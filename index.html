@@ -1501,10 +1501,27 @@
   // Nothing is written to storage until this runs — typing only updates the
   // in-memory entry and marks the row dirty (see markRowDirty). Saving only
   // happens by explicit action: clicking the row's Save button, pressing
-  // Enter, SAVE ALL, or the safety-net flush on page close.
+  // Enter, SAVE ALL, or the safety-net flush on page close. This is also
+  // where a ghost row actually becomes a real, stored entry — not on its
+  // first keystroke, so a stray character never silently creates a row.
   async function saveRowNow(entry, tr){
     if (entry._creating) await entry._creating;
-    if (!entry.id) return; // untouched ghost row — nothing to save
+    if (!entry.id) {
+      if (!entry._creating) entry._creating = DB.insertEntry(entrySnapshot(entry));
+      const row = await entry._creating;
+      entry.id = row.id;
+      delete entry._creating;
+      tr.classList.remove("ghost-row");
+      const saveBtn = tr.querySelector(".save-btn");
+      if (saveBtn) saveBtn.style.visibility = "";
+      const delBtn = tr.querySelector('[data-action="delete"]');
+      if (delBtn) delBtn.style.visibility = "";
+      document.getElementById("entryTbody").appendChild(buildEntryRow(makeGhostEntry(), true));
+      await refreshAll();
+      markRowSaved(tr, entry);
+      renderDerived();
+      return;
+    }
     await DB.updateEntry(entry.id, entrySnapshot(entry));
     await refreshAll();
     markRowSaved(tr, entry);
@@ -1582,25 +1599,6 @@
     };
   }
 
-  // First keystroke in a ghost row creates the real entry in place — no
-  // re-render, so typing is never interrupted — then appends a fresh ghost
-  // row underneath so there is always one more empty line.
-  function promoteGhost(entry, tr){
-    if (entry._creating) return;
-    entry._creating = DB.insertEntry(entrySnapshot(entry)).then(async row => {
-      entry.id = row.id;
-      delete entry._creating;
-      await refreshAll();
-      tr.classList.remove("ghost-row");
-      const saveBtn = tr.querySelector(".save-btn");
-      if (saveBtn) saveBtn.style.visibility = "";
-      const delBtn = tr.querySelector('[data-action="delete"]');
-      if (delBtn) delBtn.style.visibility = "";
-      document.getElementById("entryTbody").appendChild(buildEntryRow(makeGhostEntry(), true));
-      renderDerived();
-    });
-  }
-
   function buildEntryRow(entry, isGhost){
       const tr = document.createElement("tr");
       const pending = entryPending(entry);
@@ -1647,8 +1645,15 @@
           const field = input.dataset.field;
           const isMoney = field === "room_rent" || field === "advance_cash" || field === "advance_account" || field === "cash_received" || field === "account_received";
           entry[field] = isMoney ? num(input.value) : input.value;
-          if (!entry.id) promoteGhost(entry, tr);
           markRowDirty(tr, entry);
+          // Ghost row's Save/Delete buttons start hidden (nothing exists
+          // yet to save or delete) — the first keystroke just reveals Save;
+          // clicking it (or Enter, or SAVE ALL) is what actually creates
+          // the row, in saveRowNow().
+          if (!entry.id) {
+            const saveBtn = tr.querySelector(".save-btn");
+            if (saveBtn) saveBtn.style.visibility = "";
+          }
           if (isMoney) refreshPendingCell();
         });
       });
@@ -2541,6 +2546,7 @@
   window.addEventListener("beforeunload", (ev) => {
     unsaved.forEach((tr, entry) => {
       if (entry.id) DB.updateEntry(entry.id, entrySnapshot(entry));
+      else if (!entry._creating) DB.insertEntry(entrySnapshot(entry)); // never-saved ghost-row draft — persist it rather than lose it
     });
     if (unsaved.size > 0 && !storageOk) {
       ev.preventDefault();
