@@ -965,6 +965,20 @@
     savePendingSync(pendingSync);
     updateCloudIndicator();
   }
+  // Fast retry ladder for a push that just failed — starts near-instant
+  // (1.5s) and doubles up to the steady-state 15s interval, so a one-off
+  // network blip clears itself in a couple seconds instead of sitting on
+  // "waiting to sync" until the next scheduled tick. A device that's
+  // genuinely offline still backs off instead of hammering the network.
+  // flushPendingSync() owns the delay escalation/reset (see below) — this
+  // is just the (idempotent) arm/fire, so calling it from several places
+  // (a fresh failed push, the 15s interval, 'online') never double-books.
+  let retryDelay = 1500;
+  let retryTimer = null;
+  function scheduleQuickRetry(){
+    if (retryTimer) return; // already have one queued
+    retryTimer = setTimeout(() => { retryTimer = null; flushPendingSync(); }, retryDelay);
+  }
   // Rows/dates this browser has changes for that haven't reached the server
   // yet — a fresh pull from the database must leave these alone rather than
   // overwrite or resurrect them with an older server copy.
@@ -1026,6 +1040,7 @@
       dequeueSync(qid);
     } catch(e){
       console.error("Cloud push (entry) failed, queued for retry", e);
+      scheduleQuickRetry();
     }
   }
   async function cloudUpsertPayment(row){
@@ -1038,6 +1053,7 @@
       dequeueSync(qid);
     } catch(e){
       console.error("Cloud push (payment) failed, queued for retry", e);
+      scheduleQuickRetry();
     }
   }
   async function cloudSoftDeleteEntry(id){
@@ -1049,6 +1065,7 @@
       dequeueSync(qid);
     } catch(e){
       console.error("Cloud delete failed, queued for retry", e);
+      scheduleQuickRetry();
     }
   }
   async function cloudSoftDeletePayment(id){
@@ -1060,6 +1077,7 @@
       dequeueSync(qid);
     } catch(e){
       console.error("Cloud payment-delete failed, queued for retry", e);
+      scheduleQuickRetry();
     }
   }
   async function cloudUpsertExpectedTotal(dateISO, amount){
@@ -1071,11 +1089,13 @@
       dequeueSync(qid);
     } catch(e){
       console.error("Cloud push (expected total) failed, queued for retry", e);
+      scheduleQuickRetry();
     }
   }
 
   async function flushPendingSync(){
-    if (!sb || pendingSync.length === 0) return;
+    if (!sb) return;
+    if (pendingSync.length === 0) { retryDelay = 1500; return; }
     const remaining = [];
     for (const op of pendingSync) {
       try {
@@ -1097,6 +1117,12 @@
     pendingSync = remaining;
     savePendingSync(pendingSync);
     updateCloudIndicator();
+    if (remaining.length > 0) {
+      retryDelay = Math.min(retryDelay * 2, 15000);
+      scheduleQuickRetry();
+    } else {
+      retryDelay = 1500;
+    }
   }
   window.addEventListener("online", () => { flushPendingSync(); pullFreshFromCloud(); });
   setInterval(() => { flushPendingSync(); pullFreshFromCloud(); }, 15000);
