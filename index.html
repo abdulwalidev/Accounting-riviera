@@ -718,10 +718,17 @@
       </table>
     </div>
 
-    <div class="receipt-summary">
-      <div class="line"><span id="lblCash"></span><span class="amt" id="sumCash">–</span></div>
-      <div class="line"><span id="lblAccount"></span><span class="amt" id="sumAccount">–</span></div>
-      <div class="line total"><span id="lblTotal"></span><span class="amt" id="sumTotal">–</span></div>
+    <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;">
+      <div class="receipt-summary">
+        <div class="line"><span id="lblCash"></span><span class="amt" id="sumCash">–</span></div>
+        <div class="line"><span id="lblAccount"></span><span class="amt" id="sumAccount">–</span></div>
+        <div class="line total"><span id="lblTotal"></span><span class="amt" id="sumTotal">–</span></div>
+      </div>
+      <div class="expected-compare" id="reportExpectedCompare">
+        <div class="expected-compare-label">Expected Total</div>
+        <div class="expected-compare-amt" id="reportExpectedCompareAmt">–</div>
+        <div class="expected-compare-status" id="reportExpectedCompareStatus"></div>
+      </div>
     </div>
   </div>
 
@@ -2254,6 +2261,33 @@
     document.getElementById("sumCash").textContent = fmtNumZeroOk(dayCash);
     document.getElementById("sumAccount").textContent = fmtNumZeroOk(dayAccount);
     document.getElementById("sumTotal").textContent = fmtNumZeroOk(dayCash + dayAccount);
+    renderExpectedCompare(dayCash + dayAccount, "reportExpectedCompareAmt", "reportExpectedCompareStatus");
+  }
+
+  // Shared by Report and Detail Report — both compare the day's actually-
+  // recorded total against the Expected Total set on its own tab.
+  function renderExpectedCompare(actualTotal, amtElId, statusElId){
+    const expected = getExpectedTotal(currentDate);
+    const compareAmt = document.getElementById(amtElId);
+    const compareStatus = document.getElementById(statusElId);
+    if (expected === null) {
+      compareAmt.textContent = "–";
+      compareStatus.textContent = "Not set for this day yet — enter it on the Expected Total tab.";
+      compareStatus.className = "expected-compare-status empty";
+    } else {
+      compareAmt.textContent = fmtNumZeroOk(expected);
+      const diff = Math.round((actualTotal - expected) * 100) / 100;
+      if (Math.abs(diff) < 0.01) {
+        compareStatus.textContent = "Matches ✓";
+        compareStatus.className = "expected-compare-status match";
+      } else if (diff > 0) {
+        compareStatus.textContent = `Over by ${fmtNumZeroOk(diff)}`;
+        compareStatus.className = "expected-compare-status mismatch";
+      } else {
+        compareStatus.textContent = `Short by ${fmtNumZeroOk(-diff)}`;
+        compareStatus.className = "expected-compare-status mismatch";
+      }
+    }
   }
 
   document.getElementById("printBtn").addEventListener("click", () => window.print());
@@ -2366,28 +2400,8 @@
     const actualTotal = d.cash + d.acc;
     document.getElementById("drSumTotal").textContent = fmtNumZeroOk(actualTotal);
 
-    // EXPECTED TOTAL comparison — set on the Entry tab, checked here.
-    const expected = getExpectedTotal(currentDate);
-    const compareAmt = document.getElementById("expectedCompareAmt");
-    const compareStatus = document.getElementById("expectedCompareStatus");
-    if (expected === null) {
-      compareAmt.textContent = "–";
-      compareStatus.textContent = "Not set for this day yet — enter it on the Entry tab.";
-      compareStatus.className = "expected-compare-status empty";
-    } else {
-      compareAmt.textContent = fmtNumZeroOk(expected);
-      const diff = Math.round((actualTotal - expected) * 100) / 100;
-      if (Math.abs(diff) < 0.01) {
-        compareStatus.textContent = "Matches ✓";
-        compareStatus.className = "expected-compare-status match";
-      } else if (diff > 0) {
-        compareStatus.textContent = `Over by ${fmtNumZeroOk(diff)}`;
-        compareStatus.className = "expected-compare-status mismatch";
-      } else {
-        compareStatus.textContent = `Short by ${fmtNumZeroOk(-diff)}`;
-        compareStatus.className = "expected-compare-status mismatch";
-      }
-    }
+    // EXPECTED TOTAL comparison — set on its own tab, checked here.
+    renderExpectedCompare(actualTotal, "expectedCompareAmt", "expectedCompareStatus");
   }
 
   // =========================================================
