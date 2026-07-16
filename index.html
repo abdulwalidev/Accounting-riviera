@@ -420,6 +420,14 @@
   /* login */
   #loginOverlay { position: fixed; inset: 0; background: var(--paper); display: flex; align-items: center; justify-content: center; z-index: 200; }
   #loginOverlay.hidden { display: none; }
+
+  /* full-screen loading overlay — covers the app after login until the
+     first successful pull from the database, so a screen with missing or
+     zeroed-out data is never visible */
+  #loadingOverlay { position: fixed; inset: 0; background: var(--paper); display: flex; align-items: center; justify-content: center; z-index: 150; }
+  #loadingOverlay.hidden { display: none; }
+  .loading-dot { display:inline-block; animation: loadingPulse 1.2s ease-in-out infinite; }
+  @keyframes loadingPulse { 0%,100% { opacity: 0.25; } 50% { opacity: 1; } }
   .login-card { background: #fff; border: 1px solid var(--ink); border-radius: 8px; padding: 32px 36px; width: 340px; max-width: 90vw; display: flex; flex-direction: column; gap: 6px; }
   .login-card label { font-family: 'Inter', sans-serif; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-top: 8px; }
   .login-card input { width: 100%; }
@@ -500,6 +508,14 @@
   </div>
 </div>
 
+<div id="loadingOverlay" class="hidden">
+  <div class="login-card" style="text-align:center;">
+    <div class="eyebrow">Riviera Resort Naran</div>
+    <h1 style="font-size:20px; margin:0 0 6px;">Loading <span class="loading-dot">☁</span></h1>
+    <div class="small-note" id="loadingOverlayText">Fetching the latest data from the cloud database…</div>
+  </div>
+</div>
+
 <div id="appRoot" style="display:none;">
 
 <datalist id="roomList">
@@ -517,8 +533,8 @@
 </datalist>
 
 <div id="storageWarning">
-  <b>⚠ Data is NOT being saved in this browser right now.</b>
-  <span id="storageWarningText"></span>
+  <b>⚠ Not connected to the cloud database.</b>
+  <span id="storageWarningText">Nothing new can be saved right now. Keep this page open — it reconnects and saves your work automatically the moment the internet is back.</span>
 </div>
 
 <button class="sidebar-toggle no-print" id="sidebarToggle" title="Menu" aria-label="Open menu">☰</button>
@@ -543,7 +559,7 @@
       <h1>ACCOUNTING MANAGEMENT</h1>
     </div>
     <div class="header-right">
-      <button class="btn-solid no-print" id="saveAllBtn" title="Rows also save by themselves — this shows anything still waiting and saves it all">ALL SAVED ✓</button>
+      <button class="btn-solid no-print" id="saveAllBtn" title="Shows every row with changes not yet saved to the cloud, and saves them all at once">ALL SAVED ✓</button>
       <div id="cloudStatus" class="no-print" style="font-size:10px; margin:4px 0;"></div>
       Riviera Resort Naran
       <button class="btn-ghost no-print" id="logoutBtn" style="display:block; margin-left:auto; margin-top:8px;">Log Out</button>
@@ -924,86 +940,69 @@
   "use strict";
 
   // =========================================================
-  // CLOUD SYNC — every local save also gets pushed to Supabase, best
-  // effort. localStorage stays the fast/offline source of truth for THIS
-  // browser (nothing here can make a save slower or fail); a push that
-  // fails (offline wifi, etc.) is queued and retried automatically —
-  // nothing typed is ever lost even if the push doesn't go through yet.
+  // DATA LAYER — Supabase IS the database. There is no local cache and no
+  // background queue: every save goes straight to the server, and a row
+  // only ever says "Saved" once the server has confirmed the write. A save
+  // that can't reach the server keeps its row dirty (amber Save button +
+  // red status line + warning banner) and is retried automatically every
+  // few seconds until it lands — it never silently pretends to be saved.
   // =========================================================
   const SUPABASE_URL = "https://rmebouzkzagajtqdxvnn.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_HhUE944Kbni7rKy5PSQD5g_HnbVQFI4";
   const sb = (typeof window.supabase !== "undefined" && SUPABASE_URL && SUPABASE_ANON_KEY)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
-
-  const PENDING_SYNC_KEY = "riviera_pending_sync_v1";
-  const BOOTSTRAPPED_KEY = "riviera_cloud_bootstrapped_v1";
-
-  function loadPendingSync(){
-    try {
-      const raw = localStorage.getItem(PENDING_SYNC_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch(e){ return []; }
-  }
-  function savePendingSync(list){
-    try { localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(list)); } catch(e){ /* best effort */ }
-  }
-  let pendingSync = loadPendingSync();
-  function queueSync(op){
-    op._qid = op._qid || (Date.now().toString(36) + Math.random().toString(36).slice(2,8));
-    pendingSync.push(op);
-    savePendingSync(pendingSync);
-    updateCloudIndicator();
-    return op._qid;
-  }
-  // Removes one specific queued op once its push actually reaches the
-  // server — called after a successful push that was queued up-front (see
-  // below), never touched by ops that are still failing/retrying.
-  function dequeueSync(qid){
-    pendingSync = pendingSync.filter(op => op._qid !== qid);
-    savePendingSync(pendingSync);
-    updateCloudIndicator();
-  }
-  // Fast retry ladder for a push that just failed — starts near-instant
-  // (1.5s) and doubles up to the steady-state 15s interval, so a one-off
-  // network blip clears itself in a couple seconds instead of sitting on
-  // "waiting to sync" until the next scheduled tick. A device that's
-  // genuinely offline still backs off instead of hammering the network.
-  // flushPendingSync() owns the delay escalation/reset (see below) — this
-  // is just the (idempotent) arm/fire, so calling it from several places
-  // (a fresh failed push, the 15s interval, 'online') never double-books.
-  let retryDelay = 1500;
-  let retryTimer = null;
-  function scheduleQuickRetry(){
-    if (retryTimer) return; // already have one queued
-    retryTimer = setTimeout(() => { retryTimer = null; flushPendingSync(); }, retryDelay);
-  }
-  // Rows/dates this browser has changes for that haven't reached the server
-  // yet — a fresh pull from the database must leave these alone rather than
-  // overwrite or resurrect them with an older server copy.
-  function pendingSyncSets(){
-    const editedIds = new Set();
-    const deletedIds = new Set();
-    const expectedDates = new Set();
-    pendingSync.forEach(op => {
-      if (op.type === "entry" || op.type === "payment") editedIds.add(op.payload.id);
-      else if (op.type === "delete_entry" || op.type === "delete_payment") deletedIds.add(op.id);
-      else if (op.type === "expected_total") expectedDates.add(op.dateISO);
-    });
-    return { editedIds, deletedIds, expectedDates };
+  function requireSb(){
+    if (!sb) throw new Error("Cloud database not reachable — the Supabase library failed to load.");
+    return sb;
   }
 
+  // In-memory working copies — a mirror of the server, refreshed by
+  // pullFreshFromCloud() and updated in place only after a confirmed write.
+  let entries = [];
+  let payments = [];
+  let expectedTotals = {};
+
+  // Bumped after every confirmed write. A pull whose snapshot was fetched
+  // before a write finished is stale by definition — it gets discarded and
+  // re-run instead of overwriting fresher in-memory state (this is what
+  // used to make a just-saved payment/row flicker out and "vanish").
+  let mutationStamp = 0;
+
+  // ---------- sync status line + warning banner ----------
+  let lastSyncAt = null;
+  let syncProblem = null; // human-readable reason the server can't be reached right now
   function updateCloudIndicator(){
     const el = document.getElementById("cloudStatus");
     if (!el) return;
-    if (!sb) { el.textContent = ""; return; }
-    if (pendingSync.length > 0) {
-      el.textContent = `☁ ${pendingSync.length} change${pendingSync.length === 1 ? "" : "s"} waiting to sync…`;
+    if (!sb) {
+      el.textContent = "⚠ Cloud database not configured";
       el.style.color = "var(--danger)";
-    } else {
-      el.textContent = "☁ Backed up to cloud";
+    } else if (syncProblem) {
+      el.textContent = "☁ " + syncProblem;
+      el.style.color = "var(--danger)";
+    } else if (lastSyncAt) {
+      el.textContent = "☁ Live — synced " + lastSyncAt.toLocaleTimeString();
       el.style.color = "var(--cash)";
+    } else {
+      el.textContent = "☁ Connecting…";
+      el.style.color = "var(--muted)";
+    }
+    const banner = document.getElementById("storageWarning");
+    if (banner) banner.classList.toggle("show", !sb || !!syncProblem);
+  }
+  function setSyncProblem(msg){ syncProblem = msg; updateCloudIndicator(); }
+
+  // Full-screen cover shown after login until the first successful pull —
+  // the app never paints empty/zeroed tables that could be mistaken for
+  // real data while the database is still being fetched.
+  function setLoadingOverlay(show, msg){
+    const el = document.getElementById("loadingOverlay");
+    if (!el) return;
+    el.classList.toggle("hidden", !show);
+    if (msg) {
+      const text = document.getElementById("loadingOverlayText");
+      if (text) text.textContent = msg;
     }
   }
 
@@ -1022,293 +1021,123 @@
     return { id: row.id, entry_id: row.entry_id, payment_date: row.payment_date, cash: num(row.cash), account: num(row.account), created_at: row.created_at };
   }
 
-  // Every push below queues itself to PENDING_SYNC_KEY (localStorage,
-  // synchronous) BEFORE the network call goes out, then dequeues on
-  // success. That way the backup record survives even if the tab is
-  // closed / the network dies mid-request — a case where the promise
-  // never resolves or rejects, so a catch-only queue (the old approach)
-  // would silently lose the retry. Worst case this app ever sees is "not
-  // yet synced" (shown in the cloud indicator + retried every 15s / on
-  // reconnect), never "silently never synced".
-  async function cloudUpsertEntry(row){
-    if (!sb) return;
-    const payload = entryCloudPayload(row);
-    const qid = queueSync({ type: "entry", payload });
-    try {
-      const { error } = await sb.from("entries").upsert(payload, { onConflict: "id" });
-      if (error) throw error;
-      dequeueSync(qid);
-    } catch(e){
-      console.error("Cloud push (entry) failed, queued for retry", e);
-      scheduleQuickRetry();
-    }
-  }
-  async function cloudUpsertPayment(row){
-    if (!sb) return;
-    const payload = paymentCloudPayload(row);
-    const qid = queueSync({ type: "payment", payload });
-    try {
-      const { error } = await sb.from("payments").upsert(payload, { onConflict: "id" });
-      if (error) throw error;
-      dequeueSync(qid);
-    } catch(e){
-      console.error("Cloud push (payment) failed, queued for retry", e);
-      scheduleQuickRetry();
-    }
-  }
-  async function cloudSoftDeleteEntry(id){
-    if (!sb) return;
-    const qid = queueSync({ type: "delete_entry", id });
-    try {
-      const { error } = await sb.rpc("soft_delete_entry", { p_entry_id: id, p_reason: null });
-      if (error) throw error;
-      dequeueSync(qid);
-    } catch(e){
-      console.error("Cloud delete failed, queued for retry", e);
-      scheduleQuickRetry();
-    }
-  }
-  async function cloudSoftDeletePayment(id){
-    if (!sb) return;
-    const qid = queueSync({ type: "delete_payment", id });
-    try {
-      const { error } = await sb.rpc("soft_delete_payment", { p_payment_id: id });
-      if (error) throw error;
-      dequeueSync(qid);
-    } catch(e){
-      console.error("Cloud payment-delete failed, queued for retry", e);
-      scheduleQuickRetry();
-    }
-  }
-  async function cloudUpsertExpectedTotal(dateISO, amount){
-    if (!sb) return;
-    const qid = queueSync({ type: "expected_total", dateISO, amount: num(amount) });
-    try {
-      const { error } = await sb.from("expected_totals").upsert({ expected_date: dateISO, expected_amount: num(amount) }, { onConflict: "expected_date" });
-      if (error) throw error;
-      dequeueSync(qid);
-    } catch(e){
-      console.error("Cloud push (expected total) failed, queued for retry", e);
-      scheduleQuickRetry();
-    }
-  }
-
-  async function flushPendingSync(){
-    if (!sb) return;
-    if (pendingSync.length === 0) { retryDelay = 1500; return; }
-    const remaining = [];
-    for (const op of pendingSync) {
-      try {
-        if (op.type === "entry") {
-          const { error } = await sb.from("entries").upsert(op.payload, { onConflict: "id" }); if (error) throw error;
-        } else if (op.type === "payment") {
-          const { error } = await sb.from("payments").upsert(op.payload, { onConflict: "id" }); if (error) throw error;
-        } else if (op.type === "delete_entry") {
-          const { error } = await sb.rpc("soft_delete_entry", { p_entry_id: op.id, p_reason: null }); if (error) throw error;
-        } else if (op.type === "delete_payment") {
-          const { error } = await sb.rpc("soft_delete_payment", { p_payment_id: op.id }); if (error) throw error;
-        } else if (op.type === "expected_total") {
-          const { error } = await sb.from("expected_totals").upsert({ expected_date: op.dateISO, expected_amount: op.amount }, { onConflict: "expected_date" }); if (error) throw error;
-        }
-      } catch(e){
-        remaining.push(op); // still offline / still failing — try again next time
-      }
-    }
-    pendingSync = remaining;
-    savePendingSync(pendingSync);
-    updateCloudIndicator();
-    if (remaining.length > 0) {
-      retryDelay = Math.min(retryDelay * 2, 15000);
-      scheduleQuickRetry();
-    } else {
-      retryDelay = 1500;
-    }
-  }
-  window.addEventListener("online", () => { flushPendingSync(); pullFreshFromCloud(); });
-  setInterval(() => { flushPendingSync(); pullFreshFromCloud(); }, 15000);
-
   // =========================================================
-  // DATA LAYER — localStorage first (instant, offline-proof), Supabase
-  // second (the durable, recoverable copy — see CLOUD SYNC above).
-  //
-  // Two tables, matching the Postgres/Supabase schema in migration/:
+  // DB — thin facade over Supabase. Two tables, matching the schema in
+  // migration/:
   //   entries  (id, sr, room, guest_name, check_in, entry_date,
   //             room_rent, cash_received, account_received, remarks, created_at)
   //   payments (id, entry_id, payment_date, cash, account, created_at)
   //     — a payment row records money collected AFTER an entry's own day,
-  //       i.e. recovering a pending balance. Every call here is async
-  //       (returns a Promise) — that's what let this whole layer grow a
-  //       cloud push underneath it without touching any call site.
+  //       i.e. recovering a pending balance.
+  //
+  // The server write always happens FIRST and throws on failure; the
+  // in-memory copy is only updated after the server said yes — so nothing
+  // on screen can ever claim to be stored when it isn't.
   // =========================================================
-  const DB = (function(){
-    const ENTRIES_KEY = "riviera_entries_v2";
-    const PAYMENTS_KEY = "riviera_payments_v2";
-
-    function read(key){
-      try {
-        const raw = localStorage.getItem(key);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-      } catch(e){ console.error("DB read failed", key, e); return []; }
-    }
-    function write(key, data){
-      try { localStorage.setItem(key, JSON.stringify(data)); }
-      catch(e){ console.error("DB write failed", key, e); alert("Warning: could not save to local storage."); }
-    }
-    function normalizeRemoteEntry(r){
-      return {
-        id: r.id, sr: r.sr, room: r.room || "", guest_name: r.guest_name || "",
-        check_in: r.check_in || "", entry_date: r.entry_date,
-        entry_type: r.entry_type === "advance" ? "advance" : "payment",
-        room_rent: num(r.room_rent), cash_received: num(r.cash_received), account_received: num(r.account_received),
-        advance_cash: num(r.advance_cash || 0), advance_account: num(r.advance_account || 0),
-        remarks: r.remarks || "", check_out_date: r.check_out_date || null,
-        created_at: r.created_at
-      };
-    }
-    function normalizeRemotePayment(p){
-      return {
-        id: p.id, entry_id: p.entry_id, payment_date: p.payment_date,
-        cash: num(p.cash), account: num(p.account), created_at: p.created_at
-      };
-    }
-
-    let entries = read(ENTRIES_KEY);
-    let payments = read(PAYMENTS_KEY);
-
-    function persistEntries(){ write(ENTRIES_KEY, entries); }
-    function persistPayments(){ write(PAYMENTS_KEY, payments); }
-
-    function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
-
+  function normalizeRemoteEntry(r){
     return {
-      async listEntries(){ return entries.slice(); },
-      async insertEntry(data){
-        const row = {
-          id: uid(),
-          sr: data.sr,
-          room: data.room || "",
-          guest_name: data.guest_name || "",
-          check_in: data.check_in || "",
-          entry_date: data.entry_date,
-          entry_type: data.entry_type === "advance" ? "advance" : "payment",
-          room_rent: num(data.room_rent),
-          cash_received: num(data.cash_received),
-          account_received: num(data.account_received),
-          advance_cash: num(data.advance_cash || 0),
-          advance_account: num(data.advance_account || 0),
-          remarks: data.remarks || "",
-          check_out_date: data.check_out_date || null,
-          created_at: new Date().toISOString()
-        };
-        entries.push(row);
-        persistEntries();
-        cloudUpsertEntry(row);
-        return row;
-      },
-      async updateEntry(id, patch){
-        const row = entries.find(e => e.id === id);
-        if (!row) return null;
-        Object.assign(row, patch);
-        persistEntries();
-        cloudUpsertEntry(row);
-        return row;
-      },
-      async deleteEntry(id){
-        entries = entries.filter(e => e.id !== id);
-        persistEntries();
-        payments = payments.filter(p => p.entry_id !== id);
-        persistPayments();
-        cloudSoftDeleteEntry(id);
-      },
-      async listPayments(){ return payments.slice(); },
-      async insertPayment(data){
-        const row = {
-          id: uid(),
-          entry_id: data.entry_id,
-          payment_date: data.payment_date,
-          cash: num(data.cash),
-          account: num(data.account),
-          created_at: new Date().toISOString()
-        };
-        payments.push(row);
-        persistPayments();
-        cloudUpsertPayment(row);
-        return row;
-      },
-      async deleteLastPaymentForEntry(entryId){
-        let lastIdx = -1, lastTime = "";
-        payments.forEach((p, i) => { if (p.entry_id === entryId && p.created_at > lastTime) { lastTime = p.created_at; lastIdx = i; } });
-        if (lastIdx === -1) return null;
-        const [removed] = payments.splice(lastIdx, 1);
-        persistPayments();
-        if (removed) cloudSoftDeletePayment(removed.id);
-        return removed;
-      },
-      // Called on every load/refresh (not just when empty) so this browser
-      // always reflects the real database, not a stale local copy — except
-      // for rows this browser has changes for that haven't reached the
-      // server yet (editedIds/deletedIds, from the pending-sync queue),
-      // which are left alone so an in-flight edit or delete is never
-      // clobbered/resurrected by an older server copy.
-      async mergeFromRemote(remoteEntries, remotePayments, editedIds, deletedIds){
-        const localEntryMap = new Map(entries.map(e => [e.id, e]));
-        const localPaymentMap = new Map(payments.map(p => [p.id, p]));
-        const remoteEntryIds = new Set(remoteEntries.map(r => r.id));
-        const remotePaymentIds = new Set(remotePayments.map(r => r.id));
-
-        const merged = remoteEntries
-          .filter(r => !deletedIds.has(r.id))
-          .map(r => editedIds.has(r.id) && localEntryMap.has(r.id) ? localEntryMap.get(r.id) : normalizeRemoteEntry(r));
-        entries.forEach(local => {
-          if (!remoteEntryIds.has(local.id) && editedIds.has(local.id)) merged.push(local);
-        });
-        entries = merged;
-
-        const mergedP = remotePayments
-          .filter(r => !deletedIds.has(r.id))
-          .map(r => editedIds.has(r.id) && localPaymentMap.has(r.id) ? localPaymentMap.get(r.id) : normalizeRemotePayment(r));
-        payments.forEach(local => {
-          if (!remotePaymentIds.has(local.id) && editedIds.has(local.id)) mergedP.push(local);
-        });
-        payments = mergedP;
-
-        persistEntries();
-        persistPayments();
-      }
+      id: r.id, sr: r.sr, room: r.room || "", guest_name: r.guest_name || "",
+      check_in: r.check_in || "", entry_date: r.entry_date,
+      entry_type: r.entry_type === "advance" ? "advance" : "payment",
+      room_rent: num(r.room_rent), cash_received: num(r.cash_received), account_received: num(r.account_received),
+      advance_cash: num(r.advance_cash || 0), advance_account: num(r.advance_account || 0),
+      remarks: r.remarks || "", check_out_date: r.check_out_date || null,
+      created_at: r.created_at
     };
-  })();
-
-  // in-memory working copies, refreshed from DB after every mutation
-  let entries = [];
-  let payments = [];
-
-  async function refreshAll(){
-    entries = await DB.listEntries();
-    payments = await DB.listPayments();
   }
+  function normalizeRemotePayment(p){
+    return {
+      id: p.id, entry_id: p.entry_id, payment_date: p.payment_date,
+      cash: num(p.cash), account: num(p.account), created_at: p.created_at
+    };
+  }
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+  const DB = {
+    async insertEntry(data){
+      const row = {
+        // the caller may pass a pre-generated id (retried saves reuse the
+        // same id, so an attempt that reached the server but lost its
+        // response can never create a duplicate — the upsert just hits
+        // the same row again)
+        id: data.id || uid(),
+        sr: data.sr,
+        room: data.room || "",
+        guest_name: data.guest_name || "",
+        check_in: data.check_in || "",
+        entry_date: data.entry_date,
+        entry_type: data.entry_type === "advance" ? "advance" : "payment",
+        room_rent: num(data.room_rent),
+        cash_received: num(data.cash_received),
+        account_received: num(data.account_received),
+        advance_cash: num(data.advance_cash || 0),
+        advance_account: num(data.advance_account || 0),
+        remarks: data.remarks || "",
+        check_out_date: data.check_out_date || null,
+        created_at: new Date().toISOString()
+      };
+      const { data: savedRows, error } = await requireSb().from("entries").upsert(entryCloudPayload(row), { onConflict: "id" }).select();
+      if (error) throw error;
+      // the upsert hands the stored row back — if it carries deleted_at,
+      // this entry was deleted (from another device) and the delete wins:
+      // never resurrect it, never pretend the save counted
+      const saved = savedRows && savedRows[0];
+      if (saved && saved.deleted_at) { const err = new Error("Entry was deleted from another device"); err.deletedElsewhere = true; throw err; }
+      mutationStamp++;
+      if (!entries.some(e => e.id === row.id)) entries.push(row);
+      return row;
+    },
+    async updateEntry(id, patch){
+      const row = entries.find(e => e.id === id);
+      if (!row) { const err = new Error("Entry no longer exists here"); err.deletedElsewhere = true; throw err; }
+      const next = Object.assign({}, row, patch);
+      const { data, error } = await requireSb().from("entries").upsert(entryCloudPayload(next), { onConflict: "id" }).select();
+      if (error) throw error;
+      const saved = data && data[0];
+      if (saved && saved.deleted_at) { const err = new Error("Entry was deleted from another device"); err.deletedElsewhere = true; throw err; }
+      mutationStamp++;
+      Object.assign(row, patch);
+      return row;
+    },
+    async deleteEntry(id){
+      const { error } = await requireSb().rpc("soft_delete_entry", { p_entry_id: id, p_reason: null });
+      if (error) throw error;
+      mutationStamp++;
+      entries = entries.filter(e => e.id !== id);
+      payments = payments.filter(p => p.entry_id !== id);
+    },
+    async insertPayment(data){
+      const row = {
+        id: uid(),
+        entry_id: data.entry_id,
+        payment_date: data.payment_date,
+        cash: num(data.cash),
+        account: num(data.account),
+        created_at: new Date().toISOString()
+      };
+      const { error } = await requireSb().from("payments").upsert(paymentCloudPayload(row), { onConflict: "id" });
+      if (error) throw error;
+      mutationStamp++;
+      payments.push(row);
+      return row;
+    }
+  };
 
   // ---------- EXPECTED TOTAL — a manually-entered target for the day, set
   // before/while entries come in, so the Detail Report can show whether
-  // what actually got recorded matches what was expected. ----------
-  const EXPECTED_KEY = "riviera_expected_v1";
-  let expectedTotals = (function(){
-    try {
-      const raw = localStorage.getItem(EXPECTED_KEY);
-      const parsed = raw ? JSON.parse(raw) : {};
-      return (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : {};
-    } catch(e){ return {}; }
-  })();
+  // what actually got recorded matches what was expected. Stored on the
+  // server like everything else. ----------
   function getExpectedTotal(dateISO){
     const v = expectedTotals[dateISO];
     return (v === undefined) ? null : v;
   }
-  function setExpectedTotal(dateISO, value){
-    if (value === "" || value === null || isNaN(value)) delete expectedTotals[dateISO];
-    else expectedTotals[dateISO] = num(value);
-    try { localStorage.setItem(EXPECTED_KEY, JSON.stringify(expectedTotals)); }
-    catch(e){ console.error("Expected total save failed", e); }
-    cloudUpsertExpectedTotal(dateISO, expectedTotals[dateISO] || 0);
+  async function setExpectedTotal(dateISO, value){
+    const amount = (value === "" || value === null || isNaN(value)) ? 0 : num(value);
+    const { error } = await requireSb().from("expected_totals").upsert({ expected_date: dateISO, expected_amount: amount }, { onConflict: "expected_date" });
+    if (error) throw error;
+    mutationStamp++;
+    expectedTotals[dateISO] = amount;
   }
 
   // ---------- NUMBER / DATE HELPERS ----------
@@ -1530,12 +1359,17 @@
   }
 
   async function addNewRow(){
-    await DB.insertEntry({
-      sr: nextSr(currentDate), room: "", guest_name: "", check_in: currentDate, entry_date: currentDate,
-      entry_type: "payment",
-      room_rent: 0, cash_received: 0, account_received: 0, advance_cash: 0, advance_account: 0, remarks: ""
-    });
-    await refreshAll();
+    try {
+      await DB.insertEntry({
+        sr: nextSr(currentDate), room: "", guest_name: "", check_in: currentDate, entry_date: currentDate,
+        entry_type: "payment",
+        room_rent: 0, cash_received: 0, account_received: 0, advance_cash: 0, advance_account: 0, remarks: ""
+      });
+    } catch(e){
+      console.error("Add row failed", e);
+      alert("Couldn't add the row — the cloud database is not reachable right now. You can still type into the blank bottom row; it will save the moment the connection is back.");
+      return;
+    }
     renderEntry();
     requestBackgroundPull();
     // drop the cursor straight into the new row's Room field
@@ -1562,11 +1396,22 @@
     expSavedNote.textContent = "";
   }
   expDateInput.addEventListener("change", syncExpectedTotalTab);
-  expSaveBtn.addEventListener("click", () => {
+  expSaveBtn.addEventListener("click", async () => {
     const dateISO = expDateInput.value || todayISO();
-    setExpectedTotal(dateISO, expTotalInput.value);
-    renderDetailReport();
-    expSavedNote.textContent = `Saved for ${fmtDateLong(dateISO)}.`;
+    expSaveBtn.disabled = true;
+    expSaveBtn.textContent = "Saving…";
+    try {
+      await setExpectedTotal(dateISO, expTotalInput.value);
+      expSavedNote.textContent = `Saved for ${fmtDateLong(dateISO)}.`;
+      renderDetailReport();
+      renderReport();
+    } catch(e){
+      console.error("Expected total save failed", e);
+      expSavedNote.textContent = "Couldn't save — the cloud database is not reachable. Check the internet connection and try again.";
+    } finally {
+      expSaveBtn.disabled = false;
+      expSaveBtn.textContent = "Save";
+    }
   });
   expTotalInput.addEventListener("keydown", (ev) => {
     if (ev.key === "Enter") { ev.preventDefault(); expSaveBtn.click(); }
@@ -1617,10 +1462,15 @@
     const id = deleteTargetId;
     deleteModal.classList.remove("active");
     deleteTargetId = null;
-    for (const en of Array.from(unsaved.keys())) if (en.id === id) unsaved.delete(en);
+    try {
+      await DB.deleteEntry(id);
+    } catch(e){
+      console.error("Delete failed", e);
+      alert("Couldn't delete — the cloud database is not reachable right now. Check the internet connection and try again.");
+      return;
+    }
+    for (const en of Array.from(unsaved.keys())) if (en.id === id) { unsaved.delete(en); failedSaves.delete(en); }
     updateSaveAllBtn();
-    await DB.deleteEntry(id);
-    await refreshAll();
     renderEntry();
     requestBackgroundPull();
   });
@@ -1631,7 +1481,7 @@
   }
 
   // Every field an entry actually persists — save patches go through this so
-  // bookkeeping props on the working object (_creating etc.) never leak into
+  // bookkeeping props on the working object (_saving, _draftId etc.) never leak into
   // storage.
   function entrySnapshot(e){
     return {
@@ -1643,40 +1493,86 @@
     };
   }
 
-  // Nothing is written to storage until this runs — typing only updates the
-  // in-memory entry and marks the row dirty (see markRowDirty). Saving only
-  // happens by explicit action: clicking the row's Save button, pressing
-  // Enter, SAVE ALL, or the safety-net flush on page close. This is also
-  // where a ghost row actually becomes a real, stored entry — not on its
-  // first keystroke, so a stray character never silently creates a row.
+  // Nothing is written until this runs — typing only updates the in-memory
+  // entry and marks the row dirty (see markRowDirty). Saving only happens
+  // by explicit action: clicking the row's Save button, pressing Enter,
+  // SAVE ALL, or the safety-net flush on page close. This is also where a
+  // ghost row actually becomes a real, stored entry — not on its first
+  // keystroke, so a stray character never silently creates a row.
+  //
+  // The write goes straight to the server and the row is only marked
+  // "Saved" once the server confirms. If the write fails, the row stays
+  // dirty, joins failedSaves, and retryFailedSaves() keeps re-trying every
+  // few seconds until it lands — a retried create reuses the same draft id
+  // (upsert), so it can never produce a duplicate row.
   async function saveRowNow(entry, tr){
-    if (entry._creating) await entry._creating;
-    if (!entry.id) {
-      if (!entry._creating) entry._creating = DB.insertEntry(entrySnapshot(entry));
-      const row = await entry._creating;
-      entry.id = row.id;
-      delete entry._creating;
-      tr.classList.remove("ghost-row");
-      const saveBtn = tr.querySelector(".save-btn");
-      if (saveBtn) saveBtn.style.visibility = "";
-      const delBtn = tr.querySelector('[data-action="delete"]');
-      if (delBtn) delBtn.style.visibility = "";
-      document.getElementById("entryTbody").appendChild(buildEntryRow(makeGhostEntry(), true));
-      await refreshAll();
+    if (entry._saving) return entry._saving; // this row's save is already on the wire
+    const btn = tr.querySelector(".save-btn");
+    const wasGhost = !entry.id;
+    if (btn) btn.textContent = "Saving…";
+    entry._saving = (async () => {
+      if (!entry.id) {
+        entry._draftId = entry._draftId || uid();
+        const row = await DB.insertEntry(Object.assign({}, entrySnapshot(entry), { id: entry._draftId }));
+        entry.id = row.id;
+        entry.created_at = row.created_at;
+      } else {
+        await DB.updateEntry(entry.id, entrySnapshot(entry));
+      }
+    })();
+    try {
+      await entry._saving;
+      failedSaves.delete(entry);
+      if (syncProblem) setSyncProblem(null);
+      if (wasGhost) {
+        tr.classList.remove("ghost-row");
+        if (btn) btn.style.visibility = "";
+        const delBtn = tr.querySelector('[data-action="delete"]');
+        if (delBtn) delBtn.style.visibility = "";
+        if (entry === ghostEntry) ghostEntry = null;
+        document.getElementById("entryTbody").appendChild(buildEntryRow(currentGhostEntry(), true));
+      }
       markRowSaved(tr, entry);
       renderDerived();
       requestBackgroundPull();
-      return;
+    } catch(e){
+      if (e && e.deletedElsewhere) {
+        // the delete always wins — drop the local copy instead of quietly
+        // resurrecting it or pretending the save counted
+        unsaved.delete(entry);
+        failedSaves.delete(entry);
+        updateSaveAllBtn();
+        const goneId = entry.id || entry._draftId;
+        entries = entries.filter(x => x.id !== goneId);
+        delete entry._saving;
+        alert(`This entry (${entry.room || "—"} — ${entry.guest_name || "no name"}) was just deleted from another device, so these changes can't be saved. The row will now disappear here too.`);
+        renderAll();
+        return;
+      }
+      console.error("Save failed — will keep retrying automatically", e);
+      failedSaves.add(entry); // stays in `unsaved` too, so SAVE ALL still sees it
+      setSyncProblem("Couldn't save — check the internet connection. Retrying automatically…");
+      if (btn) btn.textContent = "Save";
+    } finally {
+      delete entry._saving;
     }
-    await DB.updateEntry(entry.id, entrySnapshot(entry));
-    await refreshAll();
-    markRowSaved(tr, entry);
-    requestBackgroundPull();
   }
 
-  // Rows with changes not yet written — auto-save clears them about half a
-  // second after the last keystroke; this registry drives the big SAVE ALL
-  // button in the header so Excel-minded staff can SEE everything is stored.
+  // Saves the user explicitly asked for that couldn't reach the server —
+  // re-tried every few seconds (and on 'online') until they land.
+  const failedSaves = new Set(); // working entry objects
+  async function retryFailedSaves(){
+    for (const entry of Array.from(failedSaves)) {
+      const tr = unsaved.get(entry);
+      if (!tr) { failedSaves.delete(entry); continue; }
+      await saveRowNow(entry, tr);
+    }
+  }
+
+  // Rows with changes not yet written to the server; this registry drives
+  // the big SAVE ALL button in the header so Excel-minded staff can SEE
+  // everything is stored, and it's exactly the set of rows a background
+  // pull must never overwrite.
   const unsaved = new Map(); // working entry object -> its table row
   function updateSaveAllBtn(){
     const btn = document.getElementById("saveAllBtn");
@@ -1711,6 +1607,13 @@
     syncDateControls();
     const tbody = document.getElementById("entryTbody");
     tbody.innerHTML = "";
+    if (!initialLoadDone) {
+      tbody.innerHTML = `<tr><td colspan="14" class="empty-row-cell">${syncProblem
+        ? "Couldn't load from the cloud database — check the internet connection; retrying…"
+        : "Loading from the cloud database…"}</td></tr>`;
+      renderDerived();
+      return;
+    }
     const search = document.getElementById("todaySearch").value.trim().toLowerCase();
     let list = entries.filter(e => isInHouseOn(e, currentDate));
     list.sort((a,b) => a.entry_date === b.entry_date ? a.sr - b.sr : (a.entry_date < b.entry_date ? -1 : 1));
@@ -1731,8 +1634,9 @@
 
     // A blank "ghost" row always sits under the last entry — typing anything
     // into it creates the entry by itself, exactly like moving onto the next
-    // empty line in Excel. (Hidden while a search filter is active.)
-    if (!search) tbody.appendChild(buildEntryRow(makeGhostEntry(), true));
+    // empty line in Excel. (Hidden while a search filter is active; a typed
+    // draft survives that and comes back when the search is cleared.)
+    if (!search) tbody.appendChild(buildEntryRow(currentGhostEntry(), true));
 
     renderDerived();
   }
@@ -1744,6 +1648,18 @@
       room_rent: 0, cash_received: 0, account_received: 0,
       advance_cash: 0, advance_account: 0, remarks: ""
     };
+  }
+
+  // The one ghost draft in play. A typed-but-not-yet-saved draft must
+  // survive EVERY re-render — searches, date changes, tab switches,
+  // background pulls — so the render always re-uses the live draft object
+  // instead of minting a blank one. This is what guarantees the row being
+  // typed can never vanish out from under the user.
+  let ghostEntry = null;
+  function currentGhostEntry(){
+    if (ghostEntry && !ghostEntry.id && unsaved.has(ghostEntry)) return ghostEntry;
+    ghostEntry = makeGhostEntry();
+    return ghostEntry;
   }
 
   function buildEntryRow(entry, isGhost){
@@ -1857,8 +1773,19 @@
         tr.querySelector(".save-btn").style.visibility = "hidden";
         tr.querySelector('[data-action="delete"]').style.visibility = "hidden";
         tr.querySelector('input[data-field="guest_name"]').placeholder = "type here to start a new row…";
-        tr.querySelectorAll('input[type="number"]').forEach(i => { i.value = ""; });
+        // blank the zeros so the empty line looks empty — but keep any
+        // amounts already typed into a draft that's being re-rendered
+        tr.querySelectorAll('input[type="number"]').forEach(i => { if (!num(i.value)) i.value = ""; });
         tr.children[11].innerHTML = `<span style="color:var(--muted);">—</span>`;
+      }
+
+      // A rebuilt row for an entry that still has unsaved changes must come
+      // back DIRTY and re-bind itself as that entry's live row — otherwise a
+      // re-render (date change, search, pull) would show "Saved" on a row
+      // the server hasn't confirmed yet.
+      if (unsaved.has(entry)) {
+        markRowDirty(tr, entry);
+        if (isGhost) tr.querySelector(".save-btn").style.visibility = "";
       }
 
       return tr;
@@ -2190,8 +2117,13 @@
       alert(`That is more than the pending balance (PKR ${fmtNum(pending)}). Enter an amount up to the pending balance.`);
       return;
     }
-    await DB.insertPayment({ entry_id: e.id, payment_date: date, cash, account: acc });
-    await refreshAll();
+    try {
+      await DB.insertPayment({ entry_id: e.id, payment_date: date, cash, account: acc });
+    } catch(err){
+      console.error("Payment save failed", err);
+      alert("Couldn't save this payment — the cloud database is not reachable right now. Check the internet connection and try again.");
+      return;
+    }
     document.getElementById("collectModal").classList.remove("active");
     collectTargetEntryId = null;
     renderAll();
@@ -2680,6 +2612,9 @@
 
       tr.querySelector('[data-action="save"]').addEventListener("click", () => saveRowNow(entry, tr));
       tr.querySelector('[data-action="delete"]').addEventListener("click", () => deleteEntry(entry.id));
+      // same rule as the main board: a rebuilt row with unsaved changes
+      // comes back dirty and re-binds as the entry's live row
+      if (unsaved.has(entry)) markRowDirty(tr, entry);
       tbody.appendChild(tr);
     });
 
@@ -2709,10 +2644,9 @@
   }
 
   // =========================================================
-  // SAVE ALL — the big header button. Rows also auto-save on their own
-  // about half a second after the last keystroke, so this is reassurance
-  // for staff used to Excel's Ctrl+S: click it to SEE exactly which rows
-  // still have changes waiting, and write them all at once.
+  // SAVE ALL — the big header button. Reassurance for staff used to
+  // Excel's Ctrl+S: click it to SEE exactly which rows still have changes
+  // waiting, and write them all to the server at once.
   // =========================================================
   const saveAllModal = document.getElementById("saveAllModal");
   document.getElementById("saveAllBtn").addEventListener("click", () => {
@@ -2743,93 +2677,166 @@
     saveAllModal.classList.remove("active");
   });
 
-  // Nobody leaves with unsaved work: closing / refreshing the page force-
-  // writes every pending change first (localStorage writes are synchronous,
-  // so this always completes before the page is gone). The browser's
-  // "leave site?" prompt only appears if storage is broken and the changes
-  // genuinely could not be written anywhere.
-  window.addEventListener("beforeunload", (ev) => {
+  // Nobody leaves with unsaved work silently: any row still dirty gets
+  // flushed to the server with a keepalive request (the browser lets it
+  // finish even after the page is gone), AND the "leave site?" prompt is
+  // shown, because the server hasn't confirmed those rows yet.
+  function flushUnsavedKeepalive(){
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || unsaved.size === 0) return;
+    const rows = [];
     unsaved.forEach((tr, entry) => {
-      if (entry.id) DB.updateEntry(entry.id, entrySnapshot(entry));
-      else if (!entry._creating) DB.insertEntry(entrySnapshot(entry)); // never-saved ghost-row draft — persist it rather than lose it
+      if (!entry.id) entry._draftId = entry._draftId || uid();
+      rows.push(entryCloudPayload(Object.assign({}, entrySnapshot(entry), {
+        id: entry.id || entry._draftId,
+        created_at: entry.created_at || new Date().toISOString()
+      })));
     });
-    if (unsaved.size > 0 && !storageOk) {
-      ev.preventDefault();
-      ev.returnValue = "";
-    }
+    try {
+      fetch(SUPABASE_URL + "/rest/v1/entries?on_conflict=id", {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+          "Content-Type": "application/json",
+          "Prefer": "resolution=merge-duplicates"
+        },
+        body: JSON.stringify(rows)
+      });
+    } catch(e){ /* best effort — the leave prompt below still warns */ }
+  }
+  window.addEventListener("pagehide", flushUnsavedKeepalive);
+  window.addEventListener("beforeunload", (ev) => {
+    if (unsaved.size === 0) return;
+    flushUnsavedKeepalive();
+    ev.preventDefault();
+    ev.returnValue = "";
   });
 
-  // ---------- STORAGE SELF-TEST ----------
-  // Writes a probe value and reads it back through a fresh JSON round-trip.
-  // Catches both thrown exceptions (storage blocked/disabled) and the
-  // silent-failure case some browsers use for file:// pages (write appears
-  // to succeed but nothing is actually persisted).
-  function checkStorageWorks(){
-    const probeKey = "riviera_storage_probe";
-    const probeVal = "ok-" + Date.now();
-    try {
-      localStorage.setItem(probeKey, probeVal);
-      const readBack = localStorage.getItem(probeKey);
-      localStorage.removeItem(probeKey);
-      return readBack === probeVal;
-    } catch(e){
-      return false;
-    }
-  }
-  let storageOk = true;
-  function showStorageWarningIfNeeded(){
-    storageOk = checkStorageWorks();
-    if (storageOk) return;
-    const banner = document.getElementById("storageWarning");
-    const text = document.getElementById("storageWarningText");
-    const isFileProtocol = location.protocol === "file:";
-    text.textContent = isFileProtocol
-      ? " Your browser blocks saved data for files opened by double-click (file://). Anything you enter now will vanish on refresh. Fix: open this same file in Firefox (usually works), or ask for a one-click local server setup so it opens as http://localhost instead."
-      : " Your browser has local storage disabled or full. Anything you enter now will vanish on refresh. Check privacy/cookie settings for this site, or try a different browser.";
-    banner.classList.add("show");
-  }
-
-  // ---------- CLOUD BOOTSTRAP ----------
-  // Runs once per browser, right after login — and only ever needs to push
-  // anything up if this browser has old pre-cloud history that was never
-  // backed up. One bulk upsert per table (not one row at a time — a
-  // sequential per-row loop here used to be the slow part on first login).
-  async function bootstrapCloudSync(){
+  // ---------- ONE-TIME LEGACY MIGRATION ----------
+  // Older versions of this app kept a full copy of the data (plus an
+  // offline retry queue) in localStorage. Anything still stranded in this
+  // browser is pushed to the server once, then the local copies are
+  // removed for good — the server is the only store now. If the push
+  // fails, the local data is left untouched and this runs again next load.
+  async function migrateLegacyLocalData(){
     if (!sb) return;
-    const alreadyBootstrapped = localStorage.getItem(BOOTSTRAPPED_KEY) === "1";
-    if (!alreadyBootstrapped && (entries.length || payments.length || Object.keys(expectedTotals).length)) {
+    const readJSON = (key, fallback) => {
       try {
-        if (entries.length) {
-          const { error } = await sb.from("entries").upsert(entries.map(entryCloudPayload), { onConflict: "id" });
-          if (error) throw error;
-        }
-        if (payments.length) {
-          const { error } = await sb.from("payments").upsert(payments.map(paymentCloudPayload), { onConflict: "id" });
-          if (error) throw error;
-        }
-        for (const dateISO of Object.keys(expectedTotals)) await cloudUpsertExpectedTotal(dateISO, expectedTotals[dateISO]);
-        localStorage.setItem(BOOTSTRAPPED_KEY, "1");
-      } catch(e){
-        console.error("Initial cloud backup failed, will keep retrying on future saves", e);
+        const raw = localStorage.getItem(key);
+        const parsed = raw ? JSON.parse(raw) : null;
+        return (parsed === null || parsed === undefined) ? fallback : parsed;
+      } catch(e){ return fallback; }
+    };
+    let hasLegacy = false;
+    try { hasLegacy = ["riviera_pending_sync_v1","riviera_entries_v2","riviera_payments_v2","riviera_expected_v1","riviera_cloud_bootstrapped_v1"].some(k => localStorage.getItem(k) !== null); }
+    catch(e){ return; }
+    if (!hasLegacy) return;
+    try {
+      // 1) replay the old offline retry queue — edits that never reached
+      //    the server at all
+      const legacyQueue = readJSON("riviera_pending_sync_v1", []);
+      for (const op of (Array.isArray(legacyQueue) ? legacyQueue : [])) {
+        if (op.type === "entry") { const { error } = await sb.from("entries").upsert(op.payload, { onConflict: "id" }); if (error) throw error; }
+        else if (op.type === "payment") { const { error } = await sb.from("payments").upsert(op.payload, { onConflict: "id" }); if (error) throw error; }
+        else if (op.type === "delete_entry") { const { error } = await sb.rpc("soft_delete_entry", { p_entry_id: op.id, p_reason: null }); if (error) throw error; }
+        else if (op.type === "delete_payment") { const { error } = await sb.rpc("soft_delete_payment", { p_payment_id: op.id }); if (error) throw error; }
+        else if (op.type === "expected_total") { const { error } = await sb.from("expected_totals").upsert({ expected_date: op.dateISO, expected_amount: op.amount }, { onConflict: "expected_date" }); if (error) throw error; }
       }
-    } else if (!alreadyBootstrapped) {
-      localStorage.setItem(BOOTSTRAPPED_KEY, "1");
+      // 2) a browser that never completed the old one-time bootstrap may
+      //    hold history that exists nowhere else — push it before clearing
+      if ((function(){ try { return localStorage.getItem("riviera_cloud_bootstrapped_v1") !== "1"; } catch(e){ return false; } })()) {
+        const legacyEntries = readJSON("riviera_entries_v2", []);
+        const legacyPayments = readJSON("riviera_payments_v2", []);
+        const legacyExpected = readJSON("riviera_expected_v1", {});
+        if (Array.isArray(legacyEntries) && legacyEntries.length) {
+          const { error } = await sb.from("entries").upsert(legacyEntries.map(entryCloudPayload), { onConflict: "id" }); if (error) throw error;
+        }
+        if (Array.isArray(legacyPayments) && legacyPayments.length) {
+          const { error } = await sb.from("payments").upsert(legacyPayments.map(paymentCloudPayload), { onConflict: "id" }); if (error) throw error;
+        }
+        if (legacyExpected && typeof legacyExpected === "object" && !Array.isArray(legacyExpected)) {
+          for (const dateISO of Object.keys(legacyExpected)) {
+            const { error } = await sb.from("expected_totals").upsert({ expected_date: dateISO, expected_amount: num(legacyExpected[dateISO]) }, { onConflict: "expected_date" }); if (error) throw error;
+          }
+        }
+      }
+      ["riviera_pending_sync_v1","riviera_entries_v2","riviera_payments_v2","riviera_expected_v1","riviera_cloud_bootstrapped_v1","riviera_storage_probe"]
+        .forEach(k => { try { localStorage.removeItem(k); } catch(e){ /* nothing to clean */ } });
+    } catch(e){
+      console.error("Legacy local-data migration failed — keeping the local copy and trying again next load", e);
     }
-    await pullFreshFromCloud();
   }
 
-  // ---------- CLOUD PULL — always the real database, never a stale cache ----------
-  // Runs after login, after every save, on 'online', and on the sync
-  // interval — always a genuine fetch of entries_active/payments_active/
-  // expected_totals (no skipping it just because local data already exists).
-  // Rows this browser has unsynced changes for (pendingSyncSets) are left
-  // alone so an in-flight edit is never overwritten mid-flight; everything
-  // else gets replaced with the real server copy every time.
+  // =========================================================
+  // SYNC ENGINE — the server is re-fetched every 5 seconds, right after
+  // every save, when the tab becomes visible again, and when the internet
+  // comes back. The ONE rule that keeps typing safe: the screen is never
+  // re-rendered while the user is editing (any dirty row, or the cursor
+  // sitting inside an editable table) — pulled data waits in memory and
+  // the re-render happens the moment editing is done. This is what used to
+  // make the row being typed vanish mid-entry.
+  // =========================================================
+  let initialLoadDone = false;
+  let lastServerHash = "";
+  let renderQueued = false;
+
+  function isUserEditing(){
+    if (unsaved.size > 0) return true;
+    const ae = document.activeElement;
+    if (!ae || (ae.tagName !== "INPUT" && ae.tagName !== "TEXTAREA" && ae.tagName !== "SELECT")) return false;
+    return !!(ae.closest("#entryTbody") || ae.closest("#allTbody"));
+  }
+  function safeRerender(){
+    if (isUserEditing()) { renderQueued = true; return; }
+    renderQueued = false;
+    renderAll();
+  }
+  // the moment focus leaves an editable table with nothing left dirty,
+  // apply any pull that arrived while the user was typing
+  document.addEventListener("focusout", () => {
+    if (!renderQueued) return;
+    // the small delay lets an in-progress click (mousedown → focusout →
+    // mouseup) land on its button before the DOM underneath is rebuilt
+    setTimeout(() => { if (renderQueued && !isUserEditing()) safeRerender(); }, 120);
+  });
+
+  // Rows with local changes the server hasn't confirmed yet keep the local
+  // version — everything else becomes exactly what the server returned.
+  function applyServerData(sEntries, sPayments, sExpected){
+    const dirtyIds = new Set();
+    unsaved.forEach((tr, e) => { if (e.id) dirtyIds.add(e.id); });
+    // IDENTITY-STABLE merge: rows already known keep their exact object
+    // (updated in place unless dirty). The table's inputs hold references
+    // to these objects — swapping them for fresh copies while a re-render
+    // is deferred would strand typing in orphaned objects that never save.
+    const localById = new Map(entries.map(e => [e.id, e]));
+    const serverIds = new Set(sEntries.map(r => r.id));
+    const next = sEntries.map(r => {
+      const local = localById.get(r.id);
+      if (local) {
+        if (!dirtyIds.has(r.id)) Object.assign(local, normalizeRemoteEntry(r));
+        return local;
+      }
+      return normalizeRemoteEntry(r);
+    });
+    entries.forEach(local => { if (!serverIds.has(local.id) && dirtyIds.has(local.id)) next.push(local); });
+    entries = next;
+    // a payment whose entry no longer exists (deleted at the same moment
+    // the payment was being collected on another device) must never show
+    // up as a blank orphan row in the reports
+    const activeEntryIds = new Set(entries.map(e => e.id));
+    payments = sPayments.map(normalizeRemotePayment).filter(p => activeEntryIds.has(p.entry_id));
+    expectedTotals = {};
+    sExpected.forEach(r => { expectedTotals[r.expected_date] = num(r.expected_amount); });
+  }
+
   let pullInFlight = null;
   async function pullFreshFromCloud(){
     if (!sb) return;
     if (pullInFlight) return pullInFlight; // already fetching — don't pile up requests
     pullInFlight = (async () => {
+      const stampAtStart = mutationStamp;
       try {
         const [entriesRes, paymentsRes, expectedRes] = await Promise.all([
           sb.from("entries_active").select("*"),
@@ -2839,34 +2846,66 @@
         if (entriesRes.error) throw entriesRes.error;
         if (paymentsRes.error) throw paymentsRes.error;
         if (expectedRes.error) throw expectedRes.error;
+        // a write finished while this snapshot was on the wire — the
+        // snapshot is already stale, so fetch again instead of applying it
+        if (mutationStamp !== stampAtStart) { requestBackgroundPull(); return; }
 
-        const { editedIds, deletedIds, expectedDates } = pendingSyncSets();
-        await DB.mergeFromRemote(entriesRes.data || [], paymentsRes.data || [], editedIds, deletedIds);
+        const firstLoad = !initialLoadDone;
+        initialLoadDone = true;
+        lastSyncAt = new Date();
+        syncProblem = null;
 
-        const merged = {};
-        (expectedRes.data || []).forEach(r => { merged[r.expected_date] = num(r.expected_amount); });
-        expectedDates.forEach(d => { if (expectedTotals[d] !== undefined) merged[d] = expectedTotals[d]; });
-        expectedTotals = merged;
-        try { localStorage.setItem(EXPECTED_KEY, JSON.stringify(expectedTotals)); } catch(e){ /* best effort */ }
-
-        await refreshAll();
-        renderAll();
+        const hash = JSON.stringify([entriesRes.data, paymentsRes.data, expectedRes.data]);
+        const changed = hash !== lastServerHash;
+        lastServerHash = hash;
+        applyServerData(entriesRes.data || [], paymentsRes.data || [], expectedRes.data || []);
+        if (firstLoad) setLoadingOverlay(false);
+        if (changed || firstLoad) safeRerender();
         updateCloudIndicator();
       } catch(e){
-        console.error("Cloud refresh failed, staying on local cache", e);
+        console.error("Cloud pull failed — retrying on the next tick", e);
+        setSyncProblem(navigator.onLine === false
+          ? "No internet — reconnecting…"
+          : "Can't reach the cloud database — retrying…");
+        // before the first successful load there is nothing correct to
+        // show — keep the loading screen up (with the reason) rather than
+        // ever painting empty tables that look like real data
+        if (!initialLoadDone) {
+          setLoadingOverlay(true, "Can't reach the cloud database — check the internet connection. Retrying automatically…");
+          renderAll();
+        }
       } finally {
         pullInFlight = null;
       }
     })();
     return pullInFlight;
   }
-  // Fire a pull shortly after any local save/delete — collapses a burst of
-  // saves (e.g. SAVE ALL looping over many rows) into a single pull instead
-  // of one per row, and never blocks the save itself since it's not awaited.
+  // Fire a pull shortly after any save/delete — collapses a burst of saves
+  // (e.g. SAVE ALL looping over many rows) into a single pull instead of
+  // one per row, and never blocks the save itself since it's not awaited.
   let pullDebounceTimer = null;
   function requestBackgroundPull(){
     clearTimeout(pullDebounceTimer);
-    pullDebounceTimer = setTimeout(() => pullFreshFromCloud(), 800);
+    pullDebounceTimer = setTimeout(() => pullFreshFromCloud(), 500);
+  }
+
+  window.addEventListener("online", () => { syncProblem = null; updateCloudIndicator(); retryFailedSaves(); pullFreshFromCloud(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { retryFailedSaves(); pullFreshFromCloud(); } });
+  setInterval(() => { retryFailedSaves(); pullFreshFromCloud(); }, 5000);
+
+  // Realtime (instant cross-device updates): if Realtime is enabled for
+  // these tables in Supabase (see migration/enable_realtime.sql), any
+  // change made on another device triggers an immediate pull here. If it
+  // isn't enabled, this simply never fires — the 5-second poll above
+  // remains the guarantee either way.
+  if (sb && typeof sb.channel === "function") {
+    try {
+      sb.channel("riviera-live")
+        .on("postgres_changes", { event: "*", schema: "public", table: "entries" }, () => requestBackgroundPull())
+        .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => requestBackgroundPull())
+        .on("postgres_changes", { event: "*", schema: "public", table: "expected_totals" }, () => requestBackgroundPull())
+        .subscribe();
+    } catch(e){ console.error("Realtime unavailable — the 5s poll covers it", e); }
   }
 
   // ---------- LOGIN ----------
@@ -2927,17 +2966,13 @@
   async function startApp(){
     if (appStarted) return;
     appStarted = true;
-    showStorageWarningIfNeeded();
     makeTablesResizable();
     updateSaveAllBtn();
-    // Paint instantly from local cache first — never block the screen on a
-    // network round trip. The cloud bootstrap + pull below run in the
-    // background and re-render the moment the real database responds.
-    await refreshAll();
-    renderAll();
     updateCloudIndicator();
-    flushPendingSync();
-    bootstrapCloudSync();
+    setLoadingOverlay(true, "Fetching the latest data from the cloud database…");
+    renderAll(); // paints the "Loading from the cloud database…" state behind the overlay
+    await migrateLegacyLocalData();
+    pullFreshFromCloud();
   }
 
   function showApp(){
