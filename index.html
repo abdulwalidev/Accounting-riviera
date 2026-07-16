@@ -24,12 +24,29 @@
     min-height: 100vh;
     font-family: 'Inter', sans-serif;
     color: var(--ink);
-    padding-left: 190px; /* room for the fixed left sidebar */
   }
   .wrap { max-width: 1460px; margin: 0 auto; padding: 28px 20px 60px; }
 
-  /* left sidebar navigation — every page lives here; the top bar keeps
-     only the three most-used pages */
+  /* left sidebar navigation — collapsed/off-canvas by default, opened with
+     the toggle button; every page lives here, the top bar keeps only the
+     three most-used pages */
+  .sidebar-toggle {
+    position: fixed; top: 14px; left: 14px; z-index: 60;
+    width: 38px; height: 38px;
+    border: 1px solid var(--ink);
+    border-radius: 6px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 17px;
+    cursor: pointer;
+  }
+  .sidebar-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.25);
+    z-index: 39;
+  }
+  .sidebar-backdrop.show { display: block; }
   .sidebar {
     position: fixed;
     left: 0; top: 0; bottom: 0;
@@ -42,13 +59,18 @@
     gap: 6px;
     overflow-y: auto;
     z-index: 40;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 3px 0 14px rgba(0,0,0,0.18);
   }
+  .sidebar.open { transform: translateX(0); }
   .sidebar .side-title {
     font-size: 11px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--muted);
     margin: 0 6px 10px;
+    padding-left: 34px; /* clears the fixed toggle button */
   }
   .sidebar button {
     font-family: 'Inter', sans-serif;
@@ -67,17 +89,7 @@
   .sidebar button:hover { border-color: var(--ink); }
   .sidebar button.active { background: var(--ink); color: var(--paper); }
   @media (max-width: 900px) {
-    body { padding-left: 0; }
-    .sidebar {
-      position: static;
-      width: auto;
-      flex-direction: row;
-      flex-wrap: wrap;
-      border-right: none;
-      border-bottom: 2px solid var(--ink);
-      padding: 10px 12px;
-    }
-    .sidebar .side-title { display: none; }
+    .sidebar { width: 78vw; max-width: 260px; }
   }
 
   /* storage warning */
@@ -447,7 +459,7 @@
   @page { size: portrait; margin: 14mm 12mm; }
 
   @media print {
-    .mode-toggle, .sidebar, .toolbar, .date-nav button, input[type="date"], .no-print, .form-card, #storageWarning, .expected-card { display: none !important; }
+    .mode-toggle, .sidebar, .sidebar-toggle, .sidebar-backdrop, .toolbar, .date-nav button, input[type="date"], .no-print, .form-card, #storageWarning, .expected-card { display: none !important; }
     body { background: #fff; padding-left: 0; }
     .wrap { max-width: none; padding: 0; }
     .header { margin-bottom: 10px; padding-bottom: 10px; }
@@ -509,6 +521,8 @@
   <span id="storageWarningText"></span>
 </div>
 
+<button class="sidebar-toggle no-print" id="sidebarToggle" title="Menu" aria-label="Open menu">☰</button>
+<div class="sidebar-backdrop no-print" id="sidebarBackdrop"></div>
 <div class="sidebar no-print" id="sideNav">
   <div class="side-title">Riviera · Menu</div>
   <button data-tab="today" class="active">Entry</button>
@@ -517,6 +531,7 @@
   <button data-tab="checkedout">Checked Out</button>
   <button data-tab="report">Report</button>
   <button data-tab="detailreport">Detail Report</button>
+  <button data-tab="expected">Expected Total</button>
   <button data-tab="overview">ALL</button>
 </div>
 
@@ -554,11 +569,6 @@
         <span class="badge-today g-badge">—</span>
       </div>
       <button class="btn-ghost g-next">next day &rarr;</button>
-    </div>
-    <div class="expected-card no-print" id="expectedCard">
-      <span class="expected-card-label">Expected Total for this day</span>
-      <input type="number" id="expectedInput" placeholder="e.g. 35000" step="any">
-      <span class="small-note">Set this once at the start of the day, then add entries as usual — the Detail Report will show you if the total matches.</span>
     </div>
     <div class="toolbar">
       <button class="btn-solid" id="addRowBtn">+ Add Row</button>
@@ -770,6 +780,22 @@
     </div>
   </div>
 
+  <!-- EXPECTED TOTAL — its own page: pick a date, enter what Munshi (the
+       hotel management software) shows as that day's total, save. Nothing
+       else on this page on purpose — it's just for that one comparison. -->
+  <div class="tabpanel" id="tab-expected" style="display:none">
+    <div class="form-card" style="max-width:420px;">
+      <h3>Expected Total</h3>
+      <p class="small-note" style="margin-top:0;">Pick a date, enter what Munshi shows as that day's total, and save — the Detail Report for that date will compare it against what's actually recorded here.</p>
+      <div class="form-grid">
+        <label><span>Date</span><input type="date" id="expDateInput"></label>
+        <label><span>Expected Total</span><input type="number" id="expTotalInput" placeholder="e.g. 35000" step="any"></label>
+      </div>
+      <button class="btn-solid" id="expSaveBtn" style="margin-top:14px;">Save</button>
+      <div class="small-note" id="expSavedNote" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
   <!-- TAB 6: ALL — everything about the selected date on one page,
        with a fully-editable master table on top for finding & fixing mistakes -->
   <div class="tabpanel" id="tab-overview" style="display:none">
@@ -918,9 +944,33 @@
   }
   let pendingSync = loadPendingSync();
   function queueSync(op){
+    op._qid = op._qid || (Date.now().toString(36) + Math.random().toString(36).slice(2,8));
     pendingSync.push(op);
     savePendingSync(pendingSync);
     updateCloudIndicator();
+    return op._qid;
+  }
+  // Removes one specific queued op once its push actually reaches the
+  // server — called after a successful push that was queued up-front (see
+  // below), never touched by ops that are still failing/retrying.
+  function dequeueSync(qid){
+    pendingSync = pendingSync.filter(op => op._qid !== qid);
+    savePendingSync(pendingSync);
+    updateCloudIndicator();
+  }
+  // Rows/dates this browser has changes for that haven't reached the server
+  // yet — a fresh pull from the database must leave these alone rather than
+  // overwrite or resurrect them with an older server copy.
+  function pendingSyncSets(){
+    const editedIds = new Set();
+    const deletedIds = new Set();
+    const expectedDates = new Set();
+    pendingSync.forEach(op => {
+      if (op.type === "entry" || op.type === "payment") editedIds.add(op.payload.id);
+      else if (op.type === "delete_entry" || op.type === "delete_payment") deletedIds.add(op.id);
+      else if (op.type === "expected_total") expectedDates.add(op.dateISO);
+    });
+    return { editedIds, deletedIds, expectedDates };
   }
 
   function updateCloudIndicator(){
@@ -951,61 +1001,69 @@
     return { id: row.id, entry_id: row.entry_id, payment_date: row.payment_date, cash: num(row.cash), account: num(row.account), created_at: row.created_at };
   }
 
+  // Every push below queues itself to PENDING_SYNC_KEY (localStorage,
+  // synchronous) BEFORE the network call goes out, then dequeues on
+  // success. That way the backup record survives even if the tab is
+  // closed / the network dies mid-request — a case where the promise
+  // never resolves or rejects, so a catch-only queue (the old approach)
+  // would silently lose the retry. Worst case this app ever sees is "not
+  // yet synced" (shown in the cloud indicator + retried every 15s / on
+  // reconnect), never "silently never synced".
   async function cloudUpsertEntry(row){
     if (!sb) return;
     const payload = entryCloudPayload(row);
+    const qid = queueSync({ type: "entry", payload });
     try {
       const { error } = await sb.from("entries").upsert(payload, { onConflict: "id" });
       if (error) throw error;
-      updateCloudIndicator();
+      dequeueSync(qid);
     } catch(e){
       console.error("Cloud push (entry) failed, queued for retry", e);
-      queueSync({ type: "entry", payload });
     }
   }
   async function cloudUpsertPayment(row){
     if (!sb) return;
     const payload = paymentCloudPayload(row);
+    const qid = queueSync({ type: "payment", payload });
     try {
       const { error } = await sb.from("payments").upsert(payload, { onConflict: "id" });
       if (error) throw error;
-      updateCloudIndicator();
+      dequeueSync(qid);
     } catch(e){
       console.error("Cloud push (payment) failed, queued for retry", e);
-      queueSync({ type: "payment", payload });
     }
   }
   async function cloudSoftDeleteEntry(id){
     if (!sb) return;
+    const qid = queueSync({ type: "delete_entry", id });
     try {
       const { error } = await sb.rpc("soft_delete_entry", { p_entry_id: id, p_reason: null });
       if (error) throw error;
-      updateCloudIndicator();
+      dequeueSync(qid);
     } catch(e){
       console.error("Cloud delete failed, queued for retry", e);
-      queueSync({ type: "delete_entry", id });
     }
   }
   async function cloudSoftDeletePayment(id){
     if (!sb) return;
+    const qid = queueSync({ type: "delete_payment", id });
     try {
       const { error } = await sb.rpc("soft_delete_payment", { p_payment_id: id });
       if (error) throw error;
-      updateCloudIndicator();
+      dequeueSync(qid);
     } catch(e){
       console.error("Cloud payment-delete failed, queued for retry", e);
-      queueSync({ type: "delete_payment", id });
     }
   }
   async function cloudUpsertExpectedTotal(dateISO, amount){
     if (!sb) return;
+    const qid = queueSync({ type: "expected_total", dateISO, amount: num(amount) });
     try {
       const { error } = await sb.from("expected_totals").upsert({ expected_date: dateISO, expected_amount: num(amount) }, { onConflict: "expected_date" });
       if (error) throw error;
-      updateCloudIndicator();
+      dequeueSync(qid);
     } catch(e){
       console.error("Cloud push (expected total) failed, queued for retry", e);
-      queueSync({ type: "expected_total", dateISO, amount: num(amount) });
     }
   }
 
@@ -1033,8 +1091,8 @@
     savePendingSync(pendingSync);
     updateCloudIndicator();
   }
-  window.addEventListener("online", flushPendingSync);
-  setInterval(flushPendingSync, 25000);
+  window.addEventListener("online", () => { flushPendingSync(); pullFreshFromCloud(); });
+  setInterval(() => { flushPendingSync(); pullFreshFromCloud(); }, 15000);
 
   // =========================================================
   // DATA LAYER — localStorage first (instant, offline-proof), Supabase
@@ -1063,6 +1121,23 @@
     function write(key, data){
       try { localStorage.setItem(key, JSON.stringify(data)); }
       catch(e){ console.error("DB write failed", key, e); alert("Warning: could not save to local storage."); }
+    }
+    function normalizeRemoteEntry(r){
+      return {
+        id: r.id, sr: r.sr, room: r.room || "", guest_name: r.guest_name || "",
+        check_in: r.check_in || "", entry_date: r.entry_date,
+        entry_type: r.entry_type === "advance" ? "advance" : "payment",
+        room_rent: num(r.room_rent), cash_received: num(r.cash_received), account_received: num(r.account_received),
+        advance_cash: num(r.advance_cash || 0), advance_account: num(r.advance_account || 0),
+        remarks: r.remarks || "", check_out_date: r.check_out_date || null,
+        created_at: r.created_at
+      };
+    }
+    function normalizeRemotePayment(p){
+      return {
+        id: p.id, entry_id: p.entry_id, payment_date: p.payment_date,
+        cash: num(p.cash), account: num(p.account), created_at: p.created_at
+      };
     }
 
     let entries = read(ENTRIES_KEY);
@@ -1137,23 +1212,34 @@
         if (removed) cloudSoftDeletePayment(removed.id);
         return removed;
       },
-      // Used once, at startup, only when this browser's local storage is
-      // empty — repopulates it from whatever Supabase already has (a new
-      // device, or this browser's storage got cleared).
-      async __replaceAll(remoteEntries, remotePayments){
-        entries = remoteEntries.map(r => ({
-          id: r.id, sr: r.sr, room: r.room || "", guest_name: r.guest_name || "",
-          check_in: r.check_in || "", entry_date: r.entry_date,
-          entry_type: r.entry_type === "advance" ? "advance" : "payment",
-          room_rent: num(r.room_rent), cash_received: num(r.cash_received), account_received: num(r.account_received),
-          advance_cash: num(r.advance_cash || 0), advance_account: num(r.advance_account || 0),
-          remarks: r.remarks || "", check_out_date: r.check_out_date || null,
-          created_at: r.created_at
-        }));
-        payments = remotePayments.map(p => ({
-          id: p.id, entry_id: p.entry_id, payment_date: p.payment_date,
-          cash: num(p.cash), account: num(p.account), created_at: p.created_at
-        }));
+      // Called on every load/refresh (not just when empty) so this browser
+      // always reflects the real database, not a stale local copy — except
+      // for rows this browser has changes for that haven't reached the
+      // server yet (editedIds/deletedIds, from the pending-sync queue),
+      // which are left alone so an in-flight edit or delete is never
+      // clobbered/resurrected by an older server copy.
+      async mergeFromRemote(remoteEntries, remotePayments, editedIds, deletedIds){
+        const localEntryMap = new Map(entries.map(e => [e.id, e]));
+        const localPaymentMap = new Map(payments.map(p => [p.id, p]));
+        const remoteEntryIds = new Set(remoteEntries.map(r => r.id));
+        const remotePaymentIds = new Set(remotePayments.map(r => r.id));
+
+        const merged = remoteEntries
+          .filter(r => !deletedIds.has(r.id))
+          .map(r => editedIds.has(r.id) && localEntryMap.has(r.id) ? localEntryMap.get(r.id) : normalizeRemoteEntry(r));
+        entries.forEach(local => {
+          if (!remoteEntryIds.has(local.id) && editedIds.has(local.id)) merged.push(local);
+        });
+        entries = merged;
+
+        const mergedP = remotePayments
+          .filter(r => !deletedIds.has(r.id))
+          .map(r => editedIds.has(r.id) && localPaymentMap.has(r.id) ? localPaymentMap.get(r.id) : normalizeRemotePayment(r));
+        payments.forEach(local => {
+          if (!remotePaymentIds.has(local.id) && editedIds.has(local.id)) mergedP.push(local);
+        });
+        payments = mergedP;
+
         persistEntries();
         persistPayments();
       }
@@ -1295,12 +1381,24 @@
   }
 
   // In-house on date D: the entry existed by D and hadn't checked out
-  // (reached fully paid) before D. Still-unpaid guests are in-house on every
-  // date from their entry date onward — nonpayment never checks anyone out.
+  // (reached fully paid, or explicitly checked out) before D. Still-unpaid
+  // guests are in-house on every date from their entry date onward —
+  // nonpayment never checks anyone out — UNLESS Checkout has been set
+  // explicitly, which always wins: a guest who has actually checked out
+  // stops appearing on later dates even with an open balance (chase that
+  // balance from the Pending tab instead, which isn't date-filtered).
   function isInHouseOn(entry, dateISO){
     if (entry.entry_date > dateISO) return false;
+    if (entry.check_out_date) return entry.check_out_date >= dateISO;
     if (entryPending(entry) > 0.001) return true;
-    return checkoutDateForEntry(entry) >= dateISO;
+    // Room Rent not filled in yet -> checkoutDateForEntry() has nothing to
+    // compute a checkout from and returns null. That must mean "hasn't
+    // checked out" (still in-house), not fail the >= comparison below —
+    // null coerces to 0 there, which loses against any real date string
+    // and silently hid rows with a blank Room Rent from every list that
+    // calls this, even though the row was saved fine.
+    const co = checkoutDateForEntry(entry);
+    return co === null || co >= dateISO;
   }
 
   // ---------- NAVIGATION (left sidebar + slim top bar) ----------
@@ -1318,9 +1416,23 @@
     if (name === "report") renderReport();
     if (name === "detailreport") renderDetailReport();
     if (name === "overview") renderOverview();
+    if (name === "expected") syncExpectedTotalTab();
   }
   navButtons.forEach(btn => btn.addEventListener("click", () => showTab(btn.dataset.tab)));
   document.getElementById("tab-today").style.display = "block";
+
+  // ---------- SIDEBAR TOGGLE — closed by default on every load, opened
+  // on demand via the ☰ button; picking a page or clicking outside closes it. ----------
+  const sideNav = document.getElementById("sideNav");
+  const sidebarToggle = document.getElementById("sidebarToggle");
+  const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+  function openSidebar(){ sideNav.classList.add("open"); sidebarBackdrop.classList.add("show"); }
+  function closeSidebar(){ sideNav.classList.remove("open"); sidebarBackdrop.classList.remove("show"); }
+  sidebarToggle.addEventListener("click", () => {
+    sideNav.classList.contains("open") ? closeSidebar() : openSidebar();
+  });
+  sidebarBackdrop.addEventListener("click", closeSidebar);
+  sideNav.querySelectorAll("button").forEach(btn => btn.addEventListener("click", closeSidebar));
 
   // =========================================================
   // GLOBAL DATE — one selected date shared by the whole app.
@@ -1336,11 +1448,6 @@
     document.querySelectorAll(".g-date").forEach(inp => { inp.value = currentDate; inp.max = t; });
     document.querySelectorAll(".g-badge").forEach(b => { b.textContent = fmtDateCompact(currentDate); });
     document.querySelectorAll(".g-next").forEach(btn => { btn.disabled = currentDate >= t; });
-    const expInput = document.getElementById("expectedInput");
-    if (expInput && document.activeElement !== expInput) {
-      const v = getExpectedTotal(currentDate);
-      expInput.value = (v === null) ? "" : v;
-    }
   }
 
   // This system only tracks payments actually received, so it never makes
@@ -1397,6 +1504,7 @@
     });
     await refreshAll();
     renderEntry();
+    requestBackgroundPull();
     // drop the cursor straight into the new row's Room field
     const rows = document.querySelectorAll("#entryTbody tr:not(.ghost-row)");
     const last = rows[rows.length - 1];
@@ -1407,25 +1515,28 @@
 
   document.getElementById("todaySearch").addEventListener("input", renderEntry);
 
-  // EXPECTED TOTAL — saved per day, debounced like every other field, and
-  // saved immediately on Enter so it behaves exactly like the rest of the app.
-  let expectedSaveTimer = null;
-  const expectedInput = document.getElementById("expectedInput");
-  expectedInput.addEventListener("input", () => {
-    clearTimeout(expectedSaveTimer);
-    expectedSaveTimer = setTimeout(() => {
-      setExpectedTotal(currentDate, expectedInput.value);
-      renderDetailReport();
-    }, 400);
+  // EXPECTED TOTAL — its own page, its own date (independent of the global
+  // date used everywhere else), explicit Save button instead of autosave.
+  const expDateInput = document.getElementById("expDateInput");
+  const expTotalInput = document.getElementById("expTotalInput");
+  const expSaveBtn = document.getElementById("expSaveBtn");
+  const expSavedNote = document.getElementById("expSavedNote");
+  function syncExpectedTotalTab(){
+    expDateInput.max = todayISO();
+    if (!expDateInput.value) expDateInput.value = todayISO();
+    const v = getExpectedTotal(expDateInput.value);
+    expTotalInput.value = (v === null) ? "" : v;
+    expSavedNote.textContent = "";
+  }
+  expDateInput.addEventListener("change", syncExpectedTotalTab);
+  expSaveBtn.addEventListener("click", () => {
+    const dateISO = expDateInput.value || todayISO();
+    setExpectedTotal(dateISO, expTotalInput.value);
+    renderDetailReport();
+    expSavedNote.textContent = `Saved for ${fmtDateLong(dateISO)}.`;
   });
-  expectedInput.addEventListener("keydown", (ev) => {
-    if (ev.key === "Enter") {
-      ev.preventDefault();
-      clearTimeout(expectedSaveTimer);
-      setExpectedTotal(currentDate, expectedInput.value);
-      renderDetailReport();
-      expectedInput.blur();
-    }
+  expTotalInput.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") { ev.preventDefault(); expSaveBtn.click(); }
   });
 
   // Deleting is permanent (removes payment/pending-recovery history too), so
@@ -1478,6 +1589,7 @@
     await DB.deleteEntry(id);
     await refreshAll();
     renderEntry();
+    requestBackgroundPull();
   });
 
   async function deleteEntry(id){
@@ -1520,11 +1632,13 @@
       await refreshAll();
       markRowSaved(tr, entry);
       renderDerived();
+      requestBackgroundPull();
       return;
     }
     await DB.updateEntry(entry.id, entrySnapshot(entry));
     await refreshAll();
     markRowSaved(tr, entry);
+    requestBackgroundPull();
   }
 
   // Rows with changes not yet written — auto-save clears them about half a
@@ -1615,7 +1729,7 @@
         <td><input type="text" data-field="room" list="roomList" autocomplete="off" value="${escapeAttr(entry.room)}"></td>
         <td class="name-cell"><input type="text" data-field="guest_name" value="${escapeAttr(entry.guest_name)}"></td>
         <td><input type="date" data-field="check_in" value="${entry.check_in || ""}"></td>
-        <td><input type="date" data-field="check_out_date" value="${entry.check_out_date || ""}" max="${todayISO()}" title="Checkout date — editable directly, same as Check-in"></td>
+        <td><input type="date" data-field="check_out_date" value="${entry.check_out_date || ""}" min="${entry.check_in ? addDays(entry.check_in, 1) : ""}" title="Checkout must be a date after Check-in"></td>
         <td class="money-cell"><input type="number" data-field="room_rent" value="${entry.room_rent || 0}"></td>
         <td class="money-cell"><input type="number" data-field="advance_cash" value="${entry.advance_cash || 0}"></td>
         <td class="money-cell"><input type="number" data-field="advance_account" value="${entry.advance_account || 0}"></td>
@@ -1656,6 +1770,29 @@
           }
           if (isMoney) refreshPendingCell();
         });
+      });
+
+      // Check-in can be any date. Checkout just has to land after whatever
+      // Check-in is currently set to — its min updates live as Check-in changes.
+      const checkInField = tr.querySelector('input[data-field="check_in"]');
+      const checkOutField = tr.querySelector('input[data-field="check_out_date"]');
+      checkInField.addEventListener("change", () => {
+        checkOutField.min = checkInField.value ? addDays(checkInField.value, 1) : "";
+        if (checkInField.value && checkOutField.value && checkOutField.value <= checkInField.value) {
+          alert("Checkout date must be after the new Check-in date — please re-check Checkout.");
+          checkOutField.value = "";
+          entry.check_out_date = "";
+          markRowDirty(tr, entry);
+        }
+      });
+      checkOutField.addEventListener("change", () => {
+        const v = checkOutField.value;
+        if (v && entry.check_in && v <= entry.check_in) {
+          alert("Checkout date must be after Check-in.");
+          checkOutField.value = entry.check_out_date || "";
+          entry.check_out_date = checkOutField.value;
+          markRowDirty(tr, entry);
+        }
       });
 
       tr.querySelectorAll("input, textarea").forEach(input => {
@@ -2025,6 +2162,7 @@
     document.getElementById("collectModal").classList.remove("active");
     collectTargetEntryId = null;
     renderAll();
+    requestBackgroundPull();
   });
 
   // =========================================================
@@ -2338,7 +2476,11 @@
   function entriesForAllTable(from, to){
     return entries.filter(e =>
       (e.entry_date >= from && e.entry_date <= to) ||
-      (e.entry_date <= to && (entryPending(e) > 0.001 || checkoutDateForEntry(e) >= from)) ||
+      // checkoutDateForEntry() returns null when Room Rent is blank (nothing
+      // to compute a checkout from) — that means "never checked out", so it
+      // must count as still in-house, not fail the >= comparison (see the
+      // matching note on isInHouseOn above).
+      (e.entry_date <= to && (entryPending(e) > 0.001 || checkoutDateForEntry(e) === null || checkoutDateForEntry(e) >= from)) ||
       payments.some(p => p.entry_id === e.id && p.payment_date >= from && p.payment_date <= to)
     );
   }
@@ -2415,7 +2557,7 @@
         <td class="name-cell"><input type="text" data-field="guest_name" value="${escapeAttr(entry.guest_name)}"></td>
         <td><input type="date" data-field="check_in" value="${entry.check_in || ""}"></td>
         <td><input type="date" data-field="entry_date" value="${entry.entry_date || ""}" max="${todayISO()}"></td>
-        <td><input type="date" data-field="check_out_date" value="${entry.check_out_date || ""}" max="${todayISO()}" title="${checkoutTitle}"></td>
+        <td><input type="date" data-field="check_out_date" value="${entry.check_out_date || ""}" min="${entry.check_in ? addDays(entry.check_in, 1) : ""}" title="${checkoutTitle || "Checkout must be a date after Check-in"}"></td>
         <td class="money-cell"><input type="number" data-field="room_rent" value="${entry.room_rent || 0}"></td>
         <td class="money-cell"><input type="number" data-field="cash_received" value="${entry.cash_received || 0}"></td>
         <td class="money-cell"><input type="number" data-field="account_received" value="${entry.account_received || 0}"></td>
@@ -2471,6 +2613,29 @@
         }
         entry.entry_date = v;
         markRowDirty(tr, entry);
+      });
+
+      // Same rule as the Entry tab: Check-in can be any date, Checkout just
+      // has to land after whatever Check-in is currently set to.
+      const checkInField = tr.querySelector('input[data-field="check_in"]');
+      const checkOutField = tr.querySelector('input[data-field="check_out_date"]');
+      checkInField.addEventListener("change", () => {
+        checkOutField.min = checkInField.value ? addDays(checkInField.value, 1) : "";
+        if (checkInField.value && checkOutField.value && checkOutField.value <= checkInField.value) {
+          alert("Checkout date must be after the new Check-in date — please re-check Checkout.");
+          checkOutField.value = "";
+          entry.check_out_date = "";
+          markRowDirty(tr, entry);
+        }
+      });
+      checkOutField.addEventListener("change", () => {
+        const v = checkOutField.value;
+        if (v && entry.check_in && v <= entry.check_in) {
+          alert("Checkout date must be after Check-in.");
+          checkOutField.value = entry.check_out_date || "";
+          entry.check_out_date = checkOutField.value;
+          markRowDirty(tr, entry);
+        }
       });
 
       tr.querySelector('[data-action="save"]').addEventListener("click", () => saveRowNow(entry, tr));
@@ -2585,17 +2750,46 @@
   }
 
   // ---------- CLOUD BOOTSTRAP ----------
-  // Runs once per browser, right after login. If this browser has no
-  // local data at all, pull down whatever Supabase already has — recovers
-  // a wiped browser or sets up a brand new device automatically. If it DOES
-  // have local data that's never been pushed before, push all of it up
-  // once so older, pre-cloud history gets backed up too.
+  // Runs once per browser, right after login — and only ever needs to push
+  // anything up if this browser has old pre-cloud history that was never
+  // backed up. One bulk upsert per table (not one row at a time — a
+  // sequential per-row loop here used to be the slow part on first login).
   async function bootstrapCloudSync(){
     if (!sb) return;
-    const hasLocalData = entries.length > 0 || payments.length > 0;
     const alreadyBootstrapped = localStorage.getItem(BOOTSTRAPPED_KEY) === "1";
+    if (!alreadyBootstrapped && (entries.length || payments.length || Object.keys(expectedTotals).length)) {
+      try {
+        if (entries.length) {
+          const { error } = await sb.from("entries").upsert(entries.map(entryCloudPayload), { onConflict: "id" });
+          if (error) throw error;
+        }
+        if (payments.length) {
+          const { error } = await sb.from("payments").upsert(payments.map(paymentCloudPayload), { onConflict: "id" });
+          if (error) throw error;
+        }
+        for (const dateISO of Object.keys(expectedTotals)) await cloudUpsertExpectedTotal(dateISO, expectedTotals[dateISO]);
+        localStorage.setItem(BOOTSTRAPPED_KEY, "1");
+      } catch(e){
+        console.error("Initial cloud backup failed, will keep retrying on future saves", e);
+      }
+    } else if (!alreadyBootstrapped) {
+      localStorage.setItem(BOOTSTRAPPED_KEY, "1");
+    }
+    await pullFreshFromCloud();
+  }
 
-    if (!hasLocalData) {
+  // ---------- CLOUD PULL — always the real database, never a stale cache ----------
+  // Runs after login, after every save, on 'online', and on the sync
+  // interval — always a genuine fetch of entries_active/payments_active/
+  // expected_totals (no skipping it just because local data already exists).
+  // Rows this browser has unsynced changes for (pendingSyncSets) are left
+  // alone so an in-flight edit is never overwritten mid-flight; everything
+  // else gets replaced with the real server copy every time.
+  let pullInFlight = null;
+  async function pullFreshFromCloud(){
+    if (!sb) return;
+    if (pullInFlight) return pullInFlight; // already fetching — don't pile up requests
+    pullInFlight = (async () => {
       try {
         const [entriesRes, paymentsRes, expectedRes] = await Promise.all([
           sb.from("entries_active").select("*"),
@@ -2605,32 +2799,34 @@
         if (entriesRes.error) throw entriesRes.error;
         if (paymentsRes.error) throw paymentsRes.error;
         if (expectedRes.error) throw expectedRes.error;
-        const remoteEntries = entriesRes.data || [];
-        const remotePayments = paymentsRes.data || [];
-        const remoteExpected = expectedRes.data || [];
-        if (remoteEntries.length || remotePayments.length) {
-          await DB.__replaceAll(remoteEntries, remotePayments);
-        }
-        if (remoteExpected.length) {
-          expectedTotals = {};
-          remoteExpected.forEach(r => { expectedTotals[r.expected_date] = num(r.expected_amount); });
-          try { localStorage.setItem(EXPECTED_KEY, JSON.stringify(expectedTotals)); } catch(e){ /* best effort */ }
-        }
-        localStorage.setItem(BOOTSTRAPPED_KEY, "1");
+
+        const { editedIds, deletedIds, expectedDates } = pendingSyncSets();
+        await DB.mergeFromRemote(entriesRes.data || [], paymentsRes.data || [], editedIds, deletedIds);
+
+        const merged = {};
+        (expectedRes.data || []).forEach(r => { merged[r.expected_date] = num(r.expected_amount); });
+        expectedDates.forEach(d => { if (expectedTotals[d] !== undefined) merged[d] = expectedTotals[d]; });
+        expectedTotals = merged;
+        try { localStorage.setItem(EXPECTED_KEY, JSON.stringify(expectedTotals)); } catch(e){ /* best effort */ }
+
+        await refreshAll();
+        renderAll();
+        updateCloudIndicator();
       } catch(e){
-        console.error("Cloud pull failed, continuing with whatever is stored locally", e);
+        console.error("Cloud refresh failed, staying on local cache", e);
+      } finally {
+        pullInFlight = null;
       }
-    } else if (!alreadyBootstrapped) {
-      try {
-        for (const e of entries) await cloudUpsertEntry(e);
-        for (const p of payments) await cloudUpsertPayment(p);
-        for (const dateISO of Object.keys(expectedTotals)) await cloudUpsertExpectedTotal(dateISO, expectedTotals[dateISO]);
-        localStorage.setItem(BOOTSTRAPPED_KEY, "1");
-      } catch(e){
-        console.error("Initial cloud backup failed, will keep retrying on future saves", e);
-      }
-    }
-    updateCloudIndicator();
+    })();
+    return pullInFlight;
+  }
+  // Fire a pull shortly after any local save/delete — collapses a burst of
+  // saves (e.g. SAVE ALL looping over many rows) into a single pull instead
+  // of one per row, and never blocks the save itself since it's not awaited.
+  let pullDebounceTimer = null;
+  function requestBackgroundPull(){
+    clearTimeout(pullDebounceTimer);
+    pullDebounceTimer = setTimeout(() => pullFreshFromCloud(), 800);
   }
 
   // ---------- LOGIN ----------
@@ -2694,12 +2890,14 @@
     showStorageWarningIfNeeded();
     makeTablesResizable();
     updateSaveAllBtn();
-    await refreshAll();
-    await bootstrapCloudSync();
+    // Paint instantly from local cache first — never block the screen on a
+    // network round trip. The cloud bootstrap + pull below run in the
+    // background and re-render the moment the real database responds.
     await refreshAll();
     renderAll();
     updateCloudIndicator();
     flushPendingSync();
+    bootstrapCloudSync();
   }
 
   function showApp(){
