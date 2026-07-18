@@ -1,0 +1,3781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guest Entry Form</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<!-- self-hosted: Edge/Brave Tracking Prevention silently blocks some CDN
+     copies (this is why supabase.js is served locally too) -->
+<script src="xlsx.full.min.js"></script>
+<style>
+  :root{
+    /* Luxury hospitality palette: deep navy + gold, slate-cool surfaces */
+    --ink:#172554;        /* deep navy — text, buttons, table borders */
+    --paper:#FFFFFF;      /* white page background */
+    --muted:#5B6B84;      /* slate — labels, secondary text */
+    --cash:#166534;       /* green — cash amounts */
+    --account:#1D4ED8;    /* blue — bank/account amounts */
+    --line:#17255426;
+    --amber:#E7C55A;      /* gold accent — table headers, highlights */
+    --gold-deep:#A16207;  /* darker gold for text/borders on light bg */
+    --danger:#B91C1C;
+    --danger-bg:#FEE2E2;
+    /* legacy aliases so nothing else in the file breaks */
+    --bg:var(--paper);
+    --panel:#ffffff;
+    --text:var(--ink);
+    --accent:var(--account);
+    --accent2:var(--cash);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+  }
+  h1{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:26px;
+    letter-spacing:-0.01em;
+    margin:0 0 4px;
+  }
+  .sub{
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:20px;
+  }
+  .panel{
+    background:#fff;
+    border:1px solid var(--line);
+    border-left:4px solid var(--ink);
+    border-radius:6px;
+    padding:18px;
+    margin-bottom:18px;
+  }
+  .panel.accent-guest{ border-left-color:var(--ink); }
+  .panel.accent-rooms{ border-left-color:var(--amber); }
+  .panel.accent-payments{ border-left-color:var(--cash); }
+  .panel.accent-filters{ border-left-color:var(--account); }
+  .panel.accent-report{ border-left-color:var(--cash); }
+  .panel h2{
+    font-family:'Inter',sans-serif;
+    font-size:16px;
+    text-transform:uppercase;
+    letter-spacing:0.07em;
+    color:var(--ink);
+    font-weight:700;
+    margin:0 0 14px;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--line);
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:12px;
+  }
+  /* ---- Payment mode colour-coding ---- */
+  .cash-amt{ color:var(--cash) !important; font-weight:700; }
+  .account-amt{ color:var(--account) !important; font-weight:700; }
+  tr.mode-cash td{ background:#E9F6EF; }
+  tr.mode-bank td{ background:#EAF1FC; }
+  tbody tr.mode-cash:nth-child(even) td{ background:#DDF0E5; }
+  tbody tr.mode-bank:nth-child(even) td{ background:#DEE9FA; }
+  .mode-badge{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:3px;
+    font-size:10.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+  .mode-badge.cash{ background:#CBEEDA; color:var(--cash); }
+  .mode-badge.bank{ background:#D7E3FB; color:var(--account); }
+  input:disabled, select:disabled{ opacity:0.55; }
+  .payCash:not(:disabled), #dNewCash:not(:disabled){ border-color:var(--cash); box-shadow:inset 0 0 0 1px var(--cash); }
+  .payAccount:not(:disabled), #dNewAccount:not(:disabled){ border-color:var(--account); box-shadow:inset 0 0 0 1px var(--account); }
+  label{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-size:10.5px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:5px;
+  }
+  .req{
+    color:var(--danger);
+  }
+  input, select{
+    width:100%;
+    background:#fff;
+    border:1px solid var(--ink);
+    border-radius:4px;
+    color:var(--ink);
+    padding:8px 10px;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    min-height:34px;
+  }
+  input::placeholder{ color:var(--muted); }
+  .date-readout{
+    display:block;
+    width:100%;
+    text-align:center;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.03em;
+    color:var(--account);
+    margin-top:4px;
+  }
+  .date-readout:empty{ display:none; }
+  input:focus, select:focus{
+    outline:2px solid var(--account);
+    outline-offset:0;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  input[type="number"]{ -moz-appearance:textfield; appearance:textfield; }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  th{
+    text-align:left;
+    color:#fff;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    padding:10px 8px;
+    background:var(--ink);
+    border:1px solid #0F1A3D;
+  }
+  td{
+    padding:6px 8px;
+    border:1px solid #00000018;
+    vertical-align:middle;
+  }
+  tbody tr:nth-child(even) td{ background:#F7F9FC; }
+  td input, td select{
+    padding:6px 8px;
+    font-size:13px;
+    min-height:30px;
+  }
+  .roomctrl{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  input.duplicate, select.duplicate{
+    border-color:var(--danger) !important;
+    background:var(--danger-bg) !important;
+  }
+  .roomctrl button{
+    width:26px;
+    height:26px;
+    border-radius:4px;
+    border:1px solid var(--ink);
+    background:#fff;
+    color:var(--ink);
+    font-size:14px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .roomctrl button:hover{
+    background:var(--ink);
+    color:#fff;
+  }
+  .roomctrl span{
+    min-width:20px;
+    text-align:center;
+    font-weight:600;
+  }
+  .rowtotal{
+    font-weight:700;
+    font-family:'Inter',sans-serif;
+    color:var(--cash);
+  }
+  .rmno{
+    text-align:center;
+    color:var(--muted);
+  }
+  .actions{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:12px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .btn{
+    font-family:'Inter',sans-serif;
+    background:var(--ink);
+    color:var(--paper);
+    border:1px solid var(--ink);
+    padding:9px 16px;
+    border-radius:4px;
+    font-size:12px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    font-weight:600;
+    cursor:pointer;
+    min-height:38px;
+  }
+  .btn:hover{ opacity:0.85; }
+  .btn.secondary{
+    background:transparent;
+    color:var(--ink);
+    border:1px solid var(--ink);
+  }
+  .btn.secondary:hover{
+    background:var(--ink);
+    color:var(--paper);
+  }
+  .btn.danger{
+    background:transparent;
+    color:var(--danger);
+    border:1px solid var(--danger);
+    padding:4px 8px;
+    font-size:12px;
+    min-height:auto;
+  }
+  .btn.danger:hover{
+    background:var(--danger);
+    color:#fff;
+  }
+  .btn.success{
+    background:var(--cash);
+    border:1px solid var(--cash);
+    color:#fff;
+  }
+  .btn.success:hover{
+    opacity:0.85;
+  }
+  .btn.edit-gold{
+    background:var(--amber);
+    border:1px solid var(--gold-deep);
+    color:var(--ink);
+  }
+  .btn.edit-gold:hover{
+    background:var(--gold-deep);
+    border-color:var(--gold-deep);
+    color:#fff;
+    opacity:1;
+  }
+  .btn.danger-solid{
+    background:var(--danger);
+    border:1px solid var(--danger);
+    color:#fff;
+  }
+  .btn.danger-solid:hover{
+    opacity:0.85;
+  }
+  .grandtotal{
+    font-family:'Inter',sans-serif;
+    font-size:16px;
+    font-weight:700;
+    color:var(--cash);
+  }
+  .del{
+    text-align:center;
+  }
+  .roomno-wrap{
+    position:relative;
+  }
+  .roomno-list{
+    display:none;
+    position:absolute;
+    top:calc(100% + 4px);
+    left:0;
+    right:0;
+    z-index:30;
+    background:#fff;
+    border:1px solid var(--ink);
+    border-radius:4px;
+    max-height:190px;
+    overflow-y:auto;
+    box-shadow:0 6px 18px rgba(0,0,0,0.18);
+  }
+  .roomno-list.show{
+    display:block;
+  }
+  .roomno-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:7px 10px;
+    font-size:13px;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .roomno-item:hover{
+    background:var(--amber);
+  }
+  .roomno-item .grp{
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    color:var(--muted);
+  }
+  .roomno-empty{
+    padding:8px 10px;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .summary{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:12px;
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+  }
+  .summary .box{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:10px 12px;
+  }
+  .summary .box .lbl{
+    font-family:'Inter',sans-serif;
+    font-size:10.5px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin-bottom:4px;
+  }
+  .summary .box .val{
+    font-family:'Inter',sans-serif;
+    font-size:16px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .status{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:3px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+  }
+  .status.paid{
+    background:#CBEEDA;
+    color:var(--cash);
+  }
+  .status.pending{
+    background:var(--danger-bg);
+    color:var(--danger);
+  }
+  .status.partial{
+    background:#F7EBC5;
+    color:var(--gold-deep);
+  }
+
+  /* ---- Layout / Sidebar (off-canvas, matches Riviera tracker) ---- */
+  .sidebar-toggle{
+    position:fixed; top:14px; left:14px; z-index:60;
+    width:38px; height:38px;
+    border:1px solid var(--ink);
+    border-radius:6px;
+    background:var(--ink);
+    color:var(--paper);
+    font-size:17px;
+    cursor:pointer;
+  }
+  .sidebar-backdrop{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.25);
+    z-index:39;
+  }
+  .sidebar-backdrop.show{ display:block; }
+  .sidebar{
+    position:fixed;
+    left:0; top:0; bottom:0;
+    width:210px;
+    background:#fff;
+    border-right:2px solid var(--ink);
+    padding:64px 12px 20px; /* top padding clears the fixed ☰ toggle */
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    overflow-y:auto;
+    z-index:40;
+    transform:translateX(-100%);
+    transition:transform 0.2s ease;
+    box-shadow:3px 0 14px rgba(0,0,0,0.18);
+  }
+  .sidebar.open{ transform:translateX(0); }
+  .sidebar-inner{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .brand{
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 6px 10px;
+    padding-left:34px;
+  }
+  .navitem{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    text-align:left;
+    border:1px solid transparent;
+    border-radius:4px;
+    padding:10px 12px;
+    color:var(--ink);
+    cursor:pointer;
+    min-height:40px;
+  }
+  .navitem:hover{ border-color:var(--ink); }
+  .navitem.active{
+    background:var(--ink);
+    color:var(--paper);
+    font-weight:600;
+  }
+  .main{
+    flex:1;
+    min-width:0;
+    max-width:1100px;
+    margin:0 auto;
+    padding:28px 20px 60px;
+  }
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:44px;
+    margin-bottom:18px;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:16px;
+  }
+  .topbar-left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  #cloudStatus{
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:0.03em;
+  }
+  #whoami{
+    font-family:'Inter',sans-serif;
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .view{
+    display:none;
+  }
+  .view.active{
+    display:block;
+  }
+  .day-group{
+    margin-bottom:16px;
+  }
+  .day-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 10px;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.05em;
+    border-radius:4px;
+    margin-bottom:6px;
+  }
+  .day-total{
+    color:var(--amber);
+  }
+  .empty-note{
+    color:var(--muted);
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    padding:20px 4px;
+    text-align:center;
+  }
+  .report-grandbar{
+    display:flex;
+    justify-content:flex-end;
+    gap:24px;
+    padding:14px 4px 0;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+  }
+  .report-grandbar b{
+    color:var(--ink);
+    font-size:15px;
+  }
+  .topnav{
+    display:inline-flex;
+    flex-wrap:wrap;
+    border:1px solid var(--ink);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .topnav .navbtn{
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    border:none;
+    background:transparent;
+    color:var(--ink);
+    padding:10px 20px;
+    cursor:pointer;
+    min-height:40px;
+  }
+  .topnav .navbtn + .navbtn{ border-left:1px solid var(--ink); }
+  .topnav .navbtn:hover{ background:#E9EEF8; }
+  .topnav .navbtn.active{
+    background:var(--ink);
+    color:var(--paper);
+  }
+  .search-row{
+    display:flex;
+    gap:12px;
+    align-items:flex-end;
+    flex-wrap:wrap;
+  }
+  .search-row .grow{
+    flex:1;
+    min-width:220px;
+  }
+  .checkline{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    padding-bottom:9px;
+  }
+  .checkline input{
+    width:auto;
+    min-height:auto;
+  }
+  .glist{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-top:16px;
+  }
+  .gcard{
+    background:#fff;
+    border:1px solid var(--line);
+    border-left:4px solid var(--line);
+    border-radius:6px;
+    padding:12px 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    cursor:pointer;
+  }
+  .gcard:hover{
+    border-color:var(--ink);
+    border-left-color:var(--ink);
+  }
+  .gcard.status-paid{ border-left-color:var(--cash); }
+  .gcard.status-pending{ border-left-color:var(--danger); }
+  .gcard.status-partial{ border-left-color:var(--gold-deep); }
+  .gcard .ginfo .name{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    color:var(--ink);
+  }
+  .gcard .ginfo .meta{
+    color:var(--muted);
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    margin-top:2px;
+  }
+  .gcard .gnums{
+    text-align:right;
+    display:flex;
+    gap:18px;
+  }
+  .gcard .gnums .box .lbl{
+    font-family:'Inter',sans-serif;
+    font-size:10px;
+    color:var(--muted);
+    text-transform:uppercase;
+  }
+  .gcard .gnums .box .val{
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    font-weight:700;
+    color:var(--ink);
+  }
+  .backlink{
+    color:var(--account);
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    cursor:pointer;
+    margin-bottom:10px;
+    display:inline-block;
+  }
+  .detail-payhist td{
+    font-size:13px;
+  }
+  .section-divider{
+    border-top:2px solid var(--ink);
+    margin:28px 0 20px;
+  }
+  .standalone-heading{
+    font-family:'Inter',sans-serif;
+    font-size:18px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.07em;
+    color:var(--ink);
+    margin:0 0 12px;
+  }
+  .editing-bar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    background:#F7EBC5;
+    border:1px solid var(--gold-deep);
+    border-left:5px solid var(--gold-deep);
+    border-radius:6px;
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    padding:10px 14px;
+    margin-bottom:16px;
+  }
+  #extraDetailList{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-top:14px;
+  }
+  .extra-detail-row{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .extra-detail-row .edKind{
+    width:200px;
+    flex-shrink:0;
+  }
+  .extra-detail-row .edValue-wrap{
+    flex:1;
+    min-width:180px;
+  }
+  .extra-detail-row .edValue{
+    width:100%;
+  }
+  .collapse-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+    font-size:16px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.07em;
+    color:var(--ink);
+    padding:16px 18px;
+  }
+  .collapse-head:hover{ background:#F7F9FC; }
+  .collapse-chev{
+    font-size:12px;
+    color:var(--muted);
+    letter-spacing:0.04em;
+  }
+  .locked-note{
+    float:right;
+    font-size:9.5px;
+    font-weight:600;
+    letter-spacing:0.06em;
+    color:var(--muted);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:2px 6px;
+  }
+  /* ---- In-page notices (replaces browser alert popups) ---- */
+  .notice-wrap{
+    position:fixed;
+    top:16px;
+    left:50%;
+    transform:translateX(-50%);
+    z-index:200;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    width:min(560px, calc(100vw - 32px));
+    pointer-events:none;
+  }
+  .notice{
+    pointer-events:auto;
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    background:var(--danger);
+    color:#fff;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    font-weight:600;
+    line-height:1.45;
+    padding:14px 16px;
+    border-radius:6px;
+    border-left:6px solid #7F1D1D;
+    box-shadow:0 8px 24px rgba(23,37,84,0.35);
+    cursor:pointer;
+    animation:noticeIn 0.25s ease;
+  }
+  .notice.success{
+    background:var(--cash);
+    border-left-color:#0B4023;
+  }
+  .notice .notice-icon{
+    font-size:16px;
+    line-height:1.3;
+  }
+  @keyframes noticeIn{
+    from{ opacity:0; transform:translateY(-12px); }
+    to{ opacity:1; transform:none; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .notice{ animation:none; }
+  }
+  input.field-error, select.field-error,
+  input.field-error:focus, select.field-error:focus{
+    outline:2px solid var(--danger);
+    outline-offset:0;
+    border-color:var(--danger);
+    background:var(--danger-bg);
+  }
+  .unitType.auto-detected{
+    opacity:1;
+    color:var(--cash);
+    font-weight:700;
+    border-color:var(--cash);
+    background:#E9F6EF;
+  }
+  .unitType.needs-pick{
+    border-color:var(--danger);
+    box-shadow:inset 0 0 0 1px var(--danger);
+    background:var(--danger-bg);
+    color:var(--danger);
+    font-weight:700;
+  }
+  .new-flag{
+    display:inline-block;
+    background:var(--amber);
+    color:var(--ink);
+    font-size:9.5px;
+    font-weight:700;
+    letter-spacing:0.06em;
+    padding:2px 6px;
+    border-radius:3px;
+    margin-right:6px;
+  }
+  .addpay-form{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+    gap:10px;
+    align-items:end;
+  }
+  @media (max-width: 900px){
+    .sidebar{ width:78vw; max-width:260px; }
+  }
+
+  /* ---- Confirm & Save modal ---- */
+  .modal-backdrop{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(23,37,84,0.55);
+    align-items:center;
+    justify-content:center;
+    z-index:80;
+    padding:20px;
+  }
+  .modal-backdrop.active{ display:flex; }
+  .modal{
+    background:var(--paper);
+    border:1px solid var(--ink);
+    border-radius:8px;
+    padding:22px 24px;
+    width:640px;
+    max-width:100%;
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  .modal h3{
+    font-family:'Inter',sans-serif;
+    font-size:18px;
+    font-weight:700;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  .modal .modal-actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    margin-top:16px;
+  }
+  .confirm-lbl{
+    font-family:'Inter',sans-serif;
+    font-size:10.5px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:2px;
+  }
+  .confirm-val{
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  /* ---- Cloud sync: login, loading overlay, offline banner ---- */
+  #loginOverlay{
+    position:fixed; inset:0;
+    background:var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    z-index:300;
+  }
+  #loginOverlay.hidden{ display:none; }
+  #loadingOverlay{
+    position:fixed; inset:0;
+    background:var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    z-index:250;
+  }
+  #loadingOverlay.hidden{ display:none; }
+  .login-card{
+    background:#fff;
+    border:1px solid var(--ink);
+    border-radius:8px;
+    padding:32px 36px;
+    width:340px;
+    max-width:90vw;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .login-card h2{
+    font-family:'Inter',sans-serif;
+    font-size:17px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.07em;
+    margin:0 0 2px;
+  }
+  .login-card .sub{ margin-bottom:8px; }
+  .login-card label{ margin-top:8px; }
+  .login-error{
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    color:var(--danger);
+    min-height:16px;
+  }
+  .cloud-banner{
+    display:none;
+    position:fixed;
+    left:50%;
+    bottom:16px;
+    transform:translateX(-50%);
+    z-index:150;
+    width:min(560px, calc(100vw - 32px));
+    background:var(--danger);
+    color:#fff;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    line-height:1.45;
+    padding:12px 16px;
+    border-radius:6px;
+    border-left:6px solid #7F1D1D;
+    box-shadow:0 8px 24px rgba(23,37,84,0.35);
+  }
+  .cloud-banner.show{ display:block; }
+
+  .print-header{
+    display:none;
+  }
+  .print-header h1{
+    font-size:20px;
+    margin:0 0 4px;
+  }
+  .print-header-sub{
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:16px;
+  }
+  @media print{
+    @page{
+      size: portrait;
+      margin: 14mm 12mm;
+    }
+    .no-print{ display:none !important; }
+    body{ background:#fff; }
+    .main{ max-width:100%; margin:0; padding:0; }
+    .view{ display:none !important; }
+    .view.active{ display:block !important; }
+    .print-header{ display:block; }
+    .panel{ border:none; padding:0; margin-bottom:14px; }
+    .day-group{ break-inside:avoid; page-break-inside:avoid; }
+    table{ font-size:11px; }
+    th{ background:#eee !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+</head>
+
+<body>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <h2>Guest Entry System</h2>
+    <div class="sub">Sign in to open the guest register</div>
+    <label for="loginUsername">Username</label>
+    <input type="text" id="loginUsername" autocomplete="username" placeholder="accountant@riviera">
+    <label for="loginPassword">Password</label>
+    <input type="password" id="loginPassword" autocomplete="current-password">
+    <div class="login-error" id="loginError"></div>
+    <button class="btn" id="loginBtn" style="width:100%; margin-top:6px;">Sign In</button>
+  </div>
+</div>
+
+<div id="loadingOverlay" class="hidden">
+  <div class="login-card" style="text-align:center;">
+    <h2>One moment…</h2>
+    <div class="sub" id="loadingOverlayText" style="margin-bottom:0;">Fetching the latest data from the cloud database…</div>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
+
+<button class="sidebar-toggle no-print" id="sidebarToggle" onclick="toggleSidebar()" title="Menu" aria-label="Open menu">☰</button>
+<div class="sidebar-backdrop no-print" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+<div class="sidebar no-print" id="sidebar">
+  <div class="sidebar-inner">
+    <div class="navitem active" id="navEntry" onclick="showView('entry')">Guest Entry</div>
+    <div class="navitem" id="navAddPay" onclick="showView('addpay')">Add Payment</div>
+    <div class="navitem" id="navSearch" onclick="showView('search')">Search</div>
+    <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar no-print">
+    <div class="topbar-left">
+      <div id="cloudStatus"></div>
+      <div id="whoami"></div>
+      <button class="btn secondary" id="logoutBtn" style="min-height:32px; padding:5px 10px;">Sign Out</button>
+    </div>
+    <div class="topnav">
+      <button class="navbtn active" id="topNavEntry" onclick="showView('entry')">Guest Entry</button>
+      <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
+      <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
+      <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
+    </div>
+  </div>
+
+  <div class="view active" id="view-entry">
+
+    <div class="editing-bar no-print" id="editModeBar" style="display:none;">
+      <span>✎ EDITING: <b id="editModeName"></b> — saving will update this existing entry, not create a new one.</span>
+      <button class="btn secondary" onclick="cancelEditMode()">Cancel Edit</button>
+    </div>
+
+    <h1>Guest Entry</h1>
+    <div class="sub">Customer detail &amp; room/apartment booking</div>
+
+    <div class="panel accent-guest">
+      <h2>Customer Detail</h2>
+      <div class="grid">
+        <div>
+          <label>Guest Name <span class="req">*</span></label>
+          <input type="text" id="guestName" placeholder="Full name" required>
+        </div>
+        <div>
+          <label>Father Name <span class="req">*</span></label>
+          <input type="text" id="fatherName" placeholder="Father's name" required>
+        </div>
+        <div>
+          <label>CNIC <span class="req">*</span></label>
+          <input type="text" id="cnic" placeholder="XXXXX-XXXXXXX-X" required>
+        </div>
+      </div>
+      <div id="extraDetailList"></div>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn secondary" onclick="addExtraDetailRow()">+ Detail</button>
+      </div>
+    </div>
+
+    <div class="panel accent-rooms">
+      <h2>Room / Apartment Detail</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px;">#</th>
+            <th style="width:170px;">Room No / Apt No</th>
+            <th style="width:130px;">Type</th>
+            <th style="width:130px;">Rent Per Day</th>
+            <th style="width:120px;">No of Days</th>
+            <th style="width:120px;">Total</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody id="roomBody"></tbody>
+      </table>
+      <div class="actions">
+        <button class="btn secondary" onclick="addRow()">+ Add Row</button>
+        <div class="grandtotal">Grand Total: Rs. <span id="grandTotal">0</span></div>
+      </div>
+    </div>
+
+    <div class="panel accent-payments">
+      <h2>Payment Detail</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px;">#</th>
+            <th style="width:88px;">Date</th>
+            <th style="width:136px;">Type</th>
+            <th style="width:120px;">Mode</th>
+            <th style="width:100px;">Bank</th>
+            <th>Remarks</th>
+            <th style="width:110px;">Cash Amount</th>
+            <th style="width:110px;">Account Amount</th>
+            <th style="width:110px;">Row Total</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody id="payBody"></tbody>
+      </table>
+      <div class="actions">
+        <button class="btn secondary" onclick="addPayRow()">+ Add Payment</button>
+      </div>
+
+      <div class="summary">
+        <div class="box">
+          <div class="lbl">Booking Total</div>
+          <div class="val" id="sumBookingTotal">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Total Paid</div>
+          <div class="val" id="sumPaid">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Balance Due</div>
+          <div class="val" id="sumDue">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Status</div>
+          <div class="val"><span class="status pending" id="sumStatus">Pending</span></div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn success" onclick="reviewEntry()">Save Entry</button>
+
+    <div class="section-divider"></div>
+    <h2 class="standalone-heading">Today's Entries</h2>
+    <div id="todayEntriesBody"><div class="empty-note">No entries saved today yet.</div></div>
+
+  </div>
+
+  <div class="view" id="view-addpay">
+
+    <h1>Add Payment</h1>
+    <div class="sub">Take a payment against an existing entry</div>
+
+    <div class="panel accent-payments">
+      <h2>Step 1 — Find The Guest</h2>
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (name, father name, CNIC, room no)</label>
+          <input type="text" id="apSearchInput" placeholder="Type to search...">
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="apDueOnly" checked>
+          <label for="apDueOnly" style="margin:0;">Only balance due</label>
+        </div>
+      </div>
+      <div class="glist" id="apGuestList"></div>
+    </div>
+
+    <div id="apPaySection" style="display:none;">
+
+      <div class="panel accent-guest" id="apGuestStrip"></div>
+
+      <div class="panel accent-payments">
+        <h2>Step 2 — Payment</h2>
+        <div class="addpay-form">
+          <div>
+            <label>Date</label>
+            <input type="date" id="dNewDate">
+            <div class="date-readout" id="dNewDateReadout"></div>
+          </div>
+          <div>
+            <label>Type</label>
+            <select id="dNewType">
+              <option value="Reservation">Reservation</option>
+              <option value="Check-in">Check-in</option>
+              <option value="Due Payment" selected>Due Payment</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label>Mode</label>
+            <select id="dNewMode" onchange="toggleDetailMode()">
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Card">Card</option>
+            </select>
+          </div>
+          <div>
+            <label>Bank</label>
+            <select id="dNewBank" disabled>
+              <option value="">-</option>
+              <option value="Alfalah">Alfalah</option>
+              <option value="MCB">MCB</option>
+            </select>
+          </div>
+          <div>
+            <label>Cash Amount</label>
+            <input type="number" id="dNewCash" min="0" placeholder="0">
+          </div>
+          <div>
+            <label>Account Amount</label>
+            <input type="number" id="dNewAccount" min="0" placeholder="0" disabled>
+          </div>
+          <div>
+            <label>Remarks</label>
+            <input type="text" id="dNewRemarks" placeholder="Optional note">
+          </div>
+          <div>
+            <button class="btn" onclick="addDetailPayment()">+ Add Payment</button>
+          </div>
+        </div>
+
+        <div class="summary" id="addPayPreview">
+          <div class="box">
+            <div class="lbl">This Payment</div>
+            <div class="val" id="prevAmount">0</div>
+            <div class="date-readout" id="prevAmountWords"></div>
+          </div>
+          <div class="box">
+            <div class="lbl">Balance Due Now</div>
+            <div class="val" id="prevDueNow">0</div>
+          </div>
+          <div class="box">
+            <div class="lbl">Due After This Payment</div>
+            <div class="val" id="prevDueAfter">0</div>
+          </div>
+          <div class="box">
+            <div class="lbl">Result</div>
+            <div class="val"><span class="status pending" id="prevStatus">—</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="view" id="view-search">
+
+    <h1>Search Guests</h1>
+    <div class="sub">Find any guest and check balance due, or open to add a payment</div>
+
+    <div class="panel accent-guest">
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (name, father name, CNIC, room no)</label>
+          <input type="text" id="gsearchInput" placeholder="Type to search...">
+        </div>
+        <div>
+          <label>Entry Date</label>
+          <input type="date" id="gsearchDate">
+          <div class="date-readout" id="gsearchDateReadout"></div>
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="gsearchDueOnly">
+          <label for="gsearchDueOnly" style="margin:0;">Only show balance due</label>
+        </div>
+      </div>
+      <div class="glist" id="gsearchList"></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-detail">
+
+    <span class="backlink" onclick="showView('search')">&larr; Back to Search</span>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+      <div>
+        <h1 id="detailName">Guest</h1>
+        <div class="sub" id="detailMeta"></div>
+      </div>
+      <button class="btn edit-gold" id="editEntryBtn" onclick="openEditModal()">✎ Edit This Entry</button>
+    </div>
+
+    <div class="panel accent-guest">
+      <h2>Customer Detail <span class="locked-note">Locked — use the Edit button to change anything</span></h2>
+      <div class="grid">
+        <div>
+          <label>Guest Name</label>
+          <input type="text" id="dGuestName" disabled>
+        </div>
+        <div>
+          <label>Father Name</label>
+          <input type="text" id="dFatherName" disabled>
+        </div>
+        <div>
+          <label>CNIC</label>
+          <input type="text" id="dCnic" disabled>
+        </div>
+      </div>
+      <div class="grid" id="dExtraDetails" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="panel accent-rooms" style="padding:0;">
+      <div class="collapse-head" onclick="toggleRoomDetail()">
+        <span>Room / Apartment Detail</span>
+        <span id="roomCollapseChev" class="collapse-chev">▸ Show</span>
+      </div>
+      <div id="roomDetailCollapse" style="display:none; padding:0 18px 18px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Room No / Apt No</th>
+              <th style="width:120px;">Type</th>
+              <th style="width:130px;">Rent Per Day</th>
+              <th style="width:110px;">No of Days</th>
+              <th style="width:120px;">Total</th>
+            </tr>
+          </thead>
+          <tbody id="detailRoomBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel accent-payments">
+      <h2>Payment History</h2>
+      <table class="detail-payhist">
+        <thead>
+          <tr>
+            <th style="width:110px;">Date</th>
+            <th style="width:100px;">Type</th>
+            <th style="width:90px;">Mode</th>
+            <th style="width:90px;">Bank</th>
+            <th>Remarks</th>
+            <th style="width:100px;">Cash</th>
+            <th style="width:100px;">Account</th>
+            <th style="width:100px;">Total</th>
+          </tr>
+        </thead>
+        <tbody id="detailPayBody"></tbody>
+      </table>
+
+      <div class="summary">
+        <div class="box">
+          <div class="lbl">Booking Total</div>
+          <div class="val" id="dSumBooking">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Total Paid</div>
+          <div class="val" id="dSumPaid">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Balance Due</div>
+          <div class="val" id="dSumDue">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Status</div>
+          <div class="val"><span class="status pending" id="dSumStatus">Pending</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-report">
+
+    <h1 class="no-print">Report</h1>
+    <div class="sub no-print">Payment detail, grouped by day</div>
+
+    <div class="print-header">
+      <h1>Payment Report</h1>
+      <div class="print-header-sub" id="printHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <h2>Filters</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>From Date</label>
+          <input type="date" id="filterFrom">
+          <div class="date-readout" id="filterFromReadout"></div>
+        </div>
+        <div>
+          <label>To Date</label>
+          <input type="date" id="filterTo">
+          <div class="date-readout" id="filterToReadout"></div>
+        </div>
+        <div style="grid-column:span 2;">
+          <label>Search (name, father name, CNIC, room no, type, mode)</label>
+          <input type="text" id="filterSearch" placeholder="Type to search...">
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="clearFilters()">Clear Filters</button>
+          <button class="btn secondary" onclick="setFiltersToday()">Today</button>
+        </div>
+        <button class="btn" onclick="openExportModal()">⬇ Export</button>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="reportBody"><div class="empty-note">No payments saved yet.</div></div>
+      <div class="report-grandbar" id="reportGrandbar" style="display:none;">
+        <span>Total Cash: Rs. <b id="repCash" class="cash-amt">0</b></span>
+        <span>Total Account: Rs. <b id="repAccount" class="account-amt">0</b></span>
+        <span>Grand Total: Rs. <b id="repGrand">0</b></span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="cloud-banner no-print" id="cloudBanner">
+  <b>⚠ Not connected to the cloud database.</b>
+  <span id="cloudBannerText">Entries cannot be saved or loaded until the connection is back — it retries automatically.</span>
+</div>
+
+</div><!-- /appRoot -->
+
+<div class="notice-wrap" id="noticeWrap"></div>
+
+<div class="modal-backdrop" id="confirmModalBackdrop">
+  <div class="modal">
+    <h3>Confirm Guest Entry</h3>
+    <div class="sub" style="margin-bottom:14px;">Please check every detail below carefully before saving — this cannot be edited from the Report page later.</div>
+    <div id="confirmBody"></div>
+    <label for="confirmTotalInput" style="margin-top:4px;">Re-type the Grand Total (numbers only) to confirm it is correct</label>
+    <input type="text" id="confirmTotalInput" placeholder="e.g. 60000" autocomplete="off" inputmode="numeric" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmSaveEntry(); }">
+    <label for="confirmTypeInput" style="margin-top:10px;">Type CONFIRM to save this entry</label>
+    <input type="text" id="confirmTypeInput" placeholder="confirm" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmSaveEntry(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeConfirmModal()">Cancel</button>
+      <button class="btn" onclick="confirmSaveEntry()">Confirm &amp; Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="deleteModalBackdrop">
+  <div class="modal">
+    <h3 style="color:var(--danger);">Confirm Delete</h3>
+    <div class="sub" style="margin-bottom:14px;">Check carefully — this is the row you are about to remove.</div>
+    <div id="deleteBody"></div>
+    <label for="deleteTypeInput" style="margin-top:4px;">Type DELETE to remove this row</label>
+    <input type="text" id="deleteTypeInput" placeholder="delete" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmDeleteRow(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn danger-solid" onclick="confirmDeleteRow()">Delete Row</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="editModalBackdrop">
+  <div class="modal">
+    <h3>Edit This Entry</h3>
+    <div class="sub" style="margin-bottom:14px;">Check that this is the right guest — the whole entry will open for editing on the Guest Entry page.</div>
+    <div id="editBody"></div>
+    <label for="editTypeInput" style="margin-top:4px;">Type EDIT to open this entry for editing</label>
+    <input type="text" id="editTypeInput" placeholder="edit" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmEditEntry(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeEditModal()">Cancel</button>
+      <button class="btn" onclick="confirmEditEntry()">Open For Editing</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="addPayModalBackdrop">
+  <div class="modal">
+    <h3>Confirm Payment</h3>
+    <div class="sub" style="margin-bottom:14px;">Check the amount carefully before adding this payment.</div>
+    <div id="addPayModalBody"></div>
+    <label for="addPayTypeInput" style="margin-top:4px;">Type CONFIRM to add this payment</label>
+    <input type="text" id="addPayTypeInput" placeholder="confirm" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmAddPayment(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeAddPayModal()">Cancel</button>
+      <button class="btn" onclick="confirmAddPayment()">Confirm &amp; Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="exportModalBackdrop">
+  <div class="modal" style="width:420px;">
+    <h3>Export Report</h3>
+    <div class="sub" style="margin-bottom:14px;">Choose a format. The export uses the filters currently applied.</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn" onclick="closeExportModal(); exportReportExcel();">Excel File (.xlsx)</button>
+      <button class="btn" onclick="closeExportModal(); printReport();">PDF / Print</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeExportModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="../supabase.js"></script>
+
+<script>
+// Bright in-page notice instead of the browser's plain alert() popup.
+// Click to dismiss; errors stay a little longer than success messages.
+function showNotice(message, kind){
+  const wrap = document.getElementById('noticeWrap');
+  const n = document.createElement('div');
+  n.className = 'notice' + (kind === 'success' ? ' success' : '');
+  const icon = document.createElement('span');
+  icon.className = 'notice-icon';
+  icon.textContent = kind === 'success' ? '✓' : '⚠';
+  const text = document.createElement('span');
+  text.textContent = message;
+  n.appendChild(icon);
+  n.appendChild(text);
+  n.onclick = ()=> n.remove();
+  wrap.appendChild(n);
+  setTimeout(()=>{ n.remove(); }, kind === 'success' ? 4000 : 6500);
+}
+
+// Focus a field that failed validation with a red highlight (instead of the
+// normal blue focus ring); the red clears as soon as the user edits the field.
+function focusError(el){
+  el.classList.add('field-error');
+  const clear = ()=> el.classList.remove('field-error');
+  el.addEventListener('input', clear, { once:true });
+  el.addEventListener('change', clear, { once:true });
+  el.focus();
+}
+
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+
+let currentView = 'entry';
+
+function showView(view){
+  currentView = view;
+  ['entry','addpay','search','report','detail'].forEach(v=>{
+    const el = document.getElementById('view-' + v);
+    if(el) el.classList.toggle('active', v === view);
+  });
+  document.getElementById('navEntry').classList.toggle('active', view === 'entry');
+  document.getElementById('navAddPay').classList.toggle('active', view === 'addpay');
+  document.getElementById('navSearch').classList.toggle('active', view === 'search' || view === 'detail');
+  document.getElementById('navReport').classList.toggle('active', view === 'report');
+  document.getElementById('topNavEntry').classList.toggle('active', view === 'entry');
+  document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
+  document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
+  document.getElementById('topNavReport').classList.toggle('active', view === 'report');
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('show');
+  if(view === 'report') renderReport();
+  if(view === 'search') renderSearch();
+  if(view === 'entry') renderTodayEntries();
+  if(view === 'addpay') renderApList();
+}
+
+function updateFilterDateReadouts(){
+  const fromVal = document.getElementById('filterFrom').value;
+  const toVal = document.getElementById('filterTo').value;
+  document.getElementById('filterFromReadout').textContent = fromVal ? formatDate(fromVal) : '';
+  document.getElementById('filterToReadout').textContent = toVal ? formatDate(toVal) : '';
+}
+
+function clearFilters(){
+  document.getElementById('filterFrom').value = '';
+  document.getElementById('filterTo').value = '';
+  document.getElementById('filterSearch').value = '';
+  updateFilterDateReadouts();
+  renderReport();
+}
+
+function setFiltersToday(){
+  const t = todayStr();
+  document.getElementById('filterFrom').value = t;
+  document.getElementById('filterTo').value = t;
+  updateFilterDateReadouts();
+  renderReport();
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  setFiltersToday();
+  ['filterFrom','filterTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', updateFilterDateReadouts);
+  });
+  ['filterFrom','filterTo','filterSearch'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', renderReport);
+  });
+  document.getElementById('gsearchInput').addEventListener('input', renderSearch);
+  document.getElementById('gsearchDueOnly').addEventListener('change', renderSearch);
+  document.getElementById('gsearchDate').addEventListener('input', renderSearch);
+  ['dNewCash','dNewAccount'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', updateAddPayPreview);
+  });
+  document.getElementById('apSearchInput').addEventListener('input', renderApList);
+  document.getElementById('apDueOnly').addEventListener('change', renderApList);
+  ['input','change'].forEach(evt=>{
+    document.getElementById('dNewDate').addEventListener(evt, e=>{
+      updateDateReadout(e.target, document.getElementById('dNewDateReadout'));
+    });
+  });
+  renderTodayEntries();
+});
+
+let rowCount = 0;
+
+// ---------- Unit lists (from the property's existing room/apartment map) ----------
+const ROOM_NUMBERS = [
+  "201","202","203","204","205","206","207",
+  "208","209","210","211","212","213","214",
+  "301","302","303","304","305","306","307",
+  "308","309","310","311","312","313","314",
+  "401","402","403","404","405","406","407",
+  "408","409","410","411","412","413","414"
+];
+const APARTMENT_NUMBERS = [
+  "A-101","A-102","A-201","A-202","A-301","A-302","A-401","A-402",
+  "B-101","B-102","B-201","B-202","B-301","B-303","B-401","B-402",
+  "C-01","C-101","C-102","C-201","C-202","C-301","C-302","C-401","C-402",
+  "D-101","D-102","D-201","D-202","D-301","D-302","D-401","D-402"
+];
+const ALL_UNITS = [
+  { value:'N/A', group:'Not decided' },
+  ...ROOM_NUMBERS.map(n=>({ value:n, group:'Room' })),
+  ...APARTMENT_NUMBERS.map(n=>({ value:n, group:'Apartment' }))
+];
+
+function detectUnitType(roomNo){
+  const v = (roomNo || '').trim().toUpperCase();
+  if(ROOM_NUMBERS.includes(v)) return 'Room';
+  if(APARTMENT_NUMBERS.includes(v)) return 'Apartment';
+  return '';
+}
+
+// Auto-fills the Type column from the picked unit; when the unit is N/A
+// (or hand-typed and unknown) the dropdown unlocks so the user must say
+// whether it's a Room or an Apartment.
+function updateUnitType(tr){
+  const v = tr.querySelector('.roomNo').value.trim().toUpperCase();
+  const typeSel = tr.querySelector('.unitType');
+  const placeholder = typeSel.querySelector('option[value=""]');
+  const roomOpt = typeSel.querySelector('option[value="Room"]');
+  const aptOpt = typeSel.querySelector('option[value="Apartment"]');
+  roomOpt.textContent = 'Room';
+  aptOpt.textContent = 'Apartment';
+  typeSel.classList.remove('auto-detected');
+  if(!v){
+    typeSel.value = ''; typeSel.disabled = true;
+    placeholder.textContent = '—';
+    typeSel.classList.remove('needs-pick');
+    return;
+  }
+  const detected = detectUnitType(v);
+  if(detected){
+    // show a confident green "Room ✓" instead of a washed-out disabled look
+    typeSel.value = detected; typeSel.disabled = true;
+    (detected === 'Room' ? roomOpt : aptOpt).textContent = detected + ' ✓';
+    typeSel.classList.add('auto-detected');
+    placeholder.textContent = '—';
+    typeSel.classList.remove('needs-pick');
+    return;
+  }
+  // N/A or hand-typed unknown unit: the user must pick Room or Apartment
+  typeSel.disabled = false;
+  placeholder.textContent = 'SELECT THIS';
+  typeSel.classList.toggle('needs-pick', !typeSel.value);
+}
+
+function getUsedRoomNumbers(excludeTr){
+  return new Set(
+    Array.from(document.querySelectorAll('#roomBody .roomNo'))
+      .filter(inp => inp.closest('tr') !== excludeTr)
+      .map(inp => inp.value.trim().toUpperCase())
+      .filter(v => v && v !== 'N/A')
+  );
+}
+
+function renderRoomNoList(listEl, filter, currentTr){
+  const f = (filter || '').trim().toLowerCase();
+  const usedElsewhere = getUsedRoomNumbers(currentTr);
+  const rawMatches = ALL_UNITS.filter(u=> !f || u.value.toLowerCase().includes(f));
+  const matches = rawMatches.filter(u=> !usedElsewhere.has(u.value.toUpperCase()));
+  if(matches.length === 0){
+    listEl.innerHTML = rawMatches.length > 0
+      ? '<div class="roomno-empty">Already added in another row</div>'
+      : '<div class="roomno-empty">No match</div>';
+    return;
+  }
+  listEl.innerHTML = matches.map(u=>
+    `<div class="roomno-item" data-value="${u.value}">${u.value}<span class="grp">${u.group}</span></div>`
+  ).join('');
+}
+
+// Flags any room-number field whose value is already used in another row,
+// so a mistaken duplicate (typed by hand, not picked from the list) is
+// still caught and visibly marked before it can be saved.
+function refreshDuplicateRoomHighlights(){
+  const inputs = Array.from(document.querySelectorAll('#roomBody .roomNo'));
+  const counts = {};
+  inputs.forEach(inp=>{
+    const v = inp.value.trim().toUpperCase();
+    if(!v || v === 'N/A') return; // several undecided rooms are allowed
+    counts[v] = (counts[v] || 0) + 1;
+  });
+  inputs.forEach(inp=>{
+    const v = inp.value.trim().toUpperCase();
+    inp.classList.toggle('duplicate', !!v && counts[v] > 1);
+  });
+}
+
+// Event delegation so this works for every room row, including ones added later
+const roomBodyEl = document.getElementById('roomBody');
+
+roomBodyEl.addEventListener('input', e=>{
+  if(!e.target.classList.contains('roomNo')) return;
+  const wrap = e.target.closest('.roomno-wrap');
+  const tr = e.target.closest('tr');
+  const list = wrap.querySelector('.roomno-list');
+  renderRoomNoList(list, e.target.value, tr);
+  list.classList.add('show');
+  refreshDuplicateRoomHighlights();
+  updateUnitType(tr);
+});
+
+roomBodyEl.addEventListener('change', e=>{
+  if(!e.target.classList.contains('unitType')) return;
+  e.target.classList.toggle('needs-pick', !e.target.value);
+});
+
+// keep the "18 Jul 2026" readouts in sync with their date selectors
+['input','change'].forEach(evt=>{
+  document.getElementById('payBody').addEventListener(evt, e=>{
+    if(!e.target.classList.contains('payDate')) return;
+    updateDateReadout(e.target, e.target.parentElement.querySelector('.payDateReadout'));
+  });
+  document.getElementById('extraDetailList').addEventListener(evt, e=>{
+    if(!e.target.classList.contains('edValue')) return;
+    updateDateReadout(e.target, e.target.closest('.extra-detail-row').querySelector('.edValueReadout'));
+  });
+});
+
+roomBodyEl.addEventListener('focusin', e=>{
+  if(!e.target.classList.contains('roomNo')) return;
+  const wrap = e.target.closest('.roomno-wrap');
+  const tr = e.target.closest('tr');
+  const list = wrap.querySelector('.roomno-list');
+  renderRoomNoList(list, e.target.value, tr);
+  list.classList.add('show');
+});
+
+roomBodyEl.addEventListener('focusout', e=>{
+  if(!e.target.classList.contains('roomNo')) return;
+  const wrap = e.target.closest('.roomno-wrap');
+  setTimeout(()=>{ wrap.querySelector('.roomno-list').classList.remove('show'); }, 150);
+});
+
+roomBodyEl.addEventListener('mousedown', e=>{
+  const item = e.target.closest('.roomno-item');
+  if(!item || !item.dataset.value) return;
+  e.preventDefault();
+  const wrap = item.closest('.roomno-wrap');
+  wrap.querySelector('.roomNo').value = item.dataset.value;
+  wrap.querySelector('.roomno-list').classList.remove('show');
+  refreshDuplicateRoomHighlights();
+  updateUnitType(wrap.closest('tr'));
+});
+
+roomBodyEl.addEventListener('keydown', e=>{
+  if(e.key !== 'Enter') return;
+  const isRoomNo = e.target.classList.contains('roomNo');
+  const isRent = e.target.classList.contains('rent');
+  if(!isRoomNo && !isRent) return;
+  e.preventDefault();
+
+  const tr = e.target.closest('tr');
+
+  if(isRoomNo){
+    // if the autocomplete list is open, pick the top match; either way, move to Rent
+    const list = tr.querySelector('.roomno-list');
+    const firstItem = list.querySelector('.roomno-item');
+    if(list.classList.contains('show') && firstItem && firstItem.dataset.value){
+      e.target.value = firstItem.dataset.value;
+      list.classList.remove('show');
+      refreshDuplicateRoomHighlights();
+      updateUnitType(tr);
+    }
+    tr.querySelector('.rent').focus();
+    return;
+  }
+
+  // Enter in Rent field: go to the next row if one exists, otherwise add a new row
+  const rows = Array.from(roomBodyEl.querySelectorAll('tr'));
+  const idx = rows.indexOf(tr);
+  const nextRow = rows[idx + 1];
+  if(nextRow){
+    nextRow.querySelector('.roomNo').focus();
+  } else {
+    addRow();
+    const newRow = roomBodyEl.querySelector('tr:last-child');
+    newRow.querySelector('.roomNo').focus();
+  }
+});
+
+function addRow(){
+  rowCount++;
+  const tbody = document.getElementById('roomBody');
+  const tr = document.createElement('tr');
+  tr.dataset.rooms = 1;
+  tr.innerHTML = `
+    <td class="rmno">${rowCount}</td>
+    <td>
+      <div class="roomno-wrap">
+        <input type="text" placeholder="Search room / apt no" class="roomNo" autocomplete="off">
+        <div class="roomno-list"></div>
+      </div>
+    </td>
+    <td>
+      <select class="unitType" disabled>
+        <option value="">—</option>
+        <option value="Room">Room</option>
+        <option value="Apartment">Apartment</option>
+      </select>
+    </td>
+    <td><input type="number" placeholder="0" class="rent" oninput="calcRow(this)" min="0"></td>
+    <td>
+      <div class="roomctrl">
+        <button onclick="changeRooms(this,-1)">-</button>
+        <span class="roomCount">1</span>
+        <button onclick="changeRooms(this,1)">+</button>
+      </div>
+    </td>
+    <td class="rowtotal">0</td>
+    <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'room')">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function changeRooms(btn, delta){
+  const tr = btn.closest('tr');
+  let rooms = parseInt(tr.dataset.rooms) + delta;
+  if(rooms < 1) rooms = 1;
+  tr.dataset.rooms = rooms;
+  tr.querySelector('.roomCount').textContent = rooms;
+  calcRow(tr.querySelector('.rent'));
+}
+
+function calcRow(rentInput){
+  const tr = rentInput.closest('tr');
+  const rent = parseFloat(rentInput.value) || 0;
+  const rooms = parseInt(tr.dataset.rooms) || 1;
+  const total = rent * rooms;
+  tr.querySelector('.rowtotal').textContent = total.toLocaleString();
+  calcGrandTotal();
+}
+
+function deleteRow(btn){
+  btn.closest('tr').remove();
+  calcGrandTotal();
+  renumber();
+  refreshDuplicateRoomHighlights();
+}
+
+// ---- Delete confirmation: every ✕ shows what is being removed and
+// requires typing "delete", so a mis-click can't wipe entered data. ----
+let pendingDelete = null; // { tr, kind: 'room' | 'payment' }
+
+function requestDeleteRow(btn, kind){
+  // Every ✕ in the app goes through this modal — no exceptions.
+  const tr = btn.closest(kind === 'detail' ? '.extra-detail-row' : 'tr');
+  pendingDelete = { tr, kind };
+  const body = document.getElementById('deleteBody');
+
+  if(kind === 'detail'){
+    body.innerHTML = `
+      <div class="grid" style="margin-bottom:14px;">
+        <div><div class="confirm-lbl">Detail Type</div><div class="confirm-val">${tr.querySelector('.edKind').value || '(not selected)'}</div></div>
+        <div><div class="confirm-lbl">Value</div><div class="confirm-val">${tr.querySelector('.edValue').value.trim() || '(empty)'}</div></div>
+      </div>`;
+  } else if(kind === 'room'){
+    body.innerHTML = `
+      <div class="grid" style="margin-bottom:14px;">
+        <div><div class="confirm-lbl">Room No / Apt No</div><div class="confirm-val">${tr.querySelector('.roomNo').value.trim() || '-'}</div></div>
+        <div><div class="confirm-lbl">Type</div><div class="confirm-val">${tr.querySelector('.unitType').value || '-'}</div></div>
+        <div><div class="confirm-lbl">Rent Per Day</div><div class="confirm-val">${(parseFloat(tr.querySelector('.rent').value) || 0).toLocaleString()}</div></div>
+        <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${tr.dataset.rooms || 1}</div></div>
+        <div><div class="confirm-lbl">Total</div><div class="confirm-val">${tr.querySelector('.rowtotal').textContent || 0}</div></div>
+      </div>`;
+  } else {
+    const dateVal = tr.querySelector('.payDate').value;
+    body.innerHTML = `
+      <div class="grid" style="margin-bottom:14px;">
+        <div><div class="confirm-lbl">Date</div><div class="confirm-val">${dateVal ? formatDate(dateVal) : '-'}</div></div>
+        <div><div class="confirm-lbl">Type</div><div class="confirm-val">${tr.querySelector('.payType').value}</div></div>
+        <div><div class="confirm-lbl">Mode</div><div class="confirm-val">${tr.querySelector('.payMode').value}</div></div>
+        <div><div class="confirm-lbl">Bank</div><div class="confirm-val">${tr.querySelector('.payBank').value || '-'}</div></div>
+        <div><div class="confirm-lbl">Remarks</div><div class="confirm-val">${tr.querySelector('.payRemarks').value.trim() || '-'}</div></div>
+        <div><div class="confirm-lbl">Cash Amount</div><div class="confirm-val">${(parseFloat(tr.querySelector('.payCash').value) || 0).toLocaleString()}</div></div>
+        <div><div class="confirm-lbl">Account Amount</div><div class="confirm-val">${(parseFloat(tr.querySelector('.payAccount').value) || 0).toLocaleString()}</div></div>
+        <div><div class="confirm-lbl">Row Total</div><div class="confirm-val">${tr.querySelector('.payTotal').textContent || 0}</div></div>
+      </div>`;
+  }
+
+  const input = document.getElementById('deleteTypeInput');
+  input.value = '';
+  input.classList.remove('duplicate');
+  document.getElementById('deleteModalBackdrop').classList.add('active');
+  input.focus();
+}
+
+function closeDeleteModal(){
+  document.getElementById('deleteModalBackdrop').classList.remove('active');
+  pendingDelete = null;
+}
+
+function confirmDeleteRow(){
+  const input = document.getElementById('deleteTypeInput');
+  if(input.value.trim().toLowerCase() !== 'delete'){
+    input.classList.add('duplicate');
+    showNotice('Please type "delete" in the box to remove this row.');
+    input.focus();
+    return;
+  }
+  if(!pendingDelete) return;
+  const { tr, kind } = pendingDelete;
+  if(kind === 'room'){
+    deleteRow(tr); // closest('tr') on a tr returns itself
+  } else if(kind === 'payment'){
+    deletePayRow(tr);
+  } else {
+    tr.remove(); // extra-detail row — nothing to renumber or recalc
+  }
+  closeDeleteModal();
+}
+
+function renumber(){
+  document.querySelectorAll('#roomBody tr').forEach((tr,i)=>{
+    tr.querySelector('.rmno').textContent = i+1;
+  });
+  rowCount = document.querySelectorAll('#roomBody tr').length;
+}
+
+function calcGrandTotal(){
+  let sum = 0;
+  document.querySelectorAll('#roomBody .rowtotal').forEach(td=>{
+    sum += parseFloat(td.textContent.replace(/,/g,'')) || 0;
+  });
+  document.getElementById('grandTotal').textContent = sum.toLocaleString();
+  calcSummary();
+}
+
+// ---- Payment tracking ----
+let payCount = 0;
+
+function todayStr(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+function addPayRow(){
+  payCount++;
+  const tbody = document.getElementById('payBody');
+  const tr = document.createElement('tr');
+  tr.classList.add('mode-cash');
+  tr.innerHTML = `
+    <td class="rmno">${payCount}</td>
+    <td><input type="date" class="payDate" value="${todayStr()}"><div class="date-readout payDateReadout">${formatDate(todayStr())}</div></td>
+    <td>
+      <select class="payType">
+        <option value="Reservation">Reservation</option>
+        <option value="Check-in">Check-in</option>
+        <option value="Other">Other</option>
+      </select>
+    </td>
+    <td>
+      <select class="payMode" onchange="toggleMode(this)">
+        <option value="Cash">Cash</option>
+        <option value="Bank Transfer">Bank Transfer</option>
+        <option value="Card">Card</option>
+      </select>
+    </td>
+    <td>
+      <select class="payBank" disabled>
+        <option value="">-</option>
+        <option value="Alfalah">Alfalah</option>
+        <option value="MCB">MCB</option>
+      </select>
+    </td>
+    <td><input type="text" class="payRemarks" placeholder="Optional note"></td>
+    <td><input type="number" placeholder="0" class="payCash" min="0" oninput="calcPayRow(this)"></td>
+    <td><input type="number" placeholder="0" class="payAccount" min="0" oninput="calcPayRow(this)" disabled></td>
+    <td class="rowtotal payTotal cash-amt">0</td>
+    <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'payment')">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function toggleMode(sel){
+  const tr = sel.closest('tr');
+  const cash = tr.querySelector('.payCash');
+  const acct = tr.querySelector('.payAccount');
+  const bank = tr.querySelector('.payBank');
+  const total = tr.querySelector('.payTotal');
+  const mode = sel.value;
+  if(mode === 'Cash'){
+    cash.disabled = false; acct.disabled = true; acct.value = '';
+    bank.disabled = true; bank.value = '';
+    tr.classList.remove('mode-bank'); tr.classList.add('mode-cash');
+    total.classList.remove('account-amt'); total.classList.add('cash-amt');
+  } else {
+    // Bank Transfer or Card
+    acct.disabled = false; cash.disabled = true; cash.value = '';
+    bank.disabled = false;
+    tr.classList.remove('mode-cash'); tr.classList.add('mode-bank');
+    total.classList.remove('cash-amt'); total.classList.add('account-amt');
+  }
+  calcPayRow(cash);
+}
+
+function calcPayRow(input){
+  const tr = input.closest('tr');
+  const cash = parseFloat(tr.querySelector('.payCash').value) || 0;
+  const acct = parseFloat(tr.querySelector('.payAccount').value) || 0;
+  const total = cash + acct;
+  tr.querySelector('.payTotal').textContent = total.toLocaleString();
+  calcSummary();
+}
+
+function deletePayRow(btn){
+  btn.closest('tr').remove();
+  renumberPay();
+  calcSummary();
+}
+
+function renumberPay(){
+  document.querySelectorAll('#payBody tr').forEach((tr,i)=>{
+    tr.querySelector('.rmno').textContent = i+1;
+  });
+  payCount = document.querySelectorAll('#payBody tr').length;
+}
+
+function calcSummary(){
+  const bookingTotal = parseFloat(document.getElementById('grandTotal').textContent.replace(/,/g,'')) || 0;
+  let paid = 0;
+  document.querySelectorAll('#payBody .payTotal').forEach(td=>{
+    paid += parseFloat(td.textContent.replace(/,/g,'')) || 0;
+  });
+  const due = bookingTotal - paid;
+
+  document.getElementById('sumBookingTotal').textContent = bookingTotal.toLocaleString();
+  document.getElementById('sumPaid').textContent = paid.toLocaleString();
+  document.getElementById('sumDue').textContent = Math.max(due,0).toLocaleString();
+
+  const statusEl = document.getElementById('sumStatus');
+  statusEl.classList.remove('paid','pending','partial');
+  if(bookingTotal > 0 && due <= 0){
+    statusEl.textContent = 'Paid';
+    statusEl.classList.add('paid');
+  } else if(paid > 0){
+    statusEl.textContent = 'Partial';
+    statusEl.classList.add('partial');
+  } else {
+    statusEl.textContent = 'Pending';
+    statusEl.classList.add('pending');
+  }
+}
+
+// ---- Optional extra details (+ Detail button) ----
+const EXTRA_DETAIL_KINDS = [
+  'Address', 'Nationality', 'Company Name', 'Profession',
+  'Contact No', 'Emergency No', 'Date of Arrival', 'Date of Departure'
+];
+
+function addExtraDetailRow(kind, value){
+  const row = document.createElement('div');
+  row.className = 'extra-detail-row';
+  row.innerHTML = `
+    <select class="edKind" onchange="onExtraKindChange(this)">
+      <option value="">— Select detail —</option>
+      ${EXTRA_DETAIL_KINDS.map(k=>`<option value="${k}">${k}</option>`).join('')}
+    </select>
+    <div class="edValue-wrap">
+      <input type="text" class="edValue" placeholder="Enter detail">
+      <div class="date-readout edValueReadout"></div>
+    </div>
+    <button class="btn danger" onclick="requestDeleteRow(this,'detail')">✕</button>
+  `;
+  document.getElementById('extraDetailList').appendChild(row);
+  if(kind){
+    row.querySelector('.edKind').value = kind;
+    onExtraKindChange(row.querySelector('.edKind'));
+  }
+  if(value) row.querySelector('.edValue').value = value;
+  updateDateReadout(row.querySelector('.edValue'), row.querySelector('.edValueReadout'));
+  if(!kind) row.querySelector('.edKind').focus();
+}
+
+// Date-type details get a date picker instead of a text box
+function onExtraKindChange(sel){
+  const row = sel.closest('.extra-detail-row');
+  const input = row.querySelector('.edValue');
+  const isDate = sel.value === 'Date of Arrival' || sel.value === 'Date of Departure';
+  const wasDate = input.type === 'date';
+  if(isDate !== wasDate) input.value = '';
+  input.type = isDate ? 'date' : 'text';
+  updateDateReadout(input, row.querySelector('.edValueReadout'));
+}
+
+// Shows "18 Jul 2026" under a date selector (cleared for non-dates/empty)
+function updateDateReadout(input, readoutEl){
+  if(!readoutEl) return;
+  readoutEl.textContent = (input.type === 'date' && input.value) ? formatDate(input.value) : '';
+}
+
+function collectExtraDetails(){
+  const rows = document.querySelectorAll('#extraDetailList .extra-detail-row');
+  const details = [];
+  for(const row of rows){
+    const kindSel = row.querySelector('.edKind');
+    const valueInput = row.querySelector('.edValue');
+    const kind = kindSel.value;
+    const value = valueInput.value.trim();
+    if(!kind && !value) continue; // untouched row — ignore
+    if(!kind){
+      showNotice('Please select what kind of detail "' + value + '" is, or remove that detail row.');
+      focusError(kindSel);
+      return null;
+    }
+    if(!value){
+      showNotice('Please enter the ' + kind + ', or remove that detail row.');
+      focusError(valueInput);
+      return null;
+    }
+    details.push({ kind, value });
+  }
+  return details;
+}
+
+function formatExtraDetail(d){
+  const isDate = d.kind === 'Date of Arrival' || d.kind === 'Date of Departure';
+  return isDate && d.value ? formatDate(d.value) : d.value;
+}
+
+let pendingEntryData = null;
+
+function reviewEntry(){
+  // ---- Guardrails: the person doing data entry may be rushed or new to
+  // the form, so catch the mistakes that would otherwise sit quietly in
+  // the saved data (missing name, a room typed twice, a bank left unset). ----
+  const guestNameEl = document.getElementById('guestName');
+  const guestName = guestNameEl.value.trim();
+  if(!guestName){
+    showNotice('Please enter the Guest Name before saving.');
+    focusError(guestNameEl);
+    return;
+  }
+  if(!/^[a-zA-Z\s.'-]+$/.test(guestName)){
+    showNotice('Guest Name looks wrong — it should contain letters only (no numbers). Please check for a typo.');
+    focusError(guestNameEl);
+    return;
+  }
+
+  const fatherNameEl = document.getElementById('fatherName');
+  const fatherName = fatherNameEl.value.trim();
+  if(!fatherName){
+    showNotice('Please enter the Father Name before saving.');
+    focusError(fatherNameEl);
+    return;
+  }
+  if(!/^[a-zA-Z\s.'-]+$/.test(fatherName)){
+    showNotice('Father Name looks wrong — it should contain letters only (no numbers). Please check for a typo.');
+    focusError(fatherNameEl);
+    return;
+  }
+
+  const cnicEl = document.getElementById('cnic');
+  const cnic = cnicEl.value.trim();
+  if(!cnic){
+    showNotice('Please enter the CNIC before saving.');
+    focusError(cnicEl);
+    return;
+  }
+  const cnicDigits = cnic.replace(/[^0-9]/g, '');
+  if(cnicDigits.length !== 13){
+    showNotice('CNIC looks wrong — it should have exactly 13 digits (e.g. XXXXX-XXXXXXX-X). Please check for a typo.');
+    focusError(cnicEl);
+    return;
+  }
+
+  // duplicate CNIC guard — catches an accidental re-entry of an existing guest
+  const existingEntries = loadAllEntries();
+  const dupGuest = existingEntries.find(e => e.id !== editingEntryId && (e.cnic || '').replace(/[^0-9]/g,'') === cnicDigits);
+  if(dupGuest){
+    const proceed = confirm('A guest with this CNIC already exists: "' + (dupGuest.guestName || '(no name)') + '". Save this as a separate new entry anyway?');
+    if(!proceed) return;
+  }
+
+  const extraDetails = collectExtraDetails();
+  if(extraDetails === null) return;
+
+  const roomRows = Array.from(document.querySelectorAll('#roomBody tr'));
+  const cleanRooms = [];
+  for(const tr of roomRows){
+    const roomNoInput = tr.querySelector('.roomNo');
+    const rentInput = tr.querySelector('.rent');
+    const roomNo = roomNoInput.value.trim();
+    const rent = parseFloat(rentInput.value) || 0;
+    if(!roomNo && rent === 0) continue; // untouched filler row — ignore silently
+    if(!roomNo){
+      showNotice('A rent amount was entered without a Room No / Apt No. Please pick a room for every row, or clear the rent.');
+      focusError(roomNoInput);
+      return;
+    }
+    if(rent <= 0){
+      showNotice('Room ' + roomNo + ' has no Rent Per Day entered. Please enter a rent amount greater than 0.');
+      focusError(rentInput);
+      return;
+    }
+    const typeSel = tr.querySelector('.unitType');
+    const unitType = typeSel.value;
+    if(!unitType){
+      showNotice('Please select whether "' + roomNo + '" is a Room or an Apartment in the Type column.');
+      focusError(typeSel);
+      return;
+    }
+    const roomObj = {
+      roomNo, unitType, rentInput, tr,
+      rent: rentInput.value,
+      count: tr.dataset.rooms,
+      total: parseFloat(tr.querySelector('.rowtotal').textContent.replace(/,/g,'')) || 0
+    };
+    if(tr.dataset.roomId) roomObj.id = tr.dataset.roomId; // keep identity when editing
+    cleanRooms.push(roomObj);
+  }
+  if(cleanRooms.length === 0){
+    showNotice('Please add at least one room before saving.');
+    return;
+  }
+  const seenRooms = {};
+  for(const r of cleanRooms){
+    const key = r.roomNo.toUpperCase();
+    if(key === 'N/A') continue; // undecided rooms may repeat
+    if(seenRooms[key]){
+      showNotice('Room ' + r.roomNo + ' is selected in more than one row. Each room can only be booked once per entry — please fix the duplicate before saving.');
+      focusError(r.tr.querySelector('.roomNo'));
+      return;
+    }
+    seenRooms[key] = true;
+  }
+
+  const payRows = Array.from(document.querySelectorAll('#payBody tr'));
+  const cleanPayments = [];
+  for(const tr of payRows){
+    const mode = tr.querySelector('.payMode').value;
+    const bankSel = tr.querySelector('.payBank');
+    const bank = bankSel.value;
+    const dateInput = tr.querySelector('.payDate');
+    const cashInput = tr.querySelector('.payCash');
+    const acctInput = tr.querySelector('.payAccount');
+    const cash = parseFloat(cashInput.value) || 0;
+    const account = parseFloat(acctInput.value) || 0;
+    if(cash === 0 && account === 0) continue; // untouched filler payment row — ignore silently
+    if(cash < 0 || account < 0){
+      showNotice('Payment amounts cannot be negative. Please fix the payment row before saving.');
+      focusError(cash < 0 ? cashInput : acctInput);
+      return;
+    }
+    if(!dateInput.value){
+      showNotice('Please pick a Date for the payment row before saving.');
+      focusError(dateInput);
+      return;
+    }
+    if((mode === 'Bank Transfer' || mode === 'Card') && !bank){
+      showNotice('Please select a bank for the ' + mode + ' payment row before saving.');
+      focusError(bankSel);
+      return;
+    }
+    const payObj = {
+      date: dateInput.value,
+      type: tr.querySelector('.payType').value,
+      mode, bank, cash, account,
+      remarks: tr.querySelector('.payRemarks').value.trim(),
+      total: parseFloat(tr.querySelector('.payTotal').textContent.replace(/,/g,'')) || 0
+    };
+    if(tr.dataset.payId) payObj.id = tr.dataset.payId; // keep identity when editing
+    cleanPayments.push(payObj);
+  }
+
+  const bookingTotalNum = parseFloat(document.getElementById('grandTotal').textContent.replace(/,/g,'')) || 0;
+  const paidTotalNum = cleanPayments.reduce((sum, p) => sum + p.total, 0);
+  if(paidTotalNum > bookingTotalNum){
+    showNotice(
+      'The total payment entered (Rs. ' + paidTotalNum.toLocaleString() +
+      ') is MORE than the Booking Total (Rs. ' + bookingTotalNum.toLocaleString() +
+      '). Payments can never be more than the booking total — please fix the amounts before saving.'
+    );
+    return;
+  }
+
+  const data = {
+    guestName,
+    fatherName,
+    cnic,
+    extraDetails,
+    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, count: r.count, total: r.total })),
+    payments: cleanPayments
+  };
+  data.bookingTotal = document.getElementById('sumBookingTotal').textContent;
+  data.totalPaid = document.getElementById('sumPaid').textContent;
+  data.balanceDue = document.getElementById('sumDue').textContent;
+  data.status = document.getElementById('sumStatus').textContent;
+
+  pendingEntryData = data;
+  openConfirmModal(data);
+}
+
+function openConfirmModal(data){
+  const box = document.getElementById('confirmBody');
+
+  const roomRowsHtml = data.rooms.map(r=>`
+    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.count}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
+  `).join('');
+
+  const payRowsHtml = data.payments.length ? data.payments.map(p=>{
+    const isCash = p.mode === 'Cash';
+    return `
+    <tr class="${isCash ? 'mode-cash' : 'mode-bank'}">
+      <td>${formatDate(p.date)}</td><td>${p.type}</td><td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${p.mode}</span></td><td>${p.bank || '-'}</td>
+      <td>${p.remarks || '-'}</td>
+      <td class="cash-amt">${p.cash ? p.cash.toLocaleString() : '-'}</td><td class="account-amt">${p.account ? p.account.toLocaleString() : '-'}</td>
+      <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${p.total.toLocaleString()}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="8" class="empty-note">No payments entered yet.</td></tr>';
+
+  box.innerHTML = `
+    <div class="grid" style="margin-bottom:14px;">
+      <div><div class="confirm-lbl">Guest Name</div><div class="confirm-val">${data.guestName || '-'}</div></div>
+      <div><div class="confirm-lbl">Father Name</div><div class="confirm-val">${data.fatherName || '-'}</div></div>
+      <div><div class="confirm-lbl">CNIC</div><div class="confirm-val">${data.cnic || '-'}</div></div>
+      ${(data.extraDetails || []).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
+    </div>
+    <table style="margin-bottom:14px;">
+      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Days</th><th>Total</th></tr></thead>
+      <tbody>${roomRowsHtml}</tbody>
+    </table>
+    <table style="margin-bottom:14px;">
+      <thead><tr><th>Date</th><th>Type</th><th>Mode</th><th>Bank</th><th>Remarks</th><th>Cash</th><th>Account</th><th>Total</th></tr></thead>
+      <tbody>${payRowsHtml}</tbody>
+    </table>
+    <div class="summary" style="margin-top:0; padding-top:0; border-top:none;">
+      <div class="box"><div class="lbl">Booking Total</div><div class="val">${data.bookingTotal}</div></div>
+      <div class="box"><div class="lbl">Total Paid</div><div class="val">${data.totalPaid}</div></div>
+      <div class="box"><div class="lbl">Balance Due</div><div class="val">${data.balanceDue}</div></div>
+      <div class="box"><div class="lbl">Status</div><div class="val"><span class="status ${data.status.toLowerCase()}">${data.status}</span></div></div>
+    </div>
+  `;
+
+  document.getElementById('confirmTypeInput').value = '';
+  document.getElementById('confirmTypeInput').classList.remove('duplicate');
+  document.getElementById('confirmTotalInput').value = '';
+  document.getElementById('confirmTotalInput').classList.remove('duplicate');
+  document.getElementById('confirmModalBackdrop').classList.add('active');
+  document.getElementById('confirmTotalInput').focus();
+}
+
+function closeConfirmModal(){
+  document.getElementById('confirmModalBackdrop').classList.remove('active');
+  pendingEntryData = null;
+}
+
+function confirmSaveEntry(){
+  if(!pendingEntryData) return;
+
+  // The enterer must re-type the grand total — catches a wrong rent/days
+  // they would otherwise wave through without reading.
+  const totalInput = document.getElementById('confirmTotalInput');
+  const typedTotal = parseFloat(totalInput.value.replace(/[^0-9.]/g, '')) || 0;
+  const actualTotal = parseFloat(String(pendingEntryData.bookingTotal).replace(/,/g, '')) || 0;
+  if(typedTotal !== actualTotal){
+    totalInput.classList.add('duplicate');
+    showNotice('The Grand Total you typed (' + (totalInput.value.trim() || 'nothing') + ') does not match the entry\'s Grand Total (' + actualTotal.toLocaleString() + '). Please check the rooms and rent are correct, then type the total again.');
+    totalInput.focus();
+    return;
+  }
+
+  const typed = document.getElementById('confirmTypeInput').value.trim().toLowerCase();
+  if(typed !== 'confirm'){
+    document.getElementById('confirmTypeInput').classList.add('duplicate');
+    showNotice('Please type "confirm" in the box to save this entry.');
+    document.getElementById('confirmTypeInput').focus();
+    return;
+  }
+
+  const data = pendingEntryData;
+
+  if(editingEntryId){
+    if(!isAdmin()){
+      // can't normally happen (staff can't enter edit mode at all) — final
+      // backstop so an edit save is never applied without the admin role
+      showNotice('Editing saved entries is only available to admin accounts.');
+      cancelEditMode();
+      closeConfirmModal();
+      return;
+    }
+    // Editing an existing entry: replace it in place, keep its identity.
+    const all = loadAllEntries();
+    const idx = all.findIndex(e=> e.id === editingEntryId);
+    if(idx === -1){
+      showNotice('Could not find the original entry to update — nothing was changed.');
+      closeConfirmModal();
+      return;
+    }
+    const original = all[idx];
+    data.id = original.id;
+    data.savedAt = original.savedAt;
+    data.editedAt = new Date().toISOString();
+    // rows removed while editing get soft-deleted in the cloud — the data
+    // is never gone, an admin can restore it from the SQL Editor
+    const keptRoomIds = new Set(data.rooms.map(r=> r.id).filter(Boolean));
+    (original.rooms || []).forEach(r=>{
+      if(r.id && !keptRoomIds.has(r.id)) queueSoftDelete('room', r.id);
+    });
+    const keptPayIds = new Set(data.payments.map(p=> p.id).filter(Boolean));
+    (original.payments || []).forEach(p=>{
+      if(p.id && !keptPayIds.has(p.id)) queueSoftDelete('payment', p.id);
+    });
+    data.rooms.forEach(r=>{ if(!r.id) r.id = uid('r'); });
+    data.payments.forEach(p=>{ if(!p.id) p.id = uid('p'); });
+    all[idx] = data;
+    queueEntryPush(data.id);
+    editingEntryId = null;
+    document.getElementById('editModeBar').style.display = 'none';
+    closeConfirmModal();
+    resetEntryForm();
+    renderTodayEntries();
+    showNotice('Entry updated successfully.', 'success');
+    return;
+  }
+
+  data.savedAt = new Date().toISOString();
+  data.id = uid('g');
+  data.rooms.forEach(r=>{ if(!r.id) r.id = uid('r'); });
+  data.payments.forEach(p=>{ if(!p.id) p.id = uid('p'); });
+
+  entries.push(data);
+  queueEntryPush(data.id);
+
+  closeConfirmModal();
+  resetEntryForm();
+  renderTodayEntries();
+  showNotice('Entry saved — it is listed under Today\'s Entries below. The form is ready for the next guest.', 'success');
+}
+
+// Clear the whole entry form for the next guest.
+function resetEntryForm(){
+  ['guestName','fatherName','cnic'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('extraDetailList').innerHTML = '';
+  document.getElementById('roomBody').innerHTML = '';
+  document.getElementById('payBody').innerHTML = '';
+  rowCount = 0;
+  payCount = 0;
+  addRow();
+  addPayRow();
+  calcGrandTotal();
+}
+
+// ---- Today's Entries: everything saved today, newest at the top ----
+function renderTodayEntries(){
+  const box = document.getElementById('todayEntriesBody');
+  if(!initialLoadDone){
+    box.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const all = loadAllEntries();
+  const t = todayStr();
+  const todays = all.filter(e => (e.savedAt || '').slice(0,10) === t);
+  if(todays.length === 0){
+    box.innerHTML = '<div class="empty-note">No entries saved today yet.</div>';
+    return;
+  }
+  todays.sort((a,b)=> (b.savedAt || '').localeCompare(a.savedAt || ''));
+  box.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th style="width:70px;">Time</th>
+          <th>Guest</th>
+          <th>Rooms</th>
+          <th style="width:120px;">Booking Total</th>
+          <th style="width:100px;">Paid</th>
+          <th style="width:100px;">Due</th>
+          <th style="width:90px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${todays.map(e=>{
+          const tt = computeTotals(e);
+          const roomNos = (e.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+          const time = e.savedAt ? new Date(e.savedAt).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) : '-';
+          return `<tr style="cursor:pointer;" onclick="openDetail('${e.id}')" title="Open this guest">
+            <td>${time}</td>
+            <td>${e.guestName || '(no name)'}</td>
+            <td>${roomNos || '-'}</td>
+            <td>${tt.bookingTotal.toLocaleString()}</td>
+            <td class="cash-amt">${tt.paid.toLocaleString()}</td>
+            <td style="font-weight:700; color:${tt.due > 0 ? 'var(--danger)' : 'inherit'};">${tt.due.toLocaleString()}</td>
+            <td><span class="status ${tt.status.toLowerCase()}">${tt.status}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ---- Shared guest data helpers ----
+// `entries` (declared in the cloud data layer below) is an in-memory
+// mirror of the cloud database — the ONLY source of truth. localStorage
+// is never read for data anymore; it only holds a legacy copy that gets
+// migrated to the cloud once on first run.
+function loadAllEntries(){
+  return entries;
+}
+
+function computeTotals(entry){
+  const bookingTotal = (entry.rooms || []).reduce((s,r)=>{
+    const t = parseFloat(String(r.total).replace(/,/g,'')) || 0;
+    return s + t;
+  }, 0);
+  const paid = (entry.payments || []).reduce((s,p)=> s + (parseFloat(p.total) || 0), 0);
+  const due = bookingTotal - paid;
+  let status = 'Pending';
+  if(bookingTotal > 0 && due <= 0) status = 'Paid';
+  else if(paid > 0) status = 'Partial';
+  return { bookingTotal, paid, due: Math.max(due,0), status };
+}
+
+// ---- Edit mode: reopen a saved entry on the Guest Entry page ----
+let editingEntryId = null;
+
+function openEditModal(){
+  if(!isAdmin()){
+    showNotice('Editing saved entries is only available to admin accounts.');
+    return;
+  }
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  const t = computeTotals(entry);
+  const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+  document.getElementById('editBody').innerHTML = `
+    <div class="grid" style="margin-bottom:14px;">
+      <div><div class="confirm-lbl">Guest Name</div><div class="confirm-val">${entry.guestName || '-'}</div></div>
+      <div><div class="confirm-lbl">Father Name</div><div class="confirm-val">${entry.fatherName || '-'}</div></div>
+      <div><div class="confirm-lbl">CNIC</div><div class="confirm-val">${entry.cnic || '-'}</div></div>
+      <div><div class="confirm-lbl">Rooms</div><div class="confirm-val">${roomNos || '-'}</div></div>
+      <div><div class="confirm-lbl">Booking Total</div><div class="confirm-val">${t.bookingTotal.toLocaleString()}</div></div>
+      <div><div class="confirm-lbl">Paid / Due</div><div class="confirm-val">${t.paid.toLocaleString()} / ${t.due.toLocaleString()}</div></div>
+    </div>`;
+  const input = document.getElementById('editTypeInput');
+  input.value = '';
+  input.classList.remove('duplicate');
+  document.getElementById('editModalBackdrop').classList.add('active');
+  input.focus();
+}
+
+function closeEditModal(){
+  document.getElementById('editModalBackdrop').classList.remove('active');
+}
+
+function confirmEditEntry(){
+  if(!isAdmin()){
+    showNotice('Editing saved entries is only available to admin accounts.');
+    closeEditModal();
+    return;
+  }
+  const input = document.getElementById('editTypeInput');
+  if(input.value.trim().toLowerCase() !== 'edit'){
+    input.classList.add('duplicate');
+    showNotice('Please type "edit" in the box to open this entry for editing.');
+    input.focus();
+    return;
+  }
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  closeEditModal();
+  startEditEntry(entry);
+}
+
+function startEditEntry(entry){
+  if(!isAdmin()){
+    showNotice('Editing saved entries is only available to admin accounts.');
+    return;
+  }
+  editingEntryId = entry.id;
+
+  document.getElementById('guestName').value = entry.guestName || '';
+  document.getElementById('fatherName').value = entry.fatherName || '';
+  document.getElementById('cnic').value = entry.cnic || '';
+
+  document.getElementById('extraDetailList').innerHTML = '';
+  (entry.extraDetails || []).forEach(d=> addExtraDetailRow(d.kind, d.value));
+
+  document.getElementById('roomBody').innerHTML = '';
+  rowCount = 0;
+  (entry.rooms && entry.rooms.length ? entry.rooms : [null]).forEach(r=>{
+    addRow();
+    if(!r) return;
+    const tr = document.querySelector('#roomBody tr:last-child');
+    if(r.id) tr.dataset.roomId = r.id;
+    tr.querySelector('.roomNo').value = r.roomNo || '';
+    const days = parseInt(r.count) || 1;
+    tr.dataset.rooms = days;
+    tr.querySelector('.roomCount').textContent = days;
+    tr.querySelector('.rent').value = r.rent || '';
+    updateUnitType(tr);
+    const typeSel = tr.querySelector('.unitType');
+    if(!typeSel.disabled && r.unitType){
+      typeSel.value = r.unitType;
+      typeSel.classList.remove('needs-pick');
+    }
+    calcRow(tr.querySelector('.rent'));
+  });
+  refreshDuplicateRoomHighlights();
+
+  document.getElementById('payBody').innerHTML = '';
+  payCount = 0;
+  (entry.payments && entry.payments.length ? entry.payments : [null]).forEach(p=>{
+    addPayRow();
+    if(!p) return;
+    const tr = document.querySelector('#payBody tr:last-child');
+    if(p.id) tr.dataset.payId = p.id;
+    tr.querySelector('.payDate').value = p.date || todayStr();
+    updateDateReadout(tr.querySelector('.payDate'), tr.querySelector('.payDateReadout'));
+    const typeSel = tr.querySelector('.payType');
+    const mappedType = p.type === 'Pending' ? 'Due Payment' : (p.type || 'Other');
+    // "Due Payment" is not offered on new entries, but an existing entry
+    // being edited may legitimately hold one — add the option just for this row.
+    if(mappedType === 'Due Payment' && !typeSel.querySelector('option[value="Due Payment"]')){
+      const opt = document.createElement('option');
+      opt.value = 'Due Payment';
+      opt.textContent = 'Due Payment';
+      typeSel.appendChild(opt);
+    }
+    typeSel.value = mappedType;
+    if(typeSel.selectedIndex === -1) typeSel.value = 'Other';
+    const modeSel = tr.querySelector('.payMode');
+    modeSel.value = p.mode || 'Cash';
+    if(modeSel.selectedIndex === -1) modeSel.value = 'Cash';
+    toggleMode(modeSel);
+    if(modeSel.value === 'Cash'){
+      tr.querySelector('.payCash').value = p.cash || '';
+    } else {
+      tr.querySelector('.payBank').value = p.bank || '';
+      tr.querySelector('.payAccount').value = p.account || '';
+    }
+    tr.querySelector('.payRemarks').value = p.remarks || '';
+    calcPayRow(tr.querySelector('.payCash'));
+  });
+
+  document.getElementById('editModeName').textContent = entry.guestName || '(no name)';
+  document.getElementById('editModeBar').style.display = 'flex';
+  showView('entry');
+  window.scrollTo(0, 0);
+}
+
+function cancelEditMode(){
+  editingEntryId = null;
+  document.getElementById('editModeBar').style.display = 'none';
+  resetEntryForm();
+  if(currentDetailId){
+    openDetail(currentDetailId); // back to the guest page, nothing changed
+  }
+}
+
+// ---- Search page ----
+let currentDetailId = null;
+// payments added in this session, so the history can flag them with NEW!
+const newPaymentIds = new Set();
+
+function renderSearch(){
+  if(!initialLoadDone){
+    document.getElementById('gsearchList').innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const all = loadAllEntries();
+  const searchVal = document.getElementById('gsearchInput').value.trim().toLowerCase();
+  const dueOnly = document.getElementById('gsearchDueOnly').checked;
+  const dateVal = document.getElementById('gsearchDate').value;
+  document.getElementById('gsearchDateReadout').textContent = dateVal ? formatDate(dateVal) : '';
+  const listEl = document.getElementById('gsearchList');
+
+  let items = all.map(entry=>{
+    const t = computeTotals(entry);
+    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+    return { entry, t, roomNos };
+  });
+
+  if(searchVal){
+    items = items.filter(({entry, roomNos})=>{
+      const haystack = [
+        entry.guestName, entry.fatherName, entry.cnic, roomNos,
+        (entry.extraDetails || []).map(d=>d.value).join(' ')
+      ].join(' ').toLowerCase();
+      return haystack.includes(searchVal);
+    });
+  }
+
+  if(dateVal){
+    items = items.filter(({entry})=> (entry.savedAt || '').slice(0,10) === dateVal);
+  }
+
+  if(dueOnly){
+    items = items.filter(({t})=> t.due > 0);
+  }
+
+  if(items.length === 0){
+    listEl.innerHTML = '<div class="empty-note">No guests match.</div>';
+    return;
+  }
+
+  // due balances first
+  items.sort((a,b)=> b.t.due - a.t.due);
+
+  listEl.innerHTML = items.map(({entry, t, roomNos})=>{
+    const statusClass = t.status.toLowerCase();
+    return `
+      <div class="gcard status-${statusClass}" onclick="openDetail('${entry.id}')">
+        <div class="ginfo">
+          <div class="name">${entry.guestName || '(no name)'}</div>
+          <div class="meta">${roomNos ? 'Room ' + roomNos + ' &middot; ' : ''}${entry.cnic || ''}</div>
+        </div>
+        <div class="gnums">
+          <div class="box"><div class="lbl">Entry Date</div><div class="val">${entry.savedAt ? formatDate(entry.savedAt.slice(0,10)) : '-'}</div></div>
+          <div class="box"><div class="lbl">Total</div><div class="val">${t.bookingTotal.toLocaleString()}</div></div>
+          <div class="box"><div class="lbl">Paid</div><div class="val cash-amt">${t.paid.toLocaleString()}</div></div>
+          <div class="box"><div class="lbl">Due</div><div class="val" style="color:${t.due>0?'var(--danger)':'inherit'};">${t.due.toLocaleString()}</div></div>
+          <div class="box"><div class="lbl">Status</div><div class="val"><span class="status ${statusClass}">${t.status}</span></div></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ---- Guest detail page ----
+function openDetail(id){
+  currentDetailId = id;
+  showView('detail');
+  renderDetail();
+}
+
+function getCurrentEntry(){
+  const all = loadAllEntries();
+  return all.find(e=> e.id === currentDetailId);
+}
+
+function renderDetail(){
+  const entry = getCurrentEntry();
+  if(!entry){
+    showView('search');
+    return;
+  }
+  document.getElementById('detailName').textContent = entry.guestName || '(no name)';
+  document.getElementById('detailMeta').textContent = entry.roomNos || '';
+
+  document.getElementById('dGuestName').value = entry.guestName || '';
+  document.getElementById('dFatherName').value = entry.fatherName || '';
+  document.getElementById('dCnic').value = entry.cnic || '';
+  document.getElementById('dExtraDetails').innerHTML = (entry.extraDetails || []).map(d=>
+    `<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`
+  ).join('');
+
+  const roomBody = document.getElementById('detailRoomBody');
+  roomBody.innerHTML = (entry.rooms || []).map(r=>`
+    <tr>
+      <td>${r.roomNo || '-'}</td>
+      <td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td>
+      <td>${Number(r.rent || 0).toLocaleString()}</td>
+      <td>${r.count || 1}</td>
+      <td class="rowtotal">${(parseFloat(String(r.total || 0).replace(/,/g,'')) || 0).toLocaleString()}</td>
+    </tr>`).join('') || '<tr><td colspan="5" class="empty-note">No rooms.</td></tr>';
+
+  const payBody = document.getElementById('detailPayBody');
+  const payments = (entry.payments || []).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''));
+  payBody.innerHTML = payments.map(p=>{
+    const isCash = p.mode === 'Cash';
+    return `
+    <tr class="${isCash ? 'mode-cash' : 'mode-bank'}">
+      <td>${p.id && newPaymentIds.has(p.id) ? '<span class="new-flag">NEW!</span>' : ''}${formatDate(p.date)}</td>
+      <td>${p.type}</td>
+      <td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${p.mode}</span></td>
+      <td>${p.bank || '-'}</td>
+      <td>${p.remarks || '-'}</td>
+      <td class="cash-amt">${p.cash ? Number(p.cash).toLocaleString() : '-'}</td>
+      <td class="account-amt">${p.account ? Number(p.account).toLocaleString() : '-'}</td>
+      <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${Number(p.total).toLocaleString()}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="empty-note">No payments yet.</td></tr>';
+
+  const t = computeTotals(entry);
+  document.getElementById('dSumBooking').textContent = t.bookingTotal.toLocaleString();
+  document.getElementById('dSumPaid').textContent = t.paid.toLocaleString();
+  document.getElementById('dSumDue').textContent = t.due.toLocaleString();
+  const statusEl = document.getElementById('dSumStatus');
+  statusEl.className = 'status ' + t.status.toLowerCase();
+  statusEl.textContent = t.status;
+
+  // room detail starts collapsed every time the page opens
+  document.getElementById('roomDetailCollapse').style.display = 'none';
+  document.getElementById('roomCollapseChev').textContent = '▸ Show';
+}
+
+function toggleRoomDetail(){
+  const box = document.getElementById('roomDetailCollapse');
+  const chev = document.getElementById('roomCollapseChev');
+  const isOpen = box.style.display !== 'none';
+  box.style.display = isOpen ? 'none' : 'block';
+  chev.textContent = isOpen ? '▸ Show' : '▾ Hide';
+}
+
+// ---- Add Payment page ----
+function resetPayForm(){
+  document.getElementById('dNewDate').value = todayStr();
+  document.getElementById('dNewDateReadout').textContent = formatDate(todayStr());
+  document.getElementById('dNewCash').value = '';
+  document.getElementById('dNewCash').disabled = false;
+  document.getElementById('dNewAccount').value = '';
+  document.getElementById('dNewAccount').disabled = true;
+  document.getElementById('dNewRemarks').value = '';
+  document.getElementById('dNewBank').value = '';
+  document.getElementById('dNewBank').disabled = true;
+  document.getElementById('dNewMode').value = 'Cash';
+  document.getElementById('dNewType').value = 'Due Payment';
+  updateAddPayPreview();
+}
+
+function renderApList(){
+  const listEl = document.getElementById('apGuestList');
+  if(!initialLoadDone){
+    listEl.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const searchVal = document.getElementById('apSearchInput').value.trim().toLowerCase();
+  const dueOnly = document.getElementById('apDueOnly').checked;
+
+  let items = loadAllEntries().map(entry=>{
+    const t = computeTotals(entry);
+    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+    return { entry, t, roomNos };
+  });
+
+  if(searchVal){
+    items = items.filter(({entry, roomNos})=>{
+      const haystack = [
+        entry.guestName, entry.fatherName, entry.cnic, roomNos
+      ].join(' ').toLowerCase();
+      return haystack.includes(searchVal);
+    });
+  }
+  if(dueOnly){
+    items = items.filter(({t})=> t.due > 0);
+  }
+  items.sort((a,b)=> b.t.due - a.t.due);
+
+  if(items.length === 0){
+    listEl.innerHTML = '<div class="empty-note">' + (dueOnly ? 'No guests with a balance due. Untick the box to see everyone.' : 'No guests match.') + '</div>';
+    return;
+  }
+
+  listEl.innerHTML = items.map(({entry, t, roomNos})=>{
+    const statusClass = t.status.toLowerCase();
+    return `
+      <div class="gcard status-${statusClass}" onclick="selectApGuest('${entry.id}')">
+        <div class="ginfo">
+          <div class="name">${entry.guestName || '(no name)'}</div>
+          <div class="meta">${entry.fatherName ? 's/o ' + entry.fatherName + ' &middot; ' : ''}${roomNos ? 'Room ' + roomNos : ''}</div>
+        </div>
+        <div class="gnums">
+          <div class="box"><div class="lbl">Total</div><div class="val">${t.bookingTotal.toLocaleString()}</div></div>
+          <div class="box"><div class="lbl">Paid</div><div class="val cash-amt">${t.paid.toLocaleString()}</div></div>
+          <div class="box"><div class="lbl">Due</div><div class="val" style="color:${t.due>0?'var(--danger)':'inherit'};">${t.due.toLocaleString()}</div></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function selectApGuest(id){
+  currentDetailId = id;
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  renderApGuestStrip();
+  document.getElementById('apPaySection').style.display = 'block';
+  resetPayForm();
+  document.getElementById('apPaySection').scrollIntoView({ behavior:'smooth', block:'start' });
+  document.getElementById('dNewCash').focus();
+}
+
+function renderApGuestStrip(){
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  const t = computeTotals(entry);
+  const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+  document.getElementById('apGuestStrip').innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+      <div>
+        <div style="font-family:'Inter',sans-serif; font-weight:700; font-size:17px; color:var(--ink);">${entry.guestName || '(no name)'}</div>
+        <div style="color:var(--muted); font-family:'Inter',sans-serif; font-size:12px; margin-top:2px;">${entry.fatherName ? 's/o ' + entry.fatherName + ' &middot; ' : ''}${roomNos ? 'Room ' + roomNos : ''}</div>
+      </div>
+      <div class="gnums">
+        <div class="box"><div class="lbl">Booking Total</div><div class="val">${t.bookingTotal.toLocaleString()}</div></div>
+        <div class="box"><div class="lbl">Paid</div><div class="val cash-amt">${t.paid.toLocaleString()}</div></div>
+        <div class="box"><div class="lbl">Balance Due</div><div class="val" style="color:${t.due>0?'var(--danger)':'var(--cash)'};">${t.due.toLocaleString()}</div></div>
+        <div class="box"><div class="lbl">Status</div><div class="val"><span class="status ${t.status.toLowerCase()}">${t.status}</span></div></div>
+      </div>
+    </div>`;
+}
+
+function toggleDetailMode(){
+  const mode = document.getElementById('dNewMode').value;
+  const cash = document.getElementById('dNewCash');
+  const acct = document.getElementById('dNewAccount');
+  const bank = document.getElementById('dNewBank');
+  if(mode === 'Cash'){
+    cash.disabled = false; acct.disabled = true; acct.value = '';
+    bank.disabled = true; bank.value = '';
+  } else {
+    // Bank Transfer or Card
+    acct.disabled = false; cash.disabled = true; cash.value = '';
+    bank.disabled = false;
+  }
+  updateAddPayPreview();
+}
+
+function addDetailPayment(){
+  const date = document.getElementById('dNewDate').value;
+  if(!date){ showNotice('Please pick a date.'); return; }
+  const type = document.getElementById('dNewType').value;
+  const mode = document.getElementById('dNewMode').value;
+  const bank = document.getElementById('dNewBank').value;
+  const remarks = document.getElementById('dNewRemarks').value.trim();
+  const cashInput = document.getElementById('dNewCash');
+  const acctInput = document.getElementById('dNewAccount');
+  const cash = parseFloat(cashInput.value) || 0;
+  const account = parseFloat(acctInput.value) || 0;
+  const total = cash + account;
+  if(cash < 0 || account < 0){
+    showNotice('Payment amounts cannot be negative.');
+    focusError(cash < 0 ? cashInput : acctInput);
+    return;
+  }
+  if(total <= 0){ showNotice('Enter a cash or account amount.'); return; }
+  if((mode === 'Bank Transfer' || mode === 'Card') && !bank){ showNotice('Please select a bank.'); return; }
+
+  const entry = getCurrentEntry();
+  if(!entry) return;
+
+  const t = computeTotals(entry);
+  if(t.due === 0){
+    showNotice('This booking is already fully paid — no more payments can be added.');
+    return;
+  }
+  if(total > t.due){
+    showNotice('This payment (Rs. ' + total.toLocaleString() + ') is MORE than the remaining Balance Due (Rs. ' + t.due.toLocaleString() + '). A payment can never be more than the due amount — please fix the figure.');
+    focusError(mode === 'Cash' ? cashInput : acctInput);
+    return;
+  }
+  const after = t.due - total;
+
+  pendingDetailPayment = { date, type, mode, bank, cash, account, remarks, total };
+
+  document.getElementById('addPayModalBody').innerHTML = `
+    <div class="grid" style="margin-bottom:14px;">
+      <div><div class="confirm-lbl">Guest</div><div class="confirm-val">${entry.guestName || '(no name)'}</div></div>
+      <div><div class="confirm-lbl">Date</div><div class="confirm-val">${formatDate(date)}</div></div>
+      <div><div class="confirm-lbl">Type</div><div class="confirm-val">${type}</div></div>
+      <div><div class="confirm-lbl">Mode</div><div class="confirm-val">${mode}${bank ? ' — ' + bank : ''}</div></div>
+      <div><div class="confirm-lbl">Remarks</div><div class="confirm-val">${remarks || '-'}</div></div>
+    </div>
+    <div class="summary" style="margin-top:0; padding-top:0; border-top:none;">
+      <div class="box"><div class="lbl">This Payment</div><div class="val">${total.toLocaleString()}</div><div class="date-readout">= ${amountInWords(total)}</div></div>
+      <div class="box"><div class="lbl">Balance Due Now</div><div class="val">${t.due.toLocaleString()}</div></div>
+      <div class="box"><div class="lbl">Due After</div><div class="val" style="color:${after > 0 ? 'var(--danger)' : 'var(--cash)'};">${after.toLocaleString()}</div></div>
+    </div>
+  `;
+
+  const input = document.getElementById('addPayTypeInput');
+  input.value = '';
+  input.classList.remove('duplicate');
+  document.getElementById('addPayModalBackdrop').classList.add('active');
+  input.focus();
+}
+
+let pendingDetailPayment = null;
+
+function closeAddPayModal(){
+  document.getElementById('addPayModalBackdrop').classList.remove('active');
+  pendingDetailPayment = null;
+}
+
+function confirmAddPayment(){
+  const input = document.getElementById('addPayTypeInput');
+  if(input.value.trim().toLowerCase() !== 'confirm'){
+    input.classList.add('duplicate');
+    showNotice('Please type "confirm" in the box to add this payment.');
+    input.focus();
+    return;
+  }
+  if(!pendingDetailPayment) return;
+
+  const all = loadAllEntries();
+  const entry = all.find(e=> e.id === currentDetailId);
+  if(!entry){ closeAddPayModal(); return; }
+
+  if(!entry.payments) entry.payments = [];
+  const payId = uid('p');
+  entry.payments.push(Object.assign({ id: payId }, pendingDetailPayment));
+  newPaymentIds.add(payId);
+  queueEntryPush(entry.id);
+  const savedTotal = pendingDetailPayment.total;
+  closeAddPayModal();
+  renderDetail();
+  renderApGuestStrip();
+  renderApList();
+  resetPayForm();
+  showNotice('Payment of Rs. ' + savedTotal.toLocaleString() + ' added.', 'success');
+}
+
+// ---- Live calculation preview under the Add Payment form ----
+function amountInWords(n){
+  const fmt = x => (Math.round(x * 100) / 100).toLocaleString();
+  if(n >= 10000000) return fmt(n / 10000000) + ' crore';
+  if(n >= 100000) return fmt(n / 100000) + ' lakh';
+  if(n >= 1000) return fmt(n / 1000) + ' thousand';
+  return fmt(n);
+}
+
+function updateAddPayPreview(){
+  const box = document.getElementById('addPayPreview');
+  const entry = getCurrentEntry();
+  if(!entry){ box.style.display = 'none'; return; }
+  box.style.display = 'grid';
+  const t = computeTotals(entry);
+  const cash = parseFloat(document.getElementById('dNewCash').value) || 0;
+  const acct = parseFloat(document.getElementById('dNewAccount').value) || 0;
+  const amount = cash + acct;
+  const after = t.due - amount;
+
+  document.getElementById('prevAmount').textContent = amount.toLocaleString();
+  document.getElementById('prevAmountWords').textContent = amount > 0 ? '= ' + amountInWords(amount) : '';
+  document.getElementById('prevDueNow').textContent = t.due.toLocaleString();
+
+  const afterEl = document.getElementById('prevDueAfter');
+  const statusEl = document.getElementById('prevStatus');
+  statusEl.className = 'status';
+  if(amount === 0){
+    afterEl.textContent = t.due.toLocaleString();
+    afterEl.style.color = 'inherit';
+    statusEl.classList.add('pending');
+    statusEl.textContent = '—';
+  } else if(after > 0){
+    afterEl.textContent = after.toLocaleString();
+    afterEl.style.color = 'var(--danger)';
+    statusEl.classList.add('partial');
+    statusEl.textContent = 'Still due';
+  } else if(after === 0){
+    afterEl.textContent = '0';
+    afterEl.style.color = 'var(--cash)';
+    statusEl.classList.add('paid');
+    statusEl.textContent = 'Fully paid ✓';
+  } else {
+    afterEl.textContent = '0';
+    afterEl.style.color = 'var(--gold-deep)';
+    statusEl.classList.add('pending');
+    statusEl.textContent = 'Over by ' + Math.abs(after).toLocaleString() + '!';
+  }
+}
+
+// ---- Report: Payment Detail per day ----
+function getFilteredReportRows(){
+  const all = loadAllEntries();
+
+  const fromVal = document.getElementById('filterFrom').value;
+  const toVal = document.getElementById('filterTo').value;
+  const searchVal = document.getElementById('filterSearch').value.trim().toLowerCase();
+
+  // flatten payments with guest + booking info attached, for filtering by "anything"
+  let rows = [];
+  all.forEach(entry=>{
+    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+    (entry.payments || []).forEach(p=>{
+      if(!p.date) return;
+      rows.push({
+        date: p.date,
+        guest: entry.guestName || '(no name)',
+        father: entry.fatherName || '',
+        cnic: entry.cnic || '',
+        roomNos: roomNos,
+        type: p.type,
+        mode: p.mode,
+        bank: p.bank || '',
+        remarks: p.remarks || '',
+        cash: p.cash || 0,
+        account: p.account || 0,
+        total: p.total || 0
+      });
+    });
+  });
+
+  // date range filter
+  if(fromVal){
+    rows = rows.filter(r => r.date >= fromVal);
+  }
+  if(toVal){
+    rows = rows.filter(r => r.date <= toVal);
+  }
+
+  // search across everything
+  if(searchVal){
+    rows = rows.filter(r=>{
+      const haystack = [
+        r.guest, r.father, r.cnic,
+        r.roomNos, r.type, r.mode, r.bank, r.remarks, r.date
+      ].join(' ').toLowerCase();
+      return haystack.includes(searchVal);
+    });
+  }
+
+  return { rows, fromVal, toVal, searchVal };
+}
+
+function renderReport(){
+  const container = document.getElementById('reportBody');
+  const barEl = document.getElementById('reportGrandbar');
+  if(!initialLoadDone){
+    container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    barEl.style.display = 'none';
+    return;
+  }
+  const { rows, fromVal, toVal } = getFilteredReportRows();
+
+  const subParts = [];
+  subParts.push(fromVal || toVal ? `${fromVal ? formatDate(fromVal) : 'Start'} to ${toVal ? formatDate(toVal) : 'Today'}` : 'All dates');
+  subParts.push('Generated ' + formatDate(todayStr()));
+  document.getElementById('printHeaderSub').textContent = subParts.join('  ·  ');
+
+  if(rows.length === 0){
+    container.innerHTML = '<div class="empty-note">No payments match these filters.</div>';
+    barEl.style.display = 'none';
+    return;
+  }
+
+  // group by date, newest first
+  const groups = {};
+  rows.forEach(r=>{
+    if(!groups[r.date]) groups[r.date] = [];
+    groups[r.date].push(r);
+  });
+  const dates = Object.keys(groups).sort((a,b)=> b.localeCompare(a));
+
+  let grandCash = 0, grandAccount = 0, grandTotal = 0;
+  let html = '';
+
+  dates.forEach(date=>{
+    const dayRows = groups[date];
+    let dayTotal = 0;
+    let bodyRows = '';
+    dayRows.forEach(r=>{
+      dayTotal += r.total;
+      grandCash += r.cash;
+      grandAccount += r.account;
+      const isCash = r.mode === 'Cash';
+      bodyRows += `
+        <tr class="${isCash ? 'mode-cash' : 'mode-bank'}">
+          <td>${r.guest}</td>
+          <td>${r.type}</td>
+          <td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${r.mode}</span></td>
+          <td>${r.bank || '-'}</td>
+          <td>${r.remarks || '-'}</td>
+          <td class="cash-amt">${r.cash ? r.cash.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.account ? r.account.toLocaleString() : '-'}</td>
+          <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${r.total.toLocaleString()}</td>
+        </tr>`;
+    });
+    grandTotal += dayTotal;
+
+    html += `
+      <div class="day-group">
+        <div class="day-head">
+          <span>${formatDate(date)}</span>
+          <span class="day-total">Rs. ${dayTotal.toLocaleString()}</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Guest</th>
+              <th style="width:100px;">Type</th>
+              <th style="width:90px;">Mode</th>
+              <th style="width:90px;">Bank</th>
+              <th style="width:140px;">Remarks</th>
+              <th style="width:100px;">Cash</th>
+              <th style="width:100px;">Account</th>
+              <th style="width:100px;">Total</th>
+            </tr>
+          </thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      </div>`;
+  });
+
+  container.innerHTML = html;
+  barEl.style.display = 'flex';
+  document.getElementById('repCash').textContent = grandCash.toLocaleString();
+  document.getElementById('repAccount').textContent = grandAccount.toLocaleString();
+  document.getElementById('repGrand').textContent = grandTotal.toLocaleString();
+}
+
+function formatDate(iso){
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+// ---- Export current report (respects active filters) ----
+function exportReportExcel(){
+  const { rows } = getFilteredReportRows();
+  if(rows.length === 0){ showNotice('No payments match the current filters.'); return; }
+
+  const data = rows
+    .slice()
+    .sort((a,b)=> b.date.localeCompare(a.date))
+    .map(r=>({
+      'Date': formatDate(r.date),
+      'Guest': r.guest,
+      'Father Name': r.father,
+      'CNIC': r.cnic,
+      'Room No(s)': r.roomNos,
+      'Type': r.type,
+      'Mode': r.mode,
+      'Bank': r.bank || '-',
+      'Remarks': r.remarks || '',
+      'Cash': r.cash,
+      'Account': r.account,
+      'Total': r.total
+    }));
+
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [
+    {wch:12},{wch:20},{wch:20},{wch:16},
+    {wch:14},{wch:12},{wch:14},{wch:12},{wch:22},{wch:12},{wch:12},{wch:12}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Payment Report');
+  XLSX.writeFile(wb, `payment-report-${todayStr()}.xlsx`);
+}
+
+function openExportModal(){
+  const { rows } = getFilteredReportRows();
+  if(rows.length === 0){ showNotice('No payments match the current filters.'); return; }
+  document.getElementById('exportModalBackdrop').classList.add('active');
+}
+
+function closeExportModal(){
+  document.getElementById('exportModalBackdrop').classList.remove('active');
+}
+
+function printReport(){
+  const { rows } = getFilteredReportRows();
+  if(rows.length === 0){ showNotice('No payments match the current filters.'); return; }
+  window.print();
+}
+
+// =========================================================
+// CLOUD DATA LAYER — Supabase IS the database. `entries` is an in-memory
+// mirror of the server, refreshed by pullFreshFromCloud() and pushed by
+// pushPendingNow(). Every save goes to the cloud immediately; a save that
+// can't reach the server stays queued (red banner + status line) and is
+// retried near-instantly until it lands — it is never silently dropped.
+// localStorage is never trusted for data.
+// =========================================================
+const SUPABASE_URL = "https://rmebouzkzagajtqdxvnn.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_HhUE944Kbni7rKy5PSQD5g_HnbVQFI4";
+const sb = (typeof window.supabase !== "undefined" && SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+let entries = [];               // the cloud mirror every page reads from
+let initialLoadDone = false;    // nothing renders as "no data" until the first successful pull
+let appStarted = false;
+
+// Bumped after every confirmed write. A pull whose snapshot was fetched
+// before a write finished is stale by definition — it gets discarded and
+// re-run instead of overwriting fresher in-memory state.
+let mutationStamp = 0;
+
+function uid(prefix){
+  return (prefix || '') + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+function num(v){
+  const n = parseFloat(String(v === undefined || v === null ? '' : v).replace(/,/g,''));
+  return isNaN(n) ? 0 : Math.round(n * 100) / 100;
+}
+
+// ---------- sync status line + warning banner ----------
+let lastSyncAt = null;
+let syncProblem = null;
+
+function updateCloudIndicator(){
+  const el = document.getElementById('cloudStatus');
+  if(el){
+    const pending = pendingPushIds.size + pendingSoftDeletes.length;
+    if(!sb){
+      el.textContent = '⚠ Cloud database not configured';
+      el.style.color = 'var(--danger)';
+    } else if(syncProblem){
+      el.textContent = '☁ ' + syncProblem + (pending ? ' (' + pending + ' unsaved)' : '');
+      el.style.color = 'var(--danger)';
+    } else if(pending){
+      el.textContent = '☁ Saving…';
+      el.style.color = 'var(--gold-deep)';
+    } else if(lastSyncAt){
+      el.textContent = '☁ Live — synced ' + lastSyncAt.toLocaleTimeString();
+      el.style.color = 'var(--cash)';
+    } else {
+      el.textContent = '☁ Connecting…';
+      el.style.color = 'var(--muted)';
+    }
+  }
+  const banner = document.getElementById('cloudBanner');
+  if(banner) banner.classList.toggle('show', !sb || !!syncProblem);
+}
+
+function setSyncProblem(msg){ syncProblem = msg; updateCloudIndicator(); }
+
+function cloudLoadingNote(){
+  return syncProblem
+    ? 'Couldn\'t load from the cloud database — check the internet connection; retrying…'
+    : 'Loading from the cloud database…';
+}
+
+// Full-screen cover shown after login until the first successful pull —
+// the app never paints empty lists that could be mistaken for real data.
+function setLoadingOverlay(show, msg){
+  const el = document.getElementById('loadingOverlay');
+  if(!el) return;
+  el.classList.toggle('hidden', !show);
+  if(msg){
+    const text = document.getElementById('loadingOverlayText');
+    if(text) text.textContent = msg;
+  }
+}
+
+// ---------- cloud payloads (app shape -> table rows) ----------
+function guestPayload(e){
+  return {
+    id: e.id,
+    guest_name: e.guestName || '',
+    father_name: e.fatherName || '',
+    cnic: e.cnic || '',
+    extra_details: e.extraDetails || [],
+    saved_at: e.savedAt || new Date().toISOString(),
+    edited_at: e.editedAt || null
+  };
+}
+function roomPayload(e, r){
+  return {
+    id: r.id,
+    guest_id: e.id,
+    room_no: r.roomNo || '',
+    unit_type: r.unitType || '',
+    rent_per_day: num(r.rent),
+    days_count: parseInt(r.count) || 1,
+    total: num(r.total)
+  };
+}
+function paymentPayload(e, p){
+  return {
+    id: p.id,
+    guest_id: e.id,
+    payment_date: p.date,
+    pay_type: p.type || 'Other',
+    mode: p.mode || 'Cash',
+    bank: p.bank || '',
+    remarks: p.remarks || '',
+    cash: num(p.cash),
+    account: num(p.account),
+    total: num(p.total)
+  };
+}
+
+// ---------- PUSH: per-save with fast retry ----------
+// Entry ids with changes the server hasn't confirmed yet, plus room/payment
+// rows removed during an edit that still need their soft-delete stamped.
+const pendingPushIds = new Set();
+const pendingSoftDeletes = []; // { kind: 'room' | 'payment', id }
+let pushInFlight = false;
+let pushRetryTimer = null;
+
+function queueSoftDelete(kind, id){
+  pendingSoftDeletes.push({ kind, id });
+}
+
+function queueEntryPush(entryId){
+  pendingPushIds.add(entryId);
+  updateCloudIndicator();
+  pushPendingNow();
+}
+
+async function pushPendingNow(){
+  if(!sb || pushInFlight) return;
+  if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0) return;
+  pushInFlight = true;
+  try{
+    // soft-deletes first, so an edit that removed a payment can never leave
+    // the removed row alive while the rest of the edit already landed
+    while(pendingSoftDeletes.length > 0){
+      const d = pendingSoftDeletes[0];
+      const { error } = d.kind === 'room'
+        ? await sb.rpc('soft_delete_booking_room', { p_room_id: d.id, p_reason: 'removed while editing entry' })
+        : await sb.rpc('soft_delete_guest_payment', { p_payment_id: d.id, p_reason: 'removed while editing entry' });
+      if(error) throw error;
+      mutationStamp++;
+      pendingSoftDeletes.shift();
+    }
+    for(const id of Array.from(pendingPushIds)){
+      const entry = entries.find(e=> e.id === id);
+      if(!entry){ pendingPushIds.delete(id); continue; }
+      // the guest row goes first (rooms/payments reference it), and the
+      // upsert hands the stored row back — if it carries deleted_at, this
+      // entry was deleted from another device and the delete wins: never
+      // resurrect it, never pretend the save counted
+      const { data: savedRows, error } = await sb.from('guests').upsert(guestPayload(entry), { onConflict: 'id' }).select();
+      if(error) throw error;
+      const saved = savedRows && savedRows[0];
+      if(saved && saved.deleted_at){
+        pendingPushIds.delete(id);
+        entries = entries.filter(e=> e.id !== id);
+        showNotice('The entry for "' + (entry.guestName || 'no name') + '" was deleted from another device, so these changes can\'t be saved. It will now disappear here too.');
+        rerenderActiveView();
+        continue;
+      }
+      if(entry.rooms && entry.rooms.length){
+        const { error: rErr } = await sb.from('booking_rooms').upsert(entry.rooms.map(r=> roomPayload(entry, r)), { onConflict: 'id' });
+        if(rErr) throw rErr;
+      }
+      if(entry.payments && entry.payments.length){
+        const { error: pErr } = await sb.from('guest_payments').upsert(entry.payments.map(p=> paymentPayload(entry, p)), { onConflict: 'id' });
+        if(pErr) throw pErr;
+      }
+      mutationStamp++;
+      pendingPushIds.delete(id);
+    }
+    if(syncProblem) syncProblem = null;
+    requestBackgroundPull();
+  }catch(e){
+    console.error('Cloud push failed — will keep retrying automatically', e);
+    setSyncProblem(navigator.onLine === false
+      ? 'No internet — the save is queued and pushes the moment the connection is back.'
+      : 'Couldn\'t save to the cloud database — retrying automatically…');
+    clearTimeout(pushRetryTimer);
+    pushRetryTimer = setTimeout(pushPendingNow, 1500); // near-instant retry, not just the 5s tick
+  }finally{
+    pushInFlight = false;
+    updateCloudIndicator();
+  }
+}
+
+// ---------- PULL: cloud-first load + background refresh ----------
+let pullInFlight = null;
+let lastServerHash = '';
+
+function applyServerData(gRows, rRows, pRows){
+  const roomsByGuest = {};
+  rRows.slice().sort((a,b)=> (a.created_at || '').localeCompare(b.created_at || ''))
+    .forEach(r=>{ (roomsByGuest[r.guest_id] = roomsByGuest[r.guest_id] || []).push(r); });
+  const paysByGuest = {};
+  pRows.slice().sort((a,b)=> (a.created_at || '').localeCompare(b.created_at || ''))
+    .forEach(p=>{ (paysByGuest[p.guest_id] = paysByGuest[p.guest_id] || []).push(p); });
+
+  const fromServer = gRows.map(g=> ({
+    id: g.id,
+    guestName: g.guest_name || '',
+    fatherName: g.father_name || '',
+    cnic: g.cnic || '',
+    extraDetails: Array.isArray(g.extra_details) ? g.extra_details : [],
+    savedAt: g.saved_at,
+    editedAt: g.edited_at || undefined,
+    rooms: (roomsByGuest[g.id] || []).map(r=> ({
+      id: r.id, roomNo: r.room_no || '', unitType: r.unit_type || '',
+      rent: num(r.rent_per_day), count: parseInt(r.days_count) || 1, total: num(r.total)
+    })),
+    payments: (paysByGuest[g.id] || []).map(p=> ({
+      id: p.id, date: p.payment_date, type: p.pay_type || 'Other', mode: p.mode || 'Cash',
+      bank: p.bank || '', remarks: p.remarks || '', cash: num(p.cash), account: num(p.account), total: num(p.total)
+    }))
+  }));
+
+  // entries with a push still on the way keep their local version —
+  // everything else becomes exactly what the server returned
+  const serverIds = new Set(fromServer.map(e=> e.id));
+  const next = fromServer.map(srv=>
+    pendingPushIds.has(srv.id) ? (entries.find(e=> e.id === srv.id) || srv) : srv
+  );
+  entries.forEach(local=>{
+    if(!serverIds.has(local.id) && pendingPushIds.has(local.id)) next.push(local);
+  });
+  entries = next;
+}
+
+async function pullFreshFromCloud(){
+  if(!sb) return;
+  if(pullInFlight) return pullInFlight; // already fetching — don't pile up requests
+  pullInFlight = (async ()=>{
+    const stampAtStart = mutationStamp;
+    try{
+      const [gRes, rRes, pRes] = await Promise.all([
+        sb.from('guests_active').select('*'),
+        sb.from('booking_rooms_active').select('*'),
+        sb.from('guest_payments_active').select('*')
+      ]);
+      if(gRes.error) throw gRes.error;
+      if(rRes.error) throw rRes.error;
+      if(pRes.error) throw pRes.error;
+      // a write finished while this snapshot was on the wire — the snapshot
+      // is already stale, so fetch again instead of applying it
+      if(mutationStamp !== stampAtStart){ requestBackgroundPull(); return; }
+
+      const firstLoad = !initialLoadDone;
+      initialLoadDone = true;
+      lastSyncAt = new Date();
+      // reads working doesn't mean writes landed — while saves are still
+      // queued, the warning stays up until the push itself succeeds
+      if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0) syncProblem = null;
+
+      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data]);
+      const changed = hash !== lastServerHash;
+      lastServerHash = hash;
+      if(changed || firstLoad){
+        applyServerData(gRes.data || [], rRes.data || [], pRes.data || []);
+        rerenderActiveView();
+      }
+      if(firstLoad) setLoadingOverlay(false);
+      updateCloudIndicator();
+    }catch(e){
+      console.error('Cloud pull failed — retrying on the next tick', e);
+      setSyncProblem(navigator.onLine === false
+        ? 'No internet — reconnecting…'
+        : 'Can\'t reach the cloud database — retrying…');
+      // before the first successful load there is nothing correct to show —
+      // keep the loading screen up (with the reason) rather than painting
+      // empty lists that look like real data
+      if(!initialLoadDone){
+        setLoadingOverlay(true, 'Can\'t reach the cloud database — check the internet connection. Retrying automatically…');
+        rerenderActiveView();
+      }
+    }finally{
+      pullInFlight = null;
+    }
+  })();
+  return pullInFlight;
+}
+
+// Fire a pull shortly after any save — collapses a burst of saves into a
+// single pull and never blocks the save itself since it's not awaited.
+let pullDebounceTimer = null;
+function requestBackgroundPull(){
+  clearTimeout(pullDebounceTimer);
+  pullDebounceTimer = setTimeout(()=> pullFreshFromCloud(), 500);
+}
+
+// Repaint whatever page is on screen from the fresh snapshot. The entry
+// form itself is never data-bound, so a pull can never wipe mid-typing
+// input — only the display lists rebuild.
+function rerenderActiveView(){
+  if(currentView === 'entry'){ renderTodayEntries(); }
+  else if(currentView === 'search'){ renderSearch(); }
+  else if(currentView === 'report'){ renderReport(); }
+  else if(currentView === 'detail'){ renderDetail(); }
+  else if(currentView === 'addpay'){
+    renderApList();
+    if(currentDetailId && document.getElementById('apPaySection').style.display !== 'none'){
+      renderApGuestStrip();
+      updateAddPayPreview();
+    }
+  }
+}
+
+window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); pushPendingNow(); pullFreshFromCloud(); });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && appStarted){ pushPendingNow(); pullFreshFromCloud(); } });
+setInterval(()=>{ if(appStarted){ pushPendingNow(); pullFreshFromCloud(); } }, 5000);
+
+// Realtime (instant cross-device updates): if Realtime is enabled for these
+// tables (migration/new_system_schema.sql does it), any change made on
+// another device triggers an immediate pull here. If it isn't enabled this
+// simply never fires — the 5-second poll above remains the guarantee.
+if(sb && typeof sb.channel === 'function'){
+  try{
+    sb.channel('guest-system-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, ()=> requestBackgroundPull())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_rooms' }, ()=> requestBackgroundPull())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_payments' }, ()=> requestBackgroundPull())
+      .subscribe();
+  }catch(e){ console.error('Realtime unavailable — the 5s poll covers it', e); }
+}
+
+// Nobody leaves with unsaved work silently: anything still queued gets
+// flushed to the server with keepalive requests (the browser lets them
+// finish even after the page is gone), AND the "leave site?" prompt is
+// shown, because the server hasn't confirmed those rows yet.
+function flushPendingKeepalive(){
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY || pendingPushIds.size === 0) return;
+  const guests = [], rooms = [], pays = [];
+  pendingPushIds.forEach(id=>{
+    const e = entries.find(x=> x.id === id);
+    if(!e) return;
+    guests.push(guestPayload(e));
+    (e.rooms || []).forEach(r=> rooms.push(roomPayload(e, r)));
+    (e.payments || []).forEach(p=> pays.push(paymentPayload(e, p)));
+  });
+  const send = (table, body)=>{
+    if(!body.length) return;
+    try{
+      fetch(SUPABASE_URL + '/rest/v1/' + table + '?on_conflict=id', {
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(body)
+      });
+    }catch(e){ /* best effort — the leave prompt below still warns */ }
+  };
+  send('guests', guests);
+  send('booking_rooms', rooms);
+  send('guest_payments', pays);
+}
+window.addEventListener('pagehide', flushPendingKeepalive);
+window.addEventListener('beforeunload', ev=>{
+  if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0) return;
+  flushPendingKeepalive();
+  ev.preventDefault();
+  ev.returnValue = '';
+});
+
+// ---------- ONE-TIME LEGACY MIGRATION ----------
+// Earlier versions of this app kept everything in localStorage.guestEntries.
+// Anything still in this browser is pushed to the cloud once, then the
+// local copy is removed for good — the server is the only store now. If
+// the push fails, the local data is left untouched and this runs again
+// next load.
+async function migrateLegacyLocalData(){
+  if(!sb) return;
+  let legacy = null;
+  try{
+    const raw = localStorage.getItem('guestEntries');
+    legacy = raw ? JSON.parse(raw) : null;
+  }catch(e){ return; }
+  if(!Array.isArray(legacy) || legacy.length === 0){
+    if(legacy !== null){ try{ localStorage.removeItem('guestEntries'); }catch(e){ /* nothing to clean */ } }
+    return;
+  }
+  try{
+    for(const e of legacy){
+      e.id = e.id || uid('g');
+      (e.rooms || []).forEach(r=>{ r.id = r.id || uid('r'); });
+      (e.payments || []).forEach(p=>{ p.id = p.id || uid('p'); });
+      const { error } = await sb.from('guests').upsert(guestPayload(e), { onConflict: 'id' });
+      if(error) throw error;
+      if((e.rooms || []).length){
+        const { error: rErr } = await sb.from('booking_rooms').upsert(e.rooms.map(r=> roomPayload(e, r)), { onConflict: 'id' });
+        if(rErr) throw rErr;
+      }
+      if((e.payments || []).length){
+        const { error: pErr } = await sb.from('guest_payments').upsert(e.payments.map(p=> paymentPayload(e, p)), { onConflict: 'id' });
+        if(pErr) throw pErr;
+      }
+    }
+    localStorage.removeItem('guestEntries');
+  }catch(e){
+    console.error('Legacy local-data migration failed — keeping the local copy and trying again next load', e);
+  }
+}
+
+// ---------- LOGIN ----------
+// A plain users table in Supabase, not Supabase Auth (same account as the
+// old tracker). The password never leaves the database — check_login()
+// only ever returns true/false. Signing in once is remembered for this
+// browser tab's session (survives a refresh, asks again after the browser
+// is fully closed and reopened).
+const LOGIN_SESSION_KEY = 'guest_system_logged_in_v1';
+
+// ---- Account roles ----
+// 'admin' — full access. 'staff' — everything EXCEPT editing mode: the
+// "✎ Edit This Entry" feature is completely unavailable (button hidden AND
+// every code path into it blocked). The role comes from the server with
+// each sign-in — it is never typed or chosen in the browser.
+let currentUser = null; // { username, role }
+
+function isAdmin(){
+  return !!currentUser && currentUser.role === 'admin';
+}
+
+function applyRolePermissions(){
+  const editBtn = document.getElementById('editEntryBtn');
+  if(editBtn) editBtn.style.display = isAdmin() ? '' : 'none';
+  const who = document.getElementById('whoami');
+  if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
+}
+
+// Returns the account's role string on success, false on wrong
+// credentials, null when the server can't even be reached.
+async function checkLogin(username, password){
+  if(!sb) return null; // cloud not reachable at all — can't verify anyone
+  try{
+    const { data, error } = await sb.rpc('check_login_role', { p_username: username, p_password: password });
+    if(error) throw error;
+    return (typeof data === 'string' && data) ? data : false;
+  }catch(e){
+    console.error('Login check failed', e);
+    return null; // couldn't even reach the server — different message than "wrong password"
+  }
+}
+
+async function attemptLogin(){
+  const loginError = document.getElementById('loginError');
+  const loginBtn = document.getElementById('loginBtn');
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if(!username || !password){ loginError.textContent = 'Enter both username and password.'; return; }
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Checking…';
+  const role = await checkLogin(username, password);
+  loginBtn.disabled = false;
+  loginBtn.textContent = 'Sign In';
+  if(typeof role === 'string'){
+    currentUser = { username, role };
+    try{ sessionStorage.setItem(LOGIN_SESSION_KEY, JSON.stringify(currentUser)); }catch(e){ /* best effort */ }
+    loginError.textContent = '';
+    showApp();
+  } else if(role === null){
+    loginError.textContent = 'Couldn\'t reach the server — check your internet connection and try again.';
+  } else {
+    loginError.textContent = 'Wrong username or password.';
+  }
+}
+
+async function startApp(){
+  if(appStarted) return;
+  appStarted = true;
+  updateCloudIndicator();
+  setLoadingOverlay(true, 'Fetching the latest data from the cloud database…');
+  rerenderActiveView(); // paints the "Loading…" state behind the overlay
+  await migrateLegacyLocalData();
+  pullFreshFromCloud();
+}
+
+function showApp(){
+  applyRolePermissions();
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('appRoot').style.display = '';
+  startApp();
+}
+
+document.getElementById('loginBtn').addEventListener('click', attemptLogin);
+document.getElementById('loginPassword').addEventListener('keydown', ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); attemptLogin(); } });
+document.getElementById('loginUsername').addEventListener('keydown', ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); document.getElementById('loginPassword').focus(); } });
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  if(pendingPushIds.size > 0 && !confirm('Some saves have not reached the cloud database yet. Sign out anyway?')) return;
+  try{ sessionStorage.removeItem(LOGIN_SESSION_KEY); }catch(e){ /* best effort */ }
+  location.reload();
+});
+
+// start with 1 room row and 1 payment row
+addRow();
+addPayRow();
+
+// ---------- INITIAL LOAD ----------
+(function init(){
+  // the remembered session must carry a server-issued role — anything
+  // older/unreadable (e.g. the pre-roles format) means signing in again
+  try{
+    const raw = sessionStorage.getItem(LOGIN_SESSION_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.username && (parsed.role === 'admin' || parsed.role === 'staff')){
+        currentUser = parsed;
+      } else {
+        sessionStorage.removeItem(LOGIN_SESSION_KEY);
+      }
+    }
+  }catch(e){
+    try{ sessionStorage.removeItem(LOGIN_SESSION_KEY); }catch(e2){ /* best effort */ }
+  }
+  updateCloudIndicator();
+  if(currentUser){
+    showApp();
+  } else {
+    document.getElementById('loginUsername').focus();
+  }
+})();
+</script>
+
+</body>
+</html>
