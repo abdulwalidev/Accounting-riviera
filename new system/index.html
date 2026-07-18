@@ -1312,6 +1312,7 @@
             <th style="width:90px;">Mode</th>
             <th style="width:90px;">Bank</th>
             <th>Remarks</th>
+            <th style="width:130px;">Taken By</th>
             <th style="width:100px;">Cash</th>
             <th style="width:100px;">Account</th>
             <th style="width:100px;">Total</th>
@@ -1338,6 +1339,11 @@
           <div class="val"><span class="status pending" id="dSumStatus">Pending</span></div>
         </div>
       </div>
+    </div>
+
+    <div class="panel accent-guest">
+      <h2>Change History <span class="locked-note">Recorded automatically — cannot be edited</span></h2>
+      <div id="detailChangeLog"></div>
     </div>
 
   </div>
@@ -2391,6 +2397,15 @@ function confirmSaveEntry(){
     data.id = original.id;
     data.savedAt = original.savedAt;
     data.editedAt = new Date().toISOString();
+    data.savedBy = original.savedBy || '';
+    data.editedBy = currentUser ? currentUser.username : '';
+    // the form doesn't carry who took each payment — restore it from the
+    // original by id; genuinely new payment rows belong to this user
+    const origPayById = new Map((original.payments || []).map(p=> [p.id, p]));
+    data.payments.forEach(p=>{
+      const orig = p.id && origPayById.get(p.id);
+      p.createdBy = orig ? (orig.createdBy || '') : (currentUser ? currentUser.username : '');
+    });
     // rows removed while editing get soft-deleted in the cloud — the data
     // is never gone, an admin can restore it from the SQL Editor
     const keptRoomIds = new Set(data.rooms.map(r=> r.id).filter(Boolean));
@@ -2404,6 +2419,7 @@ function confirmSaveEntry(){
     data.rooms.forEach(r=>{ if(!r.id) r.id = uid('r'); });
     data.payments.forEach(p=>{ if(!p.id) p.id = uid('p'); });
     all[idx] = data;
+    logGuestAction(data.id, 'edited');
     queueEntryPush(data.id);
     editingEntryId = null;
     document.getElementById('editModeBar').style.display = 'none';
@@ -2416,10 +2432,15 @@ function confirmSaveEntry(){
 
   data.savedAt = new Date().toISOString();
   data.id = uid('g');
+  data.savedBy = currentUser ? currentUser.username : '';
   data.rooms.forEach(r=>{ if(!r.id) r.id = uid('r'); });
-  data.payments.forEach(p=>{ if(!p.id) p.id = uid('p'); });
+  data.payments.forEach(p=>{
+    if(!p.id) p.id = uid('p');
+    p.createdBy = currentUser ? currentUser.username : '';
+  });
 
   entries.push(data);
+  logGuestAction(data.id, 'created');
   queueEntryPush(data.id);
 
   closeConfirmModal();
@@ -2465,6 +2486,7 @@ function renderTodayEntries(){
           <th style="width:70px;">Time</th>
           <th>Guest</th>
           <th>Rooms</th>
+          <th style="width:140px;">Entered By</th>
           <th style="width:120px;">Booking Total</th>
           <th style="width:100px;">Paid</th>
           <th style="width:100px;">Due</th>
@@ -2480,6 +2502,7 @@ function renderTodayEntries(){
             <td>${time}</td>
             <td>${e.guestName || '(no name)'}</td>
             <td>${roomNos || '-'}</td>
+            <td>${(e.editedBy || e.savedBy) ? (e.editedBy && e.editedBy !== e.savedBy ? (e.savedBy || '-') + ' <span style="color:var(--muted);">(edited: ' + e.editedBy + ')</span>' : (e.savedBy || e.editedBy)) : '-'}</td>
             <td>${tt.bookingTotal.toLocaleString()}</td>
             <td class="cash-amt">${tt.paid.toLocaleString()}</td>
             <td style="font-weight:700; color:${tt.due > 0 ? 'var(--danger)' : 'inherit'};">${tt.due.toLocaleString()}</td>
@@ -2736,7 +2759,10 @@ function renderDetail(){
     return;
   }
   document.getElementById('detailName').textContent = entry.guestName || '(no name)';
-  document.getElementById('detailMeta').textContent = entry.roomNos || '';
+  const metaParts = [];
+  if(entry.savedAt) metaParts.push('Entered ' + formatDate(entry.savedAt.slice(0,10)) + (entry.savedBy ? ' by ' + entry.savedBy : ''));
+  if(entry.editedAt) metaParts.push('Last edited ' + formatDate(entry.editedAt.slice(0,10)) + (entry.editedBy ? ' by ' + entry.editedBy : ''));
+  document.getElementById('detailMeta').textContent = metaParts.join('  ·  ');
 
   document.getElementById('dGuestName').value = entry.guestName || '';
   document.getElementById('dFatherName').value = entry.fatherName || '';
@@ -2766,11 +2792,14 @@ function renderDetail(){
       <td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${p.mode}</span></td>
       <td>${p.bank || '-'}</td>
       <td>${p.remarks || '-'}</td>
+      <td>${p.createdBy || '-'}</td>
       <td class="cash-amt">${p.cash ? Number(p.cash).toLocaleString() : '-'}</td>
       <td class="account-amt">${p.account ? Number(p.account).toLocaleString() : '-'}</td>
       <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${Number(p.total).toLocaleString()}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" class="empty-note">No payments yet.</td></tr>';
+  }).join('') || '<tr><td colspan="9" class="empty-note">No payments yet.</td></tr>';
+
+  renderChangeLog(entry);
 
   const t = computeTotals(entry);
   document.getElementById('dSumBooking').textContent = t.bookingTotal.toLocaleString();
@@ -2783,6 +2812,48 @@ function renderDetail(){
   // room detail starts collapsed every time the page opens
   document.getElementById('roomDetailCollapse').style.display = 'none';
   document.getElementById('roomCollapseChev').textContent = '▸ Show';
+}
+
+// Every recorded action on this entry, newest first: who did what, when.
+// The log is append-only on the server — nothing in the app can rewrite it.
+const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added' };
+
+function renderChangeLog(entry){
+  const box = document.getElementById('detailChangeLog');
+  const logs = getLogsFor(entry.id);
+  if(logs.length === 0){
+    // entries saved before tracking existed have no log rows — fall back
+    // to the stamps stored on the entry itself
+    box.innerHTML = '<div class="empty-note">No change history recorded for this entry' + (entry.savedAt ? ' (saved before change tracking was added)' : '') + '.</div>';
+    return;
+  }
+  box.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th style="width:170px;">When</th>
+          <th style="width:160px;">Action</th>
+          <th>By</th>
+          <th style="width:90px;">Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${logs.map(l=>`
+          <tr>
+            <td>${fmtLogTime(l.at)}</td>
+            <td>${LOG_ACTION_LABELS[l.action] || l.action}</td>
+            <td>${l.username || '-'}</td>
+            <td><span class="mode-badge ${l.role === 'admin' ? 'bank' : 'cash'}">${l.role || '-'}</span></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function fmtLogTime(iso){
+  if(!iso) return '-';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+    + ', ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
 }
 
 function toggleRoomDetail(){
@@ -2988,8 +3059,9 @@ function confirmAddPayment(){
 
   if(!entry.payments) entry.payments = [];
   const payId = uid('p');
-  entry.payments.push(Object.assign({ id: payId }, pendingDetailPayment));
+  entry.payments.push(Object.assign({ id: payId, createdBy: currentUser ? currentUser.username : '' }, pendingDetailPayment));
   newPaymentIds.add(payId);
+  logGuestAction(entry.id, 'payment_added');
   queueEntryPush(entry.id);
   const savedTotal = pendingDetailPayment.total;
   closeAddPayModal();
@@ -3074,6 +3146,7 @@ function getFilteredReportRows(){
         mode: p.mode,
         bank: p.bank || '',
         remarks: p.remarks || '',
+        by: p.createdBy || entry.savedBy || '',
         cash: p.cash || 0,
         account: p.account || 0,
         total: p.total || 0
@@ -3151,6 +3224,7 @@ function renderReport(){
           <td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${r.mode}</span></td>
           <td>${r.bank || '-'}</td>
           <td>${r.remarks || '-'}</td>
+          <td>${r.by || '-'}</td>
           <td class="cash-amt">${r.cash ? r.cash.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.account ? r.account.toLocaleString() : '-'}</td>
           <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${r.total.toLocaleString()}</td>
@@ -3172,6 +3246,7 @@ function renderReport(){
               <th style="width:90px;">Mode</th>
               <th style="width:90px;">Bank</th>
               <th style="width:140px;">Remarks</th>
+              <th style="width:120px;">Taken By</th>
               <th style="width:100px;">Cash</th>
               <th style="width:100px;">Account</th>
               <th style="width:100px;">Total</th>
@@ -3212,6 +3287,7 @@ function exportReportExcel(){
       'Mode': r.mode,
       'Bank': r.bank || '-',
       'Remarks': r.remarks || '',
+      'Taken By': r.by || '',
       'Cash': r.cash,
       'Account': r.account,
       'Total': r.total
@@ -3220,7 +3296,7 @@ function exportReportExcel(){
   const ws = XLSX.utils.json_to_sheet(data);
   ws['!cols'] = [
     {wch:12},{wch:20},{wch:20},{wch:16},
-    {wch:14},{wch:12},{wch:14},{wch:12},{wch:22},{wch:12},{wch:12},{wch:12}
+    {wch:14},{wch:12},{wch:14},{wch:12},{wch:22},{wch:18},{wch:12},{wch:12},{wch:12}
   ];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Payment Report');
@@ -3282,7 +3358,7 @@ let syncProblem = null;
 function updateCloudIndicator(){
   const el = document.getElementById('cloudStatus');
   if(el){
-    const pending = pendingPushIds.size + pendingSoftDeletes.length;
+    const pending = pendingPushIds.size + pendingSoftDeletes.length + pendingEditLogs.length;
     if(!sb){
       el.textContent = '⚠ Cloud database not configured';
       el.style.color = 'var(--danger)';
@@ -3333,7 +3409,9 @@ function guestPayload(e){
     cnic: e.cnic || '',
     extra_details: e.extraDetails || [],
     saved_at: e.savedAt || new Date().toISOString(),
-    edited_at: e.editedAt || null
+    edited_at: e.editedAt || null,
+    saved_by: e.savedBy || '',
+    edited_by: e.editedBy || ''
   };
 }
 function roomPayload(e, r){
@@ -3358,7 +3436,8 @@ function paymentPayload(e, p){
     remarks: p.remarks || '',
     cash: num(p.cash),
     account: num(p.account),
-    total: num(p.total)
+    total: num(p.total),
+    created_by: p.createdBy || ''
   };
 }
 
@@ -3367,8 +3446,34 @@ function paymentPayload(e, p){
 // rows removed during an edit that still need their soft-delete stamped.
 const pendingPushIds = new Set();
 const pendingSoftDeletes = []; // { kind: 'room' | 'payment', id }
+const pendingEditLogs = [];    // append-only audit rows not yet on the server
+let editLogs = [];             // server mirror of the guest_edits log
 let pushInFlight = false;
 let pushRetryTimer = null;
+
+// Records who did what for the change history. Queued alongside the save
+// itself and pushed with it.
+function logGuestAction(guestId, action){
+  pendingEditLogs.push({
+    id: uid('l'),
+    guest_id: guestId,
+    username: currentUser ? currentUser.username : '',
+    role: currentUser ? currentUser.role : '',
+    action,
+    at: new Date().toISOString()
+  });
+}
+
+function getLogsFor(guestId){
+  const seen = new Set();
+  return editLogs.concat(pendingEditLogs)
+    .filter(l=>{
+      if(l.guest_id !== guestId || seen.has(l.id)) return false;
+      seen.add(l.id);
+      return true;
+    })
+    .sort((a,b)=> (b.at || '').localeCompare(a.at || ''));
+}
 
 function queueSoftDelete(kind, id){
   pendingSoftDeletes.push({ kind, id });
@@ -3382,7 +3487,7 @@ function queueEntryPush(entryId){
 
 async function pushPendingNow(){
   if(!sb || pushInFlight) return;
-  if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0) return;
+  if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0) return;
   pushInFlight = true;
   try{
     // soft-deletes first, so an edit that removed a payment can never leave
@@ -3424,6 +3529,12 @@ async function pushPendingNow(){
       mutationStamp++;
       pendingPushIds.delete(id);
     }
+    if(pendingEditLogs.length > 0){
+      const { error: lErr } = await sb.from('guest_edits').upsert(pendingEditLogs.slice(), { onConflict: 'id' });
+      if(lErr) throw lErr;
+      mutationStamp++;
+      editLogs = editLogs.concat(pendingEditLogs.splice(0));
+    }
     if(syncProblem) syncProblem = null;
     requestBackgroundPull();
   }catch(e){
@@ -3463,9 +3574,12 @@ function applyServerData(gRows, rRows, pRows){
       id: r.id, roomNo: r.room_no || '', unitType: r.unit_type || '',
       rent: num(r.rent_per_day), count: parseInt(r.days_count) || 1, total: num(r.total)
     })),
+    savedBy: g.saved_by || '',
+    editedBy: g.edited_by || '',
     payments: (paysByGuest[g.id] || []).map(p=> ({
       id: p.id, date: p.payment_date, type: p.pay_type || 'Other', mode: p.mode || 'Cash',
-      bank: p.bank || '', remarks: p.remarks || '', cash: num(p.cash), account: num(p.account), total: num(p.total)
+      bank: p.bank || '', remarks: p.remarks || '', cash: num(p.cash), account: num(p.account), total: num(p.total),
+      createdBy: p.created_by || ''
     }))
   }));
 
@@ -3487,14 +3601,16 @@ async function pullFreshFromCloud(){
   pullInFlight = (async ()=>{
     const stampAtStart = mutationStamp;
     try{
-      const [gRes, rRes, pRes] = await Promise.all([
+      const [gRes, rRes, pRes, lRes] = await Promise.all([
         sb.from('guests_active').select('*'),
         sb.from('booking_rooms_active').select('*'),
-        sb.from('guest_payments_active').select('*')
+        sb.from('guest_payments_active').select('*'),
+        sb.from('guest_edits').select('*')
       ]);
       if(gRes.error) throw gRes.error;
       if(rRes.error) throw rRes.error;
       if(pRes.error) throw pRes.error;
+      if(lRes.error) throw lRes.error;
       // a write finished while this snapshot was on the wire — the snapshot
       // is already stale, so fetch again instead of applying it
       if(mutationStamp !== stampAtStart){ requestBackgroundPull(); return; }
@@ -3504,13 +3620,14 @@ async function pullFreshFromCloud(){
       lastSyncAt = new Date();
       // reads working doesn't mean writes landed — while saves are still
       // queued, the warning stays up until the push itself succeeds
-      if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0) syncProblem = null;
+      if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0) syncProblem = null;
 
-      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data]);
+      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data, lRes.data]);
       const changed = hash !== lastServerHash;
       lastServerHash = hash;
       if(changed || firstLoad){
         applyServerData(gRes.data || [], rRes.data || [], pRes.data || []);
+        editLogs = lRes.data || [];
         rerenderActiveView();
       }
       if(firstLoad) setLoadingOverlay(false);
@@ -3582,7 +3699,8 @@ if(sb && typeof sb.channel === 'function'){
 // finish even after the page is gone), AND the "leave site?" prompt is
 // shown, because the server hasn't confirmed those rows yet.
 function flushPendingKeepalive(){
-  if(!SUPABASE_URL || !SUPABASE_ANON_KEY || pendingPushIds.size === 0) return;
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  if(pendingPushIds.size === 0 && pendingEditLogs.length === 0) return;
   const guests = [], rooms = [], pays = [];
   pendingPushIds.forEach(id=>{
     const e = entries.find(x=> x.id === id);
@@ -3610,10 +3728,11 @@ function flushPendingKeepalive(){
   send('guests', guests);
   send('booking_rooms', rooms);
   send('guest_payments', pays);
+  send('guest_edits', pendingEditLogs.slice());
 }
 window.addEventListener('pagehide', flushPendingKeepalive);
 window.addEventListener('beforeunload', ev=>{
-  if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0) return;
+  if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0) return;
   flushPendingKeepalive();
   ev.preventDefault();
   ev.returnValue = '';

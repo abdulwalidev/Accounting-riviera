@@ -26,6 +26,7 @@
 
 create extension if not exists pgcrypto;
 
+drop table if exists public.guest_edits cascade;
 drop table if exists public.guest_payments cascade;
 drop table if exists public.booking_rooms cascade;
 drop table if exists public.guests cascade;
@@ -45,6 +46,8 @@ create table public.guests (
   extra_details jsonb not null default '[]'::jsonb,
   saved_at timestamptz not null default now(),
   edited_at timestamptz,
+  saved_by text not null default '',
+  edited_by text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
@@ -84,6 +87,7 @@ create table public.guest_payments (
   cash numeric(12,2) not null default 0,
   account numeric(12,2) not null default 0,
   total numeric(12,2) not null default 0,
+  created_by text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
@@ -92,6 +96,22 @@ create table public.guest_payments (
 
 comment on column public.guest_payments.deleted_at is
   'Soft delete marker, same convention as guests.deleted_at.';
+
+-- ---------- TABLE: guest_edits (append-only audit log) ----------
+-- One row per action (entry created / entry edited / payment added) with
+-- the signed-in account's username + role. No UPDATE/DELETE is granted to
+-- the API at all, so history can never be rewritten from the app.
+create table public.guest_edits (
+  id text primary key,
+  guest_id text not null,
+  username text not null default '',
+  role text not null default '',
+  action text not null default 'edited' check (action in ('created', 'edited', 'payment_added')),
+  at timestamptz not null default now()
+);
+
+comment on table public.guest_edits is
+  'Append-only audit log. No UPDATE/DELETE is granted to the API at all, so history can never be rewritten from the app.';
 
 -- ---------- updated_at AUTO-STAMP ----------
 -- set_updated_at() already exists in this project (old schema); recreate
@@ -127,6 +147,8 @@ create index idx_booking_rooms_deleted_at on public.booking_rooms (deleted_at);
 create index idx_guest_payments_guest_id on public.guest_payments (guest_id);
 create index idx_guest_payments_date on public.guest_payments (payment_date);
 create index idx_guest_payments_deleted_at on public.guest_payments (deleted_at);
+create index idx_guest_edits_guest_id on public.guest_edits (guest_id);
+create index idx_guest_edits_at on public.guest_edits (at);
 
 -- ---------- SOFT DELETE / RESTORE FUNCTIONS ----------
 create or replace function public.soft_delete_guest(p_guest_id text, p_reason text default null)
@@ -257,6 +279,11 @@ create policy "guest_payments_select" on public.guest_payments for select using 
 create policy "guest_payments_insert" on public.guest_payments for insert with check (true);
 create policy "guest_payments_update" on public.guest_payments for update using (true) with check (true);
 
+alter table public.guest_edits enable row level security;
+create policy "guest_edits_select" on public.guest_edits for select using (true);
+create policy "guest_edits_insert" on public.guest_edits for insert with check (true);
+-- deliberately NO update policy for guest_edits — the log is append-only
+
 -- No DELETE policy anywhere on purpose — see GRANTS below.
 
 -- ---------- GRANTS ----------
@@ -265,6 +292,7 @@ grant usage on schema public to anon, authenticated;
 grant select, insert, update on public.guests to anon, authenticated;
 grant select, insert, update on public.booking_rooms to anon, authenticated;
 grant select, insert, update on public.guest_payments to anon, authenticated;
+grant select, insert on public.guest_edits to anon, authenticated;
 
 grant select on public.guests_active, public.booking_rooms_active, public.guest_payments_active to anon, authenticated;
 -- *_deleted views stay ungranted — admin recovery only, from the dashboard.
