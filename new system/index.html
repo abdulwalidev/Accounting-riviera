@@ -1046,6 +1046,16 @@
           <label>CNIC <span class="req">*</span></label>
           <input type="text" id="cnic" placeholder="XXXXX-XXXXXXX-X" required>
         </div>
+        <div>
+          <label>Check-in Date</label>
+          <input type="date" id="checkInDate" title="Reference only — does not affect any amount">
+          <div class="date-readout" id="checkInDateReadout"></div>
+        </div>
+        <div>
+          <label>Check-out Date</label>
+          <input type="date" id="checkOutDate" title="Reference only — does not affect any amount">
+          <div class="date-readout" id="checkOutDateReadout"></div>
+        </div>
       </div>
       <div id="extraDetailList"></div>
       <div class="actions" style="margin-top:12px;">
@@ -1059,13 +1069,11 @@
         <thead>
           <tr>
             <th style="width:36px;">#</th>
-            <th style="width:150px;">Room No / Apt No</th>
-            <th style="width:110px;">Type</th>
-            <th style="width:120px;">Check-in</th>
-            <th style="width:120px;">Check-out</th>
-            <th style="width:110px;">Rent Per Day</th>
-            <th style="width:110px;">No of Days</th>
-            <th style="width:110px;">Total</th>
+            <th style="width:170px;">Room No / Apt No</th>
+            <th style="width:130px;">Type</th>
+            <th style="width:130px;">Rent Per Day</th>
+            <th style="width:120px;">No of Days</th>
+            <th style="width:120px;">Total</th>
             <th style="width:40px;"></th>
           </tr>
         </thead>
@@ -1279,6 +1287,14 @@
           <label>CNIC</label>
           <input type="text" id="dCnic" disabled>
         </div>
+        <div>
+          <label>Check-in</label>
+          <input type="text" id="dCheckIn" disabled>
+        </div>
+        <div>
+          <label>Check-out</label>
+          <input type="text" id="dCheckOut" disabled>
+        </div>
       </div>
       <div class="grid" id="dExtraDetails" style="margin-top:14px;"></div>
     </div>
@@ -1293,12 +1309,10 @@
           <thead>
             <tr>
               <th>Room No / Apt No</th>
-              <th style="width:110px;">Type</th>
-              <th style="width:110px;">Check-in</th>
-              <th style="width:110px;">Check-out</th>
-              <th style="width:110px;">Rent Per Day</th>
-              <th style="width:100px;">No of Days</th>
-              <th style="width:110px;">Total</th>
+              <th style="width:120px;">Type</th>
+              <th style="width:130px;">Rent Per Day</th>
+              <th style="width:110px;">No of Days</th>
+              <th style="width:120px;">Total</th>
             </tr>
           </thead>
           <tbody id="detailRoomBody"></tbody>
@@ -1586,6 +1600,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
     document.getElementById('dNewDate').addEventListener(evt, e=>{
       updateDateReadout(e.target, document.getElementById('dNewDateReadout'));
     });
+    document.getElementById('checkInDate').addEventListener(evt, e=>{
+      updateDateReadout(e.target, document.getElementById('checkInDateReadout'));
+    });
+    document.getElementById('checkOutDate').addEventListener(evt, e=>{
+      updateDateReadout(e.target, document.getElementById('checkOutDateReadout'));
+    });
   });
   renderTodayEntries();
 });
@@ -1809,8 +1829,6 @@ function addRow(){
         <option value="Apartment">Apartment</option>
       </select>
     </td>
-    <td><input type="date" class="roomCheckIn" title="Reference only — does not affect any amount"></td>
-    <td><input type="date" class="roomCheckOut" title="Reference only — does not affect any amount"></td>
     <td><input type="number" placeholder="0" class="rent" oninput="calcRow(this)" min="0"></td>
     <td>
       <div class="roomctrl">
@@ -1871,8 +1889,6 @@ function requestDeleteRow(btn, kind){
       <div class="grid" style="margin-bottom:14px;">
         <div><div class="confirm-lbl">Room No / Apt No</div><div class="confirm-val">${tr.querySelector('.roomNo').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">Type</div><div class="confirm-val">${tr.querySelector('.unitType').value || '-'}</div></div>
-        <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${tr.querySelector('.roomCheckIn').value ? formatDate(tr.querySelector('.roomCheckIn').value) : '-'}</div></div>
-        <div><div class="confirm-lbl">Check-out</div><div class="confirm-val">${tr.querySelector('.roomCheckOut').value ? formatDate(tr.querySelector('.roomCheckOut').value) : '-'}</div></div>
         <div><div class="confirm-lbl">Rent Per Day</div><div class="confirm-val">${(parseFloat(tr.querySelector('.rent').value) || 0).toLocaleString()}</div></div>
         <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${tr.dataset.rooms || 1}</div></div>
         <div><div class="confirm-lbl">Total</div><div class="confirm-val">${tr.querySelector('.rowtotal').textContent || 0}</div></div>
@@ -2191,6 +2207,16 @@ function reviewEntry(){
     if(!proceed) return;
   }
 
+  // stay dates — reference only, no amount depends on them, but a
+  // checkout before the check-in is always a typo
+  const checkInEl = document.getElementById('checkInDate');
+  const checkOutEl = document.getElementById('checkOutDate');
+  if(checkInEl.value && checkOutEl.value && checkOutEl.value < checkInEl.value){
+    showNotice('The Check-out date is before the Check-in date. Please fix the dates (they are for reference only).');
+    focusError(checkOutEl);
+    return;
+  }
+
   const extraDetails = collectExtraDetails();
   if(extraDetails === null) return;
 
@@ -2219,22 +2245,11 @@ function reviewEntry(){
       focusError(typeSel);
       return;
     }
-    const checkInInput = tr.querySelector('.roomCheckIn');
-    const checkOutInput = tr.querySelector('.roomCheckOut');
-    // reference-only dates — no amount depends on them, but a checkout
-    // before the check-in is always a typo
-    if(checkInInput.value && checkOutInput.value && checkOutInput.value < checkInInput.value){
-      showNotice('Room ' + roomNo + ': the Check-out date is before the Check-in date. Please fix the dates (they are for reference only).');
-      focusError(checkOutInput);
-      return;
-    }
     const roomObj = {
       roomNo, unitType, rentInput, tr,
       rent: rentInput.value,
       count: tr.dataset.rooms,
-      total: parseFloat(tr.querySelector('.rowtotal').textContent.replace(/,/g,'')) || 0,
-      checkIn: checkInInput.value || '',
-      checkOut: checkOutInput.value || ''
+      total: parseFloat(tr.querySelector('.rowtotal').textContent.replace(/,/g,'')) || 0
     };
     if(tr.dataset.roomId) roomObj.id = tr.dataset.roomId; // keep identity when editing
     cleanRooms.push(roomObj);
@@ -2308,8 +2323,10 @@ function reviewEntry(){
     guestName,
     fatherName,
     cnic,
+    checkIn: checkInEl.value || '',
+    checkOut: checkOutEl.value || '',
     extraDetails,
-    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, count: r.count, total: r.total, checkIn: r.checkIn, checkOut: r.checkOut })),
+    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, count: r.count, total: r.total })),
     payments: cleanPayments
   };
   data.bookingTotal = document.getElementById('sumBookingTotal').textContent;
@@ -2325,7 +2342,7 @@ function openConfirmModal(data){
   const box = document.getElementById('confirmBody');
 
   const roomRowsHtml = data.rooms.map(r=>`
-    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${r.checkIn ? formatDate(r.checkIn) : '-'}</td><td>${r.checkOut ? formatDate(r.checkOut) : '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.count}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
+    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.count}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
@@ -2344,10 +2361,12 @@ function openConfirmModal(data){
       <div><div class="confirm-lbl">Guest Name</div><div class="confirm-val">${data.guestName || '-'}</div></div>
       <div><div class="confirm-lbl">Father Name</div><div class="confirm-val">${data.fatherName || '-'}</div></div>
       <div><div class="confirm-lbl">CNIC</div><div class="confirm-val">${data.cnic || '-'}</div></div>
+      <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${data.checkIn ? formatDate(data.checkIn) : '-'}</div></div>
+      <div><div class="confirm-lbl">Check-out</div><div class="confirm-val">${data.checkOut ? formatDate(data.checkOut) : '-'}</div></div>
       ${(data.extraDetails || []).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
     </div>
     <table style="margin-bottom:14px;">
-      <thead><tr><th>Room No</th><th>Type</th><th>Check-in</th><th>Check-out</th><th>Rent/Day</th><th>Days</th><th>Total</th></tr></thead>
+      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Days</th><th>Total</th></tr></thead>
       <tbody>${roomRowsHtml}</tbody>
     </table>
     <table style="margin-bottom:14px;">
@@ -2494,9 +2513,11 @@ function confirmSaveEntry(){
 
 // Clear the whole entry form for the next guest.
 function resetEntryForm(){
-  ['guestName','fatherName','cnic'].forEach(id=>{
+  ['guestName','fatherName','cnic','checkInDate','checkOutDate'].forEach(id=>{
     document.getElementById(id).value = '';
   });
+  document.getElementById('checkInDateReadout').textContent = '';
+  document.getElementById('checkOutDateReadout').textContent = '';
   document.getElementById('extraDetailList').innerHTML = '';
   document.getElementById('roomBody').innerHTML = '';
   document.getElementById('payBody').innerHTML = '';
@@ -2644,6 +2665,10 @@ function startEditEntry(entry){
   document.getElementById('guestName').value = entry.guestName || '';
   document.getElementById('fatherName').value = entry.fatherName || '';
   document.getElementById('cnic').value = entry.cnic || '';
+  document.getElementById('checkInDate').value = entry.checkIn || '';
+  document.getElementById('checkOutDate').value = entry.checkOut || '';
+  updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
+  updateDateReadout(document.getElementById('checkOutDate'), document.getElementById('checkOutDateReadout'));
 
   document.getElementById('extraDetailList').innerHTML = '';
   (entry.extraDetails || []).forEach(d=> addExtraDetailRow(d.kind, d.value));
@@ -2656,8 +2681,6 @@ function startEditEntry(entry){
     const tr = document.querySelector('#roomBody tr:last-child');
     if(r.id) tr.dataset.roomId = r.id;
     tr.querySelector('.roomNo').value = r.roomNo || '';
-    tr.querySelector('.roomCheckIn').value = r.checkIn || '';
-    tr.querySelector('.roomCheckOut').value = r.checkOut || '';
     const days = parseInt(r.count) || 1;
     tr.dataset.rooms = days;
     tr.querySelector('.roomCount').textContent = days;
@@ -2818,6 +2841,8 @@ function renderDetail(){
   document.getElementById('dGuestName').value = entry.guestName || '';
   document.getElementById('dFatherName').value = entry.fatherName || '';
   document.getElementById('dCnic').value = entry.cnic || '';
+  document.getElementById('dCheckIn').value = entry.checkIn ? formatDate(entry.checkIn) : '—';
+  document.getElementById('dCheckOut').value = entry.checkOut ? formatDate(entry.checkOut) : '—';
   document.getElementById('dExtraDetails').innerHTML = (entry.extraDetails || []).map(d=>
     `<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`
   ).join('');
@@ -2827,12 +2852,10 @@ function renderDetail(){
     <tr>
       <td>${r.roomNo || '-'}</td>
       <td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td>
-      <td>${r.checkIn ? formatDate(r.checkIn) : '-'}</td>
-      <td>${r.checkOut ? formatDate(r.checkOut) : '-'}</td>
       <td>${Number(r.rent || 0).toLocaleString()}</td>
       <td>${r.count || 1}</td>
       <td class="rowtotal">${(parseFloat(String(r.total || 0).replace(/,/g,'')) || 0).toLocaleString()}</td>
-    </tr>`).join('') || '<tr><td colspan="7" class="empty-note">No rooms.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="5" class="empty-note">No rooms.</td></tr>';
 
   const payBody = document.getElementById('detailPayBody');
   const payments = (entry.payments || []).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''));
@@ -3464,7 +3487,9 @@ function guestPayload(e){
     saved_at: e.savedAt || new Date().toISOString(),
     edited_at: e.editedAt || null,
     saved_by: e.savedBy || '',
-    edited_by: e.editedBy || ''
+    edited_by: e.editedBy || '',
+    check_in: e.checkIn || null,
+    check_out: e.checkOut || null
   };
 }
 function roomPayload(e, r){
@@ -3475,9 +3500,7 @@ function roomPayload(e, r){
     unit_type: r.unitType || '',
     rent_per_day: num(r.rent),
     days_count: parseInt(r.count) || 1,
-    total: num(r.total),
-    check_in: r.checkIn || null,
-    check_out: r.checkOut || null
+    total: num(r.total)
   };
 }
 function paymentPayload(e, p){
@@ -3627,11 +3650,12 @@ function applyServerData(gRows, rRows, pRows){
     editedAt: g.edited_at || undefined,
     rooms: (roomsByGuest[g.id] || []).map(r=> ({
       id: r.id, roomNo: r.room_no || '', unitType: r.unit_type || '',
-      rent: num(r.rent_per_day), count: parseInt(r.days_count) || 1, total: num(r.total),
-      checkIn: r.check_in || '', checkOut: r.check_out || ''
+      rent: num(r.rent_per_day), count: parseInt(r.days_count) || 1, total: num(r.total)
     })),
     savedBy: g.saved_by || '',
     editedBy: g.edited_by || '',
+    checkIn: g.check_in || '',
+    checkOut: g.check_out || '',
     payments: (paysByGuest[g.id] || []).map(p=> ({
       id: p.id, date: p.payment_date, type: p.pay_type || 'Other', mode: p.mode || 'Cash',
       bank: p.bank || '', remarks: p.remarks || '', cash: num(p.cash), account: num(p.account), total: num(p.total),

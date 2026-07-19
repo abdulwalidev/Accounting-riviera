@@ -58,10 +58,12 @@ with checks(ord, name, ok) as (
     exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'guest_payments')
   union all select 34, 'realtime: guest_edits (audit log)',
     exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'guest_edits')
-  union all select 35, 'column: booking_rooms.check_in',
-    exists (select 1 from information_schema.columns where table_schema='public' and table_name='booking_rooms' and column_name='check_in')
-  union all select 36, 'column: booking_rooms.check_out',
-    exists (select 1 from information_schema.columns where table_schema='public' and table_name='booking_rooms' and column_name='check_out')
+  union all select 35, 'column: guests.check_in',
+    exists (select 1 from information_schema.columns where table_schema='public' and table_name='guests' and column_name='check_in')
+  union all select 36, 'column: guests.check_out',
+    exists (select 1 from information_schema.columns where table_schema='public' and table_name='guests' and column_name='check_out')
+  union all select 37, 'per-room dates removed (superseded)',
+    not exists (select 1 from information_schema.columns where table_schema='public' and table_name='booking_rooms' and column_name in ('check_in','check_out'))
 )
 select name as "check", case when ok then '✓ OK' else '✗ PROBLEM' end as status
 from checks
