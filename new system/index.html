@@ -1044,7 +1044,7 @@
         </div>
         <div>
           <label>CNIC <span class="req">*</span></label>
-          <input type="text" id="cnic" placeholder="XXXXX-XXXXXXX-X" required>
+          <input type="text" id="cnic" placeholder="XXXXX-XXXXXXX-X" required onblur="offerReturningGuestPrefill()">
         </div>
         <div>
           <label>Check-in Date</label>
@@ -2075,7 +2075,7 @@ function calcSummary(){
 // ---- Optional extra details (+ Detail button) ----
 const EXTRA_DETAIL_KINDS = [
   'Address', 'Nationality', 'Company Name', 'Profession',
-  'Contact No', 'Emergency No', 'Date of Arrival', 'Date of Departure'
+  'Contact No', 'Emergency No', 'Car No', 'Date of Arrival', 'Date of Departure'
 ];
 
 function addExtraDetailRow(kind, value){
@@ -2148,6 +2148,44 @@ function formatExtraDetail(d){
   return isDate && d.value ? formatDate(d.value) : d.value;
 }
 
+// ---- Returning guest: typing a known CNIC offers to load the person's
+// saved details into the NEW entry, so this visit starts from what we
+// already know and any new detail (new car, new number…) is just added
+// on top. The visit itself stays separate — rooms/payments/dates fresh. ----
+let returningPromptedDigits = null; // asked once per CNIC — don't nag on every blur
+let returningPrefillDigits = null;  // accepted → save-time dup dialog is skipped
+
+function offerReturningGuestPrefill(){
+  if(editingEntryId) return; // editing an old entry — not a new visit
+  const digits = document.getElementById('cnic').value.replace(/[^0-9]/g, '');
+  if(digits.length !== 13 || digits === returningPromptedDigits) return;
+  const matches = loadAllEntries()
+    .filter(e => (e.cnic || '').replace(/[^0-9]/g,'') === digits)
+    .sort((a,b)=> (b.savedAt || '').localeCompare(a.savedAt || ''));
+  if(matches.length === 0) return;
+  returningPromptedDigits = digits;
+  const prev = matches[0];
+  const prevDate = prev.savedAt ? ' (last visit ' + formatDate(prev.savedAt.slice(0,10)) + ')' : '';
+  const ok = confirm(
+    'RETURNING GUEST — this CNIC belongs to "' + (prev.guestName || '(no name)') + '"' + prevDate + '.\n\n' +
+    'Click OK to load his saved details (name, father name, + details) into this new entry. ' +
+    'You can then add any new detail with "+ Detail". Rooms, payments and dates start fresh for this visit.\n\n' +
+    'Click Cancel to type everything by hand instead.'
+  );
+  if(!ok) return;
+  returningPrefillDigits = digits;
+  document.getElementById('guestName').value = prev.guestName || '';
+  document.getElementById('fatherName').value = prev.fatherName || '';
+  // Append only details not already typed into the form — never wipe rows
+  const have = Array.from(document.querySelectorAll('#extraDetailList .extra-detail-row')).map(row => ({
+    kind: row.querySelector('.edKind').value,
+    value: row.querySelector('.edValue').value.trim()
+  }));
+  (prev.extraDetails || []).forEach(d=>{
+    if(!have.some(h => h.kind === d.kind && h.value === d.value)) addExtraDetailRow(d.kind, d.value);
+  });
+}
+
 let pendingEntryData = null;
 
 function reviewEntry(){
@@ -2197,7 +2235,7 @@ function reviewEntry(){
   // duplicate CNIC guard — catches an accidental re-entry of an existing guest
   const existingEntries = loadAllEntries();
   const dupGuest = existingEntries.find(e => e.id !== editingEntryId && (e.cnic || '').replace(/[^0-9]/g,'') === cnicDigits);
-  if(dupGuest){
+  if(dupGuest && returningPrefillDigits !== cnicDigits){
     const prevDate = dupGuest.savedAt ? ' (entered ' + formatDate(dupGuest.savedAt.slice(0,10)) + ')' : '';
     const proceed = confirm(
       'This CNIC already belongs to "' + (dupGuest.guestName || '(no name)') + '"' + prevDate + '.\n\n' +
@@ -2523,6 +2561,8 @@ function resetEntryForm(){
   document.getElementById('payBody').innerHTML = '';
   rowCount = 0;
   payCount = 0;
+  returningPromptedDigits = null;
+  returningPrefillDigits = null;
   addRow();
   addPayRow();
   calcGrandTotal();
