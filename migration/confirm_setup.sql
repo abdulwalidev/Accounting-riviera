@@ -56,6 +56,8 @@ with checks(ord, name, ok) as (
     exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'booking_rooms')
   union all select 33, 'realtime: guest_payments',
     exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'guest_payments')
+  union all select 34, 'realtime: guest_edits (audit log)',
+    exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'guest_edits')
 )
 select name as "check", case when ok then '✓ OK' else '✗ PROBLEM' end as status
 from checks

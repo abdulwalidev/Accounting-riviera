@@ -43,6 +43,15 @@ create policy "guest_edits_insert" on public.guest_edits for insert with check (
 
 grant select, insert on public.guest_edits to anon, authenticated;
 
+-- Realtime for the audit log, so the Change History panel updates on other
+-- devices instantly instead of on the next 5-second poll. Safe to re-run.
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'guest_edits') then
+    alter publication supabase_realtime add table public.guest_edits;
+  end if;
+end $$;
+
 -- =========================================================================
 -- Done. The app writes to these automatically from now on; rows saved
 -- before today simply show no name.

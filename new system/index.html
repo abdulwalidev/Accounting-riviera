@@ -2407,21 +2407,40 @@ function confirmSaveEntry(){
       p.createdBy = orig ? (orig.createdBy || '') : (currentUser ? currentUser.username : '');
     });
     // rows removed while editing get soft-deleted in the cloud — the data
-    // is never gone, an admin can restore it from the SQL Editor
+    // is never gone, an admin can restore it from the SQL Editor. The diff
+    // runs against the snapshot from when editing BEGAN, so only rows the
+    // editor actually saw and removed get deleted.
+    const baseline = (editingBaseline && editingBaseline.id === original.id) ? editingBaseline : original;
     const keptRoomIds = new Set(data.rooms.map(r=> r.id).filter(Boolean));
-    (original.rooms || []).forEach(r=>{
+    (baseline.rooms || []).forEach(r=>{
       if(r.id && !keptRoomIds.has(r.id)) queueSoftDelete('room', r.id);
     });
     const keptPayIds = new Set(data.payments.map(p=> p.id).filter(Boolean));
-    (original.payments || []).forEach(p=>{
+    (baseline.payments || []).forEach(p=>{
       if(p.id && !keptPayIds.has(p.id)) queueSoftDelete('payment', p.id);
+    });
+    // rooms/payments that arrived from ANOTHER DEVICE while this edit was
+    // open exist in the live entry but were never shown in the form —
+    // keep them instead of silently wiping them with the save
+    const baselineRoomIds = new Set((baseline.rooms || []).map(r=> r.id));
+    const baselinePayIds = new Set((baseline.payments || []).map(p=> p.id));
+    let carriedFromElsewhere = 0;
+    (original.rooms || []).forEach(r=>{
+      if(r.id && !baselineRoomIds.has(r.id) && !keptRoomIds.has(r.id)){ data.rooms.push(r); carriedFromElsewhere++; }
+    });
+    (original.payments || []).forEach(p=>{
+      if(p.id && !baselinePayIds.has(p.id) && !keptPayIds.has(p.id)){ data.payments.push(p); carriedFromElsewhere++; }
     });
     data.rooms.forEach(r=>{ if(!r.id) r.id = uid('r'); });
     data.payments.forEach(p=>{ if(!p.id) p.id = uid('p'); });
     all[idx] = data;
     logGuestAction(data.id, 'edited');
     queueEntryPush(data.id);
+    if(carriedFromElsewhere > 0){
+      showNotice(carriedFromElsewhere + ' room/payment row(s) added from another device while you were editing were kept in the entry.', 'success');
+    }
     editingEntryId = null;
+    editingBaseline = null;
     document.getElementById('editModeBar').style.display = 'none';
     closeConfirmModal();
     resetEntryForm();
@@ -2537,6 +2556,10 @@ function computeTotals(entry){
 
 // ---- Edit mode: reopen a saved entry on the Guest Entry page ----
 let editingEntryId = null;
+// Snapshot of the entry as it was when editing began. Saving diffs the
+// form against THIS (not the live entry), so a room/payment added from
+// another device mid-edit is never mistaken for one the editor removed.
+let editingBaseline = null;
 
 function openEditModal(){
   if(!isAdmin()){
@@ -2592,6 +2615,7 @@ function startEditEntry(entry){
     return;
   }
   editingEntryId = entry.id;
+  editingBaseline = JSON.parse(JSON.stringify(entry));
 
   document.getElementById('guestName').value = entry.guestName || '';
   document.getElementById('fatherName').value = entry.fatherName || '';
@@ -2665,6 +2689,7 @@ function startEditEntry(entry){
 
 function cancelEditMode(){
   editingEntryId = null;
+  editingBaseline = null;
   document.getElementById('editModeBar').style.display = 'none';
   resetEntryForm();
   if(currentDetailId){
@@ -3690,6 +3715,7 @@ if(sb && typeof sb.channel === 'function'){
       .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, ()=> requestBackgroundPull())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_rooms' }, ()=> requestBackgroundPull())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_payments' }, ()=> requestBackgroundPull())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_edits' }, ()=> requestBackgroundPull())
       .subscribe();
   }catch(e){ console.error('Realtime unavailable — the 5s poll covers it', e); }
 }
