@@ -66,6 +66,8 @@ create table public.booking_rooms (
   rent_per_day numeric(12,2) not null default 0,
   days_count integer not null default 1,
   total numeric(12,2) not null default 0,
+  check_in date,   -- reference only, never used in calculations
+  check_out date,  -- reference only, never used in calculations
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   deleted_at timestamptz,
