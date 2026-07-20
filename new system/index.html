@@ -1247,7 +1247,7 @@
           <input type="text" id="gsearchInput" placeholder="Type to search...">
         </div>
         <div>
-          <label>Entry Date</label>
+          <label>Entry / Payment Date</label>
           <input type="date" id="gsearchDate">
           <div class="date-readout" id="gsearchDateReadout"></div>
         </div>
@@ -1399,7 +1399,10 @@
           <button class="btn secondary" onclick="clearFilters()">Clear Filters</button>
           <button class="btn secondary" onclick="setFiltersToday()">Today</button>
         </div>
-        <button class="btn" onclick="openExportModal()">⬇ Export</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <input type="text" id="filterCashSearch" placeholder="type total amount" style="width:180px;">
+          <button class="btn" onclick="openExportModal()">⬇ Export</button>
+        </div>
       </div>
     </div>
 
@@ -1431,7 +1434,7 @@
     <div class="sub" style="margin-bottom:14px;">Please check every detail below carefully before saving — this cannot be edited from the Report page later.</div>
     <div id="confirmBody"></div>
     <label for="confirmTotalInput" style="margin-top:4px;">Re-type the Grand Total (numbers only) to confirm it is correct</label>
-    <input type="text" id="confirmTotalInput" placeholder="e.g. 60000" autocomplete="off" inputmode="numeric" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmSaveEntry(); }">
+    <input type="text" id="confirmTotalInput" placeholder="total amount" autocomplete="off" inputmode="numeric" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmSaveEntry(); }">
     <label for="confirmTypeInput" style="margin-top:10px;">Type CONFIRM to save this entry</label>
     <input type="text" id="confirmTypeInput" placeholder="confirm" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmSaveEntry(); }">
     <div class="modal-actions">
@@ -1568,6 +1571,7 @@ function clearFilters(){
   document.getElementById('filterFrom').value = '';
   document.getElementById('filterTo').value = '';
   document.getElementById('filterSearch').value = '';
+  document.getElementById('filterCashSearch').value = '';
   updateFilterDateReadouts();
   renderReport();
 }
@@ -1580,12 +1584,13 @@ function setFiltersToday(){
   renderReport();
 }
 
+
 document.addEventListener('DOMContentLoaded', ()=>{
   setFiltersToday();
   ['filterFrom','filterTo'].forEach(id=>{
     document.getElementById(id).addEventListener('input', updateFilterDateReadouts);
   });
-  ['filterFrom','filterTo','filterSearch'].forEach(id=>{
+  ['filterFrom','filterTo','filterSearch','filterCashSearch'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderReport);
   });
   document.getElementById('gsearchInput').addEventListener('input', renderSearch);
@@ -2075,7 +2080,7 @@ function calcSummary(){
 // ---- Optional extra details (+ Detail button) ----
 const EXTRA_DETAIL_KINDS = [
   'Address', 'Nationality', 'Company Name', 'Profession',
-  'Contact No', 'Emergency No', 'Car No', 'Date of Arrival', 'Date of Departure'
+  'Contact No', 'Emergency No', 'Car No', 'Date of Arrival', 'Date of Departure', 'Extra Remarks'
 ];
 
 function addExtraDetailRow(kind, value){
@@ -2820,7 +2825,10 @@ function renderSearch(){
   }
 
   if(dateVal){
-    items = items.filter(({entry})=> (entry.savedAt || '').slice(0,10) === dateVal);
+    items = items.filter(({entry})=>
+      (entry.savedAt || '').slice(0,10) === dateVal ||
+      (entry.payments || []).some(p=> p.date === dateVal)
+    );
   }
 
   if(dueOnly){
@@ -3245,6 +3253,7 @@ function getFilteredReportRows(){
   const fromVal = document.getElementById('filterFrom').value;
   const toVal = document.getElementById('filterTo').value;
   const searchVal = document.getElementById('filterSearch').value.trim().toLowerCase();
+  const cashSearchVal = document.getElementById('filterCashSearch').value.replace(/,/g,'').trim();
 
   // flatten payments with guest + booking info attached, for filtering by "anything"
   let rows = [];
@@ -3290,7 +3299,16 @@ function getFilteredReportRows(){
     });
   }
 
-  return { rows, fromVal, toVal, searchVal };
+  // search by any amount (cash, account, or total), comma or no comma (e.g. "31250" or "31,250")
+  if(cashSearchVal){
+    rows = rows.filter(r =>
+      String(r.cash).includes(cashSearchVal) ||
+      String(r.account).includes(cashSearchVal) ||
+      String(r.total).includes(cashSearchVal)
+    );
+  }
+
+  return { rows, fromVal, toVal, searchVal, cashSearchVal };
 }
 
 function renderReport(){
