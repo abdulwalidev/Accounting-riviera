@@ -3253,6 +3253,7 @@ function getFilteredReportRows(){
     (entry.payments || []).forEach(p=>{
       if(!p.date) return;
       rows.push({
+        id: entry.id,
         date: p.date,
         guest: entry.guestName || '(no name)',
         father: entry.fatherName || '',
@@ -3334,13 +3335,13 @@ function renderReport(){
       grandAccount += r.account;
       const isCash = r.mode === 'Cash';
       bodyRows += `
-        <tr class="${isCash ? 'mode-cash' : 'mode-bank'}">
+        <tr class="${isCash ? 'mode-cash' : 'mode-bank'}" style="cursor:pointer;" onclick="openDetail('${r.id}')" title="Open this guest">
           <td>${r.guest}</td>
           <td>${r.type}</td>
           <td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${r.mode}</span></td>
           <td>${r.bank || '-'}</td>
           <td>${r.remarks || '-'}</td>
-          <td>${r.by || '-'}</td>
+          <td>${r.roomNos || '-'}</td>
           <td class="cash-amt">${r.cash ? r.cash.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.account ? r.account.toLocaleString() : '-'}</td>
           <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${r.total.toLocaleString()}</td>
@@ -3362,7 +3363,7 @@ function renderReport(){
               <th style="width:90px;">Mode</th>
               <th style="width:90px;">Bank</th>
               <th style="width:140px;">Remarks</th>
-              <th style="width:120px;">Taken By</th>
+              <th style="width:120px;">Room No</th>
               <th style="width:100px;">Cash</th>
               <th style="width:100px;">Account</th>
               <th style="width:100px;">Total</th>
