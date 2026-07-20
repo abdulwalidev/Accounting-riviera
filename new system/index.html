@@ -1702,6 +1702,8 @@ function setFiltersToday(){
 
 document.addEventListener('DOMContentLoaded', ()=>{
   setFiltersToday();
+  document.getElementById('checkInDate').value = todayStr();
+  updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
   ['filterFrom','filterTo'].forEach(id=>{
     document.getElementById(id).addEventListener('input', updateFilterDateReadouts);
   });
@@ -1741,6 +1743,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     });
   });
   renderTodayEntries();
+  scheduleKarachiMidnightRollover();
 });
 
 let rowCount = 0;
@@ -2092,9 +2095,64 @@ function calcGrandTotal(){
 // ---- Payment tracking ----
 let payCount = 0;
 
+// All "which day is this" logic runs on Pakistan Standard Time (Asia/Karachi,
+// UTC+5, no DST) — not UTC and not the visiting device's local time zone.
+// A plain UTC slice rolls the date over at 5:00 AM PKT instead of midnight;
+// this keeps every date boundary (today's entries, filters, exports) tied
+// to midnight in Pakistan regardless of where the browser is.
+function toKarachiDateStr(input){
+  const d = input ? new Date(input) : new Date();
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
+}
+
 function todayStr(){
-  const d = new Date();
-  return d.toISOString().slice(0,10);
+  return toKarachiDateStr();
+}
+
+// A tab left open across midnight would otherwise keep showing yesterday
+// until something forces a re-render. This times a single refresh for the
+// exact moment it turns midnight in Pakistan (no polling/interval drift),
+// then re-arms itself for the next one. Only date fields still sitting on
+// the stale "today" get bumped forward — a deliberately-picked past date
+// (e.g. a custom report range) is left alone.
+let lastKnownToday = todayStr();
+
+function msUntilNextKarachiMidnight(){
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 19, 0, 0, 0));
+  if(next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
+  return next.getTime() - now.getTime();
+}
+
+function scheduleKarachiMidnightRollover(){
+  setTimeout(()=>{
+    handleKarachiMidnightRollover();
+    scheduleKarachiMidnightRollover();
+  }, msUntilNextKarachiMidnight() + 1000);
+}
+
+function handleKarachiMidnightRollover(){
+  const newToday = todayStr();
+  if(newToday === lastKnownToday) return;
+  ['filterFrom','filterTo','ledgerFrom','ledgerTo','frFrom','frTo','gsearchDate','dNewDate','checkInDate'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && el.value === lastKnownToday) el.value = newToday;
+  });
+  lastKnownToday = newToday;
+  updateFilterDateReadouts();
+  updateLedgerDateReadouts();
+  updateFullReportDateReadouts();
+  const gsearchDateEl = document.getElementById('gsearchDate');
+  if(gsearchDateEl) updateDateReadout(gsearchDateEl, document.getElementById('gsearchDateReadout'));
+  const dNewDateEl = document.getElementById('dNewDate');
+  if(dNewDateEl) updateDateReadout(dNewDateEl, document.getElementById('dNewDateReadout'));
+  const checkInDateEl = document.getElementById('checkInDate');
+  if(checkInDateEl) updateDateReadout(checkInDateEl, document.getElementById('checkInDateReadout'));
+  if(currentView === 'entry') renderTodayEntries();
+  if(currentView === 'report') renderReport();
+  if(currentView === 'search') renderSearch();
+  if(currentView === 'ledger') renderLedger();
+  if(currentView === 'fullreport') renderFullReport();
 }
 
 function addPayRow(){
@@ -2298,7 +2356,7 @@ function offerReturningGuestPrefill(){
   if(matches.length === 0) return;
   returningPromptedDigits = digits;
   const prev = matches[0];
-  const prevDate = prev.savedAt ? ' (last visit ' + formatDate(prev.savedAt.slice(0,10)) + ')' : '';
+  const prevDate = prev.savedAt ? ' (last visit ' + formatDate(toKarachiDateStr(prev.savedAt)) + ')' : '';
   const ok = confirm(
     'RETURNING GUEST — this CNIC belongs to "' + (prev.guestName || '(no name)') + '"' + prevDate + '.\n\n' +
     'Click OK to load his saved details (name, father name, + details) into this new entry. ' +
@@ -2369,7 +2427,7 @@ function reviewEntry(){
   const existingEntries = loadAllEntries();
   const dupGuest = existingEntries.find(e => e.id !== editingEntryId && (e.cnic || '').replace(/[^0-9]/g,'') === cnicDigits);
   if(dupGuest && returningPrefillDigits !== cnicDigits){
-    const prevDate = dupGuest.savedAt ? ' (entered ' + formatDate(dupGuest.savedAt.slice(0,10)) + ')' : '';
+    const prevDate = dupGuest.savedAt ? ' (entered ' + formatDate(toKarachiDateStr(dupGuest.savedAt)) + ')' : '';
     const proceed = confirm(
       'This CNIC already belongs to "' + (dupGuest.guestName || '(no name)') + '"' + prevDate + '.\n\n' +
       'RETURNING GUEST? Click OK — every visit is saved as its OWN new entry, with its own rooms, payments and balance. Do NOT edit the old entry to add a new stay.\n\n' +
@@ -2684,10 +2742,14 @@ function confirmSaveEntry(){
 
 // Clear the whole entry form for the next guest.
 function resetEntryForm(){
-  ['guestName','fatherName','cnic','checkInDate','checkOutDate'].forEach(id=>{
+  ['guestName','fatherName','cnic','checkOutDate'].forEach(id=>{
     document.getElementById(id).value = '';
   });
-  document.getElementById('checkInDateReadout').textContent = '';
+  // Check-in defaults to today (Pakistan time) — nearly every walk-in checks in the day
+  // they're entered, so this saves re-picking the date on every single guest.
+  const checkInEl = document.getElementById('checkInDate');
+  checkInEl.value = todayStr();
+  updateDateReadout(checkInEl, document.getElementById('checkInDateReadout'));
   document.getElementById('checkOutDateReadout').textContent = '';
   document.getElementById('extraDetailList').innerHTML = '';
   document.getElementById('roomBody').innerHTML = '';
@@ -2710,7 +2772,7 @@ function renderTodayEntries(){
   }
   const all = loadAllEntries();
   const t = todayStr();
-  const todays = all.filter(e => (e.savedAt || '').slice(0,10) === t);
+  const todays = all.filter(e => e.savedAt && toKarachiDateStr(e.savedAt) === t);
   if(todays.length === 0){
     box.innerHTML = '<div class="empty-note">No entries saved today yet.</div>';
     return;
@@ -2734,7 +2796,7 @@ function renderTodayEntries(){
         ${todays.map(e=>{
           const tt = computeTotals(e);
           const roomNos = (e.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
-          const time = e.savedAt ? new Date(e.savedAt).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }) : '-';
+          const time = e.savedAt ? new Date(e.savedAt).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Karachi' }) : '-';
           return `<tr style="cursor:pointer;" onclick="openDetail('${e.id}')" title="Open this guest">
             <td>${time}</td>
             <td>${e.guestName || '(no name)'}</td>
@@ -2954,7 +3016,7 @@ function renderSearch(){
 
   if(dateVal){
     items = items.filter(({entry})=>
-      (entry.savedAt || '').slice(0,10) === dateVal ||
+      (entry.savedAt && toKarachiDateStr(entry.savedAt) === dateVal) ||
       (entry.payments || []).some(p=> p.date === dateVal)
     );
   }
@@ -2980,7 +3042,7 @@ function renderSearch(){
           <div class="meta">${roomNos ? 'Room ' + roomNos + ' &middot; ' : ''}${entry.cnic || ''}</div>
         </div>
         <div class="gnums">
-          <div class="box"><div class="lbl">Entry Date</div><div class="val">${entry.savedAt ? formatDate(entry.savedAt.slice(0,10)) : '-'}</div></div>
+          <div class="box"><div class="lbl">Entry Date</div><div class="val">${entry.savedAt ? formatDate(toKarachiDateStr(entry.savedAt)) : '-'}</div></div>
           <div class="box"><div class="lbl">Total</div><div class="val">${t.bookingTotal.toLocaleString()}</div></div>
           <div class="box"><div class="lbl">Paid</div><div class="val cash-amt">${t.paid.toLocaleString()}</div></div>
           <div class="box"><div class="lbl">Due</div><div class="val" style="color:${t.due>0?'var(--danger)':'inherit'};">${t.due.toLocaleString()}</div></div>
@@ -3010,8 +3072,8 @@ function renderDetail(){
   }
   document.getElementById('detailName').textContent = entry.guestName || '(no name)';
   const metaParts = [];
-  if(entry.savedAt) metaParts.push('Entered ' + formatDate(entry.savedAt.slice(0,10)) + (entry.savedBy ? ' by ' + entry.savedBy : ''));
-  if(entry.editedAt) metaParts.push('Last edited ' + formatDate(entry.editedAt.slice(0,10)) + (entry.editedBy ? ' by ' + entry.editedBy : ''));
+  if(entry.savedAt) metaParts.push('Entered ' + formatDate(toKarachiDateStr(entry.savedAt)) + (entry.savedBy ? ' by ' + entry.savedBy : ''));
+  if(entry.editedAt) metaParts.push('Last edited ' + formatDate(toKarachiDateStr(entry.editedAt)) + (entry.editedBy ? ' by ' + entry.editedBy : ''));
   document.getElementById('detailMeta').textContent = metaParts.join('  ·  ');
 
   document.getElementById('dGuestName').value = entry.guestName || '';
@@ -3104,8 +3166,8 @@ function renderChangeLog(entry){
 function fmtLogTime(iso){
   if(!iso) return '-';
   const d = new Date(iso);
-  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
-    + ', ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', timeZone:'Asia/Karachi' })
+    + ', ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Karachi' });
 }
 
 function toggleRoomDetail(){
@@ -3602,7 +3664,7 @@ function buildLedgerLines(){
     const father = entry.fatherName || '';
     const cnic = entry.cnic || '';
     if(t.bookingTotal > 0){
-      const debitDate = entry.checkInDate || (entry.savedAt ? entry.savedAt.slice(0,10) : '') || todayStr();
+      const debitDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '') || todayStr();
       lines.push({
         guestId: entry.id, date: debitDate, kind: 'Debit',
         particulars: 'Room Charges' + (roomNos ? ' — Room ' + roomNos : ''),
@@ -3816,7 +3878,7 @@ function getFilteredFullReportRows(){
   let rows = all.map(entry=>{
     const t = computeTotals(entry);
     const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
-    const date = entry.checkInDate || (entry.savedAt ? entry.savedAt.slice(0,10) : '');
+    const date = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     return {
       id: entry.id,
       guest: entry.guestName || '(no name)',
