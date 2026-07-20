@@ -1003,6 +1003,8 @@
     <div class="navitem" id="navAddPay" onclick="showView('addpay')">Add Payment</div>
     <div class="navitem" id="navSearch" onclick="showView('search')">Search</div>
     <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
+    <div class="navitem" id="navLedger" onclick="showView('ledger')">Ledger</div>
+    <div class="navitem" id="navFullReport" onclick="showView('fullreport')">Full Report</div>
   </div>
 </div>
 
@@ -1417,6 +1419,115 @@
 
   </div>
 
+  <div class="view" id="view-ledger">
+
+    <h1 class="no-print">Ledger</h1>
+    <div class="sub no-print">Day book &amp; per-person account ledger — Debit (charges) / Credit (payments) / Balance</div>
+
+    <div class="print-header">
+      <h1 id="ledgerPrintTitle">Ledger</h1>
+      <div class="print-header-sub" id="ledgerPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <h2>Ledger View</h2>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn" id="ledgerModeDay" onclick="setLedgerMode('day')">Per Day</button>
+        <button class="btn secondary" id="ledgerModePerson" onclick="setLedgerMode('person')">Per Person</button>
+      </div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); margin-top:14px;">
+        <div>
+          <label>From Date</label>
+          <input type="date" id="ledgerFrom">
+          <div class="date-readout" id="ledgerFromReadout"></div>
+        </div>
+        <div>
+          <label>To Date</label>
+          <input type="date" id="ledgerTo">
+          <div class="date-readout" id="ledgerToReadout"></div>
+        </div>
+        <div id="ledgerPersonPickWrap" style="display:none; grid-column:span 2;">
+          <label>Guest</label>
+          <select id="ledgerPersonSelect" onchange="renderLedger()"></select>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="clearLedgerFilters()">Clear Filters</button>
+          <button class="btn secondary" onclick="setLedgerFiltersToday()">Today</button>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" onclick="exportLedgerExcel()">⬇ Export</button>
+          <button class="btn secondary" onclick="printLedger()">🖶 Print</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="ledgerBody"><div class="empty-note">No data yet.</div></div>
+      <div class="report-grandbar" id="ledgerGrandbar" style="display:none;">
+        <span>Total Debit: Rs. <b id="ledDebit">0</b></span>
+        <span>Total Credit: Rs. <b id="ledCredit" class="cash-amt">0</b></span>
+        <span>Balance: Rs. <b id="ledBalance">0</b></span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-fullreport">
+
+    <h1 class="no-print">Full Report</h1>
+    <div class="sub no-print">Complete financial statement — billed, credit (paid) and outstanding debt for every guest</div>
+
+    <div class="print-header">
+      <h1>Full Financial Report</h1>
+      <div class="print-header-sub" id="frPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <h2>Filters</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>From Date</label>
+          <input type="date" id="frFrom">
+          <div class="date-readout" id="frFromReadout"></div>
+        </div>
+        <div>
+          <label>To Date</label>
+          <input type="date" id="frTo">
+          <div class="date-readout" id="frToReadout"></div>
+        </div>
+        <div style="grid-column:span 2;">
+          <label>Search (name, father name, CNIC, room no)</label>
+          <input type="text" id="frSearch" placeholder="Type to search...">
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;">
+          <div class="checkline">
+            <input type="checkbox" id="frDebtOnly">
+            <label for="frDebtOnly" style="margin:0;">Only show outstanding debt</label>
+          </div>
+          <button class="btn secondary" onclick="clearFullReportFilters()">Clear Filters</button>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" onclick="exportFullReportExcel()">⬇ Export</button>
+          <button class="btn secondary" onclick="printFullReport()">🖶 Print</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="fullReportBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+      <div class="report-grandbar" id="fullReportGrandbar" style="display:none;">
+        <span>Total Billed: Rs. <b id="frBilled">0</b></span>
+        <span>Total Credit (Paid): Rs. <b id="frCredit" class="cash-amt">0</b></span>
+        <span>Total Debt (Due): Rs. <b id="frDebt" style="color:var(--danger);">0</b></span>
+      </div>
+    </div>
+
+  </div>
+
 </div>
 
 <div class="cloud-banner no-print" id="cloudBanner">
@@ -1540,7 +1651,7 @@ let currentView = 'entry';
 
 function showView(view){
   currentView = view;
-  ['entry','addpay','search','report','detail'].forEach(v=>{
+  ['entry','addpay','search','report','detail','ledger','fullreport'].forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
@@ -1548,6 +1659,8 @@ function showView(view){
   document.getElementById('navAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('navSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('navReport').classList.toggle('active', view === 'report');
+  document.getElementById('navLedger').classList.toggle('active', view === 'ledger');
+  document.getElementById('navFullReport').classList.toggle('active', view === 'fullreport');
   document.getElementById('topNavEntry').classList.toggle('active', view === 'entry');
   document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
@@ -1558,6 +1671,8 @@ function showView(view){
   if(view === 'search') renderSearch();
   if(view === 'entry') renderTodayEntries();
   if(view === 'addpay') renderApList();
+  if(view === 'ledger') renderLedger();
+  if(view === 'fullreport') renderFullReport();
 }
 
 function updateFilterDateReadouts(){
@@ -1601,6 +1716,19 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   document.getElementById('apSearchInput').addEventListener('input', renderApList);
   document.getElementById('apDueOnly').addEventListener('change', renderApList);
+  ['ledgerFrom','ledgerTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', updateLedgerDateReadouts);
+  });
+  ['ledgerFrom','ledgerTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', renderLedger);
+  });
+  ['frFrom','frTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', updateFullReportDateReadouts);
+  });
+  ['frFrom','frTo','frSearch'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', renderFullReport);
+  });
+  document.getElementById('frDebtOnly').addEventListener('change', renderFullReport);
   ['input','change'].forEach(evt=>{
     document.getElementById('dNewDate').addEventListener(evt, e=>{
       updateDateReadout(e.target, document.getElementById('dNewDateReadout'));
@@ -3451,6 +3579,369 @@ function closeExportModal(){
 function printReport(){
   const { rows } = getFilteredReportRows();
   if(rows.length === 0){ showNotice('No payments match the current filters.'); return; }
+  window.print();
+}
+
+// =========================================================
+// LEDGER — a classic day-book / personal-account view built entirely from
+// `entries` already in memory (via loadAllEntries/computeTotals). No new
+// data is stored: each guest's room total becomes one Debit line (posted
+// on their check-in date), each payment becomes one Credit line (posted
+// on its payment date). Running balance carries across the whole filtered
+// range, matching how a real ledger book reads.
+// =========================================================
+let ledgerMode = 'day';
+
+function buildLedgerLines(){
+  const all = loadAllEntries();
+  const lines = [];
+  all.forEach(entry=>{
+    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+    const t = computeTotals(entry);
+    const guest = entry.guestName || '(no name)';
+    const father = entry.fatherName || '';
+    const cnic = entry.cnic || '';
+    if(t.bookingTotal > 0){
+      const debitDate = entry.checkInDate || (entry.savedAt ? entry.savedAt.slice(0,10) : '') || todayStr();
+      lines.push({
+        guestId: entry.id, date: debitDate, kind: 'Debit',
+        particulars: 'Room Charges' + (roomNos ? ' — Room ' + roomNos : ''),
+        guest, father, cnic, amount: t.bookingTotal
+      });
+    }
+    (entry.payments || []).forEach(p=>{
+      if(!p.date) return;
+      lines.push({
+        guestId: entry.id, date: p.date, kind: 'Credit',
+        particulars: 'Payment' + (p.mode ? ' — ' + p.mode : '') + (p.bank ? ' (' + p.bank + ')' : '') + (p.remarks ? ' · ' + p.remarks : ''),
+        guest, father, cnic, amount: p.total || 0
+      });
+    });
+  });
+  return lines;
+}
+
+function setLedgerMode(mode){
+  ledgerMode = mode;
+  document.getElementById('ledgerModeDay').classList.toggle('secondary', mode !== 'day');
+  document.getElementById('ledgerModePerson').classList.toggle('secondary', mode !== 'person');
+  document.getElementById('ledgerPersonPickWrap').style.display = mode === 'person' ? '' : 'none';
+  if(mode === 'person') populateLedgerPersonSelect();
+  renderLedger();
+}
+
+function populateLedgerPersonSelect(){
+  const sel = document.getElementById('ledgerPersonSelect');
+  const prev = sel.value;
+  const all = loadAllEntries().slice().sort((a,b)=> (a.guestName || '').localeCompare(b.guestName || ''));
+  sel.innerHTML = '<option value="">Select a guest…</option>' + all.map(e=>
+    `<option value="${e.id}">${(e.guestName || '(no name)')}${e.cnic ? ' — ' + e.cnic : ''}</option>`
+  ).join('');
+  if(prev && all.some(e=> e.id === prev)) sel.value = prev;
+}
+
+function updateLedgerDateReadouts(){
+  const fromVal = document.getElementById('ledgerFrom').value;
+  const toVal = document.getElementById('ledgerTo').value;
+  document.getElementById('ledgerFromReadout').textContent = fromVal ? formatDate(fromVal) : '';
+  document.getElementById('ledgerToReadout').textContent = toVal ? formatDate(toVal) : '';
+}
+
+function clearLedgerFilters(){
+  document.getElementById('ledgerFrom').value = '';
+  document.getElementById('ledgerTo').value = '';
+  updateLedgerDateReadouts();
+  renderLedger();
+}
+
+function setLedgerFiltersToday(){
+  const t = todayStr();
+  document.getElementById('ledgerFrom').value = t;
+  document.getElementById('ledgerTo').value = t;
+  updateLedgerDateReadouts();
+  renderLedger();
+}
+
+function getFilteredLedgerLines(){
+  let lines = buildLedgerLines();
+  const fromVal = document.getElementById('ledgerFrom').value;
+  const toVal = document.getElementById('ledgerTo').value;
+  if(fromVal) lines = lines.filter(l=> l.date >= fromVal);
+  if(toVal) lines = lines.filter(l=> l.date <= toVal);
+  if(ledgerMode === 'person'){
+    const gid = document.getElementById('ledgerPersonSelect').value;
+    lines = gid ? lines.filter(l=> l.guestId === gid) : [];
+  }
+  lines.sort((a,b)=> a.date < b.date ? -1 : (a.date > b.date ? 1 : 0));
+  return { lines, fromVal, toVal };
+}
+
+function renderLedger(){
+  const container = document.getElementById('ledgerBody');
+  const barEl = document.getElementById('ledgerGrandbar');
+  if(!initialLoadDone){
+    container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    barEl.style.display = 'none';
+    return;
+  }
+  if(ledgerMode === 'person' && !document.getElementById('ledgerPersonSelect').value){
+    container.innerHTML = '<div class="empty-note">Select a guest above to view their ledger.</div>';
+    barEl.style.display = 'none';
+    document.getElementById('ledgerPrintHeaderSub').textContent = '';
+    return;
+  }
+
+  const { lines, fromVal, toVal } = getFilteredLedgerLines();
+
+  const subParts = [];
+  if(ledgerMode === 'person'){
+    const sel = document.getElementById('ledgerPersonSelect');
+    if(sel.selectedIndex >= 0) subParts.push(sel.options[sel.selectedIndex].textContent);
+  }
+  subParts.push(fromVal || toVal ? `${fromVal ? formatDate(fromVal) : 'Start'} to ${toVal ? formatDate(toVal) : 'Today'}` : 'All dates');
+  subParts.push('Generated ' + formatDate(todayStr()));
+  document.getElementById('ledgerPrintHeaderSub').textContent = subParts.join('  ·  ');
+  document.getElementById('ledgerPrintTitle').textContent = ledgerMode === 'person' ? 'Personal Ledger' : 'Day Book — Ledger';
+
+  if(lines.length === 0){
+    container.innerHTML = '<div class="empty-note">No ledger entries match these filters.</div>';
+    barEl.style.display = 'none';
+    return;
+  }
+
+  let running = 0, totalDebit = 0, totalCredit = 0;
+  let html = '';
+
+  if(ledgerMode === 'person'){
+    let bodyRows = '';
+    lines.forEach(l=>{
+      running += (l.kind === 'Debit' ? l.amount : -l.amount);
+      if(l.kind === 'Debit') totalDebit += l.amount; else totalCredit += l.amount;
+      bodyRows += `
+        <tr>
+          <td>${formatDate(l.date)}</td>
+          <td>${l.particulars}</td>
+          <td>${l.kind === 'Debit' ? l.amount.toLocaleString() : '-'}</td>
+          <td class="cash-amt">${l.kind === 'Credit' ? l.amount.toLocaleString() : '-'}</td>
+          <td style="font-weight:700; color:${running > 0 ? 'var(--danger)' : 'inherit'};">${running.toLocaleString()}</td>
+        </tr>`;
+    });
+    html = `
+      <table>
+        <thead>
+          <tr><th style="width:100px;">Date</th><th>Particulars</th><th style="width:110px;">Debit</th><th style="width:110px;">Credit</th><th style="width:110px;">Balance</th></tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>`;
+  } else {
+    const groups = {};
+    lines.forEach(l=>{ if(!groups[l.date]) groups[l.date] = []; groups[l.date].push(l); });
+    const dates = Object.keys(groups).sort((a,b)=> a.localeCompare(b));
+    dates.forEach(date=>{
+      let bodyRows = '';
+      groups[date].forEach(l=>{
+        running += (l.kind === 'Debit' ? l.amount : -l.amount);
+        if(l.kind === 'Debit') totalDebit += l.amount; else totalCredit += l.amount;
+        bodyRows += `
+          <tr style="cursor:pointer;" onclick="openDetail('${l.guestId}')" title="Open this guest">
+            <td>${l.guest}</td>
+            <td>${l.particulars}</td>
+            <td>${l.kind === 'Debit' ? l.amount.toLocaleString() : '-'}</td>
+            <td class="cash-amt">${l.kind === 'Credit' ? l.amount.toLocaleString() : '-'}</td>
+            <td style="font-weight:700; color:${running > 0 ? 'var(--danger)' : 'inherit'};">${running.toLocaleString()}</td>
+          </tr>`;
+      });
+      html += `
+        <div class="day-group">
+          <div class="day-head"><span>${formatDate(date)}</span></div>
+          <table>
+            <thead>
+              <tr><th>Guest</th><th>Particulars</th><th style="width:110px;">Debit</th><th style="width:110px;">Credit</th><th style="width:110px;">Balance</th></tr>
+            </thead>
+            <tbody>${bodyRows}</tbody>
+          </table>
+        </div>`;
+    });
+  }
+
+  container.innerHTML = html;
+  barEl.style.display = 'flex';
+  document.getElementById('ledDebit').textContent = totalDebit.toLocaleString();
+  document.getElementById('ledCredit').textContent = totalCredit.toLocaleString();
+  document.getElementById('ledBalance').textContent = running.toLocaleString();
+}
+
+function exportLedgerExcel(){
+  const { lines } = getFilteredLedgerLines();
+  if(lines.length === 0){ showNotice('No ledger entries match the current filters.'); return; }
+  let running = 0;
+  const data = lines.map(l=>{
+    running += (l.kind === 'Debit' ? l.amount : -l.amount);
+    return {
+      'Date': formatDate(l.date),
+      'Guest': l.guest,
+      'Father Name': l.father,
+      'CNIC': l.cnic,
+      'Particulars': l.particulars,
+      'Debit': l.kind === 'Debit' ? l.amount : '',
+      'Credit': l.kind === 'Credit' ? l.amount : '',
+      'Balance': running
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:12},{wch:20},{wch:20},{wch:16},{wch:34},{wch:12},{wch:12},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, ledgerMode === 'person' ? 'Personal Ledger' : 'Day Book');
+  XLSX.writeFile(wb, `ledger-${ledgerMode}-${todayStr()}.xlsx`);
+}
+
+function printLedger(){
+  const { lines } = getFilteredLedgerLines();
+  if(lines.length === 0){ showNotice('No ledger entries match the current filters.'); return; }
+  window.print();
+}
+
+// =========================================================
+// FULL REPORT — one row per guest: total billed (debit), total credit
+// (paid), and outstanding debt (due). Purely a live roll-up of computeTotals()
+// across all entries, no data changes.
+// =========================================================
+function getFilteredFullReportRows(){
+  const all = loadAllEntries();
+  const fromVal = document.getElementById('frFrom').value;
+  const toVal = document.getElementById('frTo').value;
+  const searchVal = document.getElementById('frSearch').value.trim().toLowerCase();
+  const debtOnly = document.getElementById('frDebtOnly').checked;
+
+  let rows = all.map(entry=>{
+    const t = computeTotals(entry);
+    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+    const date = entry.checkInDate || (entry.savedAt ? entry.savedAt.slice(0,10) : '');
+    return {
+      id: entry.id,
+      guest: entry.guestName || '(no name)',
+      father: entry.fatherName || '',
+      cnic: entry.cnic || '',
+      roomNos, date,
+      billed: t.bookingTotal,
+      credit: t.paid,
+      debt: t.due,
+      status: t.status
+    };
+  });
+
+  if(fromVal) rows = rows.filter(r=> r.date >= fromVal);
+  if(toVal) rows = rows.filter(r=> r.date <= toVal);
+  if(searchVal){
+    rows = rows.filter(r=>{
+      const haystack = [r.guest, r.father, r.cnic, r.roomNos].join(' ').toLowerCase();
+      return haystack.includes(searchVal);
+    });
+  }
+  if(debtOnly) rows = rows.filter(r=> r.debt > 0);
+
+  rows.sort((a,b)=> b.debt - a.debt);
+  return { rows, fromVal, toVal };
+}
+
+function updateFullReportDateReadouts(){
+  const fromVal = document.getElementById('frFrom').value;
+  const toVal = document.getElementById('frTo').value;
+  document.getElementById('frFromReadout').textContent = fromVal ? formatDate(fromVal) : '';
+  document.getElementById('frToReadout').textContent = toVal ? formatDate(toVal) : '';
+}
+
+function clearFullReportFilters(){
+  document.getElementById('frFrom').value = '';
+  document.getElementById('frTo').value = '';
+  document.getElementById('frSearch').value = '';
+  document.getElementById('frDebtOnly').checked = false;
+  updateFullReportDateReadouts();
+  renderFullReport();
+}
+
+function renderFullReport(){
+  const container = document.getElementById('fullReportBody');
+  const barEl = document.getElementById('fullReportGrandbar');
+  if(!initialLoadDone){
+    container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    barEl.style.display = 'none';
+    return;
+  }
+  const { rows, fromVal, toVal } = getFilteredFullReportRows();
+
+  const subParts = [];
+  subParts.push(fromVal || toVal ? `${fromVal ? formatDate(fromVal) : 'Start'} to ${toVal ? formatDate(toVal) : 'Today'}` : 'All dates');
+  subParts.push('Generated ' + formatDate(todayStr()));
+  document.getElementById('frPrintHeaderSub').textContent = subParts.join('  ·  ');
+
+  if(rows.length === 0){
+    container.innerHTML = '<div class="empty-note">No guests match these filters.</div>';
+    barEl.style.display = 'none';
+    return;
+  }
+
+  let totalBilled = 0, totalCredit = 0, totalDebt = 0;
+  let bodyRows = '';
+  rows.forEach(r=>{
+    totalBilled += r.billed;
+    totalCredit += r.credit;
+    totalDebt += r.debt;
+    const statusClass = r.status.toLowerCase();
+    bodyRows += `
+      <tr style="cursor:pointer;" onclick="openDetail('${r.id}')" title="Open this guest">
+        <td>${r.guest}</td>
+        <td>${r.father || '-'}</td>
+        <td>${r.cnic || '-'}</td>
+        <td>${r.roomNos || '-'}</td>
+        <td>${r.date ? formatDate(r.date) : '-'}</td>
+        <td>${r.billed.toLocaleString()}</td>
+        <td class="cash-amt">${r.credit.toLocaleString()}</td>
+        <td style="font-weight:700; color:${r.debt > 0 ? 'var(--danger)' : 'inherit'};">${r.debt.toLocaleString()}</td>
+        <td><span class="status ${statusClass}">${r.status}</span></td>
+      </tr>`;
+  });
+
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Guest</th><th>Father Name</th><th>CNIC</th><th>Room No(s)</th><th style="width:100px;">Date</th>
+          <th style="width:110px;">Billed</th><th style="width:120px;">Credit (Paid)</th><th style="width:120px;">Debt (Due)</th><th style="width:100px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>${bodyRows}</tbody>
+    </table>`;
+  barEl.style.display = 'flex';
+  document.getElementById('frBilled').textContent = totalBilled.toLocaleString();
+  document.getElementById('frCredit').textContent = totalCredit.toLocaleString();
+  document.getElementById('frDebt').textContent = totalDebt.toLocaleString();
+}
+
+function exportFullReportExcel(){
+  const { rows } = getFilteredFullReportRows();
+  if(rows.length === 0){ showNotice('No guests match the current filters.'); return; }
+  const data = rows.map(r=>({
+    'Guest': r.guest,
+    'Father Name': r.father,
+    'CNIC': r.cnic,
+    'Room No(s)': r.roomNos,
+    'Date': r.date ? formatDate(r.date) : '',
+    'Billed': r.billed,
+    'Credit (Paid)': r.credit,
+    'Debt (Due)': r.debt,
+    'Status': r.status
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:20},{wch:20},{wch:16},{wch:14},{wch:12},{wch:12},{wch:14},{wch:14},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Full Report');
+  XLSX.writeFile(wb, `full-report-${todayStr()}.xlsx`);
+}
+
+function printFullReport(){
+  const { rows } = getFilteredFullReportRows();
+  if(rows.length === 0){ showNotice('No guests match the current filters.'); return; }
   window.print();
 }
 
