@@ -1089,15 +1089,14 @@
     <div class="topbar-left">
       <div id="cloudStatus"></div>
       <div id="whoami"></div>
-      <button class="btn secondary" id="logoutBtn" style="min-height:32px; padding:5px 10px;">Sign Out</button>
     </div>
     <div class="topnav">
       <button class="navbtn active" id="topNavEntry" onclick="showView('entry')">Guest Entry</button>
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
-      <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail <span class="beta-tag">BETA</span></button>
     </div>
+    <button class="btn secondary" id="logoutBtn" style="min-height:32px; padding:5px 10px;">Sign Out</button>
   </div>
 
   <div class="view active" id="view-entry">
@@ -1635,6 +1634,11 @@
           <label>Search (room no or guest name)</label>
           <input type="text" id="rdSearchInput" placeholder="Type to search..." autocomplete="off">
         </div>
+        <div>
+          <label>Occupancy as of</label>
+          <input type="date" id="rdDate">
+          <div class="date-readout" id="rdDateReadout"></div>
+        </div>
         <div class="checkline">
           <input type="checkbox" id="rdOccupiedOnly">
           <label for="rdOccupiedOnly" style="margin:0;">Only show occupied rooms</label>
@@ -1792,7 +1796,6 @@ function showView(view){
   document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('topNavReport').classList.toggle('active', view === 'report');
-  document.getElementById('topNavRoomDetail').classList.toggle('active', view === 'roomdetail');
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarBackdrop').classList.remove('show');
   if(view === 'report') renderReport();
@@ -1849,6 +1852,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('apDueOnly').addEventListener('change', renderApList);
   document.getElementById('rdSearchInput').addEventListener('input', renderRoomDetail);
   document.getElementById('rdOccupiedOnly').addEventListener('change', renderRoomDetail);
+  document.getElementById('rdDate').addEventListener('input', renderRoomDetail);
+  document.getElementById('rdDate').value = todayStr();
   ['ledgerFrom','ledgerTo'].forEach(id=>{
     document.getElementById(id).addEventListener('input', updateLedgerDateReadouts);
   });
@@ -2276,7 +2281,7 @@ function scheduleKarachiMidnightRollover(){
 function handleKarachiMidnightRollover(){
   const newToday = todayStr();
   if(newToday === lastKnownToday) return;
-  ['filterFrom','filterTo','ledgerFrom','ledgerTo','frFrom','frTo','gsearchDate','dNewDate','checkInDate'].forEach(id=>{
+  ['filterFrom','filterTo','ledgerFrom','ledgerTo','frFrom','frTo','gsearchDate','dNewDate','checkInDate','rdDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(el && el.value === lastKnownToday) el.value = newToday;
   });
@@ -2290,11 +2295,14 @@ function handleKarachiMidnightRollover(){
   if(dNewDateEl) updateDateReadout(dNewDateEl, document.getElementById('dNewDateReadout'));
   const checkInDateEl = document.getElementById('checkInDate');
   if(checkInDateEl) updateDateReadout(checkInDateEl, document.getElementById('checkInDateReadout'));
+  const rdDateEl = document.getElementById('rdDate');
+  if(rdDateEl) updateDateReadout(rdDateEl, document.getElementById('rdDateReadout'));
   if(currentView === 'entry') renderTodayEntries();
   if(currentView === 'report') renderReport();
   if(currentView === 'search') renderSearch();
   if(currentView === 'ledger') renderLedger();
   if(currentView === 'fullreport') renderFullReport();
+  if(currentView === 'roomdetail') renderRoomDetail();
 }
 
 function addPayRow(){
@@ -3032,6 +3040,18 @@ function computeTotals(entry){
   return { bookingTotal, paid, due: Math.max(due,0), status };
 }
 
+// The most recent thing that happened to this entry — created, edited, or
+// had a payment added — used to sort "latest activity first" lists so a
+// payment added just now on an old entry still floats it to the top.
+function getLatestActivity(entry){
+  let latest = entry.savedAt || '';
+  if(entry.editedAt && entry.editedAt > latest) latest = entry.editedAt;
+  (entry.payments || []).forEach(p=>{
+    if(p.enteredAt && p.enteredAt > latest) latest = p.enteredAt;
+  });
+  return latest;
+}
+
 // ---- Edit mode: reopen a saved entry on the Guest Entry page ----
 let editingEntryId = null;
 // Snapshot of the entry as it was when editing began. Saving diffs the
@@ -3220,8 +3240,15 @@ function renderSearch(){
     });
   }
 
+  // "System Entry Date" means any system activity that day — a new guest
+  // entry, an edit to one, or a new payment added (even if the payment's
+  // own date is backdated) — not just entries first created that day.
   if(dateVal){
-    items = items.filter(({entry})=> entry.savedAt && toKarachiDateStr(entry.savedAt) === dateVal);
+    items = items.filter(({entry})=>
+      (entry.savedAt && toKarachiDateStr(entry.savedAt) === dateVal) ||
+      (entry.editedAt && toKarachiDateStr(entry.editedAt) === dateVal) ||
+      (entry.payments || []).some(p=> p.enteredAt && toKarachiDateStr(p.enteredAt) === dateVal)
+    );
   }
 
   if(dueOnly){
@@ -3233,8 +3260,9 @@ function renderSearch(){
     return;
   }
 
-  // Sort by system entry time, latest first — always, filtered or not.
-  items.sort((a,b)=> (b.entry.savedAt || '').localeCompare(a.entry.savedAt || ''));
+  // Sort by latest activity (created, edited, or a payment added), newest
+  // first — always, filtered or not.
+  items.sort((a,b)=> getLatestActivity(b.entry).localeCompare(getLatestActivity(a.entry)));
 
   listEl.innerHTML = `
     <table>
@@ -3304,11 +3332,13 @@ function getRoomSection(roomNo){
 }
 const ROOM_SECTION_ORDER = ['2ND FLOOR','3RD FLOOR','4TH FLOOR','BLOCK A','BLOCK B','BLOCK C','BLOCK D','NA'];
 
-// "Occupied" is a heuristic: the most recent booking for a room (by
-// check-in, falling back to entry date) is treated as current; if that
-// booking has no Actual Checkout recorded yet, the room reads as occupied
-// by that guest — otherwise it's vacant and the last guest is dropped.
-function computeRoomStatuses(){
+// "Occupied as of a date" is a heuristic: of the bookings for a room, the
+// most recent one that had actually checked in by that date is treated as
+// current for that date; it counts as occupied unless its Actual Checkout
+// had already happened by then (a checkout dated after the reference date
+// doesn't count yet — the guest was still in on that earlier date).
+function computeRoomStatuses(asOfDate){
+  const refDate = asOfDate || todayStr();
   const all = loadAllEntries();
   const byRoom = {};
   all.forEach(entry=>{
@@ -3330,19 +3360,18 @@ function computeRoomStatuses(){
       const bd = b.entry.checkIn || (b.entry.savedAt ? toKarachiDateStr(b.entry.savedAt) : '');
       return bd.localeCompare(ad);
     });
-    const current = bookings[0] || null;
+    const current = bookings.find(b=>{
+      const ci = b.entry.checkIn || (b.entry.savedAt ? toKarachiDateStr(b.entry.savedAt) : '');
+      return !ci || ci <= refDate;
+    }) || null;
     const actualCheckout = current ? getDetailValue(current.entry, 'Actual Checkout') : '';
-    // "Occupied" means inside the hotel today specifically: the guest must
-    // have actually arrived (check-in is today or earlier — a future-dated
-    // reservation isn't in the room yet) and not have an Actual Checkout
-    // recorded (which would mean they've already left).
-    const hasArrived = !!current && (!current.entry.checkIn || current.entry.checkIn <= todayStr());
+    const occupied = !!current && (!actualCheckout || actualCheckout > refDate);
     return {
       roomNo,
       section: getRoomSection(roomNo),
       type: getRoomType(roomNo),
       entry: current ? current.entry : null,
-      occupied: hasArrived && !actualCheckout,
+      occupied,
       bookingCount: bookings.length
     };
   });
@@ -3374,8 +3403,12 @@ function renderRoomDetail(){
   }
   const searchVal = document.getElementById('rdSearchInput').value.trim().toLowerCase();
   const occupiedOnly = document.getElementById('rdOccupiedOnly').checked;
+  const rdDateEl = document.getElementById('rdDate');
+  const asOfDate = rdDateEl.value || todayStr();
+  updateDateReadout(rdDateEl, document.getElementById('rdDateReadout'));
+  const asOfLabel = asOfDate === todayStr() ? 'today' : 'on ' + formatDate(asOfDate);
 
-  let rooms = computeRoomStatuses();
+  let rooms = computeRoomStatuses(asOfDate);
   const totalRooms = rooms.length;
   const occupiedCount = rooms.filter(r=> r.occupied).length;
 
@@ -3392,7 +3425,7 @@ function renderRoomDetail(){
 
   summaryEl.innerHTML = `
     <span><b>${totalRooms}</b> rooms total</span>
-    <span><b>${occupiedCount}</b> occupied today</span>
+    <span><b>${occupiedCount}</b> occupied ${asOfLabel}</span>
     <span><b>${totalRooms - occupiedCount}</b> vacant</span>`;
 
   if(rooms.length === 0){
@@ -3423,7 +3456,7 @@ function renderRoomDetail(){
       <div class="day-group">
         <div class="day-head">
           <span>${section}</span>
-          <span class="day-total">${occ} / ${list.length} occupied today</span>
+          <span class="day-total">${occ} / ${list.length} occupied ${asOfLabel}</span>
         </div>
         <table>
           <thead><tr><th>Room</th><th style="width:200px;">Type</th><th style="width:100px;">Due</th><th style="width:100px;">Status</th><th>Guest</th></tr></thead>
@@ -4693,7 +4726,7 @@ function applyServerData(gRows, rRows, pRows){
     payments: (paysByGuest[g.id] || []).map(p=> ({
       id: p.id, date: p.payment_date, type: p.pay_type || 'Other', mode: p.mode || 'Cash',
       bank: p.bank || '', remarks: p.remarks || '', cash: num(p.cash), account: num(p.account), total: num(p.total),
-      createdBy: p.created_by || ''
+      createdBy: p.created_by || '', enteredAt: p.created_at || ''
     }))
   }));
 
