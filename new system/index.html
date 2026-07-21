@@ -34,6 +34,7 @@
     background:var(--paper);
     color:var(--ink);
     font-family:'Inter',sans-serif;
+    overflow-x:hidden;
   }
   h1{
     font-family:'Inter',sans-serif;
@@ -111,6 +112,20 @@
   }
   .req{
     color:var(--danger);
+  }
+  .na-check{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    margin-top:6px;
+    font-weight:400;
+    font-size:12px;
+    color:var(--muted);
+    cursor:pointer;
+  }
+  .na-check input{
+    width:auto;
+    min-height:0;
   }
   input, select{
     width:100%;
@@ -595,54 +610,106 @@
     gap:10px;
     margin-top:16px;
   }
-  .gcard{
-    background:#fff;
-    border:1px solid var(--line);
-    border-left:4px solid var(--line);
-    border-radius:6px;
-    padding:12px 14px;
+  .room-summary{
     display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
+    gap:22px;
+    flex-wrap:wrap;
+    margin:12px 0 4px;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .room-summary b{ color:var(--ink); }
+  .rd-switch{
+    display:inline-flex;
+    border:1px solid var(--ink);
+    border-radius:20px;
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  .rd-switch-btn{
+    border:none;
+    background:#fff;
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:11px;
+    letter-spacing:0.06em;
+    padding:7px 18px;
     cursor:pointer;
   }
-  .gcard:hover{
-    border-color:var(--ink);
-    border-left-color:var(--ink);
+  .rd-switch-btn.active{
+    background:var(--ink);
+    color:#fff;
   }
-  .gcard.status-paid{ border-left-color:var(--cash); }
-  .gcard.status-pending{ border-left-color:var(--danger); }
-  .gcard.status-partial{ border-left-color:var(--gold-deep); }
-  .gcard .ginfo .name{
+  .beta-tag{
+    display:inline-block;
+    background:var(--gold-deep);
+    color:#fff;
+    font-size:8px;
+    font-weight:700;
+    letter-spacing:0.05em;
+    padding:2px 5px;
+    border-radius:8px;
+    vertical-align:middle;
+    margin-left:2px;
+  }
+  .smart-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+    align-items:start;
+  }
+  /* Breaks out of .main's centered 1100px cap so this section spans the
+     full browser width instead of the site's usual reading-width column. */
+  .full-bleed{
+    width:100vw;
+    position:relative;
+    left:50%;
+    right:50%;
+    margin-left:-50vw;
+    margin-right:-50vw;
+    margin-top:18px;
+    padding:0 20px 24px;
+    box-sizing:border-box;
+  }
+  .smart-panel{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .smart-panel-head{
+    background:#EEF1F6;
+    border-bottom:1px solid var(--line);
+    text-align:center;
     font-family:'Inter',sans-serif;
     font-weight:700;
-    font-size:14px;
-    color:var(--ink);
-  }
-  .gcard .ginfo .meta{
-    color:var(--muted);
-    font-family:'Inter',sans-serif;
-    font-size:12px;
-    margin-top:2px;
-  }
-  .gcard .gnums{
-    text-align:right;
-    display:flex;
-    gap:18px;
-  }
-  .gcard .gnums .box .lbl{
-    font-family:'Inter',sans-serif;
-    font-size:10px;
-    color:var(--muted);
+    font-size:13.65px;
+    letter-spacing:0.05em;
     text-transform:uppercase;
-  }
-  .gcard .gnums .box .val{
-    font-family:'Inter',sans-serif;
-    font-size:14px;
-    font-weight:700;
+    padding:6px;
     color:var(--ink);
   }
+  .smart-row{
+    display:grid;
+    grid-template-columns:minmax(40px,max-content) 1fr 64px 96px;
+    align-items:center;
+    gap:6px;
+    padding:5px 8px;
+    font-family:'Inter',sans-serif;
+    font-size:13.65px;
+    border-bottom:1px solid #17255412;
+  }
+  .smart-row:last-child{ border-bottom:none; }
+  .smart-row.clickable{ cursor:pointer; }
+  .smart-row.clickable:hover{ background:#F7F9FC; }
+  .smart-row .sr-room{ color:var(--account); font-weight:700; white-space:nowrap; border-right:1px solid #1725540F; padding-right:6px; }
+  .smart-row .sr-type{ color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-right:1px solid #1725540F; padding-right:6px; }
+  .smart-row .sr-status{ font-weight:700; border-right:1px solid #1725540F; padding-right:6px; }
+  .smart-row .sr-status.occupied{ color:var(--account); }
+  .smart-row .sr-status.vacant{ color:var(--cash); }
+  .smart-row .sr-guest{ color:var(--account); font-weight:600; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .backlink{
     color:var(--account);
     font-family:'Inter',sans-serif;
@@ -653,7 +720,11 @@
     cursor:pointer;
     margin-bottom:10px;
     display:inline-block;
+    border:1px solid var(--ink);
+    border-radius:4px;
+    padding:6px 12px;
   }
+  .backlink:hover{ background:var(--ink); color:#fff; }
   .detail-payhist td{
     font-size:13px;
   }
@@ -826,6 +897,10 @@
   }
   @media (max-width: 900px){
     .sidebar{ width:78vw; max-width:260px; }
+    .smart-grid{ grid-template-columns:repeat(2,1fr); }
+  }
+  @media (max-width: 520px){
+    .smart-grid{ grid-template-columns:1fr; }
   }
 
   /* ---- Confirm & Save modal ---- */
@@ -999,6 +1074,7 @@
 <div class="sidebar-backdrop no-print" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 <div class="sidebar no-print" id="sidebar">
   <div class="sidebar-inner">
+    <div class="navitem" id="navRoomDetail" onclick="showView('roomdetail')">Room Detail <span class="beta-tag">BETA</span></div>
     <div class="navitem active" id="navEntry" onclick="showView('entry')">Guest Entry</div>
     <div class="navitem" id="navAddPay" onclick="showView('addpay')">Add Payment</div>
     <div class="navitem" id="navSearch" onclick="showView('search')">Search</div>
@@ -1020,6 +1096,7 @@
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
+      <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail <span class="beta-tag">BETA</span></button>
     </div>
   </div>
 
@@ -1038,15 +1115,21 @@
       <div class="grid">
         <div>
           <label>Guest Name <span class="req">*</span></label>
-          <input type="text" id="guestName" placeholder="Full name" required>
+          <input type="text" id="guestName" placeholder="Full name" autocomplete="off" required>
         </div>
         <div>
           <label>Father Name <span class="req">*</span></label>
-          <input type="text" id="fatherName" placeholder="Father's name" required>
+          <input type="text" id="fatherName" placeholder="Father's name" value="N/A" autocomplete="off" disabled required>
+          <label class="na-check"><input type="checkbox" id="fatherNameNA" onchange="toggleNA('fatherName')" checked> N/A</label>
         </div>
         <div>
           <label>CNIC <span class="req">*</span></label>
-          <input type="text" id="cnic" placeholder="XXXXX-XXXXXXX-X" required onblur="offerReturningGuestPrefill()">
+          <input type="text" id="cnic" placeholder="XXXXX-XXXXXXX-X" autocomplete="off" required onblur="offerReturningGuestPrefill()">
+          <label class="na-check"><input type="checkbox" id="cnicNA" onchange="toggleNA('cnic')"> N/A</label>
+        </div>
+        <div>
+          <label>Contact No</label>
+          <input type="text" id="contactNo" placeholder="03XX-XXXXXXX" autocomplete="off">
         </div>
         <div>
           <label>Check-in Date</label>
@@ -1054,9 +1137,14 @@
           <div class="date-readout" id="checkInDateReadout"></div>
         </div>
         <div>
-          <label>Check-out Date</label>
+          <label>Expected Checkout</label>
           <input type="date" id="checkOutDate" title="Reference only — does not affect any amount">
           <div class="date-readout" id="checkOutDateReadout"></div>
+        </div>
+        <div>
+          <label>Actual Checkout</label>
+          <input type="date" id="actualCheckoutDate" title="Reference only — does not affect any amount">
+          <div class="date-readout" id="actualCheckoutDateReadout"></div>
         </div>
       </div>
       <div id="extraDetailList"></div>
@@ -1148,7 +1236,7 @@
       <div class="search-row">
         <div class="grow">
           <label>Search (name, father name, CNIC, room no)</label>
-          <input type="text" id="apSearchInput" placeholder="Type to search...">
+          <input type="text" id="apSearchInput" placeholder="Type to search..." autocomplete="off">
         </div>
         <div class="checkline">
           <input type="checkbox" id="apDueOnly" checked>
@@ -1205,7 +1293,7 @@
           </div>
           <div>
             <label>Remarks</label>
-            <input type="text" id="dNewRemarks" placeholder="Optional note">
+            <input type="text" id="dNewRemarks" placeholder="Optional note" autocomplete="off">
           </div>
           <div>
             <button class="btn" onclick="addDetailPayment()">+ Add Payment</button>
@@ -1246,10 +1334,10 @@
       <div class="search-row">
         <div class="grow">
           <label>Search (name, father name, CNIC, room no)</label>
-          <input type="text" id="gsearchInput" placeholder="Type to search...">
+          <input type="text" id="gsearchInput" placeholder="Type to search..." autocomplete="off">
         </div>
         <div>
-          <label>Entry / Payment Date</label>
+          <label>System Entry Date</label>
           <input type="date" id="gsearchDate">
           <div class="date-readout" id="gsearchDateReadout"></div>
         </div>
@@ -1290,12 +1378,20 @@
           <input type="text" id="dCnic" disabled>
         </div>
         <div>
+          <label>Contact No</label>
+          <input type="text" id="dContactNo" disabled>
+        </div>
+        <div>
           <label>Check-in</label>
           <input type="text" id="dCheckIn" disabled>
         </div>
         <div>
-          <label>Check-out</label>
+          <label>Expected Checkout</label>
           <input type="text" id="dCheckOut" disabled>
+        </div>
+        <div>
+          <label>Actual Checkout</label>
+          <input type="text" id="dActualCheckout" disabled>
         </div>
       </div>
       <div class="grid" id="dExtraDetails" style="margin-top:14px;"></div>
@@ -1393,7 +1489,7 @@
         </div>
         <div style="grid-column:span 2;">
           <label>Search (name, father name, CNIC, room no, type, mode)</label>
-          <input type="text" id="filterSearch" placeholder="Type to search...">
+          <input type="text" id="filterSearch" placeholder="Type to search..." autocomplete="off">
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
@@ -1402,7 +1498,7 @@
           <button class="btn secondary" onclick="setFiltersToday()">Today</button>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <input type="text" id="filterCashSearch" placeholder="type total amount" style="width:180px;">
+          <input type="text" id="filterCashSearch" placeholder="type total amount" style="width:180px;" autocomplete="off">
           <button class="btn" onclick="openExportModal()">⬇ Export</button>
         </div>
       </div>
@@ -1499,7 +1595,7 @@
         </div>
         <div style="grid-column:span 2;">
           <label>Search (name, father name, CNIC, room no)</label>
-          <input type="text" id="frSearch" placeholder="Type to search...">
+          <input type="text" id="frSearch" placeholder="Type to search..." autocomplete="off">
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
@@ -1525,6 +1621,36 @@
         <span>Total Debt (Due): Rs. <b id="frDebt" style="color:var(--danger);">0</b></span>
       </div>
     </div>
+
+  </div>
+
+  <div class="view" id="view-roomdetail">
+
+    <h1>Room Detail</h1>
+    <div class="sub">Rooms by floor — who's in each one right now, at a glance</div>
+
+    <div class="panel accent-guest">
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (room no or guest name)</label>
+          <input type="text" id="rdSearchInput" placeholder="Type to search..." autocomplete="off">
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="rdOccupiedOnly">
+          <label for="rdOccupiedOnly" style="margin:0;">Only show occupied rooms</label>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:12px;">
+        <div class="room-summary" id="roomDetailSummary" style="margin:0;"></div>
+        <div class="rd-switch">
+          <button type="button" class="rd-switch-btn" id="rdModeSmart" onclick="setRoomDetailMode('smart')">SMART</button>
+          <button type="button" class="rd-switch-btn active" id="rdModeMunchi" onclick="setRoomDetailMode('munchi')">MUNCHI</button>
+        </div>
+      </div>
+      <div id="roomDetailSmartBody" style="overflow-x:auto; display:none; margin-top:14px;"></div>
+    </div>
+
+    <div class="smart-grid full-bleed" id="roomDetailMunchiBody"></div>
 
   </div>
 
@@ -1651,10 +1777,11 @@ let currentView = 'entry';
 
 function showView(view){
   currentView = view;
-  ['entry','addpay','search','report','detail','ledger','fullreport'].forEach(v=>{
+  ['entry','addpay','search','report','detail','ledger','fullreport','roomdetail'].forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
+  document.getElementById('navRoomDetail').classList.toggle('active', view === 'roomdetail');
   document.getElementById('navEntry').classList.toggle('active', view === 'entry');
   document.getElementById('navAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('navSearch').classList.toggle('active', view === 'search' || view === 'detail');
@@ -1665,6 +1792,7 @@ function showView(view){
   document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('topNavReport').classList.toggle('active', view === 'report');
+  document.getElementById('topNavRoomDetail').classList.toggle('active', view === 'roomdetail');
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarBackdrop').classList.remove('show');
   if(view === 'report') renderReport();
@@ -1673,6 +1801,7 @@ function showView(view){
   if(view === 'addpay') renderApList();
   if(view === 'ledger') renderLedger();
   if(view === 'fullreport') renderFullReport();
+  if(view === 'roomdetail') renderRoomDetail();
 }
 
 function updateFilterDateReadouts(){
@@ -1718,6 +1847,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   document.getElementById('apSearchInput').addEventListener('input', renderApList);
   document.getElementById('apDueOnly').addEventListener('change', renderApList);
+  document.getElementById('rdSearchInput').addEventListener('input', renderRoomDetail);
+  document.getElementById('rdOccupiedOnly').addEventListener('change', renderRoomDetail);
   ['ledgerFrom','ledgerTo'].forEach(id=>{
     document.getElementById(id).addEventListener('input', updateLedgerDateReadouts);
   });
@@ -1740,6 +1871,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
     });
     document.getElementById('checkOutDate').addEventListener(evt, e=>{
       updateDateReadout(e.target, document.getElementById('checkOutDateReadout'));
+    });
+    document.getElementById('actualCheckoutDate').addEventListener(evt, e=>{
+      updateDateReadout(e.target, document.getElementById('actualCheckoutDateReadout'));
     });
   });
   renderTodayEntries();
@@ -2109,6 +2243,14 @@ function todayStr(){
   return toKarachiDateStr();
 }
 
+// Room numbers are often typed both with and without their dash ("C-12"
+// vs "C12") — every search box strips dashes from both sides before
+// matching so either spelling finds the same room, the same way amount
+// search already ignores commas ("25000" / "25,000").
+function stripDashes(s){
+  return String(s == null ? '' : s).replace(/-/g, '');
+}
+
 // A tab left open across midnight would otherwise keep showing yesterday
 // until something forces a re-render. This times a single refresh for the
 // exact moment it turns midnight in Pakistan (no polling/interval drift),
@@ -2184,7 +2326,7 @@ function addPayRow(){
         <option value="MCB">MCB</option>
       </select>
     </td>
-    <td><input type="text" class="payRemarks" placeholder="Optional note"></td>
+    <td><input type="text" class="payRemarks" placeholder="Optional note" autocomplete="off"></td>
     <td><input type="number" placeholder="0" class="payCash" min="0" oninput="calcPayRow(this)"></td>
     <td><input type="number" placeholder="0" class="payAccount" min="0" oninput="calcPayRow(this)" disabled></td>
     <td class="rowtotal payTotal cash-amt">0</td>
@@ -2266,7 +2408,7 @@ function calcSummary(){
 // ---- Optional extra details (+ Detail button) ----
 const EXTRA_DETAIL_KINDS = [
   'Address', 'Nationality', 'Company Name', 'Profession',
-  'Contact No', 'Emergency No', 'Car No', 'Date of Arrival', 'Date of Departure', 'Extra Remarks'
+  'Emergency No', 'Car No', 'Date of Arrival', 'Date of Departure', 'Extra Remarks'
 ];
 
 function addExtraDetailRow(kind, value){
@@ -2278,7 +2420,7 @@ function addExtraDetailRow(kind, value){
       ${EXTRA_DETAIL_KINDS.map(k=>`<option value="${k}">${k}</option>`).join('')}
     </select>
     <div class="edValue-wrap">
-      <input type="text" class="edValue" placeholder="Enter detail">
+      <input type="text" class="edValue" placeholder="Enter detail" autocomplete="off">
       <div class="date-readout edValueReadout"></div>
     </div>
     <button class="btn danger" onclick="requestDeleteRow(this,'detail')">✕</button>
@@ -2339,6 +2481,20 @@ function formatExtraDetail(d){
   return isDate && d.value ? formatDate(d.value) : d.value;
 }
 
+// Contact No and Actual Checkout each have their own fixed field on the
+// form (not "+ Detail" options) but are still stored inside extraDetails —
+// the cloud table already has a JSON column for that array, so this needs
+// no schema change. These helpers move them between the fixed fields and
+// that array, and keep them out of the generic "+ Detail" list/dropdown.
+const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout'];
+function getDetailValue(entry, kind){
+  const d = (entry.extraDetails || []).find(d=> d.kind === kind);
+  return d ? d.value : '';
+}
+function visibleExtraDetails(entry){
+  return (entry.extraDetails || []).filter(d=> !HIDDEN_DETAIL_KINDS.includes(d.kind));
+}
+
 // ---- Returning guest: typing a known CNIC offers to load the person's
 // saved details into the NEW entry, so this visit starts from what we
 // already know and any new detail (new car, new number…) is just added
@@ -2367,14 +2523,33 @@ function offerReturningGuestPrefill(){
   returningPrefillDigits = digits;
   document.getElementById('guestName').value = prev.guestName || '';
   document.getElementById('fatherName').value = prev.fatherName || '';
+  const contactNoEl = document.getElementById('contactNo');
+  if(!contactNoEl.value.trim()) contactNoEl.value = getDetailValue(prev, 'Contact No');
   // Append only details not already typed into the form — never wipe rows
   const have = Array.from(document.querySelectorAll('#extraDetailList .extra-detail-row')).map(row => ({
     kind: row.querySelector('.edKind').value,
     value: row.querySelector('.edValue').value.trim()
   }));
-  (prev.extraDetails || []).forEach(d=>{
+  visibleExtraDetails(prev).forEach(d=>{
     if(!have.some(h => h.kind === d.kind && h.value === d.value)) addExtraDetailRow(d.kind, d.value);
   });
+}
+
+// N/A checkbox next to Father Name / CNIC: some guests simply don't have
+// one to give, and forcing a fake value in would corrupt search/duplicate
+// checks. Checking it fills the field with "N/A" and locks it; unchecking
+// clears it back to editable.
+function toggleNA(fieldId){
+  const input = document.getElementById(fieldId);
+  const checkbox = document.getElementById(fieldId + 'NA');
+  if(checkbox.checked){
+    input.value = 'N/A';
+    input.disabled = true;
+  }else{
+    input.value = '';
+    input.disabled = false;
+    input.focus();
+  }
 }
 
 let pendingEntryData = null;
@@ -2397,35 +2572,44 @@ function reviewEntry(){
   }
 
   const fatherNameEl = document.getElementById('fatherName');
-  const fatherName = fatherNameEl.value.trim();
-  if(!fatherName){
-    showNotice('Please enter the Father Name before saving.');
-    focusError(fatherNameEl);
-    return;
-  }
-  if(!/^[a-zA-Z\s.'-]+$/.test(fatherName)){
-    showNotice('Father Name looks wrong — it should contain letters only (no numbers). Please check for a typo.');
-    focusError(fatherNameEl);
-    return;
+  const fatherNameNA = document.getElementById('fatherNameNA').checked;
+  const fatherName = fatherNameNA ? 'N/A' : fatherNameEl.value.trim();
+  if(!fatherNameNA){
+    if(!fatherName){
+      showNotice('Please enter the Father Name before saving.');
+      focusError(fatherNameEl);
+      return;
+    }
+    if(!/^[a-zA-Z\s.'-]+$/.test(fatherName)){
+      showNotice('Father Name looks wrong — it should contain letters only (no numbers). Please check for a typo.');
+      focusError(fatherNameEl);
+      return;
+    }
   }
 
   const cnicEl = document.getElementById('cnic');
-  const cnic = cnicEl.value.trim();
-  if(!cnic){
-    showNotice('Please enter the CNIC before saving.');
-    focusError(cnicEl);
-    return;
-  }
-  const cnicDigits = cnic.replace(/[^0-9]/g, '');
-  if(cnicDigits.length !== 13){
-    showNotice('CNIC looks wrong — it should have exactly 13 digits (e.g. XXXXX-XXXXXXX-X). Please check for a typo.');
-    focusError(cnicEl);
-    return;
+  const cnicNA = document.getElementById('cnicNA').checked;
+  const cnic = cnicNA ? 'N/A' : cnicEl.value.trim();
+  let cnicDigits = '';
+  if(!cnicNA){
+    if(!cnic){
+      showNotice('Please enter the CNIC before saving.');
+      focusError(cnicEl);
+      return;
+    }
+    cnicDigits = cnic.replace(/[^0-9]/g, '');
+    if(cnicDigits.length !== 13){
+      showNotice('CNIC looks wrong — it should have exactly 13 digits (e.g. XXXXX-XXXXXXX-X). Please check for a typo.');
+      focusError(cnicEl);
+      return;
+    }
   }
 
-  // duplicate CNIC guard — catches an accidental re-entry of an existing guest
+  // duplicate CNIC guard — catches an accidental re-entry of an existing guest.
+  // Skipped entirely when CNIC is N/A: many N/A guests would otherwise all
+  // falsely flag each other as duplicates.
   const existingEntries = loadAllEntries();
-  const dupGuest = existingEntries.find(e => e.id !== editingEntryId && (e.cnic || '').replace(/[^0-9]/g,'') === cnicDigits);
+  const dupGuest = !cnicNA && existingEntries.find(e => e.id !== editingEntryId && (e.cnic || '').replace(/[^0-9]/g,'') === cnicDigits);
   if(dupGuest && returningPrefillDigits !== cnicDigits){
     const prevDate = dupGuest.savedAt ? ' (entered ' + formatDate(toKarachiDateStr(dupGuest.savedAt)) + ')' : '';
     const proceed = confirm(
@@ -2448,6 +2632,11 @@ function reviewEntry(){
 
   const extraDetails = collectExtraDetails();
   if(extraDetails === null) return;
+
+  const contactNo = document.getElementById('contactNo').value.trim();
+  if(contactNo) extraDetails.unshift({ kind: 'Contact No', value: contactNo });
+  const actualCheckout = document.getElementById('actualCheckoutDate').value;
+  if(actualCheckout) extraDetails.unshift({ kind: 'Actual Checkout', value: actualCheckout });
 
   const roomRows = Array.from(document.querySelectorAll('#roomBody tr'));
   const cleanRooms = [];
@@ -2591,8 +2780,9 @@ function openConfirmModal(data){
       <div><div class="confirm-lbl">Father Name</div><div class="confirm-val">${data.fatherName || '-'}</div></div>
       <div><div class="confirm-lbl">CNIC</div><div class="confirm-val">${data.cnic || '-'}</div></div>
       <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${data.checkIn ? formatDate(data.checkIn) : '-'}</div></div>
-      <div><div class="confirm-lbl">Check-out</div><div class="confirm-val">${data.checkOut ? formatDate(data.checkOut) : '-'}</div></div>
-      ${(data.extraDetails || []).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
+      <div><div class="confirm-lbl">Expected Checkout</div><div class="confirm-val">${data.checkOut ? formatDate(data.checkOut) : '-'}</div></div>
+      <div><div class="confirm-lbl">Actual Checkout</div><div class="confirm-val">${getDetailValue(data, 'Actual Checkout') ? formatDate(getDetailValue(data, 'Actual Checkout')) : '-'}</div></div>
+      ${visibleExtraDetails(data).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
     </div>
     <table style="margin-bottom:14px;">
       <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Days</th><th>Total</th></tr></thead>
@@ -2742,15 +2932,23 @@ function confirmSaveEntry(){
 
 // Clear the whole entry form for the next guest.
 function resetEntryForm(){
-  ['guestName','fatherName','cnic','checkOutDate'].forEach(id=>{
+  ['guestName','cnic','contactNo','checkOutDate','actualCheckoutDate'].forEach(id=>{
     document.getElementById(id).value = '';
   });
+  document.getElementById('cnic').disabled = false;
+  document.getElementById('cnicNA').checked = false;
+  // Father Name defaults to N/A — most walk-ins don't give it, so this
+  // saves ticking the box every time; untick it to type one in.
+  document.getElementById('fatherName').value = 'N/A';
+  document.getElementById('fatherName').disabled = true;
+  document.getElementById('fatherNameNA').checked = true;
   // Check-in defaults to today (Pakistan time) — nearly every walk-in checks in the day
   // they're entered, so this saves re-picking the date on every single guest.
   const checkInEl = document.getElementById('checkInDate');
   checkInEl.value = todayStr();
   updateDateReadout(checkInEl, document.getElementById('checkInDateReadout'));
   document.getElementById('checkOutDateReadout').textContent = '';
+  document.getElementById('actualCheckoutDateReadout').textContent = '';
   document.getElementById('extraDetailList').innerHTML = '';
   document.getElementById('roomBody').innerHTML = '';
   document.getElementById('payBody').innerHTML = '';
@@ -2899,14 +3097,21 @@ function startEditEntry(entry){
 
   document.getElementById('guestName').value = entry.guestName || '';
   document.getElementById('fatherName').value = entry.fatherName || '';
+  document.getElementById('fatherNameNA').checked = entry.fatherName === 'N/A';
+  document.getElementById('fatherName').disabled = entry.fatherName === 'N/A';
   document.getElementById('cnic').value = entry.cnic || '';
+  document.getElementById('cnicNA').checked = entry.cnic === 'N/A';
+  document.getElementById('cnic').disabled = entry.cnic === 'N/A';
+  document.getElementById('contactNo').value = getDetailValue(entry, 'Contact No');
   document.getElementById('checkInDate').value = entry.checkIn || '';
   document.getElementById('checkOutDate').value = entry.checkOut || '';
+  document.getElementById('actualCheckoutDate').value = getDetailValue(entry, 'Actual Checkout');
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
   updateDateReadout(document.getElementById('checkOutDate'), document.getElementById('checkOutDateReadout'));
+  updateDateReadout(document.getElementById('actualCheckoutDate'), document.getElementById('actualCheckoutDateReadout'));
 
   document.getElementById('extraDetailList').innerHTML = '';
-  (entry.extraDetails || []).forEach(d=> addExtraDetailRow(d.kind, d.value));
+  visibleExtraDetails(entry).forEach(d=> addExtraDetailRow(d.kind, d.value));
 
   document.getElementById('roomBody').innerHTML = '';
   rowCount = 0;
@@ -3005,20 +3210,18 @@ function renderSearch(){
   });
 
   if(searchVal){
+    const searchValNoDash = stripDashes(searchVal);
     items = items.filter(({entry, roomNos})=>{
       const haystack = [
         entry.guestName, entry.fatherName, entry.cnic, roomNos,
         (entry.extraDetails || []).map(d=>d.value).join(' ')
       ].join(' ').toLowerCase();
-      return haystack.includes(searchVal);
+      return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
     });
   }
 
   if(dateVal){
-    items = items.filter(({entry})=>
-      (entry.savedAt && toKarachiDateStr(entry.savedAt) === dateVal) ||
-      (entry.payments || []).some(p=> p.date === dateVal)
-    );
+    items = items.filter(({entry})=> entry.savedAt && toKarachiDateStr(entry.savedAt) === dateVal);
   }
 
   if(dueOnly){
@@ -3030,24 +3233,219 @@ function renderSearch(){
     return;
   }
 
-  // due balances first
-  items.sort((a,b)=> b.t.due - a.t.due);
+  // Sort by system entry time, latest first — always, filtered or not.
+  items.sort((a,b)=> (b.entry.savedAt || '').localeCompare(a.entry.savedAt || ''));
 
-  listEl.innerHTML = items.map(({entry, t, roomNos})=>{
-    const statusClass = t.status.toLowerCase();
+  listEl.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Guest</th>
+          <th style="width:120px;">Room</th>
+          <th style="width:140px;">CNIC</th>
+          <th style="width:100px;">Entry Date</th>
+          <th style="width:100px;">Check-in</th>
+          <th style="width:100px;">Expected Checkout</th>
+          <th style="width:100px;">Actual Checkout</th>
+          <th style="width:110px;">Total</th>
+          <th style="width:100px;">Paid</th>
+          <th style="width:100px;">Due</th>
+          <th style="width:90px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map(({entry, t, roomNos})=>{
+          const statusClass = t.status.toLowerCase();
+          const actualCheckout = getDetailValue(entry, 'Actual Checkout');
+          return `<tr style="cursor:pointer;" onclick="openDetail('${entry.id}')" title="Open this guest">
+            <td>${entry.guestName || '(no name)'}</td>
+            <td>${roomNos || '-'}</td>
+            <td>${entry.cnic || '-'}</td>
+            <td>${entry.savedAt ? formatDate(toKarachiDateStr(entry.savedAt)) : '-'}</td>
+            <td>${entry.checkIn ? formatDate(entry.checkIn) : '-'}</td>
+            <td>${entry.checkOut ? formatDate(entry.checkOut) : '-'}</td>
+            <td>${actualCheckout ? formatDate(actualCheckout) : '-'}</td>
+            <td>${t.bookingTotal.toLocaleString()}</td>
+            <td class="cash-amt">${t.paid.toLocaleString()}</td>
+            <td style="font-weight:700; color:${t.due > 0 ? 'var(--danger)' : 'inherit'};">${t.due.toLocaleString()}</td>
+            <td><span class="status ${statusClass}">${t.status}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ---- Room Detail: rooms by floor, who's in each one right now ----
+// ROOM_NUMBERS/APARTMENT_NUMBERS (used already by the room-picker) double
+// as the property's master room list, so every room shows here even if
+// it's never been booked. Floor/Block is derived from the room number
+// itself (2xx/3xx/4xx floors, A-/B-/C-/D- blocks); a room number that
+// shows up in a booking but isn't in that master list falls into "NA".
+const ROOM_TYPE_BY_SUFFIX = { '01': 'Suit Room', '02': 'VIP Deluxe' };
+function getRoomType(roomNo){
+  const v = (roomNo || '').trim().toUpperCase();
+  if(APARTMENT_NUMBERS.includes(v)) return '3 Bed Apartment';
+  if(ROOM_NUMBERS.includes(v)){
+    const suffix = v.slice(-2);
+    if(ROOM_TYPE_BY_SUFFIX[suffix]) return ROOM_TYPE_BY_SUFFIX[suffix];
+    const n = parseInt(suffix, 10);
+    if(n >= 3 && n <= 8) return 'Family Deluxe with River';
+    if(n >= 9 && n <= 14) return 'Family Deluxe with Mount';
+  }
+  return '';
+}
+function getRoomSection(roomNo){
+  const v = (roomNo || '').trim().toUpperCase();
+  if(ROOM_NUMBERS.includes(v)){
+    return v[0] === '2' ? '2ND FLOOR' : v[0] === '3' ? '3RD FLOOR' : v[0] === '4' ? '4TH FLOOR' : 'NA';
+  }
+  if(APARTMENT_NUMBERS.includes(v)) return 'BLOCK ' + v[0];
+  return 'NA';
+}
+const ROOM_SECTION_ORDER = ['2ND FLOOR','3RD FLOOR','4TH FLOOR','BLOCK A','BLOCK B','BLOCK C','BLOCK D','NA'];
+
+// "Occupied" is a heuristic: the most recent booking for a room (by
+// check-in, falling back to entry date) is treated as current; if that
+// booking has no Actual Checkout recorded yet, the room reads as occupied
+// by that guest — otherwise it's vacant and the last guest is dropped.
+function computeRoomStatuses(){
+  const all = loadAllEntries();
+  const byRoom = {};
+  all.forEach(entry=>{
+    (entry.rooms || []).forEach(r=>{
+      if(!r.roomNo) return;
+      const key = r.roomNo.trim().toUpperCase();
+      (byRoom[key] = byRoom[key] || []).push({ entry, room: r });
+    });
+  });
+
+  const masterKeys = [...ROOM_NUMBERS, ...APARTMENT_NUMBERS];
+  const extraKeys = Object.keys(byRoom)
+    .filter(k=> !masterKeys.includes(k))
+    .sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+  return masterKeys.concat(extraKeys).map(roomNo=>{
+    const bookings = (byRoom[roomNo] || []).slice().sort((a,b)=>{
+      const ad = a.entry.checkIn || (a.entry.savedAt ? toKarachiDateStr(a.entry.savedAt) : '');
+      const bd = b.entry.checkIn || (b.entry.savedAt ? toKarachiDateStr(b.entry.savedAt) : '');
+      return bd.localeCompare(ad);
+    });
+    const current = bookings[0] || null;
+    const actualCheckout = current ? getDetailValue(current.entry, 'Actual Checkout') : '';
+    // "Occupied" means inside the hotel today specifically: the guest must
+    // have actually arrived (check-in is today or earlier — a future-dated
+    // reservation isn't in the room yet) and not have an Actual Checkout
+    // recorded (which would mean they've already left).
+    const hasArrived = !!current && (!current.entry.checkIn || current.entry.checkIn <= todayStr());
+    return {
+      roomNo,
+      section: getRoomSection(roomNo),
+      type: getRoomType(roomNo),
+      entry: current ? current.entry : null,
+      occupied: hasArrived && !actualCheckout,
+      bookingCount: bookings.length
+    };
+  });
+}
+
+// Room Detail has two interchangeable layouts for the same filtered room
+// list: SMART (one full-width table per floor/block) and MUNCHI (a grid of
+// small floor/block panels, matching a reference PMS's "Rooms by Floor"
+// board). Both are rendered every time so switching between them is an
+// instant show/hide, never a re-render.
+let roomDetailMode = 'munchi';
+function setRoomDetailMode(mode){
+  roomDetailMode = mode;
+  document.getElementById('rdModeSmart').classList.toggle('active', mode === 'smart');
+  document.getElementById('rdModeMunchi').classList.toggle('active', mode === 'munchi');
+  document.getElementById('roomDetailSmartBody').style.display = mode === 'smart' ? '' : 'none';
+  document.getElementById('roomDetailMunchiBody').style.display = mode === 'munchi' ? '' : 'none';
+}
+
+function renderRoomDetail(){
+  const smartBody = document.getElementById('roomDetailSmartBody');
+  const munchiBody = document.getElementById('roomDetailMunchiBody');
+  const summaryEl = document.getElementById('roomDetailSummary');
+  if(!initialLoadDone){
+    smartBody.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    munchiBody.innerHTML = '';
+    summaryEl.innerHTML = '';
+    return;
+  }
+  const searchVal = document.getElementById('rdSearchInput').value.trim().toLowerCase();
+  const occupiedOnly = document.getElementById('rdOccupiedOnly').checked;
+
+  let rooms = computeRoomStatuses();
+  const totalRooms = rooms.length;
+  const occupiedCount = rooms.filter(r=> r.occupied).length;
+
+  if(searchVal){
+    const searchValNoDash = stripDashes(searchVal);
+    rooms = rooms.filter(r=>{
+      const haystack = [r.roomNo, r.type, r.entry ? r.entry.guestName : '', r.entry ? r.entry.fatherName : ''].join(' ').toLowerCase();
+      return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
+    });
+  }
+  if(occupiedOnly){
+    rooms = rooms.filter(r=> r.occupied);
+  }
+
+  summaryEl.innerHTML = `
+    <span><b>${totalRooms}</b> rooms total</span>
+    <span><b>${occupiedCount}</b> occupied today</span>
+    <span><b>${totalRooms - occupiedCount}</b> vacant</span>`;
+
+  if(rooms.length === 0){
+    smartBody.innerHTML = '<div class="empty-note">No rooms match.</div>';
+    munchiBody.innerHTML = '<div class="empty-note">No rooms match.</div>';
+    return;
+  }
+
+  const groups = {};
+  rooms.forEach(r=> (groups[r.section] = groups[r.section] || []).push(r));
+  const sections = ROOM_SECTION_ORDER.filter(section=> groups[section] && groups[section].length);
+
+  smartBody.innerHTML = sections.map(section=>{
+    const list = groups[section];
+    const occ = list.filter(r=> r.occupied).length;
+    const rows = list.map(r=>{
+      const due = r.entry ? computeTotals(r.entry).due : 0;
+      const clickable = !!r.entry;
+      return `<tr ${clickable ? `style="cursor:pointer;" onclick="openDetail('${r.entry.id}')" title="Open this guest"` : ''}>
+        <td><b>${r.roomNo}</b></td>
+        <td>${r.type || '-'}</td>
+        <td>${clickable ? due.toLocaleString() : '-'}</td>
+        <td><span class="status ${r.occupied ? 'pending' : 'paid'}">${r.occupied ? 'Occupied' : 'Vacant'}</span></td>
+        <td>${clickable ? (r.entry.guestName || '(no name)') : '-'}</td>
+      </tr>`;
+    }).join('');
     return `
-      <div class="gcard status-${statusClass}" onclick="openDetail('${entry.id}')">
-        <div class="ginfo">
-          <div class="name">${entry.guestName || '(no name)'}</div>
-          <div class="meta">${roomNos ? 'Room ' + roomNos + ' &middot; ' : ''}${entry.cnic || ''}</div>
+      <div class="day-group">
+        <div class="day-head">
+          <span>${section}</span>
+          <span class="day-total">${occ} / ${list.length} occupied today</span>
         </div>
-        <div class="gnums">
-          <div class="box"><div class="lbl">Entry Date</div><div class="val">${entry.savedAt ? formatDate(toKarachiDateStr(entry.savedAt)) : '-'}</div></div>
-          <div class="box"><div class="lbl">Total</div><div class="val">${t.bookingTotal.toLocaleString()}</div></div>
-          <div class="box"><div class="lbl">Paid</div><div class="val cash-amt">${t.paid.toLocaleString()}</div></div>
-          <div class="box"><div class="lbl">Due</div><div class="val" style="color:${t.due>0?'var(--danger)':'inherit'};">${t.due.toLocaleString()}</div></div>
-          <div class="box"><div class="lbl">Status</div><div class="val"><span class="status ${statusClass}">${t.status}</span></div></div>
-        </div>
+        <table>
+          <thead><tr><th>Room</th><th style="width:200px;">Type</th><th style="width:100px;">Due</th><th style="width:100px;">Status</th><th>Guest</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }).join('');
+
+  munchiBody.innerHTML = sections.map(section=>{
+    const rows = groups[section].map(r=>{
+      const clickable = !!r.entry;
+      return `<div class="smart-row${clickable ? ' clickable' : ''}" ${clickable ? `onclick="openDetail('${r.entry.id}')" title="Open this guest"` : ''}>
+        <span class="sr-room">${r.roomNo}</span>
+        <span class="sr-type">${r.type || ''}</span>
+        <span class="sr-status ${r.occupied ? 'occupied' : 'vacant'}">${r.occupied ? 'occupied' : 'vacant'}</span>
+        <span class="sr-guest">${clickable ? (r.entry.guestName || '') : ''}</span>
+      </div>`;
+    }).join('');
+    return `
+      <div class="smart-panel">
+        <div class="smart-panel-head">${section}</div>
+        <div>${rows}</div>
       </div>`;
   }).join('');
 }
@@ -3079,9 +3477,12 @@ function renderDetail(){
   document.getElementById('dGuestName').value = entry.guestName || '';
   document.getElementById('dFatherName').value = entry.fatherName || '';
   document.getElementById('dCnic').value = entry.cnic || '';
+  document.getElementById('dContactNo').value = getDetailValue(entry, 'Contact No') || '—';
   document.getElementById('dCheckIn').value = entry.checkIn ? formatDate(entry.checkIn) : '—';
   document.getElementById('dCheckOut').value = entry.checkOut ? formatDate(entry.checkOut) : '—';
-  document.getElementById('dExtraDetails').innerHTML = (entry.extraDetails || []).map(d=>
+  const actualCheckout = getDetailValue(entry, 'Actual Checkout');
+  document.getElementById('dActualCheckout').value = actualCheckout ? formatDate(actualCheckout) : '—';
+  document.getElementById('dExtraDetails').innerHTML = visibleExtraDetails(entry).map(d=>
     `<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`
   ).join('');
 
@@ -3210,11 +3611,12 @@ function renderApList(){
   });
 
   if(searchVal){
+    const searchValNoDash = stripDashes(searchVal);
     items = items.filter(({entry, roomNos})=>{
       const haystack = [
         entry.guestName, entry.fatherName, entry.cnic, roomNos
       ].join(' ').toLowerCase();
-      return haystack.includes(searchVal);
+      return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
     });
   }
   if(dueOnly){
@@ -3227,21 +3629,39 @@ function renderApList(){
     return;
   }
 
-  listEl.innerHTML = items.map(({entry, t, roomNos})=>{
-    const statusClass = t.status.toLowerCase();
-    return `
-      <div class="gcard status-${statusClass}" onclick="selectApGuest('${entry.id}')">
-        <div class="ginfo">
-          <div class="name">${entry.guestName || '(no name)'}</div>
-          <div class="meta">${entry.fatherName ? 's/o ' + entry.fatherName + ' &middot; ' : ''}${roomNos ? 'Room ' + roomNos : ''}</div>
-        </div>
-        <div class="gnums">
-          <div class="box"><div class="lbl">Total</div><div class="val">${t.bookingTotal.toLocaleString()}</div></div>
-          <div class="box"><div class="lbl">Paid</div><div class="val cash-amt">${t.paid.toLocaleString()}</div></div>
-          <div class="box"><div class="lbl">Due</div><div class="val" style="color:${t.due>0?'var(--danger)':'inherit'};">${t.due.toLocaleString()}</div></div>
-        </div>
-      </div>`;
-  }).join('');
+  listEl.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Guest</th>
+          <th style="width:120px;">Room</th>
+          <th style="width:100px;">Check-in</th>
+          <th style="width:100px;">Expected Checkout</th>
+          <th style="width:100px;">Actual Checkout</th>
+          <th style="width:110px;">Total</th>
+          <th style="width:100px;">Paid</th>
+          <th style="width:100px;">Due</th>
+          <th style="width:90px;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map(({entry, t, roomNos})=>{
+          const statusClass = t.status.toLowerCase();
+          const actualCheckout = getDetailValue(entry, 'Actual Checkout');
+          return `<tr style="cursor:pointer;" onclick="selectApGuest('${entry.id}')" title="Add a payment for this guest">
+            <td>${entry.guestName || '(no name)'}${entry.fatherName && entry.fatherName !== 'N/A' ? ' <span style=\"color:var(--muted); font-weight:400;\">s/o ' + entry.fatherName + '</span>' : ''}</td>
+            <td>${roomNos || '-'}</td>
+            <td>${entry.checkIn ? formatDate(entry.checkIn) : '-'}</td>
+            <td>${entry.checkOut ? formatDate(entry.checkOut) : '-'}</td>
+            <td>${actualCheckout ? formatDate(actualCheckout) : '-'}</td>
+            <td>${t.bookingTotal.toLocaleString()}</td>
+            <td class="cash-amt">${t.paid.toLocaleString()}</td>
+            <td style="font-weight:700; color:${t.due > 0 ? 'var(--danger)' : 'inherit'};">${t.due.toLocaleString()}</td>
+            <td><span class="status ${statusClass}">${t.status}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
 }
 
 function selectApGuest(id){
@@ -3264,7 +3684,7 @@ function renderApGuestStrip(){
     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
       <div>
         <div style="font-family:'Inter',sans-serif; font-weight:700; font-size:17px; color:var(--ink);">${entry.guestName || '(no name)'}</div>
-        <div style="color:var(--muted); font-family:'Inter',sans-serif; font-size:12px; margin-top:2px;">${entry.fatherName ? 's/o ' + entry.fatherName + ' &middot; ' : ''}${roomNos ? 'Room ' + roomNos : ''}</div>
+        <div style="color:var(--muted); font-family:'Inter',sans-serif; font-size:12px; margin-top:2px;">${entry.fatherName && entry.fatherName !== 'N/A' ? 's/o ' + entry.fatherName + ' &middot; ' : ''}${roomNos ? 'Room ' + roomNos : ''}</div>
       </div>
       <div class="gnums">
         <div class="box"><div class="lbl">Booking Total</div><div class="val">${t.bookingTotal.toLocaleString()}</div></div>
@@ -3480,12 +3900,13 @@ function getFilteredReportRows(){
 
   // search across everything
   if(searchVal){
+    const searchValNoDash = stripDashes(searchVal);
     rows = rows.filter(r=>{
       const haystack = [
         r.guest, r.father, r.cnic,
         r.roomNos, r.type, r.mode, r.bank, r.remarks, r.date
       ].join(' ').toLowerCase();
-      return haystack.includes(searchVal);
+      return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
     });
   }
 
@@ -3895,9 +4316,10 @@ function getFilteredFullReportRows(){
   if(fromVal) rows = rows.filter(r=> r.date >= fromVal);
   if(toVal) rows = rows.filter(r=> r.date <= toVal);
   if(searchVal){
+    const searchValNoDash = stripDashes(searchVal);
     rows = rows.filter(r=>{
       const haystack = [r.guest, r.father, r.cnic, r.roomNos].join(' ').toLowerCase();
-      return haystack.includes(searchVal);
+      return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
     });
   }
   if(debtOnly) rows = rows.filter(r=> r.debt > 0);
@@ -4366,6 +4788,7 @@ function rerenderActiveView(){
       updateAddPayPreview();
     }
   }
+  else if(currentView === 'roomdetail'){ renderRoomDetail(); }
 }
 
 window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); pushPendingNow(); pullFreshFromCloud(); });
