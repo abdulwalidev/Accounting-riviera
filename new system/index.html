@@ -1111,6 +1111,7 @@
     <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
     <div class="navitem" id="navLedgers" onclick="showView('ledgers')">Ledgers</div>
     <div class="navitem" id="navDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</div>
+    <div class="navitem" id="navDeleteEntity" onclick="showView('deleteentity')" style="display:none;"><span style="color:var(--danger);">⚠</span> Delete Entity</div>
   </div>
 </div>
 
@@ -1290,10 +1291,9 @@
           <div>
             <label>Type</label>
             <select id="dNewType">
-              <option value="Reservation">Reservation</option>
-              <option value="Check-in">Check-in</option>
+              <option value="Reservation" style="color:var(--muted);">Reservation</option>
+              <option value="Check-in" style="color:var(--muted);">Check-in</option>
               <option value="Due Payment" selected>Due Payment</option>
-              <option value="Other">Other</option>
             </select>
           </div>
           <div>
@@ -1377,6 +1377,10 @@
         <div class="checkline">
           <input type="checkbox" id="gsearchHideCheckedOut" checked>
           <label for="gsearchHideCheckedOut" style="margin:0;">Hide guests who've checked out</label>
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="gsearchShowZero">
+          <label for="gsearchShowZero" style="margin:0;">Show 0Rs guests</label>
         </div>
       </div>
       <div class="glist" id="gsearchList"></div>
@@ -1625,6 +1629,23 @@
 
   </div>
 
+  <div class="view" id="view-deleteentity">
+
+    <h1 style="color:var(--danger);">⚠ Delete Entity</h1>
+    <div class="sub">Remove an accidentally created entry — admin only. This is a soft delete: the entry (with its rooms and payments) disappears from every screen immediately. Nothing is destroyed — an admin can still restore it directly in the Supabase SQL Editor — but there is no Undo button inside the app, so search carefully and confirm you have the right guest.</div>
+
+    <div class="panel accent-guest">
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (name, father name, CNIC, room no)</label>
+          <input type="text" id="delSearchInput" placeholder="Type to search..." autocomplete="off">
+        </div>
+      </div>
+      <div class="glist" id="delGuestList"></div>
+    </div>
+
+  </div>
+
   <div class="view" id="view-roomdetail">
 
     <h1>Room Detail</h1>
@@ -1697,6 +1718,22 @@
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeDeleteModal()">Cancel</button>
       <button class="btn danger-solid" onclick="confirmDeleteRow()">Delete Row</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="deleteEntityModalBackdrop">
+  <div class="modal">
+    <h3 style="color:var(--danger);">⚠ Confirm Delete Entity</h3>
+    <div class="sub" style="margin-bottom:14px;">This removes the entry — and its rooms and payments — from every screen immediately. It isn't destroyed (an admin can restore it from the Supabase SQL Editor), but there is no Undo inside the app.</div>
+    <div id="deleteEntityBody"></div>
+    <label for="deleteEntityReason" style="margin-top:10px;">Reason (optional, saved with the delete)</label>
+    <input type="text" id="deleteEntityReason" placeholder="e.g. accidental duplicate" autocomplete="off">
+    <label for="deleteEntityTypeInput" style="margin-top:10px;">Type DELETE to remove this entry</label>
+    <input type="text" id="deleteEntityTypeInput" placeholder="delete" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmDeleteEntity(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeDeleteEntityModal()">Cancel</button>
+      <button class="btn danger-solid" onclick="confirmDeleteEntity()">Delete Entry</button>
     </div>
   </div>
 </div>
@@ -1786,8 +1823,12 @@ function showView(view){
     showNotice('Day Lock is only available to admin accounts.');
     return;
   }
+  if(view === 'deleteentity' && !isAdmin()){
+    showNotice('Delete Entity is only available to admin accounts.');
+    return;
+  }
   currentView = view;
-  ['entry','addpay','search','report','detail','ledgers','daylock','roomdetail'].forEach(v=>{
+  ['entry','addpay','search','report','detail','ledgers','daylock','deleteentity','roomdetail'].forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
@@ -1798,6 +1839,7 @@ function showView(view){
   document.getElementById('navReport').classList.toggle('active', view === 'report');
   document.getElementById('navLedgers').classList.toggle('active', view === 'ledgers');
   document.getElementById('navDayLock').classList.toggle('active', view === 'daylock');
+  document.getElementById('navDeleteEntity').classList.toggle('active', view === 'deleteentity');
   document.getElementById('topNavEntry').classList.toggle('active', view === 'entry');
   document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
@@ -1810,6 +1852,7 @@ function showView(view){
   if(view === 'addpay') renderApList();
   if(view === 'ledgers') renderLedgers();
   if(view === 'daylock') renderDayLock();
+  if(view === 'deleteentity') renderDeleteEntityList();
   if(view === 'roomdetail') renderRoomDetail();
 }
 
@@ -1852,6 +1895,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('gsearchInput').addEventListener('input', renderSearch);
   document.getElementById('gsearchDueOnly').addEventListener('change', renderSearch);
   document.getElementById('gsearchHideCheckedOut').addEventListener('change', renderSearch);
+  document.getElementById('gsearchShowZero').addEventListener('change', renderSearch);
   document.getElementById('gsearchDate').addEventListener('input', renderSearch);
   ['dNewCash','dNewAccount'].forEach(id=>{
     document.getElementById(id).addEventListener('input', updateAddPayPreview);
@@ -1877,6 +1921,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     updateDateReadout(e.target, document.getElementById('dlDateReadout'));
     renderDayLock();
   });
+  document.getElementById('delSearchInput').addEventListener('input', renderDeleteEntityList);
   ['input','change'].forEach(evt=>{
     document.getElementById('dNewDate').addEventListener(evt, e=>{
       updateDateReadout(e.target, document.getElementById('dNewDateReadout'));
@@ -2344,7 +2389,7 @@ function addPayRow(){
       <select class="payType">
         <option value="Reservation">Reservation</option>
         <option value="Check-in">Check-in</option>
-        <option value="Other">Other</option>
+        <option value="Due Payment" style="color:var(--muted);">Due Payment</option>
       </select>
     </td>
     <td>
@@ -3210,16 +3255,16 @@ function startEditEntry(entry){
     updateDateReadout(tr.querySelector('.payDate'), tr.querySelector('.payDateReadout'));
     const typeSel = tr.querySelector('.payType');
     const mappedType = p.type === 'Pending' ? 'Due Payment' : (p.type || 'Other');
-    // "Due Payment" is not offered on new entries, but an existing entry
-    // being edited may legitimately hold one — add the option just for this row.
-    if(mappedType === 'Due Payment' && !typeSel.querySelector('option[value="Due Payment"]')){
+    // A saved payment may hold a type no longer offered as a fresh choice
+    // (e.g. the retired "Other") — add it just for this row so editing
+    // never silently rewrites history to a different type.
+    if(!Array.from(typeSel.options).some(o=> o.value === mappedType)){
       const opt = document.createElement('option');
-      opt.value = 'Due Payment';
-      opt.textContent = 'Due Payment';
+      opt.value = mappedType;
+      opt.textContent = mappedType;
       typeSel.appendChild(opt);
     }
     typeSel.value = mappedType;
-    if(typeSel.selectedIndex === -1) typeSel.value = 'Other';
     const modeSel = tr.querySelector('.payMode');
     modeSel.value = p.mode || 'Cash';
     if(modeSel.selectedIndex === -1) modeSel.value = 'Cash';
@@ -3264,6 +3309,7 @@ function renderSearch(){
   const searchVal = document.getElementById('gsearchInput').value.trim().toLowerCase();
   const dueOnly = document.getElementById('gsearchDueOnly').checked;
   const hideCheckedOut = document.getElementById('gsearchHideCheckedOut').checked;
+  const showZero = document.getElementById('gsearchShowZero').checked;
   const dateVal = document.getElementById('gsearchDate').value;
   document.getElementById('gsearchDateReadout').textContent = dateVal ? formatDate(dateVal) : '';
   const listEl = document.getElementById('gsearchList');
@@ -3275,8 +3321,10 @@ function renderSearch(){
   });
 
   // Free stays (owner's guests — rent typed as "Guest", total booking = 0)
-  // don't belong in a search meant for paying customers and their balances.
-  items = items.filter(({t})=> t.bookingTotal > 0);
+  // are hidden by default; "Show 0Rs guests" brings them back in.
+  if(!showZero){
+    items = items.filter(({t})=> t.bookingTotal > 0);
+  }
 
   if(searchVal){
     const searchValNoDash = stripDashes(searchVal);
@@ -4472,6 +4520,157 @@ function renderDayLock(){
 }
 
 // =========================================================
+// DELETE ENTITY — admin-only. Soft-deletes a whole guest entry (rooms and
+// payments go with it, since they're nested under the guest client-side and
+// disappear once the guest itself drops out of guests_active). Nothing is
+// hard-deleted server-side — recovery is a manual SQL Editor operation, the
+// same "no DELETE grant" posture as the rest of this schema.
+// =========================================================
+let pendingDeleteEntityId = null;
+
+// An entry with a payment dated on a locked day can't be deleted — deleting
+// the whole entry would silently take that payment down with it, which is
+// exactly what Day Lock exists to prevent.
+function entryHasLockedPayment(entry){
+  return (entry.payments || []).some(p=> isDateLocked(p.date));
+}
+
+function renderDeleteEntityList(){
+  const listEl = document.getElementById('delGuestList');
+  if(!initialLoadDone){
+    listEl.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const searchVal = document.getElementById('delSearchInput').value.trim().toLowerCase();
+  if(!searchVal){
+    listEl.innerHTML = '<div class="empty-note">Type a name, CNIC, or room number to find the entry to delete.</div>';
+    return;
+  }
+
+  let items = loadAllEntries().map(entry=>{
+    const t = computeTotals(entry);
+    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+    return { entry, t, roomNos };
+  });
+  const searchValNoDash = stripDashes(searchVal);
+  items = items.filter(({entry, roomNos})=>{
+    const haystack = [entry.guestName, entry.fatherName, entry.cnic, roomNos].join(' ').toLowerCase();
+    return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
+  });
+
+  if(items.length === 0){
+    listEl.innerHTML = '<div class="empty-note">No guests match.</div>';
+    return;
+  }
+  items.sort((a,b)=> (b.entry.savedAt || '').localeCompare(a.entry.savedAt || ''));
+
+  listEl.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Guest</th><th style="width:120px;">Room</th><th style="width:100px;">Entered</th>
+          <th style="width:110px;">Total</th><th style="width:100px;">Paid</th><th style="width:100px;">Due</th><th style="width:110px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map(({entry, t, roomNos})=>{
+          const locked = entryHasLockedPayment(entry);
+          return `
+          <tr>
+            <td>${entry.guestName || '(no name)'}${entry.fatherName && entry.fatherName !== 'N/A' ? ' <span style="color:var(--muted); font-weight:400;">s/o ' + entry.fatherName + '</span>' : ''}</td>
+            <td>${roomNos || '-'}</td>
+            <td>${entry.savedAt ? formatDate(toKarachiDateStr(entry.savedAt)) : '-'}</td>
+            <td>${t.bookingTotal.toLocaleString()}</td>
+            <td class="cash-amt">${t.paid.toLocaleString()}</td>
+            <td style="font-weight:700; color:${t.due > 0 ? 'var(--danger)' : 'inherit'};">${t.due.toLocaleString()}</td>
+            <td>${locked
+              ? `<button class="btn danger-solid" style="min-height:28px; padding:3px 10px;" disabled title="This entry has a payment on a locked day — it can't be deleted.">🔒 Locked</button>`
+              : `<button class="btn danger-solid" style="min-height:28px; padding:3px 10px;" onclick="openDeleteEntityModal('${entry.id}')">Delete</button>`}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function openDeleteEntityModal(id){
+  if(!isAdmin()){ showNotice('Delete Entity is only available to admin accounts.'); return; }
+  const entry = loadAllEntries().find(e=> e.id === id);
+  if(!entry) return;
+  if(entryHasLockedPayment(entry)){
+    showNotice('This entry has a payment dated on a locked day and can\'t be deleted. Unlock that day first if this really needs to be removed.');
+    return;
+  }
+  pendingDeleteEntityId = id;
+  const t = computeTotals(entry);
+  const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+  document.getElementById('deleteEntityBody').innerHTML = `
+    <div class="grid" style="margin-bottom:14px;">
+      <div><div class="confirm-lbl">Guest</div><div class="confirm-val">${entry.guestName || '(no name)'}</div></div>
+      <div><div class="confirm-lbl">Father Name</div><div class="confirm-val">${entry.fatherName || '-'}</div></div>
+      <div><div class="confirm-lbl">CNIC</div><div class="confirm-val">${entry.cnic || '-'}</div></div>
+      <div><div class="confirm-lbl">Room(s)</div><div class="confirm-val">${roomNos || '-'}</div></div>
+      <div><div class="confirm-lbl">Total</div><div class="confirm-val">${t.bookingTotal.toLocaleString()}</div></div>
+      <div><div class="confirm-lbl">Paid</div><div class="confirm-val">${t.paid.toLocaleString()}</div></div>
+    </div>`;
+  document.getElementById('deleteEntityReason').value = '';
+  const input = document.getElementById('deleteEntityTypeInput');
+  input.value = '';
+  input.classList.remove('duplicate');
+  document.getElementById('deleteEntityModalBackdrop').classList.add('active');
+  input.focus();
+}
+
+function closeDeleteEntityModal(){
+  document.getElementById('deleteEntityModalBackdrop').classList.remove('active');
+  pendingDeleteEntityId = null;
+}
+
+async function deleteGuestEntity(id, reason){
+  if(!sb) return { ok:false, msg: 'Not connected to the cloud database — try again once it reconnects.' };
+  try{
+    const { error } = await sb.rpc('soft_delete_guest', { p_guest_id: id, p_reason: reason || null });
+    if(error) throw error;
+    entries = entries.filter(e=> e.id !== id);
+    mutationStamp++;
+    await pullFreshFromCloud();
+    return { ok:true };
+  }catch(e){
+    console.error('Deleting the entry failed', e);
+    return { ok:false, msg: (e && e.message && e.message.includes('soft_delete_guest'))
+      ? 'The delete function doesn\'t exist yet — run migration/soft_delete_guest.sql in the Supabase SQL Editor first.'
+      : 'Couldn\'t delete this entry — check the internet connection and try again.' };
+  }
+}
+
+async function confirmDeleteEntity(){
+  const input = document.getElementById('deleteEntityTypeInput');
+  if(input.value.trim().toLowerCase() !== 'delete'){
+    input.classList.add('duplicate');
+    showNotice('Please type "delete" in the box to remove this entry.');
+    input.focus();
+    return;
+  }
+  if(!pendingDeleteEntityId) return;
+  const id = pendingDeleteEntityId;
+  const entry = loadAllEntries().find(e=> e.id === id);
+  if(entry && entryHasLockedPayment(entry)){
+    showNotice('This entry has a payment dated on a locked day and can\'t be deleted. Unlock that day first if this really needs to be removed.');
+    closeDeleteEntityModal();
+    renderDeleteEntityList();
+    return;
+  }
+  const reason = document.getElementById('deleteEntityReason').value.trim();
+  const btn = document.querySelector('#deleteEntityModalBackdrop .btn.danger-solid');
+  if(btn){ btn.disabled = true; btn.textContent = 'Deleting…'; }
+  const result = await deleteGuestEntity(id, reason);
+  if(btn){ btn.disabled = false; btn.textContent = 'Delete Entry'; }
+  if(!result.ok){ showNotice(result.msg); return; }
+  closeDeleteEntityModal();
+  renderDeleteEntityList();
+  showNotice('Entry deleted.', 'success');
+}
+
+// =========================================================
 // CLOUD DATA LAYER — Supabase IS the database. `entries` is an in-memory
 // mirror of the server, refreshed by pullFreshFromCloud() and pushed by
 // pushPendingNow(). Every save goes to the cloud immediately; a save that
@@ -4836,6 +5035,7 @@ function rerenderActiveView(){
   else if(currentView === 'roomdetail'){ renderRoomDetail(); }
   else if(currentView === 'ledgers'){ renderLedgers(); }
   else if(currentView === 'daylock'){ renderDayLock(); }
+  else if(currentView === 'deleteentity'){ renderDeleteEntityList(); }
 }
 
 window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); pushPendingNow(); pullFreshFromCloud(); });
@@ -4965,6 +5165,8 @@ function applyRolePermissions(){
   if(editBtn) editBtn.style.display = isAdmin() ? '' : 'none';
   const dayLockNav = document.getElementById('navDayLock');
   if(dayLockNav) dayLockNav.style.display = isAdmin() ? '' : 'none';
+  const deleteEntityNav = document.getElementById('navDeleteEntity');
+  if(deleteEntityNav) deleteEntityNav.style.display = isAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
 }
