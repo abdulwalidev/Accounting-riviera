@@ -532,6 +532,30 @@
   .day-total{
     color:var(--amber);
   }
+  .rpd-guest-block{
+    margin-bottom:10px;
+  }
+  .rpd-guest-block:last-child{ margin-bottom:0; }
+  .rpd-guest-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    padding:7px 10px;
+    background:#EEF1F6;
+    border:1px solid var(--line);
+    border-bottom:none;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:12.5px;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .rpd-guest-head:hover{ background:#E4E9F2; }
+  .rpd-guest-father{
+    font-weight:400;
+    color:var(--muted);
+  }
   .empty-note{
     color:var(--muted);
     font-family:'Inter',sans-serif;
@@ -693,7 +717,7 @@
   }
   .smart-row{
     display:grid;
-    grid-template-columns:minmax(40px,max-content) 1fr 64px 96px;
+    grid-template-columns:minmax(40px,max-content) 1fr 64px 56px 110px;
     align-items:center;
     gap:6px;
     padding:5px 8px;
@@ -709,7 +733,13 @@
   .smart-row .sr-status{ font-weight:700; border-right:1px solid #1725540F; padding-right:6px; }
   .smart-row .sr-status.occupied{ color:var(--account); }
   .smart-row .sr-status.vacant{ color:var(--cash); }
+  .smart-row .sr-arrival{ color:var(--muted); font-size:11.5px; text-align:right; white-space:nowrap; border-right:1px solid #1725540F; padding-right:6px; }
   .smart-row .sr-guest{ color:var(--account); font-weight:600; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .smart-row .sr-guest.sr-guest-muted{ color:var(--muted); font-weight:500; font-style:italic; }
+  .muted-guest{ color:var(--muted); font-style:italic; font-weight:500; }
+  .lg-name-primary{ font-weight:600; }
+  .lg-connector{ display:inline-block; color:var(--muted); font-weight:700; margin-right:6px; padding-left:6px; opacity:0.6; }
+  .lg-name-continued{ color:var(--muted); font-weight:500; }
   .backlink{
     color:var(--account);
     font-family:'Inter',sans-serif;
@@ -1079,8 +1109,8 @@
     <div class="navitem" id="navAddPay" onclick="showView('addpay')">Add Payment</div>
     <div class="navitem" id="navSearch" onclick="showView('search')">Search</div>
     <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
-    <div class="navitem" id="navLedger" onclick="showView('ledger')">Ledger</div>
-    <div class="navitem" id="navFullReport" onclick="showView('fullreport')">Full Report</div>
+    <div class="navitem" id="navLedgers" onclick="showView('ledgers')">Ledgers</div>
+    <div class="navitem" id="navDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</div>
   </div>
 </div>
 
@@ -1344,6 +1374,10 @@
           <input type="checkbox" id="gsearchDueOnly">
           <label for="gsearchDueOnly" style="margin:0;">Only show balance due</label>
         </div>
+        <div class="checkline">
+          <input type="checkbox" id="gsearchHideCheckedOut" checked>
+          <label for="gsearchHideCheckedOut" style="margin:0;">Hide guests who've checked out</label>
+        </div>
       </div>
       <div class="glist" id="gsearchList"></div>
     </div>
@@ -1514,69 +1548,14 @@
 
   </div>
 
-  <div class="view" id="view-ledger">
+  <div class="view" id="view-ledgers">
 
-    <h1 class="no-print">Ledger</h1>
-    <div class="sub no-print">Day book &amp; per-person account ledger — Debit (charges) / Credit (payments) / Balance</div>
-
-    <div class="print-header">
-      <h1 id="ledgerPrintTitle">Ledger</h1>
-      <div class="print-header-sub" id="ledgerPrintHeaderSub"></div>
-    </div>
-
-    <div class="panel no-print accent-filters">
-      <h2>Ledger View</h2>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn" id="ledgerModeDay" onclick="setLedgerMode('day')">Per Day</button>
-        <button class="btn secondary" id="ledgerModePerson" onclick="setLedgerMode('person')">Per Person</button>
-      </div>
-      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); margin-top:14px;">
-        <div>
-          <label>From Date</label>
-          <input type="date" id="ledgerFrom">
-          <div class="date-readout" id="ledgerFromReadout"></div>
-        </div>
-        <div>
-          <label>To Date</label>
-          <input type="date" id="ledgerTo">
-          <div class="date-readout" id="ledgerToReadout"></div>
-        </div>
-        <div id="ledgerPersonPickWrap" style="display:none; grid-column:span 2;">
-          <label>Guest</label>
-          <select id="ledgerPersonSelect" onchange="renderLedger()"></select>
-        </div>
-      </div>
-      <div class="actions" style="margin-top:12px;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn secondary" onclick="clearLedgerFilters()">Clear Filters</button>
-          <button class="btn secondary" onclick="setLedgerFiltersToday()">Today</button>
-        </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn" onclick="exportLedgerExcel()">⬇ Export</button>
-          <button class="btn secondary" onclick="printLedger()">🖶 Print</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel accent-report">
-      <div id="ledgerBody"><div class="empty-note">No data yet.</div></div>
-      <div class="report-grandbar" id="ledgerGrandbar" style="display:none;">
-        <span>Total Debit: Rs. <b id="ledDebit">0</b></span>
-        <span>Total Credit: Rs. <b id="ledCredit" class="cash-amt">0</b></span>
-        <span>Balance: Rs. <b id="ledBalance">0</b></span>
-      </div>
-    </div>
-
-  </div>
-
-  <div class="view" id="view-fullreport">
-
-    <h1 class="no-print">Full Report</h1>
-    <div class="sub no-print">Complete financial statement — billed, credit (paid) and outstanding debt for every guest</div>
+    <h1 class="no-print">Ledgers</h1>
+    <div class="sub no-print">Room-night by room-night — rent charged, what was received against it (oldest payment first), and what's left for that night, by guest</div>
 
     <div class="print-header">
-      <h1>Full Financial Report</h1>
-      <div class="print-header-sub" id="frPrintHeaderSub"></div>
+      <h1 id="lgPrintTitle">Ledgers</h1>
+      <div class="print-header-sub" id="lgPrintHeaderSub"></div>
     </div>
 
     <div class="panel no-print accent-filters">
@@ -1584,41 +1563,64 @@
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
           <label>From Date</label>
-          <input type="date" id="frFrom">
-          <div class="date-readout" id="frFromReadout"></div>
+          <input type="date" id="lgFrom">
+          <div class="date-readout" id="lgFromReadout"></div>
         </div>
         <div>
           <label>To Date</label>
-          <input type="date" id="frTo">
-          <div class="date-readout" id="frToReadout"></div>
+          <input type="date" id="lgTo">
+          <div class="date-readout" id="lgToReadout"></div>
         </div>
         <div style="grid-column:span 2;">
-          <label>Search (name, father name, CNIC, room no)</label>
-          <input type="text" id="frSearch" placeholder="Type to search..." autocomplete="off">
+          <label>Guest (detailed ledger for one guest — leave blank for everyone)</label>
+          <select id="lgPersonSelect" onchange="renderLedgers()"></select>
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
-        <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;">
-          <div class="checkline">
-            <input type="checkbox" id="frDebtOnly">
-            <label for="frDebtOnly" style="margin:0;">Only show outstanding debt</label>
-          </div>
-          <button class="btn secondary" onclick="clearFullReportFilters()">Clear Filters</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="clearLedgersFilters()">Clear Filters</button>
+          <button class="btn secondary" onclick="setLedgersToday()">Today</button>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn" onclick="exportFullReportExcel()">⬇ Export</button>
-          <button class="btn secondary" onclick="printFullReport()">🖶 Print</button>
+          <button class="btn" onclick="exportLedgersExcel()">⬇ Export</button>
+          <button class="btn secondary" onclick="printLedgers()">🖶 Print</button>
         </div>
       </div>
     </div>
 
     <div class="panel accent-report">
-      <div id="fullReportBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
-      <div class="report-grandbar" id="fullReportGrandbar" style="display:none;">
-        <span>Total Billed: Rs. <b id="frBilled">0</b></span>
-        <span>Total Credit (Paid): Rs. <b id="frCredit" class="cash-amt">0</b></span>
-        <span>Total Debt (Due): Rs. <b id="frDebt" style="color:var(--danger);">0</b></span>
+      <div id="ledgersBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+      <div class="report-grandbar" id="ledgersGrandbar" style="display:none;">
+        <span>Total Debt: Rs. <b id="lgDebt">0</b></span>
+        <span>Total Credit: Rs. <b id="lgCredit" class="cash-amt">0</b></span>
+        <span>Total Balance: Rs. <b id="lgBalance">0</b></span>
       </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-daylock">
+
+    <h1>Day Lock</h1>
+    <div class="sub">Lock a date so no new payment can be dated on it — admin only. Payments already saved on that date are untouched.</div>
+
+    <div class="panel accent-filters">
+      <h2>Lock / Unlock a Day</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>Date</label>
+          <input type="date" id="dlDate">
+          <div class="date-readout" id="dlDateReadout"></div>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn" id="dlActionBtn" onclick="lockDay(document.getElementById('dlDate').value)">Lock This Day</button>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2>Currently Locked Days</h2>
+      <div id="dayLockList"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -1780,8 +1782,12 @@ function toggleSidebar(){
 let currentView = 'entry';
 
 function showView(view){
+  if(view === 'daylock' && !isAdmin()){
+    showNotice('Day Lock is only available to admin accounts.');
+    return;
+  }
   currentView = view;
-  ['entry','addpay','search','report','detail','ledger','fullreport','roomdetail'].forEach(v=>{
+  ['entry','addpay','search','report','detail','ledgers','daylock','roomdetail'].forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
@@ -1790,8 +1796,8 @@ function showView(view){
   document.getElementById('navAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('navSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('navReport').classList.toggle('active', view === 'report');
-  document.getElementById('navLedger').classList.toggle('active', view === 'ledger');
-  document.getElementById('navFullReport').classList.toggle('active', view === 'fullreport');
+  document.getElementById('navLedgers').classList.toggle('active', view === 'ledgers');
+  document.getElementById('navDayLock').classList.toggle('active', view === 'daylock');
   document.getElementById('topNavEntry').classList.toggle('active', view === 'entry');
   document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
@@ -1802,8 +1808,8 @@ function showView(view){
   if(view === 'search') renderSearch();
   if(view === 'entry') renderTodayEntries();
   if(view === 'addpay') renderApList();
-  if(view === 'ledger') renderLedger();
-  if(view === 'fullreport') renderFullReport();
+  if(view === 'ledgers') renderLedgers();
+  if(view === 'daylock') renderDayLock();
   if(view === 'roomdetail') renderRoomDetail();
 }
 
@@ -1836,6 +1842,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   setFiltersToday();
   document.getElementById('checkInDate').value = todayStr();
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
+  autoFillExpectedCheckout();
   ['filterFrom','filterTo'].forEach(id=>{
     document.getElementById(id).addEventListener('input', updateFilterDateReadouts);
   });
@@ -1844,6 +1851,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   document.getElementById('gsearchInput').addEventListener('input', renderSearch);
   document.getElementById('gsearchDueOnly').addEventListener('change', renderSearch);
+  document.getElementById('gsearchHideCheckedOut').addEventListener('change', renderSearch);
   document.getElementById('gsearchDate').addEventListener('input', renderSearch);
   ['dNewCash','dNewAccount'].forEach(id=>{
     document.getElementById(id).addEventListener('input', updateAddPayPreview);
@@ -1854,28 +1862,32 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('rdOccupiedOnly').addEventListener('change', renderRoomDetail);
   document.getElementById('rdDate').addEventListener('input', renderRoomDetail);
   document.getElementById('rdDate').value = todayStr();
-  ['ledgerFrom','ledgerTo'].forEach(id=>{
-    document.getElementById(id).addEventListener('input', updateLedgerDateReadouts);
+  ['lgFrom','lgTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', updateLedgersDateReadouts);
   });
-  ['ledgerFrom','ledgerTo'].forEach(id=>{
-    document.getElementById(id).addEventListener('input', renderLedger);
+  ['lgFrom','lgTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', renderLedgers);
   });
-  ['frFrom','frTo'].forEach(id=>{
-    document.getElementById(id).addEventListener('input', updateFullReportDateReadouts);
+  document.getElementById('lgFrom').value = todayStr();
+  document.getElementById('lgTo').value = todayStr();
+  updateLedgersDateReadouts();
+  document.getElementById('dlDate').value = todayStr();
+  updateDateReadout(document.getElementById('dlDate'), document.getElementById('dlDateReadout'));
+  document.getElementById('dlDate').addEventListener('input', e=>{
+    updateDateReadout(e.target, document.getElementById('dlDateReadout'));
+    renderDayLock();
   });
-  ['frFrom','frTo','frSearch'].forEach(id=>{
-    document.getElementById(id).addEventListener('input', renderFullReport);
-  });
-  document.getElementById('frDebtOnly').addEventListener('change', renderFullReport);
   ['input','change'].forEach(evt=>{
     document.getElementById('dNewDate').addEventListener(evt, e=>{
       updateDateReadout(e.target, document.getElementById('dNewDateReadout'));
     });
     document.getElementById('checkInDate').addEventListener(evt, e=>{
       updateDateReadout(e.target, document.getElementById('checkInDateReadout'));
+      autoFillExpectedCheckout();
     });
     document.getElementById('checkOutDate').addEventListener(evt, e=>{
       updateDateReadout(e.target, document.getElementById('checkOutDateReadout'));
+      checkoutSetByUser = true;
     });
     document.getElementById('actualCheckoutDate').addEventListener(evt, e=>{
       updateDateReadout(e.target, document.getElementById('actualCheckoutDateReadout'));
@@ -1886,6 +1898,20 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 
 let rowCount = 0;
+
+// Expected Checkout defaults to one night after Check-in, but only while
+// the guest hasn't actually chosen a checkout date themselves — once they
+// type/pick one (or it's loaded from a saved entry that already had one),
+// this stops overwriting it even if Check-in changes afterward.
+let checkoutSetByUser = false;
+function autoFillExpectedCheckout(){
+  if(checkoutSetByUser) return;
+  const ci = document.getElementById('checkInDate').value;
+  if(!ci) return;
+  const coEl = document.getElementById('checkOutDate');
+  coEl.value = addDaysToDateStr(ci, 1);
+  updateDateReadout(coEl, document.getElementById('checkOutDateReadout'));
+}
 
 // ---------- Unit lists (from the property's existing room/apartment map) ----------
 const ROOM_NUMBERS = [
@@ -2104,7 +2130,7 @@ function addRow(){
         <option value="Apartment">Apartment</option>
       </select>
     </td>
-    <td><input type="number" placeholder="0" class="rent" oninput="calcRow(this)" min="0"></td>
+    <td><input type="text" inputmode="decimal" placeholder="0 or Guest" class="rent" oninput="calcRow(this)"></td>
     <td>
       <div class="roomctrl">
         <button onclick="changeRooms(this,-1)">-</button>
@@ -2281,14 +2307,13 @@ function scheduleKarachiMidnightRollover(){
 function handleKarachiMidnightRollover(){
   const newToday = todayStr();
   if(newToday === lastKnownToday) return;
-  ['filterFrom','filterTo','ledgerFrom','ledgerTo','frFrom','frTo','gsearchDate','dNewDate','checkInDate','rdDate'].forEach(id=>{
+  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','dlDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(el && el.value === lastKnownToday) el.value = newToday;
   });
   lastKnownToday = newToday;
   updateFilterDateReadouts();
-  updateLedgerDateReadouts();
-  updateFullReportDateReadouts();
+  updateLedgersDateReadouts();
   const gsearchDateEl = document.getElementById('gsearchDate');
   if(gsearchDateEl) updateDateReadout(gsearchDateEl, document.getElementById('gsearchDateReadout'));
   const dNewDateEl = document.getElementById('dNewDate');
@@ -2297,11 +2322,13 @@ function handleKarachiMidnightRollover(){
   if(checkInDateEl) updateDateReadout(checkInDateEl, document.getElementById('checkInDateReadout'));
   const rdDateEl = document.getElementById('rdDate');
   if(rdDateEl) updateDateReadout(rdDateEl, document.getElementById('rdDateReadout'));
+  const dlDateEl = document.getElementById('dlDate');
+  if(dlDateEl) updateDateReadout(dlDateEl, document.getElementById('dlDateReadout'));
   if(currentView === 'entry') renderTodayEntries();
   if(currentView === 'report') renderReport();
   if(currentView === 'search') renderSearch();
-  if(currentView === 'ledger') renderLedger();
-  if(currentView === 'fullreport') renderFullReport();
+  if(currentView === 'ledgers') renderLedgers();
+  if(currentView === 'daylock') renderDayLock();
   if(currentView === 'roomdetail') renderRoomDetail();
 }
 
@@ -2652,15 +2679,19 @@ function reviewEntry(){
     const roomNoInput = tr.querySelector('.roomNo');
     const rentInput = tr.querySelector('.rent');
     const roomNo = roomNoInput.value.trim();
-    const rent = parseFloat(rentInput.value) || 0;
-    if(!roomNo && rent === 0) continue; // untouched filler row — ignore silently
+    // The owner's guests stay free — typing "Guest" (any case) in Rent
+    // Per Day marks the room as occupied with zero rent, skipping the
+    // "must be greater than 0" check that applies to paying guests.
+    const isFreeGuest = rentInput.value.trim().toLowerCase() === 'guest';
+    const rent = isFreeGuest ? 0 : (parseFloat(rentInput.value) || 0);
+    if(!roomNo && !isFreeGuest && rent === 0) continue; // untouched filler row — ignore silently
     if(!roomNo){
       showNotice('A rent amount was entered without a Room No / Apt No. Please pick a room for every row, or clear the rent.');
       focusError(roomNoInput);
       return;
     }
-    if(rent <= 0){
-      showNotice('Room ' + roomNo + ' has no Rent Per Day entered. Please enter a rent amount greater than 0.');
+    if(!isFreeGuest && rent <= 0){
+      showNotice('Room ' + roomNo + ' has no Rent Per Day entered. Please enter a rent amount greater than 0 (or type "Guest" for a free owner\'s-guest stay).');
       focusError(rentInput);
       return;
     }
@@ -2673,7 +2704,7 @@ function reviewEntry(){
     }
     const roomObj = {
       roomNo, unitType, rentInput, tr,
-      rent: rentInput.value,
+      rent: isFreeGuest ? 0 : rentInput.value,
       count: tr.dataset.rooms,
       total: parseFloat(tr.querySelector('.rowtotal').textContent.replace(/,/g,'')) || 0
     };
@@ -2721,6 +2752,14 @@ function reviewEntry(){
     if((mode === 'Bank Transfer' || mode === 'Card') && !bank){
       showNotice('Please select a bank for the ' + mode + ' payment row before saving.');
       focusError(bankSel);
+      return;
+    }
+    // A pre-existing row (already has a payId) is just being re-saved, not
+    // newly added — the lock only blocks genuinely new payments landing on
+    // a locked day.
+    if(!tr.dataset.payId && isDateLocked(dateInput.value)){
+      showNotice(formatDate(dateInput.value) + ' is locked — no new payment can be dated on this day.');
+      focusError(dateInput);
       return;
     }
     const payObj = {
@@ -2955,7 +2994,8 @@ function resetEntryForm(){
   const checkInEl = document.getElementById('checkInDate');
   checkInEl.value = todayStr();
   updateDateReadout(checkInEl, document.getElementById('checkInDateReadout'));
-  document.getElementById('checkOutDateReadout').textContent = '';
+  checkoutSetByUser = false;
+  autoFillExpectedCheckout();
   document.getElementById('actualCheckoutDateReadout').textContent = '';
   document.getElementById('extraDetailList').innerHTML = '';
   document.getElementById('roomBody').innerHTML = '';
@@ -3129,6 +3169,10 @@ function startEditEntry(entry){
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
   updateDateReadout(document.getElementById('checkOutDate'), document.getElementById('checkOutDateReadout'));
   updateDateReadout(document.getElementById('actualCheckoutDate'), document.getElementById('actualCheckoutDateReadout'));
+  // an entry that already had a checkout saved keeps it — only a blank one
+  // (never set) still auto-follows Check-in from here on
+  checkoutSetByUser = !!entry.checkOut;
+  autoFillExpectedCheckout();
 
   document.getElementById('extraDetailList').innerHTML = '';
   visibleExtraDetails(entry).forEach(d=> addExtraDetailRow(d.kind, d.value));
@@ -3144,7 +3188,7 @@ function startEditEntry(entry){
     const days = parseInt(r.count) || 1;
     tr.dataset.rooms = days;
     tr.querySelector('.roomCount').textContent = days;
-    tr.querySelector('.rent').value = r.rent || '';
+    tr.querySelector('.rent').value = (r.rent === 0 || r.rent === '0') ? 'Guest' : (r.rent || '');
     updateUnitType(tr);
     const typeSel = tr.querySelector('.unitType');
     if(!typeSel.disabled && r.unitType){
@@ -3219,6 +3263,7 @@ function renderSearch(){
   const all = loadAllEntries();
   const searchVal = document.getElementById('gsearchInput').value.trim().toLowerCase();
   const dueOnly = document.getElementById('gsearchDueOnly').checked;
+  const hideCheckedOut = document.getElementById('gsearchHideCheckedOut').checked;
   const dateVal = document.getElementById('gsearchDate').value;
   document.getElementById('gsearchDateReadout').textContent = dateVal ? formatDate(dateVal) : '';
   const listEl = document.getElementById('gsearchList');
@@ -3228,6 +3273,10 @@ function renderSearch(){
     const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
     return { entry, t, roomNos };
   });
+
+  // Free stays (owner's guests — rent typed as "Guest", total booking = 0)
+  // don't belong in a search meant for paying customers and their balances.
+  items = items.filter(({t})=> t.bookingTotal > 0);
 
   if(searchVal){
     const searchValNoDash = stripDashes(searchVal);
@@ -3253,6 +3302,10 @@ function renderSearch(){
 
   if(dueOnly){
     items = items.filter(({t})=> t.due > 0);
+  }
+
+  if(hideCheckedOut){
+    items = items.filter(({entry})=> !getDetailValue(entry, 'Actual Checkout'));
   }
 
   if(items.length === 0){
@@ -3372,6 +3425,7 @@ function computeRoomStatuses(asOfDate){
       type: getRoomType(roomNo),
       entry: current ? current.entry : null,
       occupied,
+      actualCheckout,
       bookingCount: bookings.length
     };
   });
@@ -3444,12 +3498,17 @@ function renderRoomDetail(){
     const rows = list.map(r=>{
       const due = r.entry ? computeTotals(r.entry).due : 0;
       const clickable = !!r.entry;
+      const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '-';
+      const guestCell = r.occupied
+        ? (r.entry.guestName || '(no name)')
+        : (r.entry ? `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>` : '-');
       return `<tr ${clickable ? `style="cursor:pointer;" onclick="openDetail('${r.entry.id}')" title="Open this guest"` : ''}>
         <td><b>${r.roomNo}</b></td>
         <td>${r.type || '-'}</td>
+        <td>${arrival}</td>
         <td>${clickable ? due.toLocaleString() : '-'}</td>
         <td><span class="status ${r.occupied ? 'pending' : 'paid'}">${r.occupied ? 'Occupied' : 'Vacant'}</span></td>
-        <td>${clickable ? (r.entry.guestName || '(no name)') : '-'}</td>
+        <td>${guestCell}</td>
       </tr>`;
     }).join('');
     return `
@@ -3459,7 +3518,7 @@ function renderRoomDetail(){
           <span class="day-total">${occ} / ${list.length} occupied ${asOfLabel}</span>
         </div>
         <table>
-          <thead><tr><th>Room</th><th style="width:200px;">Type</th><th style="width:100px;">Due</th><th style="width:100px;">Status</th><th>Guest</th></tr></thead>
+          <thead><tr><th>Room</th><th style="width:170px;">Type</th><th style="width:80px;">Arrival</th><th style="width:100px;">Due</th><th style="width:100px;">Status</th><th>Guest</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
@@ -3468,11 +3527,16 @@ function renderRoomDetail(){
   munchiBody.innerHTML = sections.map(section=>{
     const rows = groups[section].map(r=>{
       const clickable = !!r.entry;
+      const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '';
+      const guestText = r.occupied
+        ? (r.entry.guestName || '')
+        : (r.entry ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
       return `<div class="smart-row${clickable ? ' clickable' : ''}" ${clickable ? `onclick="openDetail('${r.entry.id}')" title="Open this guest"` : ''}>
         <span class="sr-room">${r.roomNo}</span>
         <span class="sr-type">${r.type || ''}</span>
         <span class="sr-status ${r.occupied ? 'occupied' : 'vacant'}">${r.occupied ? 'occupied' : 'vacant'}</span>
-        <span class="sr-guest">${clickable ? (r.entry.guestName || '') : ''}</span>
+        <span class="sr-arrival">${arrival}</span>
+        <span class="sr-guest${r.occupied ? '' : (r.entry ? ' sr-guest-muted' : '')}">${guestText}</span>
       </div>`;
     }).join('');
     return `
@@ -3747,6 +3811,10 @@ function toggleDetailMode(){
 function addDetailPayment(){
   const date = document.getElementById('dNewDate').value;
   if(!date){ showNotice('Please pick a date.'); return; }
+  if(isDateLocked(date)){
+    showNotice(formatDate(date) + ' is locked — no new payment can be dated on this day.');
+    return;
+  }
   const type = document.getElementById('dNewType').value;
   const mode = document.getElementById('dNewMode').value;
   const bank = document.getElementById('dNewBank').value;
@@ -4048,6 +4116,12 @@ function formatDate(iso){
   return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
 }
 
+function formatDateShort(iso){
+  if(!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short' });
+}
+
 // ---- Export current report (respects active filters) ----
 function exportReportExcel(){
   const { rows } = getFilteredReportRows();
@@ -4099,367 +4173,302 @@ function printReport(){
 }
 
 // =========================================================
-// LEDGER — a classic day-book / personal-account view built entirely from
-// `entries` already in memory (via loadAllEntries/computeTotals). No new
-// data is stored: each guest's room total becomes one Debit line (posted
-// on their check-in date), each payment becomes one Credit line (posted
-// on its payment date). Running balance carries across the whole filtered
-// range, matching how a real ledger book reads.
+// LEDGERS — room-night by room-night. A booking stores one row per room
+// with a single rent/day and a night count; this expands that into one row
+// per actual calendar night. Payments aren't tied to a specific night, so
+// they're applied oldest-night-first (FIFO): a payment bigger than one
+// night's rent rolls over to cover the next night(s); a night bigger than
+// one payment gets topped up by whichever payment comes next. Balance per
+// row is that night alone (Debt − Credit received against it) — never
+// negative, since a night can't receive more than its own rent.
 // =========================================================
-let ledgerMode = 'day';
+function addDaysToDateStr(dateStr, days){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
-function buildLedgerLines(){
+function buildLedgersRecords(){
   const all = loadAllEntries();
-  const lines = [];
+  const records = [];
   all.forEach(entry=>{
-    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
-    const t = computeTotals(entry);
+    const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
+    if(!startDate) return;
     const guest = entry.guestName || '(no name)';
-    const father = entry.fatherName || '';
-    const cnic = entry.cnic || '';
-    if(t.bookingTotal > 0){
-      const debitDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '') || todayStr();
-      lines.push({
-        guestId: entry.id, date: debitDate, kind: 'Debit',
-        particulars: 'Room Charges' + (roomNos ? ' — Room ' + roomNos : ''),
-        guest, father, cnic, amount: t.bookingTotal
-      });
-    }
-    (entry.payments || []).forEach(p=>{
-      if(!p.date) return;
-      lines.push({
-        guestId: entry.id, date: p.date, kind: 'Credit',
-        particulars: 'Payment' + (p.mode ? ' — ' + p.mode : '') + (p.bank ? ' (' + p.bank + ')' : '') + (p.remarks ? ' · ' + p.remarks : ''),
-        guest, father, cnic, amount: p.total || 0
-      });
+
+    const nights = [];
+    (entry.rooms || []).forEach(r=>{
+      if(!r.roomNo) return;
+      const nightsCount = parseInt(r.count) || 1;
+      const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
+      for(let i = 0; i < nightsCount; i++){
+        nights.push({ date: addDaysToDateStr(startDate, i), roomNo: r.roomNo, rent, received: 0, guestId: entry.id, guest });
+      }
     });
+    nights.sort((a,b)=> a.date.localeCompare(b.date));
+
+    const payments = (entry.payments || [])
+      .slice()
+      .sort((a,b)=> (a.date || '').localeCompare(b.date || ''))
+      .map(p=> ({ remaining: parseFloat(p.total) || 0 }));
+
+    let payIdx = 0;
+    nights.forEach(night=>{
+      let owed = night.rent;
+      while(owed > 0 && payIdx < payments.length){
+        const pay = payments[payIdx];
+        if(pay.remaining <= 0){ payIdx++; continue; }
+        const applied = Math.min(owed, pay.remaining);
+        night.received += applied;
+        pay.remaining -= applied;
+        owed -= applied;
+        if(pay.remaining <= 0) payIdx++;
+      }
+    });
+
+    records.push(...nights);
   });
-  return lines;
+  return records;
 }
 
-function setLedgerMode(mode){
-  ledgerMode = mode;
-  document.getElementById('ledgerModeDay').classList.toggle('secondary', mode !== 'day');
-  document.getElementById('ledgerModePerson').classList.toggle('secondary', mode !== 'person');
-  document.getElementById('ledgerPersonPickWrap').style.display = mode === 'person' ? '' : 'none';
-  if(mode === 'person') populateLedgerPersonSelect();
-  renderLedger();
-}
-
-function populateLedgerPersonSelect(){
-  const sel = document.getElementById('ledgerPersonSelect');
+function populateLedgersPersonSelect(){
+  const sel = document.getElementById('lgPersonSelect');
   const prev = sel.value;
   const all = loadAllEntries().slice().sort((a,b)=> (a.guestName || '').localeCompare(b.guestName || ''));
-  sel.innerHTML = '<option value="">Select a guest…</option>' + all.map(e=>
+  sel.innerHTML = '<option value="">All Guests</option>' + all.map(e=>
     `<option value="${e.id}">${(e.guestName || '(no name)')}${e.cnic ? ' — ' + e.cnic : ''}</option>`
   ).join('');
   if(prev && all.some(e=> e.id === prev)) sel.value = prev;
 }
 
-function updateLedgerDateReadouts(){
-  const fromVal = document.getElementById('ledgerFrom').value;
-  const toVal = document.getElementById('ledgerTo').value;
-  document.getElementById('ledgerFromReadout').textContent = fromVal ? formatDate(fromVal) : '';
-  document.getElementById('ledgerToReadout').textContent = toVal ? formatDate(toVal) : '';
+function updateLedgersDateReadouts(){
+  const fromVal = document.getElementById('lgFrom').value;
+  const toVal = document.getElementById('lgTo').value;
+  document.getElementById('lgFromReadout').textContent = fromVal ? formatDate(fromVal) : '';
+  document.getElementById('lgToReadout').textContent = toVal ? formatDate(toVal) : '';
 }
 
-function clearLedgerFilters(){
-  document.getElementById('ledgerFrom').value = '';
-  document.getElementById('ledgerTo').value = '';
-  updateLedgerDateReadouts();
-  renderLedger();
+function clearLedgersFilters(){
+  document.getElementById('lgFrom').value = '';
+  document.getElementById('lgTo').value = '';
+  document.getElementById('lgPersonSelect').value = '';
+  updateLedgersDateReadouts();
+  renderLedgers();
 }
 
-function setLedgerFiltersToday(){
+function setLedgersToday(){
   const t = todayStr();
-  document.getElementById('ledgerFrom').value = t;
-  document.getElementById('ledgerTo').value = t;
-  updateLedgerDateReadouts();
-  renderLedger();
+  document.getElementById('lgFrom').value = t;
+  document.getElementById('lgTo').value = t;
+  updateLedgersDateReadouts();
+  renderLedgers();
 }
 
-function getFilteredLedgerLines(){
-  let lines = buildLedgerLines();
-  const fromVal = document.getElementById('ledgerFrom').value;
-  const toVal = document.getElementById('ledgerTo').value;
-  if(fromVal) lines = lines.filter(l=> l.date >= fromVal);
-  if(toVal) lines = lines.filter(l=> l.date <= toVal);
-  if(ledgerMode === 'person'){
-    const gid = document.getElementById('ledgerPersonSelect').value;
-    lines = gid ? lines.filter(l=> l.guestId === gid) : [];
-  }
-  lines.sort((a,b)=> a.date < b.date ? -1 : (a.date > b.date ? 1 : 0));
-  return { lines, fromVal, toVal };
-}
+function getFilteredLedgersRecords(){
+  const fromVal = document.getElementById('lgFrom').value;
+  const toVal = document.getElementById('lgTo').value;
+  const personId = document.getElementById('lgPersonSelect').value;
 
-function renderLedger(){
-  const container = document.getElementById('ledgerBody');
-  const barEl = document.getElementById('ledgerGrandbar');
-  if(!initialLoadDone){
-    container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
-    barEl.style.display = 'none';
-    return;
-  }
-  if(ledgerMode === 'person' && !document.getElementById('ledgerPersonSelect').value){
-    container.innerHTML = '<div class="empty-note">Select a guest above to view their ledger.</div>';
-    barEl.style.display = 'none';
-    document.getElementById('ledgerPrintHeaderSub').textContent = '';
-    return;
-  }
-
-  const { lines, fromVal, toVal } = getFilteredLedgerLines();
-
-  const subParts = [];
-  if(ledgerMode === 'person'){
-    const sel = document.getElementById('ledgerPersonSelect');
-    if(sel.selectedIndex >= 0) subParts.push(sel.options[sel.selectedIndex].textContent);
-  }
-  subParts.push(fromVal || toVal ? `${fromVal ? formatDate(fromVal) : 'Start'} to ${toVal ? formatDate(toVal) : 'Today'}` : 'All dates');
-  subParts.push('Generated ' + formatDate(todayStr()));
-  document.getElementById('ledgerPrintHeaderSub').textContent = subParts.join('  ·  ');
-  document.getElementById('ledgerPrintTitle').textContent = ledgerMode === 'person' ? 'Personal Ledger' : 'Day Book — Ledger';
-
-  if(lines.length === 0){
-    container.innerHTML = '<div class="empty-note">No ledger entries match these filters.</div>';
-    barEl.style.display = 'none';
-    return;
-  }
-
-  let running = 0, totalDebit = 0, totalCredit = 0;
-  let html = '';
-
-  if(ledgerMode === 'person'){
-    let bodyRows = '';
-    lines.forEach(l=>{
-      running += (l.kind === 'Debit' ? l.amount : -l.amount);
-      if(l.kind === 'Debit') totalDebit += l.amount; else totalCredit += l.amount;
-      bodyRows += `
-        <tr>
-          <td>${formatDate(l.date)}</td>
-          <td>${l.particulars}</td>
-          <td>${l.kind === 'Debit' ? l.amount.toLocaleString() : '-'}</td>
-          <td class="cash-amt">${l.kind === 'Credit' ? l.amount.toLocaleString() : '-'}</td>
-          <td style="font-weight:700; color:${running > 0 ? 'var(--danger)' : 'inherit'};">${running.toLocaleString()}</td>
-        </tr>`;
-    });
-    html = `
-      <table>
-        <thead>
-          <tr><th style="width:100px;">Date</th><th>Particulars</th><th style="width:110px;">Debit</th><th style="width:110px;">Credit</th><th style="width:110px;">Balance</th></tr>
-        </thead>
-        <tbody>${bodyRows}</tbody>
-      </table>`;
-  } else {
-    const groups = {};
-    lines.forEach(l=>{ if(!groups[l.date]) groups[l.date] = []; groups[l.date].push(l); });
-    const dates = Object.keys(groups).sort((a,b)=> a.localeCompare(b));
-    dates.forEach(date=>{
-      let bodyRows = '';
-      groups[date].forEach(l=>{
-        running += (l.kind === 'Debit' ? l.amount : -l.amount);
-        if(l.kind === 'Debit') totalDebit += l.amount; else totalCredit += l.amount;
-        bodyRows += `
-          <tr style="cursor:pointer;" onclick="openDetail('${l.guestId}')" title="Open this guest">
-            <td>${l.guest}</td>
-            <td>${l.particulars}</td>
-            <td>${l.kind === 'Debit' ? l.amount.toLocaleString() : '-'}</td>
-            <td class="cash-amt">${l.kind === 'Credit' ? l.amount.toLocaleString() : '-'}</td>
-            <td style="font-weight:700; color:${running > 0 ? 'var(--danger)' : 'inherit'};">${running.toLocaleString()}</td>
-          </tr>`;
-      });
-      html += `
-        <div class="day-group">
-          <div class="day-head"><span>${formatDate(date)}</span></div>
-          <table>
-            <thead>
-              <tr><th>Guest</th><th>Particulars</th><th style="width:110px;">Debit</th><th style="width:110px;">Credit</th><th style="width:110px;">Balance</th></tr>
-            </thead>
-            <tbody>${bodyRows}</tbody>
-          </table>
-        </div>`;
-    });
-  }
-
-  container.innerHTML = html;
-  barEl.style.display = 'flex';
-  document.getElementById('ledDebit').textContent = totalDebit.toLocaleString();
-  document.getElementById('ledCredit').textContent = totalCredit.toLocaleString();
-  document.getElementById('ledBalance').textContent = running.toLocaleString();
-}
-
-function exportLedgerExcel(){
-  const { lines } = getFilteredLedgerLines();
-  if(lines.length === 0){ showNotice('No ledger entries match the current filters.'); return; }
-  let running = 0;
-  const data = lines.map(l=>{
-    running += (l.kind === 'Debit' ? l.amount : -l.amount);
-    return {
-      'Date': formatDate(l.date),
-      'Guest': l.guest,
-      'Father Name': l.father,
-      'CNIC': l.cnic,
-      'Particulars': l.particulars,
-      'Debit': l.kind === 'Debit' ? l.amount : '',
-      'Credit': l.kind === 'Credit' ? l.amount : '',
-      'Balance': running
-    };
-  });
-  const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:12},{wch:20},{wch:20},{wch:16},{wch:34},{wch:12},{wch:12},{wch:12}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, ledgerMode === 'person' ? 'Personal Ledger' : 'Day Book');
-  XLSX.writeFile(wb, `ledger-${ledgerMode}-${todayStr()}.xlsx`);
-}
-
-function printLedger(){
-  const { lines } = getFilteredLedgerLines();
-  if(lines.length === 0){ showNotice('No ledger entries match the current filters.'); return; }
-  window.print();
-}
-
-// =========================================================
-// FULL REPORT — one row per guest: total billed (debit), total credit
-// (paid), and outstanding debt (due). Purely a live roll-up of computeTotals()
-// across all entries, no data changes.
-// =========================================================
-function getFilteredFullReportRows(){
-  const all = loadAllEntries();
-  const fromVal = document.getElementById('frFrom').value;
-  const toVal = document.getElementById('frTo').value;
-  const searchVal = document.getElementById('frSearch').value.trim().toLowerCase();
-  const debtOnly = document.getElementById('frDebtOnly').checked;
-
-  let rows = all.map(entry=>{
-    const t = computeTotals(entry);
-    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
-    const date = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
-    return {
-      id: entry.id,
-      guest: entry.guestName || '(no name)',
-      father: entry.fatherName || '',
-      cnic: entry.cnic || '',
-      roomNos, date,
-      billed: t.bookingTotal,
-      credit: t.paid,
-      debt: t.due,
-      status: t.status
-    };
-  });
-
+  let rows = buildLedgersRecords();
   if(fromVal) rows = rows.filter(r=> r.date >= fromVal);
   if(toVal) rows = rows.filter(r=> r.date <= toVal);
-  if(searchVal){
-    const searchValNoDash = stripDashes(searchVal);
-    rows = rows.filter(r=>{
-      const haystack = [r.guest, r.father, r.cnic, r.roomNos].join(' ').toLowerCase();
-      return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
-    });
-  }
-  if(debtOnly) rows = rows.filter(r=> r.debt > 0);
+  if(personId) rows = rows.filter(r=> r.guestId === personId);
 
-  rows.sort((a,b)=> b.debt - a.debt);
+  // sorted by guest (so a guest's nights land next to each other), then
+  // by date within that guest — the multi-night "connected" read
+  rows.sort((a,b)=> a.guest.localeCompare(b.guest) || a.date.localeCompare(b.date) || a.roomNo.localeCompare(b.roomNo));
   return { rows, fromVal, toVal };
 }
 
-function updateFullReportDateReadouts(){
-  const fromVal = document.getElementById('frFrom').value;
-  const toVal = document.getElementById('frTo').value;
-  document.getElementById('frFromReadout').textContent = fromVal ? formatDate(fromVal) : '';
-  document.getElementById('frToReadout').textContent = toVal ? formatDate(toVal) : '';
-}
-
-function clearFullReportFilters(){
-  document.getElementById('frFrom').value = '';
-  document.getElementById('frTo').value = '';
-  document.getElementById('frSearch').value = '';
-  document.getElementById('frDebtOnly').checked = false;
-  updateFullReportDateReadouts();
-  renderFullReport();
-}
-
-function renderFullReport(){
-  const container = document.getElementById('fullReportBody');
-  const barEl = document.getElementById('fullReportGrandbar');
+function renderLedgers(){
+  const container = document.getElementById('ledgersBody');
+  const barEl = document.getElementById('ledgersGrandbar');
   if(!initialLoadDone){
     container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     barEl.style.display = 'none';
     return;
   }
-  const { rows, fromVal, toVal } = getFilteredFullReportRows();
+  populateLedgersPersonSelect();
+
+  const { rows, fromVal, toVal } = getFilteredLedgersRecords();
 
   const subParts = [];
   subParts.push(fromVal || toVal ? `${fromVal ? formatDate(fromVal) : 'Start'} to ${toVal ? formatDate(toVal) : 'Today'}` : 'All dates');
+  const sel = document.getElementById('lgPersonSelect');
+  if(sel.value && sel.selectedIndex >= 0) subParts.push(sel.options[sel.selectedIndex].textContent);
   subParts.push('Generated ' + formatDate(todayStr()));
-  document.getElementById('frPrintHeaderSub').textContent = subParts.join('  ·  ');
+  document.getElementById('lgPrintHeaderSub').textContent = subParts.join('  ·  ');
 
   if(rows.length === 0){
-    container.innerHTML = '<div class="empty-note">No guests match these filters.</div>';
+    container.innerHTML = '<div class="empty-note">No room-nights match these filters.</div>';
     barEl.style.display = 'none';
     return;
   }
 
-  let totalBilled = 0, totalCredit = 0, totalDebt = 0;
-  let bodyRows = '';
-  rows.forEach(r=>{
-    totalBilled += r.billed;
-    totalCredit += r.credit;
-    totalDebt += r.debt;
-    const statusClass = r.status.toLowerCase();
-    bodyRows += `
-      <tr style="cursor:pointer;" onclick="openDetail('${r.id}')" title="Open this guest">
-        <td>${r.guest}</td>
-        <td>${r.father || '-'}</td>
-        <td>${r.cnic || '-'}</td>
-        <td>${r.roomNos || '-'}</td>
-        <td>${r.date ? formatDate(r.date) : '-'}</td>
-        <td>${r.billed.toLocaleString()}</td>
-        <td class="cash-amt">${r.credit.toLocaleString()}</td>
-        <td style="font-weight:700; color:${r.debt > 0 ? 'var(--danger)' : 'inherit'};">${r.debt.toLocaleString()}</td>
-        <td><span class="status ${statusClass}">${r.status}</span></td>
+  let totalDebt = 0, totalCredit = 0, totalBalance = 0;
+  let lastGuestId = null;
+  const bodyRows = rows.map(r=>{
+    const balance = r.rent - r.received;
+    totalDebt += r.rent;
+    totalCredit += r.received;
+    totalBalance += balance;
+    // A guest's second and later night in the list reads as a continuation
+    // of the row above it (same guest, next night) rather than a fresh,
+    // unrelated entry — a small tree connector plus a lighter name marks
+    // that, instead of repeating the full-strength name on every row.
+    const isContinuation = r.guestId === lastGuestId;
+    lastGuestId = r.guestId;
+    const nameCell = isContinuation
+      ? `<span class="lg-connector">↳</span><span class="lg-name-continued">${r.guest}</span>`
+      : `<span class="lg-name-primary">${r.guest}</span>`;
+    return `
+      <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+        <td>${formatDate(r.date)}</td>
+        <td>${nameCell}</td>
+        <td>${r.roomNo}</td>
+        <td class="cash-amt">${r.received ? r.received.toLocaleString() : '-'}</td>
+        <td>${r.rent.toLocaleString()}</td>
+        <td style="font-weight:700; color:${balance > 0 ? 'var(--danger)' : 'inherit'};">${balance.toLocaleString()}</td>
       </tr>`;
-  });
+  }).join('');
 
   container.innerHTML = `
     <table>
       <thead>
-        <tr>
-          <th>Guest</th><th>Father Name</th><th>CNIC</th><th>Room No(s)</th><th style="width:100px;">Date</th>
-          <th style="width:110px;">Billed</th><th style="width:120px;">Credit (Paid)</th><th style="width:120px;">Debt (Due)</th><th style="width:100px;">Status</th>
-        </tr>
+        <tr><th style="width:100px;">Date</th><th>Name</th><th style="width:110px;">Room No</th><th style="width:110px;">Credit</th><th style="width:110px;">Debt</th><th style="width:110px;">Balance</th></tr>
       </thead>
       <tbody>${bodyRows}</tbody>
     </table>`;
+
   barEl.style.display = 'flex';
-  document.getElementById('frBilled').textContent = totalBilled.toLocaleString();
-  document.getElementById('frCredit').textContent = totalCredit.toLocaleString();
-  document.getElementById('frDebt').textContent = totalDebt.toLocaleString();
+  document.getElementById('lgDebt').textContent = totalDebt.toLocaleString();
+  document.getElementById('lgCredit').textContent = totalCredit.toLocaleString();
+  document.getElementById('lgBalance').textContent = totalBalance.toLocaleString();
 }
 
-function exportFullReportExcel(){
-  const { rows } = getFilteredFullReportRows();
-  if(rows.length === 0){ showNotice('No guests match the current filters.'); return; }
-  const data = rows.map(r=>({
-    'Guest': r.guest,
-    'Father Name': r.father,
-    'CNIC': r.cnic,
-    'Room No(s)': r.roomNos,
-    'Date': r.date ? formatDate(r.date) : '',
-    'Billed': r.billed,
-    'Credit (Paid)': r.credit,
-    'Debt (Due)': r.debt,
-    'Status': r.status
+function exportLedgersExcel(){
+  const { rows } = getFilteredLedgersRecords();
+  if(rows.length === 0){ showNotice('No room-nights match the current filters.'); return; }
+  const data = rows.map(r=> ({
+    'Date': formatDate(r.date),
+    'Name': r.guest,
+    'Room No': r.roomNo,
+    'Credit': r.received,
+    'Debt': r.rent,
+    'Balance': r.rent - r.received
   }));
   const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:20},{wch:20},{wch:16},{wch:14},{wch:12},{wch:12},{wch:14},{wch:14},{wch:10}];
+  ws['!cols'] = [{wch:12},{wch:20},{wch:14},{wch:12},{wch:12},{wch:12}];
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Full Report');
-  XLSX.writeFile(wb, `full-report-${todayStr()}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, 'Ledgers');
+  XLSX.writeFile(wb, `ledgers-${todayStr()}.xlsx`);
 }
 
-function printFullReport(){
-  const { rows } = getFilteredFullReportRows();
-  if(rows.length === 0){ showNotice('No guests match the current filters.'); return; }
+function printLedgers(){
+  const { rows } = getFilteredLedgersRecords();
+  if(rows.length === 0){ showNotice('No room-nights match the current filters.'); return; }
   window.print();
+}
+
+// =========================================================
+// DAY LOCK — admin-only. Locking a date stops any NEW payment (Add Payment,
+// or a fresh payment row in Guest Entry/Edit) from being dated on it.
+// Payments already saved on that date before the lock are left untouched —
+// this only guards against new ones landing there after the books are meant
+// to be closed for the day. `lockedDays` is the cloud mirror kept fresh by
+// pullFreshFromCloud(); a date counts as locked while it has a row with no
+// unlocked_at.
+// =========================================================
+function isDateLocked(dateStr){
+  if(!dateStr) return false;
+  return lockedDays.some(l=> l.lock_date === dateStr && !l.unlocked_at);
+}
+
+function findLockRow(dateStr){
+  return lockedDays.find(l=> l.lock_date === dateStr && !l.unlocked_at) || null;
+}
+
+async function lockDay(dateStr){
+  if(!sb){ showNotice('Not connected to the cloud database — try again once it reconnects.'); return; }
+  if(!dateStr){ showNotice('Please pick a date to lock.'); return; }
+  if(isDateLocked(dateStr)){ showNotice(formatDate(dateStr) + ' is already locked.'); return; }
+  try{
+    const { error } = await sb.from('locked_days').upsert({
+      lock_date: dateStr,
+      locked_by: currentUser ? currentUser.username : '',
+      locked_at: new Date().toISOString(),
+      unlocked_by: null,
+      unlocked_at: null
+    }, { onConflict: 'lock_date' });
+    if(error) throw error;
+    await pullFreshFromCloud();
+    renderDayLock();
+  }catch(e){
+    console.error('Locking the day failed', e);
+    showNotice(e && e.message && e.message.includes('locked_days')
+      ? 'The Day Lock table doesn\'t exist yet — run migration/lock_days.sql in the Supabase SQL Editor first.'
+      : 'Couldn\'t lock this day — check the internet connection and try again.');
+  }
+}
+
+async function unlockDay(dateStr){
+  if(!sb){ showNotice('Not connected to the cloud database — try again once it reconnects.'); return; }
+  try{
+    const { error } = await sb.from('locked_days').update({
+      unlocked_by: currentUser ? currentUser.username : '',
+      unlocked_at: new Date().toISOString()
+    }).eq('lock_date', dateStr);
+    if(error) throw error;
+    await pullFreshFromCloud();
+    renderDayLock();
+  }catch(e){
+    console.error('Unlocking the day failed', e);
+    showNotice('Couldn\'t unlock this day — check the internet connection and try again.');
+  }
+}
+
+function renderDayLock(){
+  const listEl = document.getElementById('dayLockList');
+  const dateEl = document.getElementById('dlDate');
+  const actionBtn = document.getElementById('dlActionBtn');
+  if(!listEl || !dateEl || !actionBtn) return;
+
+  if(!initialLoadDone){
+    listEl.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+
+  const pickedDate = dateEl.value || todayStr();
+  const lockRow = findLockRow(pickedDate);
+  if(lockRow){
+    actionBtn.textContent = 'Unlock This Day';
+    actionBtn.className = 'btn secondary';
+    actionBtn.onclick = ()=> unlockDay(pickedDate);
+  } else {
+    actionBtn.textContent = 'Lock This Day';
+    actionBtn.className = 'btn';
+    actionBtn.onclick = ()=> lockDay(pickedDate);
+  }
+
+  const active = lockedDays.filter(l=> !l.unlocked_at).slice().sort((a,b)=> b.lock_date.localeCompare(a.lock_date));
+  if(active.length === 0){
+    listEl.innerHTML = '<div class="empty-note">No days are locked right now.</div>';
+    return;
+  }
+  listEl.innerHTML = `
+    <table>
+      <thead><tr><th style="width:130px;">Date</th><th>Locked By</th><th style="width:170px;">Locked At</th><th style="width:110px;"></th></tr></thead>
+      <tbody>${active.map(l=> `
+        <tr>
+          <td>${formatDate(l.lock_date)}</td>
+          <td>${l.locked_by || '-'}</td>
+          <td>${l.locked_at ? new Date(l.locked_at).toLocaleString() : '-'}</td>
+          <td><button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="unlockDay('${l.lock_date}')">Unlock</button></td>
+        </tr>`).join('')}</tbody>
+    </table>`;
 }
 
 // =========================================================
@@ -4477,6 +4486,7 @@ const sb = (typeof window.supabase !== "undefined" && SUPABASE_URL && SUPABASE_A
   : null;
 
 let entries = [];               // the cloud mirror every page reads from
+let lockedDays = [];            // cloud mirror of locked_days — { lock_date, locked_by, locked_at, unlocked_by, unlocked_at }
 let initialLoadDone = false;    // nothing renders as "no data" until the first successful pull
 let appStarted = false;
 
@@ -4748,11 +4758,12 @@ async function pullFreshFromCloud(){
   pullInFlight = (async ()=>{
     const stampAtStart = mutationStamp;
     try{
-      const [gRes, rRes, pRes, lRes] = await Promise.all([
+      const [gRes, rRes, pRes, lRes, lkRes] = await Promise.all([
         sb.from('guests_active').select('*'),
         sb.from('booking_rooms_active').select('*'),
         sb.from('guest_payments_active').select('*'),
-        sb.from('guest_edits').select('*')
+        sb.from('guest_edits').select('*'),
+        sb.from('locked_days').select('*') // optional table — see catch below, not fatal if the migration hasn't been run yet
       ]);
       if(gRes.error) throw gRes.error;
       if(rRes.error) throw rRes.error;
@@ -4769,12 +4780,13 @@ async function pullFreshFromCloud(){
       // queued, the warning stays up until the push itself succeeds
       if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0) syncProblem = null;
 
-      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data, lRes.data]);
+      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data, lRes.data, lkRes.data]);
       const changed = hash !== lastServerHash;
       lastServerHash = hash;
       if(changed || firstLoad){
         applyServerData(gRes.data || [], rRes.data || [], pRes.data || []);
         editLogs = lRes.data || [];
+        if(!lkRes.error) lockedDays = lkRes.data || [];
         rerenderActiveView();
       }
       if(firstLoad) setLoadingOverlay(false);
@@ -4822,6 +4834,8 @@ function rerenderActiveView(){
     }
   }
   else if(currentView === 'roomdetail'){ renderRoomDetail(); }
+  else if(currentView === 'ledgers'){ renderLedgers(); }
+  else if(currentView === 'daylock'){ renderDayLock(); }
 }
 
 window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); pushPendingNow(); pullFreshFromCloud(); });
@@ -4839,6 +4853,7 @@ if(sb && typeof sb.channel === 'function'){
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_rooms' }, ()=> requestBackgroundPull())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_payments' }, ()=> requestBackgroundPull())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_edits' }, ()=> requestBackgroundPull())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'locked_days' }, ()=> requestBackgroundPull())
       .subscribe();
   }catch(e){ console.error('Realtime unavailable — the 5s poll covers it', e); }
 }
@@ -4948,6 +4963,8 @@ function isAdmin(){
 function applyRolePermissions(){
   const editBtn = document.getElementById('editEntryBtn');
   if(editBtn) editBtn.style.display = isAdmin() ? '' : 'none';
+  const dayLockNav = document.getElementById('navDayLock');
+  if(dayLockNav) dayLockNav.style.display = isAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
 }
