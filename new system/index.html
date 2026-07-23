@@ -1111,6 +1111,8 @@
     <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
     <div class="navitem" id="navLedgers" onclick="showView('ledgers')">Ledgers</div>
     <div class="navitem" id="navDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</div>
+  </div>
+  <div class="sidebar-inner" style="margin-top:auto;">
     <div class="navitem" id="navDeleteEntity" onclick="showView('deleteentity')" style="display:none;"><span style="color:var(--danger);">⚠</span> Delete Entity</div>
   </div>
 </div>
@@ -1618,7 +1620,7 @@
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
-        <button class="btn" id="dlActionBtn" onclick="lockDay(document.getElementById('dlDate').value)">Lock This Day</button>
+        <button class="btn" id="dlActionBtn" onclick="openDayLockModal('lock', document.getElementById('dlDate').value)">Lock This Day</button>
       </div>
     </div>
 
@@ -1734,6 +1736,19 @@
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeDeleteEntityModal()">Cancel</button>
       <button class="btn danger-solid" onclick="confirmDeleteEntity()">Delete Entry</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="dayLockModalBackdrop">
+  <div class="modal">
+    <h3 id="dayLockModalTitle">Confirm</h3>
+    <div class="sub" style="margin-bottom:14px;" id="dayLockModalSub"></div>
+    <label for="dayLockTypeInput" id="dayLockModalLabel" style="margin-top:4px;"></label>
+    <input type="text" id="dayLockTypeInput" placeholder="" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmDayLockAction(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeDayLockModal()">Cancel</button>
+      <button class="btn" id="dayLockModalConfirmBtn" onclick="confirmDayLockAction()">Confirm</button>
     </div>
   </div>
 </div>
@@ -4439,6 +4454,53 @@ function findLockRow(dateStr){
   return lockedDays.find(l=> l.lock_date === dateStr && !l.unlocked_at) || null;
 }
 
+// Locking or unlocking a day both go through this same typed-word
+// confirmation modal — LOCK to lock, UNLOCK to unlock — so a stray click
+// can never close or reopen a day by accident.
+let pendingDayLockAction = null;
+
+function openDayLockModal(mode, dateStr){
+  if(!dateStr){ showNotice('Please pick a date first.'); return; }
+  pendingDayLockAction = { mode, dateStr };
+  const word = mode === 'lock' ? 'LOCK' : 'UNLOCK';
+  document.getElementById('dayLockModalTitle').textContent = mode === 'lock' ? 'Confirm Lock' : 'Confirm Unlock';
+  document.getElementById('dayLockModalSub').textContent = mode === 'lock'
+    ? 'No new payment will be allowed on ' + formatDate(dateStr) + ' once locked.'
+    : 'Payments will be allowed on ' + formatDate(dateStr) + ' again once unlocked.';
+  document.getElementById('dayLockModalLabel').textContent = 'Type ' + word + ' to ' + mode + ' this day';
+  const input = document.getElementById('dayLockTypeInput');
+  input.value = '';
+  input.placeholder = mode;
+  input.classList.remove('duplicate');
+  const btn = document.getElementById('dayLockModalConfirmBtn');
+  btn.textContent = mode === 'lock' ? 'Lock This Day' : 'Unlock This Day';
+  btn.className = mode === 'lock' ? 'btn' : 'btn secondary';
+  document.getElementById('dayLockModalBackdrop').classList.add('active');
+  input.focus();
+}
+
+function closeDayLockModal(){
+  document.getElementById('dayLockModalBackdrop').classList.remove('active');
+  pendingDayLockAction = null;
+}
+
+async function confirmDayLockAction(){
+  if(!pendingDayLockAction) return;
+  const { mode, dateStr } = pendingDayLockAction;
+  const input = document.getElementById('dayLockTypeInput');
+  if(input.value.trim().toLowerCase() !== mode){
+    input.classList.add('duplicate');
+    showNotice('Please type "' + mode.toUpperCase() + '" in the box to ' + mode + ' this day.');
+    input.focus();
+    return;
+  }
+  const btn = document.getElementById('dayLockModalConfirmBtn');
+  btn.disabled = true;
+  closeDayLockModal();
+  if(mode === 'lock') await lockDay(dateStr); else await unlockDay(dateStr);
+  btn.disabled = false;
+}
+
 async function lockDay(dateStr){
   if(!sb){ showNotice('Not connected to the cloud database — try again once it reconnects.'); return; }
   if(!dateStr){ showNotice('Please pick a date to lock.'); return; }
@@ -4494,11 +4556,11 @@ function renderDayLock(){
   if(lockRow){
     actionBtn.textContent = 'Unlock This Day';
     actionBtn.className = 'btn secondary';
-    actionBtn.onclick = ()=> unlockDay(pickedDate);
+    actionBtn.onclick = ()=> openDayLockModal('unlock', pickedDate);
   } else {
     actionBtn.textContent = 'Lock This Day';
     actionBtn.className = 'btn';
-    actionBtn.onclick = ()=> lockDay(pickedDate);
+    actionBtn.onclick = ()=> openDayLockModal('lock', pickedDate);
   }
 
   const active = lockedDays.filter(l=> !l.unlocked_at).slice().sort((a,b)=> b.lock_date.localeCompare(a.lock_date));
@@ -4514,7 +4576,7 @@ function renderDayLock(){
           <td>${formatDate(l.lock_date)}</td>
           <td>${l.locked_by || '-'}</td>
           <td>${l.locked_at ? new Date(l.locked_at).toLocaleString() : '-'}</td>
-          <td><button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="unlockDay('${l.lock_date}')">Unlock</button></td>
+          <td><button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="openDayLockModal('unlock', '${l.lock_date}')">Unlock</button></td>
         </tr>`).join('')}</tbody>
     </table>`;
 }
