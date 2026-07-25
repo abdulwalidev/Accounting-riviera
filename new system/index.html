@@ -1495,10 +1495,7 @@
 
     <div class="editing-bar no-print" id="editModeBar" style="display:none;">
       <span>✎ EDITING: <b id="editModeName"></b> — saving will update this existing entry, not create a new one.</span>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn" onclick="openCheckoutModal()">Check Out Today</button>
-        <button class="btn secondary" onclick="cancelEditMode()">Cancel Edit</button>
-      </div>
+      <button class="btn secondary" onclick="cancelEditMode()">Cancel Edit</button>
     </div>
 
     <h1>Guest Entry</h1>
@@ -1614,7 +1611,10 @@
       </div>
     </div>
 
-    <button class="btn success" onclick="reviewEntry()">Save Entry</button>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn success" onclick="reviewEntry()">Save Entry</button>
+      <button class="btn" id="checkoutTodayBtn" onclick="openCheckoutModal()" style="display:none;">Check Out Today</button>
+    </div>
 
     <div class="section-divider"></div>
     <h2 class="standalone-heading">Today's Entries</h2>
@@ -3621,6 +3621,7 @@ function confirmSaveEntry(){
     editingEntryId = null;
     editingBaseline = null;
     document.getElementById('editModeBar').style.display = 'none';
+    document.getElementById('checkoutTodayBtn').style.display = 'none';
     closeConfirmModal();
     resetEntryForm();
     renderTodayEntries();
@@ -3911,6 +3912,7 @@ function startEditEntry(entry){
 
   document.getElementById('editModeName').textContent = entry.guestName || '(no name)';
   document.getElementById('editModeBar').style.display = 'flex';
+  document.getElementById('checkoutTodayBtn').style.display = 'inline-block';
   showView('entry');
   window.scrollTo(0, 0);
 }
@@ -3919,6 +3921,7 @@ function cancelEditMode(){
   editingEntryId = null;
   editingBaseline = null;
   document.getElementById('editModeBar').style.display = 'none';
+  document.getElementById('checkoutTodayBtn').style.display = 'none';
   resetEntryForm();
   if(currentDetailId){
     openDetail(currentDetailId); // back to the guest page, nothing changed
