@@ -1495,7 +1495,10 @@
 
     <div class="editing-bar no-print" id="editModeBar" style="display:none;">
       <span>✎ EDITING: <b id="editModeName"></b> — saving will update this existing entry, not create a new one.</span>
-      <button class="btn secondary" onclick="cancelEditMode()">Cancel Edit</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn" onclick="openCheckoutModal()">Check Out Today</button>
+        <button class="btn secondary" onclick="cancelEditMode()">Cancel Edit</button>
+      </div>
     </div>
 
     <h1>Guest Entry</h1>
@@ -2195,6 +2198,17 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="checkoutModalBackdrop">
+  <div class="modal" style="width:420px;">
+    <h3>Confirm Checkout</h3>
+    <div class="sub" style="margin-bottom:14px;" id="checkoutModalSub">Set today as the Actual Checkout date for this guest?</div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeCheckoutModal()">Cancel</button>
+      <button class="btn" onclick="confirmCheckoutToday()">Check Out Today</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="changeRoomModalBackdrop">
   <div class="modal">
     <h3>Change Room</h3>
@@ -2684,6 +2698,28 @@ function addRow(){
 // (chained occupancy in computeRoomStatuses uses it to flip the old room to
 // vacant and the new room to occupied) and adds a fresh row for the new room.
 let changeRoomActiveRows = [];
+
+function openCheckoutModal(){
+  if(!editingEntryId){
+    showNotice('Open an existing entry for editing first.');
+    return;
+  }
+  const name = document.getElementById('guestName').value.trim() || '(no name)';
+  document.getElementById('checkoutModalSub').textContent = `Set ${formatDate(todayStr())} as the Actual Checkout date for "${name}"?`;
+  document.getElementById('checkoutModalBackdrop').classList.add('active');
+}
+
+function closeCheckoutModal(){
+  document.getElementById('checkoutModalBackdrop').classList.remove('active');
+}
+
+function confirmCheckoutToday(){
+  const el = document.getElementById('actualCheckoutDate');
+  el.value = todayStr();
+  updateDateReadout(el, document.getElementById('actualCheckoutDateReadout'));
+  closeCheckoutModal();
+  showNotice('Actual Checkout set to today — click Save Entry to save it.', 'success');
+}
 
 function openChangeRoomModal(){
   const rows = Array.from(document.getElementById('roomBody').querySelectorAll('tr'));
