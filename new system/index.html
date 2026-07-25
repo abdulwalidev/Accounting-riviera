@@ -256,6 +256,10 @@
     background:var(--ink);
     color:var(--paper);
   }
+  /* Moved Out only makes sense once a booking already exists to amend —
+     hidden on a brand new Guest Entry, shown only while editing a saved one. */
+  .edit-only{ display:none; }
+  body.editing-mode .edit-only{ display:revert; }
   .btn.danger{
     background:transparent;
     color:var(--danger);
@@ -376,6 +380,75 @@
     font-weight:700;
     color:var(--ink);
   }
+  .dash-tiles{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    gap:12px;
+    margin-top:14px;
+  }
+  .dash-tile{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:16px 14px;
+    cursor:pointer;
+    transition:border-color 0.15s, transform 0.15s;
+  }
+  .dash-tile:hover{
+    border-color:var(--ink);
+    transform:translateY(-1px);
+  }
+  .dash-tile-val{
+    font-family:'Inter',sans-serif;
+    font-size:28px;
+    font-weight:700;
+    color:var(--ink);
+    line-height:1.1;
+  }
+  .dash-tile-lbl{
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin-top:4px;
+  }
+  .dash-actions{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:12px;
+    margin-top:16px;
+  }
+  .dash-action-card{
+    background:var(--ink);
+    color:#fff;
+    border-radius:8px;
+    padding:18px 16px;
+    cursor:pointer;
+    transition:opacity 0.15s;
+  }
+  .dash-action-card:hover{ opacity:0.88; }
+  .dash-action-title{
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    font-weight:700;
+  }
+  .dash-action-sub{
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    opacity:0.75;
+    margin-top:3px;
+  }
+  .cico-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:16px;
+    margin-top:16px;
+  }
+  @media (max-width:900px){
+    .cico-grid{ grid-template-columns:1fr; }
+  }
+  .cico-grid table{ font-size:12.5px; }
   .status{
     display:inline-block;
     padding:3px 10px;
@@ -1104,8 +1177,10 @@
 <div class="sidebar-backdrop no-print" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 <div class="sidebar no-print" id="sidebar">
   <div class="sidebar-inner">
+    <div class="navitem active" id="navDashboard" onclick="showView('dashboard')">Dashboard</div>
+    <div class="navitem" id="navCico" onclick="showView('cico')">Check-in / Check-out</div>
     <div class="navitem" id="navRoomDetail" onclick="showView('roomdetail')">Room Detail <span class="beta-tag">BETA</span></div>
-    <div class="navitem active" id="navEntry" onclick="showView('entry')">Guest Entry</div>
+    <div class="navitem" id="navEntry" onclick="showView('entry')">Guest Entry</div>
     <div class="navitem" id="navAddPay" onclick="showView('addpay')">Add Payment</div>
     <div class="navitem" id="navSearch" onclick="showView('search')">Search</div>
     <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
@@ -1132,7 +1207,111 @@
     <button class="btn secondary" id="logoutBtn" style="min-height:32px; padding:5px 10px;">Sign Out</button>
   </div>
 
-  <div class="view active" id="view-entry">
+  <div class="view active" id="view-dashboard">
+
+    <h1>Dashboard</h1>
+    <div class="sub">Today at a glance</div>
+
+    <div class="dash-tiles">
+      <div class="dash-tile" onclick="showView('roomdetail')">
+        <div class="dash-tile-val" id="dashArrivals">0</div>
+        <div class="dash-tile-lbl">Arrivals</div>
+      </div>
+      <div class="dash-tile" onclick="showView('roomdetail')">
+        <div class="dash-tile-val" id="dashInhouse">0</div>
+        <div class="dash-tile-lbl">Inhouse</div>
+      </div>
+      <div class="dash-tile" onclick="showView('cico')">
+        <div class="dash-tile-val" id="dashDepartures">0</div>
+        <div class="dash-tile-lbl">Departures</div>
+      </div>
+      <div class="dash-tile" onclick="showView('cico')">
+        <div class="dash-tile-val" id="dashCheckedOut">0</div>
+        <div class="dash-tile-lbl">Checked out</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Room status</h2>
+      <div class="dash-tiles">
+        <div class="dash-tile"><div class="dash-tile-val" id="dashOcc">0</div><div class="dash-tile-lbl">Occ</div></div>
+        <div class="dash-tile"><div class="dash-tile-val" id="dashReady">0</div><div class="dash-tile-lbl">Ready</div></div>
+        <div class="dash-tile"><div class="dash-tile-val" id="dashDirty">0</div><div class="dash-tile-lbl">Dirty</div></div>
+        <div class="dash-tile"><div class="dash-tile-val" id="dashOOO">0</div><div class="dash-tile-lbl">OOO</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Night summary</h2>
+      <div class="dash-tiles">
+        <div class="dash-tile"><div class="dash-tile-val" id="dashNightOcc">0</div><div class="dash-tile-lbl">Occupied</div></div>
+        <div class="dash-tile"><div class="dash-tile-val" id="dashNightAvail">0</div><div class="dash-tile-lbl">Available</div></div>
+      </div>
+    </div>
+
+    <div class="dash-actions">
+      <div class="dash-action-card" onclick="showView('entry')">
+        <div class="dash-action-title">New reservation</div>
+        <div class="dash-action-sub">Click to create</div>
+      </div>
+      <div class="dash-action-card" onclick="showView('addpay')">
+        <div class="dash-action-title">Add Payment</div>
+        <div class="dash-action-sub">Record cash or bank</div>
+      </div>
+      <div class="dash-action-card" onclick="showView('entry')">
+        <div class="dash-action-title">New check-in</div>
+        <div class="dash-action-sub">Walk-in or booked</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-cico">
+
+    <h1>Check-in / Check-out</h1>
+    <div class="sub">Expected &amp; actual guest movement</div>
+
+    <div class="panel">
+      <div class="search-row">
+        <div>
+          <label>From</label>
+          <input type="date" id="cicoFrom">
+          <div class="date-readout" id="cicoFromReadout"></div>
+        </div>
+        <div>
+          <label>To</label>
+          <input type="date" id="cicoTo">
+          <div class="date-readout" id="cicoToReadout"></div>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn secondary" onclick="setCicoToday()">Today</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cico-grid">
+      <div class="panel">
+        <h2>Expected Checkins</h2>
+        <div id="cicoExpectedCheckins"></div>
+      </div>
+      <div class="panel">
+        <h2>Expected Checkouts</h2>
+        <div id="cicoExpectedCheckouts"></div>
+      </div>
+      <div class="panel">
+        <h2>Actual Checkins</h2>
+        <div id="cicoActualCheckins"></div>
+      </div>
+      <div class="panel">
+        <h2>Actual Checkouts</h2>
+        <div id="cicoActualCheckouts"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-entry">
 
     <div class="editing-bar no-print" id="editModeBar" style="display:none;">
       <span>✎ EDITING: <b id="editModeName"></b> — saving will update this existing entry, not create a new one.</span>
@@ -1156,7 +1335,7 @@
         </div>
         <div>
           <label>CNIC <span class="req">*</span></label>
-          <input type="text" id="cnic" placeholder="XXXXX-XXXXXXX-X" autocomplete="off" required onblur="offerReturningGuestPrefill()">
+          <input type="text" id="cnic" placeholder="XXXXX-XXXXXXX-X" autocomplete="off" required oninput="formatCNIC(this)" onblur="offerReturningGuestPrefill()">
           <label class="na-check"><input type="checkbox" id="cnicNA" onchange="toggleNA('cnic')"> N/A</label>
         </div>
         <div>
@@ -1195,6 +1374,7 @@
             <th style="width:130px;">Type</th>
             <th style="width:130px;">Rent Per Day</th>
             <th style="width:120px;">No of Days</th>
+            <th style="width:130px;" class="edit-only">Moved Out</th>
             <th style="width:120px;">Total</th>
             <th style="width:40px;"></th>
           </tr>
@@ -1203,6 +1383,7 @@
       </table>
       <div class="actions">
         <button class="btn secondary" onclick="addRow()">+ Add Row</button>
+        <button class="btn secondary edit-only" onclick="openChangeRoomModal()" title="Guest is moving to a different room mid-stay">⇄ Change Room</button>
         <div class="grandtotal">Grand Total: Rs. <span id="grandTotal">0</span></div>
       </div>
     </div>
@@ -1449,6 +1630,7 @@
               <th style="width:120px;">Type</th>
               <th style="width:130px;">Rent Per Day</th>
               <th style="width:110px;">No of Days</th>
+              <th style="width:120px;">Moved Out</th>
               <th style="width:120px;">Total</th>
             </tr>
           </thead>
@@ -1767,6 +1949,24 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="changeRoomModalBackdrop">
+  <div class="modal">
+    <h3>Change Room</h3>
+    <div class="sub" style="margin-bottom:14px;">The guest leaves one room and moves into another — this always happens on the same day.</div>
+    <label for="crFromRoom" style="margin-top:4px;">Room the guest is leaving</label>
+    <select id="crFromRoom"></select>
+    <label for="crToRoom" style="margin-top:10px;">Room the guest is moving into</label>
+    <div class="roomno-wrap">
+      <input type="text" id="crToRoom" placeholder="Search room / apt no" autocomplete="off">
+      <div class="roomno-list" id="crToRoomList"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeChangeRoomModal()">Cancel</button>
+      <button class="btn" onclick="confirmChangeRoom()">Change Room</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="addPayModalBackdrop">
   <div class="modal">
     <h3>Confirm Payment</h3>
@@ -1831,7 +2031,7 @@ function toggleSidebar(){
   document.getElementById('sidebarBackdrop').classList.toggle('show');
 }
 
-let currentView = 'entry';
+let currentView = 'dashboard';
 
 function showView(view){
   if(view === 'daylock' && !isAdmin()){
@@ -1843,10 +2043,12 @@ function showView(view){
     return;
   }
   currentView = view;
-  ['entry','addpay','search','report','detail','ledgers','daylock','deleteentity','roomdetail'].forEach(v=>{
+  ['dashboard','cico','entry','addpay','search','report','detail','ledgers','daylock','deleteentity','roomdetail'].forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
+  document.getElementById('navDashboard').classList.toggle('active', view === 'dashboard');
+  document.getElementById('navCico').classList.toggle('active', view === 'cico');
   document.getElementById('navRoomDetail').classList.toggle('active', view === 'roomdetail');
   document.getElementById('navEntry').classList.toggle('active', view === 'entry');
   document.getElementById('navAddPay').classList.toggle('active', view === 'addpay');
@@ -1869,6 +2071,8 @@ function showView(view){
   if(view === 'daylock') renderDayLock();
   if(view === 'deleteentity') renderDeleteEntityList();
   if(view === 'roomdetail') renderRoomDetail();
+  if(view === 'dashboard') renderDashboard();
+  if(view === 'cico') renderCico();
 }
 
 function updateFilterDateReadouts(){
@@ -1921,6 +2125,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('rdOccupiedOnly').addEventListener('change', renderRoomDetail);
   document.getElementById('rdDate').addEventListener('input', renderRoomDetail);
   document.getElementById('rdDate').value = todayStr();
+  document.getElementById('cicoFrom').addEventListener('input', renderCico);
+  document.getElementById('cicoTo').addEventListener('input', renderCico);
+  document.getElementById('cicoFrom').value = todayStr();
+  document.getElementById('cicoTo').value = todayStr();
   ['lgFrom','lgTo'].forEach(id=>{
     document.getElementById(id).addEventListener('input', updateLedgersDateReadouts);
   });
@@ -2106,6 +2314,10 @@ roomBodyEl.addEventListener('change', e=>{
     if(!e.target.classList.contains('edValue')) return;
     updateDateReadout(e.target, e.target.closest('.extra-detail-row').querySelector('.edValueReadout'));
   });
+  roomBodyEl.addEventListener(evt, e=>{
+    if(!e.target.classList.contains('movedOut')) return;
+    updateDateReadout(e.target, e.target.closest('tr').querySelector('.movedOutReadout'));
+  });
 });
 
 roomBodyEl.addEventListener('focusin', e=>{
@@ -2198,11 +2410,91 @@ function addRow(){
         <button onclick="changeRooms(this,1)">+</button>
       </div>
     </td>
+    <td class="edit-only"><input type="date" class="movedOut" title="Date the guest left THIS room (leave blank while still here)"><div class="date-readout movedOutReadout"></div></td>
     <td class="rowtotal">0</td>
     <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'room')">✕</button></td>
   `;
   tbody.appendChild(tr);
 }
+
+// "Change Room": pick the room the guest is leaving and the room they're
+// moving into — the move always happens same-day, so one date covers both
+// sides. Confirming stamps that date as Moved Out on the old room's row
+// (chained occupancy in computeRoomStatuses uses it to flip the old room to
+// vacant and the new room to occupied) and adds a fresh row for the new room.
+let changeRoomActiveRows = [];
+
+function openChangeRoomModal(){
+  const rows = Array.from(document.getElementById('roomBody').querySelectorAll('tr'));
+  changeRoomActiveRows = rows.filter(tr=> tr.querySelector('.roomNo').value.trim() && !tr.querySelector('.movedOut').value);
+  if(changeRoomActiveRows.length === 0){
+    showNotice('Add a room for this guest first, then use Change Room to move them to a different one.');
+    return;
+  }
+  const fromSel = document.getElementById('crFromRoom');
+  fromSel.innerHTML = changeRoomActiveRows.map((tr,i)=>
+    `<option value="${i}">${tr.querySelector('.roomNo').value.trim()}</option>`
+  ).join('');
+  const toInput = document.getElementById('crToRoom');
+  toInput.value = '';
+  document.getElementById('crToRoomList').classList.remove('show');
+  document.getElementById('changeRoomModalBackdrop').classList.add('active');
+  fromSel.focus();
+}
+
+function closeChangeRoomModal(){
+  document.getElementById('changeRoomModalBackdrop').classList.remove('active');
+}
+
+function confirmChangeRoom(){
+  const fromTr = changeRoomActiveRows[parseInt(document.getElementById('crFromRoom').value)];
+  const toRoomNo = document.getElementById('crToRoom').value.trim();
+  if(!fromTr) return;
+  if(!toRoomNo){
+    showNotice('Please pick the room the guest is moving into.');
+    focusError(document.getElementById('crToRoom'));
+    return;
+  }
+  if(getUsedRoomNumbers(null).has(toRoomNo.toUpperCase())){
+    showNotice('Room ' + toRoomNo + ' is already used in this entry.');
+    focusError(document.getElementById('crToRoom'));
+    return;
+  }
+
+  const movedOutInput = fromTr.querySelector('.movedOut');
+  movedOutInput.value = todayStr();
+  updateDateReadout(movedOutInput, fromTr.querySelector('.movedOutReadout'));
+
+  addRow();
+  const newRow = document.getElementById('roomBody').querySelector('tr:last-child');
+  newRow.querySelector('.roomNo').value = toRoomNo;
+  updateUnitType(newRow);
+  refreshDuplicateRoomHighlights();
+  closeChangeRoomModal();
+  newRow.querySelector('.rent').focus();
+}
+
+// The "moving into" search box mirrors the per-row room-number autocomplete
+// (renderRoomNoList/getUsedRoomNumbers), just wired directly instead of via
+// #roomBody delegation since this input lives in a modal, not a table row.
+document.getElementById('crToRoom').addEventListener('input', e=>{
+  renderRoomNoList(document.getElementById('crToRoomList'), e.target.value, null);
+  document.getElementById('crToRoomList').classList.add('show');
+});
+document.getElementById('crToRoom').addEventListener('focus', e=>{
+  renderRoomNoList(document.getElementById('crToRoomList'), e.target.value, null);
+  document.getElementById('crToRoomList').classList.add('show');
+});
+document.getElementById('crToRoom').addEventListener('blur', ()=>{
+  setTimeout(()=>{ document.getElementById('crToRoomList').classList.remove('show'); }, 150);
+});
+document.getElementById('crToRoomList').addEventListener('mousedown', e=>{
+  const item = e.target.closest('.roomno-item');
+  if(!item || !item.dataset.value) return;
+  e.preventDefault();
+  document.getElementById('crToRoom').value = item.dataset.value;
+  document.getElementById('crToRoomList').classList.remove('show');
+});
 
 function changeRooms(btn, delta){
   const tr = btn.closest('tr');
@@ -2252,6 +2544,7 @@ function requestDeleteRow(btn, kind){
         <div><div class="confirm-lbl">Type</div><div class="confirm-val">${tr.querySelector('.unitType').value || '-'}</div></div>
         <div><div class="confirm-lbl">Rent Per Day</div><div class="confirm-val">${(parseFloat(tr.querySelector('.rent').value) || 0).toLocaleString()}</div></div>
         <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${tr.dataset.rooms || 1}</div></div>
+        <div><div class="confirm-lbl">Moved Out</div><div class="confirm-val">${tr.querySelector('.movedOut').value ? formatDate(tr.querySelector('.movedOut').value) : '-'}</div></div>
         <div><div class="confirm-lbl">Total</div><div class="confirm-val">${tr.querySelector('.rowtotal').textContent || 0}</div></div>
       </div>`;
   } else {
@@ -2384,12 +2677,18 @@ function handleKarachiMidnightRollover(){
   if(rdDateEl) updateDateReadout(rdDateEl, document.getElementById('rdDateReadout'));
   const dlDateEl = document.getElementById('dlDate');
   if(dlDateEl) updateDateReadout(dlDateEl, document.getElementById('dlDateReadout'));
+  const cicoFromEl = document.getElementById('cicoFrom');
+  if(cicoFromEl) updateDateReadout(cicoFromEl, document.getElementById('cicoFromReadout'));
+  const cicoToEl = document.getElementById('cicoTo');
+  if(cicoToEl) updateDateReadout(cicoToEl, document.getElementById('cicoToReadout'));
   if(currentView === 'entry') renderTodayEntries();
   if(currentView === 'report') renderReport();
   if(currentView === 'search') renderSearch();
   if(currentView === 'ledgers') renderLedgers();
   if(currentView === 'daylock') renderDayLock();
   if(currentView === 'roomdetail') renderRoomDetail();
+  if(currentView === 'dashboard') renderDashboard();
+  if(currentView === 'cico') renderCico();
 }
 
 function addPayRow(){
@@ -2590,6 +2889,17 @@ function visibleExtraDetails(entry){
   return (entry.extraDetails || []).filter(d=> !HIDDEN_DETAIL_KINDS.includes(d.kind));
 }
 
+// Auto-inserts dashes as digits are typed (XXXXX-XXXXXXX-X). Strips any
+// characters the user typed (dashes in the wrong place included) and
+// rebuilds from digits only, so misplaced dashes are simply dropped.
+function formatCNIC(el){
+  const digits = el.value.replace(/[^0-9]/g, '').slice(0, 13);
+  let formatted = digits;
+  if(digits.length > 5) formatted = digits.slice(0, 5) + '-' + digits.slice(5);
+  if(digits.length > 12) formatted = digits.slice(0, 5) + '-' + digits.slice(5, 12) + '-' + digits.slice(12);
+  el.value = formatted;
+}
+
 // ---- Returning guest: typing a known CNIC offers to load the person's
 // saved details into the NEW entry, so this visit starts from what we
 // already know and any new detail (new car, new number…) is just added
@@ -2766,6 +3076,7 @@ function reviewEntry(){
       roomNo, unitType, rentInput, tr,
       rent: isFreeGuest ? 0 : rentInput.value,
       count: tr.dataset.rooms,
+      movedOut: tr.querySelector('.movedOut').value || '',
       total: parseFloat(tr.querySelector('.rowtotal').textContent.replace(/,/g,'')) || 0
     };
     if(tr.dataset.roomId) roomObj.id = tr.dataset.roomId; // keep identity when editing
@@ -2851,7 +3162,7 @@ function reviewEntry(){
     checkIn: checkInEl.value || '',
     checkOut: checkOutEl.value || '',
     extraDetails,
-    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, count: r.count, total: r.total })),
+    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, count: r.count, movedOut: r.movedOut, total: r.total })),
     payments: cleanPayments
   };
   data.bookingTotal = document.getElementById('sumBookingTotal').textContent;
@@ -2867,7 +3178,7 @@ function openConfirmModal(data){
   const box = document.getElementById('confirmBody');
 
   const roomRowsHtml = data.rooms.map(r=>`
-    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.count}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
+    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
@@ -2892,7 +3203,7 @@ function openConfirmModal(data){
       ${visibleExtraDetails(data).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
     </div>
     <table style="margin-bottom:14px;">
-      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Days</th><th>Total</th></tr></thead>
+      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Days</th><th>Moved Out</th><th>Total</th></tr></thead>
       <tbody>${roomRowsHtml}</tbody>
     </table>
     <table style="margin-bottom:14px;">
@@ -3039,6 +3350,7 @@ function confirmSaveEntry(){
 
 // Clear the whole entry form for the next guest.
 function resetEntryForm(){
+  document.body.classList.remove('editing-mode');
   ['guestName','cnic','contactNo','checkOutDate','actualCheckoutDate'].forEach(id=>{
     document.getElementById(id).value = '';
   });
@@ -3214,6 +3526,7 @@ function startEditEntry(entry){
   }
   editingEntryId = entry.id;
   editingBaseline = JSON.parse(JSON.stringify(entry));
+  document.body.classList.add('editing-mode'); // reveals Moved Out — only relevant when amending a saved entry
 
   document.getElementById('guestName').value = entry.guestName || '';
   document.getElementById('fatherName').value = entry.fatherName || '';
@@ -3249,6 +3562,9 @@ function startEditEntry(entry){
     tr.dataset.rooms = days;
     tr.querySelector('.roomCount').textContent = days;
     tr.querySelector('.rent').value = (r.rent === 0 || r.rent === '0') ? 'Guest' : (r.rent || '');
+    const movedOutInput = tr.querySelector('.movedOut');
+    movedOutInput.value = r.movedOut || '';
+    updateDateReadout(movedOutInput, tr.querySelector('.movedOutReadout'));
     updateUnitType(tr);
     const typeSel = tr.querySelector('.unitType');
     if(!typeSel.disabled && r.unitType){
@@ -3453,15 +3769,29 @@ const ROOM_SECTION_ORDER = ['2ND FLOOR','3RD FLOOR','4TH FLOOR','BLOCK A','BLOCK
 // current for that date; it counts as occupied unless its Actual Checkout
 // had already happened by then (a checkout dated after the reference date
 // doesn't count yet — the guest was still in on that earlier date).
+// Each room row optionally carries a "Moved Out" date — the day the guest
+// left THAT specific room, used when a guest changes rooms mid-stay. A
+// row's occupancy window is chained off its neighbors: it starts when the
+// previous row's Moved Out date fires (or the entry's check-in, for the
+// first row) and ends on its own Moved Out date (or the entry's actual
+// checkout, if this is the last room, i.e. still open-ended). Rows that
+// never set Moved Out — genuinely simultaneous rooms, not a room change —
+// all collapse back to the whole-entry window, matching the old behavior.
 function computeRoomStatuses(asOfDate){
   const refDate = asOfDate || todayStr();
   const all = loadAllEntries();
   const byRoom = {};
   all.forEach(entry=>{
-    (entry.rooms || []).forEach(r=>{
+    const rows = entry.rooms || [];
+    const entryCheckIn = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
+    const entryCheckout = getDetailValue(entry, 'Actual Checkout');
+    rows.forEach((r, i)=>{
       if(!r.roomNo) return;
       const key = r.roomNo.trim().toUpperCase();
-      (byRoom[key] = byRoom[key] || []).push({ entry, room: r });
+      const prev = rows[i - 1];
+      const from = (prev && prev.movedOut) ? prev.movedOut : entryCheckIn;
+      const to = r.movedOut || entryCheckout || '';
+      (byRoom[key] = byRoom[key] || []).push({ entry, room: r, from, to });
     });
   });
 
@@ -3471,24 +3801,16 @@ function computeRoomStatuses(asOfDate){
     .sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
   return masterKeys.concat(extraKeys).map(roomNo=>{
-    const bookings = (byRoom[roomNo] || []).slice().sort((a,b)=>{
-      const ad = a.entry.checkIn || (a.entry.savedAt ? toKarachiDateStr(a.entry.savedAt) : '');
-      const bd = b.entry.checkIn || (b.entry.savedAt ? toKarachiDateStr(b.entry.savedAt) : '');
-      return bd.localeCompare(ad);
-    });
-    const current = bookings.find(b=>{
-      const ci = b.entry.checkIn || (b.entry.savedAt ? toKarachiDateStr(b.entry.savedAt) : '');
-      return !ci || ci <= refDate;
-    }) || null;
-    const actualCheckout = current ? getDetailValue(current.entry, 'Actual Checkout') : '';
-    const occupied = !!current && (!actualCheckout || actualCheckout > refDate);
+    const bookings = (byRoom[roomNo] || []).slice().sort((a,b)=> (b.from || '').localeCompare(a.from || ''));
+    const current = bookings.find(b=> !b.from || b.from <= refDate) || null;
+    const occupied = !!current && (!current.to || current.to > refDate);
     return {
       roomNo,
       section: getRoomSection(roomNo),
       type: getRoomType(roomNo),
       entry: current ? current.entry : null,
       occupied,
-      actualCheckout,
+      actualCheckout: current ? current.to : '',
       bookingCount: bookings.length
     };
   });
@@ -3610,6 +3932,133 @@ function renderRoomDetail(){
   }).join('');
 }
 
+// ---- Dashboard ----
+// A guest entry only records one "Check-in Date" — there's no separate
+// reservation-vs-arrival flag — so "expected" vs "actual" for arrivals is a
+// heuristic: if the entry was saved to the system before the check-in date
+// itself, it was booked ahead of time (still "expected" until that day
+// shows up as system activity); if it was saved on/after the check-in date,
+// the guest was already there when the front desk logged it ("actual").
+// Checkouts have real separate fields (expected "Check-out" vs the actual
+// checkout date), so those two are exact, not heuristic.
+function buildMovementItem(entry){
+  return { entry, t: computeTotals(entry), roomNos: (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ') };
+}
+
+function computeMovement(fromDate, toDate){
+  const all = loadAllEntries();
+  const expectedCheckins = [];
+  const actualCheckins = [];
+  const expectedCheckouts = [];
+  const actualCheckouts = [];
+
+  all.forEach(entry=>{
+    const checkIn = entry.checkIn || '';
+    const checkOut = entry.checkOut || '';
+    const actualCheckout = getDetailValue(entry, 'Actual Checkout') || '';
+    const savedDate = entry.savedAt ? toKarachiDateStr(entry.savedAt) : '';
+    const item = buildMovementItem(entry);
+
+    if(checkIn && checkIn >= fromDate && checkIn <= toDate){
+      if(savedDate && savedDate < checkIn) expectedCheckins.push(item);
+      else actualCheckins.push(item);
+    }
+    if(checkOut && checkOut >= fromDate && checkOut <= toDate){
+      expectedCheckouts.push(item);
+    }
+    if(actualCheckout && actualCheckout >= fromDate && actualCheckout <= toDate){
+      actualCheckouts.push(item);
+    }
+  });
+
+  return { expectedCheckins, actualCheckins, expectedCheckouts, actualCheckouts };
+}
+
+function renderMovementList(containerId, items){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  if(items.length === 0){
+    el.innerHTML = '<div class="empty-note">None.</div>';
+    return;
+  }
+  const sorted = items.slice().sort((a,b)=> getLatestActivity(b.entry).localeCompare(getLatestActivity(a.entry)));
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Guest</th><th style="width:90px;">Room</th><th style="width:92px;">Check-in</th><th style="width:110px;">Exp. Checkout</th><th style="width:100px;">Due</th><th style="width:84px;">Status</th></tr></thead>
+      <tbody>${sorted.map(({entry, t, roomNos})=> `
+        <tr style="cursor:pointer;" onclick="openDetail('${entry.id}')" title="Open this guest">
+          <td>${entry.guestName || '(no name)'}</td>
+          <td>${roomNos || '-'}</td>
+          <td>${entry.checkIn ? formatDateShort(entry.checkIn) : '-'}</td>
+          <td>${entry.checkOut ? formatDateShort(entry.checkOut) : '-'}</td>
+          <td style="font-weight:700; color:${t.due > 0 ? 'var(--danger)' : 'inherit'};">${t.due.toLocaleString()}</td>
+          <td><span class="status ${t.status.toLowerCase()}">${t.status}</span></td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+function renderDashboard(){
+  if(!initialLoadDone){
+    ['dashArrivals','dashInhouse','dashDepartures','dashCheckedOut','dashOcc','dashReady','dashDirty','dashOOO','dashNightOcc','dashNightAvail'].forEach(id=>{
+      document.getElementById(id).textContent = '…';
+    });
+    return;
+  }
+  const today = todayStr();
+  const rooms = computeRoomStatuses(today);
+  const totalRooms = rooms.length;
+  const occupiedCount = rooms.filter(r=> r.occupied).length;
+  const vacantCount = totalRooms - occupiedCount;
+  const move = computeMovement(today, today);
+
+  document.getElementById('dashArrivals').textContent = move.expectedCheckins.length + move.actualCheckins.length;
+  document.getElementById('dashInhouse').textContent = occupiedCount;
+  document.getElementById('dashDepartures').textContent = move.expectedCheckouts.length;
+  document.getElementById('dashCheckedOut').textContent = move.actualCheckouts.length;
+  document.getElementById('dashOcc').textContent = occupiedCount;
+  document.getElementById('dashReady').textContent = vacantCount;
+  document.getElementById('dashDirty').textContent = 0;
+  document.getElementById('dashOOO').textContent = 0;
+  document.getElementById('dashNightOcc').textContent = occupiedCount;
+  document.getElementById('dashNightAvail').textContent = vacantCount;
+}
+
+// ---- Check-in / Check-out ----
+function setCicoToday(){
+  const t = todayStr();
+  document.getElementById('cicoFrom').value = t;
+  document.getElementById('cicoTo').value = t;
+  updateDateReadout(document.getElementById('cicoFrom'), document.getElementById('cicoFromReadout'));
+  updateDateReadout(document.getElementById('cicoTo'), document.getElementById('cicoToReadout'));
+  renderCico();
+}
+
+function renderCico(){
+  const fromEl = document.getElementById('cicoFrom');
+  const toEl = document.getElementById('cicoTo');
+  if(!fromEl.value && !toEl.value){
+    fromEl.value = todayStr();
+    toEl.value = todayStr();
+  }
+  const fromDate = fromEl.value || todayStr();
+  const toDate = toEl.value || fromDate;
+  updateDateReadout(fromEl, document.getElementById('cicoFromReadout'));
+  updateDateReadout(toEl, document.getElementById('cicoToReadout'));
+
+  if(!initialLoadDone){
+    ['cicoExpectedCheckins','cicoExpectedCheckouts','cicoActualCheckins','cicoActualCheckouts'].forEach(id=>{
+      document.getElementById(id).innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    });
+    return;
+  }
+
+  const move = computeMovement(fromDate, toDate);
+  renderMovementList('cicoExpectedCheckins', move.expectedCheckins);
+  renderMovementList('cicoExpectedCheckouts', move.expectedCheckouts);
+  renderMovementList('cicoActualCheckins', move.actualCheckins);
+  renderMovementList('cicoActualCheckouts', move.actualCheckouts);
+}
+
 // ---- Guest detail page ----
 function openDetail(id){
   currentDetailId = id;
@@ -3653,8 +4102,9 @@ function renderDetail(){
       <td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td>
       <td>${Number(r.rent || 0).toLocaleString()}</td>
       <td>${r.count || 1}</td>
+      <td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td>
       <td class="rowtotal">${(parseFloat(String(r.total || 0).replace(/,/g,'')) || 0).toLocaleString()}</td>
-    </tr>`).join('') || '<tr><td colspan="5" class="empty-note">No rooms.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="6" class="empty-note">No rooms.</td></tr>';
 
   const payBody = document.getElementById('detailPayBody');
   const payments = (entry.payments || []).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''));
@@ -4838,6 +5288,7 @@ function roomPayload(e, r){
     unit_type: r.unitType || '',
     rent_per_day: num(r.rent),
     days_count: parseInt(r.count) || 1,
+    moved_out_date: r.movedOut || null,
     total: num(r.total)
   };
 }
@@ -4988,7 +5439,8 @@ function applyServerData(gRows, rRows, pRows){
     editedAt: g.edited_at || undefined,
     rooms: (roomsByGuest[g.id] || []).map(r=> ({
       id: r.id, roomNo: r.room_no || '', unitType: r.unit_type || '',
-      rent: num(r.rent_per_day), count: parseInt(r.days_count) || 1, total: num(r.total)
+      rent: num(r.rent_per_day), count: parseInt(r.days_count) || 1,
+      movedOut: r.moved_out_date || '', total: num(r.total)
     })),
     savedBy: g.saved_by || '',
     editedBy: g.edited_by || '',
@@ -5098,6 +5550,8 @@ function rerenderActiveView(){
   else if(currentView === 'ledgers'){ renderLedgers(); }
   else if(currentView === 'daylock'){ renderDayLock(); }
   else if(currentView === 'deleteentity'){ renderDeleteEntityList(); }
+  else if(currentView === 'dashboard'){ renderDashboard(); }
+  else if(currentView === 'cico'){ renderCico(); }
 }
 
 window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); pushPendingNow(); pullFreshFromCloud(); });
