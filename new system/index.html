@@ -1177,10 +1177,10 @@
 <div class="sidebar-backdrop no-print" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 <div class="sidebar no-print" id="sidebar">
   <div class="sidebar-inner">
-    <div class="navitem active" id="navDashboard" onclick="showView('dashboard')">Dashboard</div>
+    <div class="navitem" id="navDashboard" onclick="showView('dashboard')">Dashboard</div>
     <div class="navitem" id="navCico" onclick="showView('cico')">Check-in / Check-out</div>
     <div class="navitem" id="navRoomDetail" onclick="showView('roomdetail')">Room Detail <span class="beta-tag">BETA</span></div>
-    <div class="navitem" id="navEntry" onclick="showView('entry')">Guest Entry</div>
+    <div class="navitem active" id="navEntry" onclick="showView('entry')">Guest Entry</div>
     <div class="navitem" id="navAddPay" onclick="showView('addpay')">Add Payment</div>
     <div class="navitem" id="navSearch" onclick="showView('search')">Search</div>
     <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
@@ -1207,7 +1207,7 @@
     <button class="btn secondary" id="logoutBtn" style="min-height:32px; padding:5px 10px;">Sign Out</button>
   </div>
 
-  <div class="view active" id="view-dashboard">
+  <div class="view" id="view-dashboard">
 
     <h1>Dashboard</h1>
     <div class="sub">Today at a glance</div>
@@ -1311,7 +1311,7 @@
 
   </div>
 
-  <div class="view" id="view-entry">
+  <div class="view active" id="view-entry">
 
     <div class="editing-bar no-print" id="editModeBar" style="display:none;">
       <span>✎ EDITING: <b id="editModeName"></b> — saving will update this existing entry, not create a new one.</span>
@@ -1340,7 +1340,7 @@
         </div>
         <div>
           <label>Contact No</label>
-          <input type="text" id="contactNo" placeholder="03XX-XXXXXXX" autocomplete="off">
+          <input type="text" id="contactNo" placeholder="03XXXXXXXXX" autocomplete="off" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
         <div>
           <label>Check-in Date</label>
@@ -2031,7 +2031,7 @@ function toggleSidebar(){
   document.getElementById('sidebarBackdrop').classList.toggle('show');
 }
 
-let currentView = 'dashboard';
+let currentView = 'entry';
 
 function showView(view){
   if(view === 'daylock' && !isAdmin()){
