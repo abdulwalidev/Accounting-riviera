@@ -1355,6 +1355,7 @@
     <div class="navitem" id="navCico" onclick="showView('cico')">Check-in / Check-out</div>
     <div class="navitem" id="navRoomDetail" onclick="showView('roomdetail')">Room Detail <span class="beta-tag">BETA</span></div>
     <div class="navitem active" id="navEntry" onclick="showView('entry')">Guest Entry</div>
+    <div class="navitem" id="navReservations" onclick="showView('reservations')">Reservations</div>
     <div class="navitem" id="navAddPay" onclick="showView('addpay')">Add Payment</div>
     <div class="navitem" id="navSearch" onclick="showView('search')">Search</div>
     <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
@@ -1615,6 +1616,31 @@
     <div class="section-divider"></div>
     <h2 class="standalone-heading">Today's Entries</h2>
     <div id="todayEntriesBody"><div class="empty-note">No entries saved today yet.</div></div>
+
+  </div>
+
+  <div class="view" id="view-reservations">
+
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1>Reservations</h1>
+        <div class="sub">Future check-ins — booked ahead, not arrived yet</div>
+      </div>
+      <button class="btn" onclick="showView('entry')">+ Add Reservation</button>
+    </div>
+
+    <div class="panel accent-guest">
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (name, father name, CNIC, room no)</label>
+          <input type="text" id="resvSearchInput" placeholder="Type to search..." autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div id="resvList"><div class="empty-note">No upcoming reservations.</div></div>
+    </div>
 
   </div>
 
@@ -2274,7 +2300,7 @@ function showView(view){
     return;
   }
   currentView = view;
-  ['dashboard','cico','entry','addpay','search','report','graphs','detail','ledgers','daylock','deleteentity','roomdetail'].forEach(v=>{
+  ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','daylock','deleteentity','roomdetail'].forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
@@ -2282,6 +2308,7 @@ function showView(view){
   document.getElementById('navCico').classList.toggle('active', view === 'cico');
   document.getElementById('navRoomDetail').classList.toggle('active', view === 'roomdetail');
   document.getElementById('navEntry').classList.toggle('active', view === 'entry');
+  document.getElementById('navReservations').classList.toggle('active', view === 'reservations');
   document.getElementById('navAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('navSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('navReport').classList.toggle('active', view === 'report' || view === 'graphs');
@@ -2296,6 +2323,7 @@ function showView(view){
   document.getElementById('sidebarBackdrop').classList.remove('show');
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
+  if(view === 'reservations') renderReservations();
   if(view === 'search') renderSearch();
   if(view === 'entry') renderTodayEntries();
   if(view === 'addpay') renderApList();
@@ -2344,6 +2372,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     document.getElementById(id).addEventListener('input', renderReport);
   });
   document.getElementById('gsearchInput').addEventListener('input', renderSearch);
+  document.getElementById('resvSearchInput').addEventListener('input', renderReservations);
   document.getElementById('gsearchDueOnly').addEventListener('change', renderSearch);
   document.getElementById('gsearchHideCheckedOut').addEventListener('change', renderSearch);
   document.getElementById('gsearchShowZero').addEventListener('change', renderSearch);
@@ -2914,6 +2943,7 @@ function handleKarachiMidnightRollover(){
   const cicoToEl = document.getElementById('cicoTo');
   if(cicoToEl) updateDateReadout(cicoToEl, document.getElementById('cicoToReadout'));
   if(currentView === 'entry') renderTodayEntries();
+  if(currentView === 'reservations') renderReservations();
   if(currentView === 'report') renderReport();
   if(currentView === 'graphs') renderGraphs();
   if(currentView === 'search') renderSearch();
@@ -3962,6 +3992,74 @@ function renderSearch(){
             <td class="cash-amt">${t.paid.toLocaleString()}</td>
             <td style="font-weight:700; color:${t.due > 0 ? 'var(--danger)' : 'inherit'};">${t.due.toLocaleString()}</td>
             <td><span class="status ${statusClass}">${t.status}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ---- Reservations: entries booked for a future check-in date, soonest first ----
+function renderReservations(){
+  const listEl = document.getElementById('resvList');
+  if(!initialLoadDone){
+    listEl.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const all = loadAllEntries();
+  const today = todayStr();
+  const searchVal = document.getElementById('resvSearchInput').value.trim().toLowerCase();
+
+  let items = all
+    .filter(entry=> entry.checkIn && entry.checkIn > today)
+    .map(entry=>{
+      const t = computeTotals(entry);
+      const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ');
+      return { entry, t, roomNos };
+    });
+
+  if(searchVal){
+    const searchValNoDash = stripDashes(searchVal);
+    items = items.filter(({entry, roomNos})=>{
+      const haystack = [entry.guestName, entry.fatherName, entry.cnic, roomNos].join(' ').toLowerCase();
+      return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
+    });
+  }
+
+  if(items.length === 0){
+    listEl.innerHTML = '<div class="empty-note">No upcoming reservations.</div>';
+    return;
+  }
+
+  items.sort((a,b)=> a.entry.checkIn.localeCompare(b.entry.checkIn));
+
+  listEl.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Guest</th>
+          <th style="width:120px;">Room</th>
+          <th style="width:140px;">CNIC</th>
+          <th style="width:130px;">Contact No</th>
+          <th style="width:100px;">Check-in</th>
+          <th style="width:110px;">Expected Checkout</th>
+          <th style="width:110px;">Total</th>
+          <th style="width:100px;">Paid</th>
+          <th style="width:100px;">Due</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map(({entry, t, roomNos})=>{
+          const contactNo = getDetailValue(entry, 'Contact No');
+          return `<tr style="cursor:pointer;" onclick="openDetail('${entry.id}')" title="Open this guest">
+            <td>${entry.guestName || '(no name)'}</td>
+            <td>${roomNos || '-'}</td>
+            <td>${entry.cnic || '-'}</td>
+            <td>${contactNo || '-'}</td>
+            <td>${formatDate(entry.checkIn)}</td>
+            <td>${entry.checkOut ? formatDate(entry.checkOut) : '-'}</td>
+            <td>${t.bookingTotal.toLocaleString()}</td>
+            <td class="cash-amt">${t.paid.toLocaleString()}</td>
+            <td style="font-weight:700; color:${t.due > 0 ? 'var(--danger)' : 'inherit'};">${t.due.toLocaleString()}</td>
           </tr>`;
         }).join('')}
       </tbody>
@@ -5958,6 +6056,7 @@ function requestBackgroundPull(){
 // input — only the display lists rebuild.
 function rerenderActiveView(){
   if(currentView === 'entry'){ renderTodayEntries(); }
+  else if(currentView === 'reservations'){ renderReservations(); }
   else if(currentView === 'search'){ renderSearch(); }
   else if(currentView === 'report'){ renderReport(); }
   else if(currentView === 'graphs'){ renderGraphs(); }
