@@ -1040,6 +1040,90 @@
     justify-content:flex-end;
     margin-top:16px;
   }
+  .avail-year-nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:12px;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:15px;
+  }
+  .avail-year-nav button{
+    background:none;
+    border:1px solid var(--line);
+    border-radius:6px;
+    width:30px;
+    height:30px;
+    cursor:pointer;
+    font-size:15px;
+    color:var(--ink);
+  }
+  .avail-year-nav button:hover{ border-color:var(--ink); }
+  .avail-months{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+  }
+  .avail-month-btn{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:14px 8px;
+    text-align:center;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+    transition:border-color 0.15s;
+  }
+  .avail-month-btn:hover{ border-color:var(--ink); }
+  .avail-back{
+    background:none;
+    border:none;
+    color:var(--muted);
+    font-family:'Inter',sans-serif;
+    font-size:12.5px;
+    cursor:pointer;
+    padding:0 0 12px;
+  }
+  .avail-back:hover{ color:var(--ink); }
+  .avail-dow{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:4px;
+    margin-bottom:4px;
+  }
+  .avail-dow span{
+    text-align:center;
+    font-family:'Inter',sans-serif;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--muted);
+  }
+  .avail-days{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:4px;
+  }
+  .avail-day-box{
+    aspect-ratio:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid var(--line);
+    border-radius:6px;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink);
+    transition:border-color 0.15s;
+  }
+  .avail-day-box:hover{ border-color:var(--ink); background:var(--amber); }
+  .avail-day-box.is-today{ border-color:var(--ink); background:var(--danger-bg); }
+  .avail-day-empty{ visibility:hidden; }
   .confirm-lbl{
     font-family:'Inter',sans-serif;
     font-size:10.5px;
@@ -1209,8 +1293,13 @@
 
   <div class="view" id="view-dashboard">
 
-    <h1>Dashboard</h1>
-    <div class="sub">Today at a glance</div>
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1>Dashboard</h1>
+        <div class="sub">Today at a glance</div>
+      </div>
+      <button class="btn" onclick="openAvailModal()">Check Availability</button>
+    </div>
 
     <div class="dash-tiles">
       <div class="dash-tile" onclick="showView('roomdetail')">
@@ -1991,6 +2080,17 @@
     </div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeExportModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="availModalBackdrop">
+  <div class="modal" style="width:460px;">
+    <h3 id="availModalTitle">Check Availability</h3>
+    <div class="sub" style="margin-bottom:14px;" id="availModalSub">Pick a month, then a day, to see that day's room detail.</div>
+    <div id="availModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeAvailModal()">Close</button>
     </div>
   </div>
 </div>
@@ -3930,6 +4030,59 @@ function renderRoomDetail(){
         <div>${rows}</div>
       </div>`;
   }).join('');
+}
+
+// ---- Check Availability: month selector -> day grid -> Room Detail ----
+const AVAIL_MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+let availYear = new Date().getFullYear();
+
+function openAvailModal(){
+  availYear = new Date().getFullYear();
+  renderAvailMonths();
+  document.getElementById('availModalBackdrop').classList.add('active');
+}
+
+function closeAvailModal(){
+  document.getElementById('availModalBackdrop').classList.remove('active');
+}
+
+function renderAvailMonths(){
+  document.getElementById('availModalTitle').textContent = 'Check Availability';
+  document.getElementById('availModalSub').textContent = 'Pick a month, then a day, to see that day\'s room detail.';
+  const months = AVAIL_MONTH_NAMES.map((name, i)=>
+    `<div class="avail-month-btn" onclick="renderAvailDays(${availYear}, ${i})">${name}</div>`
+  ).join('');
+  document.getElementById('availModalBody').innerHTML = `
+    <div class="avail-year-nav">
+      <button type="button" onclick="availYear--; renderAvailMonths();">&lsaquo;</button>
+      <span>${availYear}</span>
+      <button type="button" onclick="availYear++; renderAvailMonths();">&rsaquo;</button>
+    </div>
+    <div class="avail-months">${months}</div>`;
+}
+
+function renderAvailDays(year, month){
+  document.getElementById('availModalTitle').textContent = AVAIL_MONTH_NAMES[month] + ' ' + year;
+  document.getElementById('availModalSub').textContent = 'Click a day to see that day\'s room detail.';
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayIso = todayStr();
+  const emptyBoxes = Array.from({length: firstDow}, ()=> '<div class="avail-day-box avail-day-empty"></div>').join('');
+  const dayBoxes = Array.from({length: daysInMonth}, (_, i)=>{
+    const day = i + 1;
+    const iso = year + '-' + String(month + 1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    return `<div class="avail-day-box${iso === todayIso ? ' is-today' : ''}" onclick="selectAvailDay('${iso}')">${day}</div>`;
+  }).join('');
+  document.getElementById('availModalBody').innerHTML = `
+    <button type="button" class="avail-back" onclick="renderAvailMonths()">&larr; Back to months</button>
+    <div class="avail-dow"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+    <div class="avail-days">${emptyBoxes}${dayBoxes}</div>`;
+}
+
+function selectAvailDay(iso){
+  closeAvailModal();
+  document.getElementById('rdDate').value = iso;
+  showView('roomdetail');
 }
 
 // ---- Dashboard ----
