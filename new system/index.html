@@ -741,6 +741,24 @@
     color:var(--ink);
     font-size:15px;
   }
+  .report-grandbar-top{
+    padding:0 4px 14px;
+  }
+  .day-grandbar{
+    display:flex;
+    justify-content:flex-end;
+    gap:18px;
+    padding:0 2px 8px;
+    font-family:'Inter',sans-serif;
+    font-size:11.5px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+  .day-grandbar b{
+    color:var(--ink);
+    font-size:13px;
+  }
   .topnav{
     display:inline-flex;
     flex-wrap:wrap;
@@ -1928,19 +1946,19 @@
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <input type="text" id="filterCashSearch" placeholder="type total amount" style="width:180px;" autocomplete="off">
-          <button class="btn secondary" onclick="showView('graphs')">📊 Detailed Graphs</button>
+          <!-- <button class="btn secondary" onclick="showView('graphs')">📊 Detailed Graphs</button> -->
           <button class="btn" onclick="openExportModal()">⬇ Export</button>
         </div>
       </div>
     </div>
 
     <div class="panel accent-report">
-      <div id="reportBody"><div class="empty-note">No payments saved yet.</div></div>
-      <div class="report-grandbar" id="reportGrandbar" style="display:none;">
+      <div class="report-grandbar report-grandbar-top" id="reportGrandbar" style="display:none;">
         <span>Total Cash: Rs. <b id="repCash" class="cash-amt">0</b></span>
-        <span>Total Account: Rs. <b id="repAccount" class="account-amt">0</b></span>
+        <span>Total Account: Rs. <b id="repAccount" class="account-amt">0</b> (MCB: <b id="repAccountMCB">0</b>, Alfalah: <b id="repAccountAlfalah">0</b>)</span>
         <span>Grand Total: Rs. <b id="repGrand">0</b></span>
       </div>
+      <div id="reportBody"><div class="empty-note">No payments saved yet.</div></div>
     </div>
 
   </div>
@@ -4988,17 +5006,23 @@ function renderReport(){
   });
   const dates = Object.keys(groups).sort((a,b)=> b.localeCompare(a));
 
-  let grandCash = 0, grandAccount = 0, grandTotal = 0;
+  let grandCash = 0, grandAccount = 0, grandAccountMCB = 0, grandAccountAlfalah = 0, grandTotal = 0;
   let html = '';
 
   dates.forEach(date=>{
     const dayRows = groups[date];
-    let dayTotal = 0;
+    let dayTotal = 0, dayCash = 0, dayAccount = 0, dayAccountMCB = 0, dayAccountAlfalah = 0;
     let bodyRows = '';
     dayRows.forEach(r=>{
       dayTotal += r.total;
+      dayCash += r.cash;
+      dayAccount += r.account;
+      if(r.bank === 'MCB') dayAccountMCB += r.account;
+      else if(r.bank === 'Alfalah') dayAccountAlfalah += r.account;
       grandCash += r.cash;
       grandAccount += r.account;
+      if(r.bank === 'MCB') grandAccountMCB += r.account;
+      else if(r.bank === 'Alfalah') grandAccountAlfalah += r.account;
       const isCash = r.mode === 'Cash';
       bodyRows += `
         <tr class="${isCash ? 'mode-cash' : 'mode-bank'}" style="cursor:pointer;" onclick="openDetail('${r.id}')" title="Open this guest">
@@ -5021,6 +5045,12 @@ function renderReport(){
           <span>${formatDate(date)}</span>
           <span class="day-total">Rs. ${dayTotal.toLocaleString()}</span>
         </div>
+        ${dates.length > 1 ? `
+        <div class="day-grandbar">
+          <span>Total Cash: Rs. <b class="cash-amt">${dayCash.toLocaleString()}</b></span>
+          <span>Total Account: Rs. <b class="account-amt">${dayAccount.toLocaleString()}</b> (MCB: ${dayAccountMCB.toLocaleString()}, Alfalah: ${dayAccountAlfalah.toLocaleString()})</span>
+          <span>Grand Total: Rs. <b>${dayTotal.toLocaleString()}</b></span>
+        </div>` : ''}
         <table>
           <thead>
             <tr>
@@ -5044,6 +5074,8 @@ function renderReport(){
   barEl.style.display = 'flex';
   document.getElementById('repCash').textContent = grandCash.toLocaleString();
   document.getElementById('repAccount').textContent = grandAccount.toLocaleString();
+  document.getElementById('repAccountMCB').textContent = grandAccountMCB.toLocaleString();
+  document.getElementById('repAccountAlfalah').textContent = grandAccountAlfalah.toLocaleString();
   document.getElementById('repGrand').textContent = grandTotal.toLocaleString();
 }
 
