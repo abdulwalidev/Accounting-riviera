@@ -10,13 +10,13 @@
 <script src="xlsx.full.min.js"></script>
 <style>
   :root{
-    /* Luxury hospitality palette: deep navy + gold, slate-cool surfaces */
-    --ink:#172554;        /* deep navy — text, buttons, table borders */
+    /* Luxury hospitality palette: sky blue + gold, slate-cool surfaces */
+    --ink:#0284C7;        /* sky blue — text, buttons, table borders */
     --paper:#FFFFFF;      /* white page background */
     --muted:#5B6B84;      /* slate — labels, secondary text */
     --cash:#166534;       /* green — cash amounts */
     --account:#1D4ED8;    /* blue — bank/account amounts */
-    --line:#17255426;
+    --line:#0284C726;
     --amber:#E7C55A;      /* gold accent — table headers, highlights */
     --gold-deep:#A16207;  /* darker gold for text/borders on light bg */
     --danger:#B91C1C;
@@ -173,7 +173,7 @@
     letter-spacing:0.05em;
     padding:10px 8px;
     background:var(--ink);
-    border:1px solid #0F1A3D;
+    border:1px solid #026591;
   }
   td{
     padding:6px 8px;
@@ -635,7 +635,7 @@
   .main{
     flex:1;
     min-width:0;
-    max-width:1100px;
+    max-width:1280px;
     margin:0 auto;
     padding:28px 20px 60px;
   }
@@ -695,6 +695,37 @@
   .day-total{
     color:var(--amber);
   }
+  .rpt-day-group{
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:14px;
+    background:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,0.14);
+  }
+  .rpt-day-head{
+    display:flex;
+    width:fit-content;
+    margin:0 auto 6px;
+    padding:9px 26px;
+  }
+  .rpt-day-head span{
+    font-size:17px;
+    font-weight:800;
+  }
+  tr.day-foot-total td{
+    font-weight:700;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    border-top:2px solid var(--ink);
+    background:#F7F8FA;
+  }
+  tr.day-foot-total td:first-child{
+    text-align:right;
+    text-transform:uppercase;
+    font-size:11px;
+    letter-spacing:0.04em;
+    color:var(--muted);
+  }
   .rpd-guest-block{
     margin-bottom:10px;
   }
@@ -740,24 +771,6 @@
   .report-grandbar b{
     color:var(--ink);
     font-size:15px;
-  }
-  .report-grandbar-top{
-    padding:0 4px 14px;
-  }
-  .day-grandbar{
-    display:flex;
-    justify-content:flex-end;
-    gap:18px;
-    padding:0 2px 8px;
-    font-family:'Inter',sans-serif;
-    font-size:11.5px;
-    color:var(--muted);
-    text-transform:uppercase;
-    letter-spacing:0.03em;
-  }
-  .day-grandbar b{
-    color:var(--ink);
-    font-size:13px;
   }
   .topnav{
     display:inline-flex;
@@ -1953,11 +1966,6 @@
     </div>
 
     <div class="panel accent-report">
-      <div class="report-grandbar report-grandbar-top" id="reportGrandbar" style="display:none;">
-        <span>Total Cash: Rs. <b id="repCash" class="cash-amt">0</b></span>
-        <span>Total Account: Rs. <b id="repAccount" class="account-amt">0</b> (MCB: <b id="repAccountMCB">0</b>, Alfalah: <b id="repAccountAlfalah">0</b>)</span>
-        <span>Grand Total: Rs. <b id="repGrand">0</b></span>
-      </div>
       <div id="reportBody"><div class="empty-note">No payments saved yet.</div></div>
     </div>
 
@@ -4979,10 +4987,8 @@ function getFilteredReportRows(){
 
 function renderReport(){
   const container = document.getElementById('reportBody');
-  const barEl = document.getElementById('reportGrandbar');
   if(!initialLoadDone){
     container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
-    barEl.style.display = 'none';
     return;
   }
   const { rows, fromVal, toVal } = getFilteredReportRows();
@@ -4994,7 +5000,6 @@ function renderReport(){
 
   if(rows.length === 0){
     container.innerHTML = '<div class="empty-note">No payments match these filters.</div>';
-    barEl.style.display = 'none';
     return;
   }
 
@@ -5006,77 +5011,68 @@ function renderReport(){
   });
   const dates = Object.keys(groups).sort((a,b)=> b.localeCompare(a));
 
-  let grandCash = 0, grandAccount = 0, grandAccountMCB = 0, grandAccountAlfalah = 0, grandTotal = 0;
   let html = '';
 
   dates.forEach(date=>{
     const dayRows = groups[date];
-    let dayTotal = 0, dayCash = 0, dayAccount = 0, dayAccountMCB = 0, dayAccountAlfalah = 0;
+    let dayTotal = 0, dayCash = 0, dayMCB = 0, dayAlfalah = 0;
     let bodyRows = '';
     dayRows.forEach(r=>{
       dayTotal += r.total;
       dayCash += r.cash;
-      dayAccount += r.account;
-      if(r.bank === 'MCB') dayAccountMCB += r.account;
-      else if(r.bank === 'Alfalah') dayAccountAlfalah += r.account;
-      grandCash += r.cash;
-      grandAccount += r.account;
-      if(r.bank === 'MCB') grandAccountMCB += r.account;
-      else if(r.bank === 'Alfalah') grandAccountAlfalah += r.account;
+      if(r.bank === 'MCB') dayMCB += r.account;
+      else if(r.bank === 'Alfalah') dayAlfalah += r.account;
       const isCash = r.mode === 'Cash';
+      const modeShort = r.mode === 'Bank Transfer' ? 'Transfer' : r.mode;
+      const modeLabel = isCash ? modeShort : `${modeShort}${r.bank ? ' (' + r.bank + ')' : ''}`;
       bodyRows += `
         <tr class="${isCash ? 'mode-cash' : 'mode-bank'}" style="cursor:pointer;" onclick="openDetail('${r.id}')" title="Open this guest">
           <td>${r.guest}</td>
           <td>${r.type}</td>
-          <td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${r.mode}</span></td>
-          <td>${r.bank || '-'}</td>
+          <td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${modeLabel}</span></td>
           <td>${r.remarks || '-'}</td>
           <td>${r.roomNos || '-'}</td>
           <td class="cash-amt">${r.cash ? r.cash.toLocaleString() : '-'}</td>
-          <td class="account-amt">${r.account ? r.account.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.bank === 'MCB' && r.account ? r.account.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.bank === 'Alfalah' && r.account ? r.account.toLocaleString() : '-'}</td>
           <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${r.total.toLocaleString()}</td>
         </tr>`;
     });
-    grandTotal += dayTotal;
 
     html += `
-      <div class="day-group">
-        <div class="day-head">
+      <div class="day-group rpt-day-group">
+        <div class="day-head rpt-day-head">
           <span>${formatDate(date)}</span>
-          <span class="day-total">Rs. ${dayTotal.toLocaleString()}</span>
         </div>
-        ${dates.length > 1 ? `
-        <div class="day-grandbar">
-          <span>Total Cash: Rs. <b class="cash-amt">${dayCash.toLocaleString()}</b></span>
-          <span>Total Account: Rs. <b class="account-amt">${dayAccount.toLocaleString()}</b> (MCB: ${dayAccountMCB.toLocaleString()}, Alfalah: ${dayAccountAlfalah.toLocaleString()})</span>
-          <span>Grand Total: Rs. <b>${dayTotal.toLocaleString()}</b></span>
-        </div>` : ''}
         <table>
           <thead>
             <tr>
               <th>Guest</th>
               <th style="width:100px;">Type</th>
               <th style="width:90px;">Mode</th>
-              <th style="width:90px;">Bank</th>
               <th style="width:140px;">Remarks</th>
               <th style="width:120px;">Room No</th>
               <th style="width:100px;">Cash</th>
-              <th style="width:100px;">Account</th>
+              <th style="width:100px;">MCB</th>
+              <th style="width:100px;">Alfalah</th>
               <th style="width:100px;">Total</th>
             </tr>
           </thead>
           <tbody>${bodyRows}</tbody>
+          <tfoot>
+            <tr class="day-foot-total">
+              <td colspan="5">Total</td>
+              <td class="cash-amt">${dayCash.toLocaleString()}</td>
+              <td class="account-amt">${dayMCB.toLocaleString()}</td>
+              <td class="account-amt">${dayAlfalah.toLocaleString()}</td>
+              <td>${dayTotal.toLocaleString()}</td>
+            </tr>
+          </tfoot>
         </table>
       </div>`;
   });
 
   container.innerHTML = html;
-  barEl.style.display = 'flex';
-  document.getElementById('repCash').textContent = grandCash.toLocaleString();
-  document.getElementById('repAccount').textContent = grandAccount.toLocaleString();
-  document.getElementById('repAccountMCB').textContent = grandAccountMCB.toLocaleString();
-  document.getElementById('repAccountAlfalah').textContent = grandAccountAlfalah.toLocaleString();
-  document.getElementById('repGrand').textContent = grandTotal.toLocaleString();
 }
 
 function formatDate(iso){
