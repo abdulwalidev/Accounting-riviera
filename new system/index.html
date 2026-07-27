@@ -64,6 +64,9 @@
   .panel.accent-payments{ border-left-color:var(--cash); }
   .panel.accent-filters{ border-left-color:var(--account); }
   .panel.accent-report{ border-left-color:var(--cash); }
+  .panel.accent-guest, .panel.accent-rooms, .panel.accent-payments{
+    border:2px solid #000;
+  }
   .panel h2{
     font-family:'Inter',sans-serif;
     font-size:16px;
@@ -701,6 +704,42 @@
     padding:14px;
     background:#fff;
     box-shadow:0 4px 14px rgba(0,0,0,0.14);
+  }
+  .rpt-grandtotal-box{
+    border:2px solid #000;
+    border-radius:8px;
+    padding:16px 20px;
+    margin-bottom:20px;
+    background:var(--ink);
+    color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,0.14);
+    text-align:center;
+  }
+  .rpt-grandtotal-label{
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    opacity:0.85;
+  }
+  .rpt-grandtotal-range{
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    opacity:0.85;
+    margin-top:2px;
+  }
+  .rpt-grandtotal-breakdown{
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    margin-top:8px;
+    opacity:0.95;
+  }
+  .rpt-grandtotal-amount{
+    font-size:26px;
+    font-weight:800;
+    margin-top:6px;
   }
   .rpt-day-head{
     display:flex;
@@ -1553,20 +1592,22 @@
           <label>Contact No</label>
           <input type="text" id="contactNo" placeholder="03XXXXXXXXX" autocomplete="off" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
-        <div>
-          <label>Check-in Date</label>
-          <input type="date" id="checkInDate" title="Reference only — does not affect any amount">
-          <div class="date-readout" id="checkInDateReadout"></div>
-        </div>
-        <div>
-          <label>Expected Checkout</label>
-          <input type="date" id="checkOutDate" title="Reference only — does not affect any amount">
-          <div class="date-readout" id="checkOutDateReadout"></div>
-        </div>
-        <div>
-          <label>Actual Checkout</label>
-          <input type="date" id="actualCheckoutDate" title="Reference only — does not affect any amount">
-          <div class="date-readout" id="actualCheckoutDateReadout"></div>
+        <div class="grid" style="grid-column:1 / -1;">
+          <div>
+            <label>Check-in Date</label>
+            <input type="date" id="checkInDate" title="Reference only — does not affect any amount">
+            <div class="date-readout" id="checkInDateReadout"></div>
+          </div>
+          <div>
+            <label>Expected Checkout</label>
+            <input type="date" id="checkOutDate" title="Reference only — does not affect any amount">
+            <div class="date-readout" id="checkOutDateReadout"></div>
+          </div>
+          <div>
+            <label>Actual Checkout</label>
+            <input type="date" id="actualCheckoutDate" title="Reference only — does not affect any amount">
+            <div class="date-readout" id="actualCheckoutDateReadout"></div>
+          </div>
         </div>
       </div>
       <div id="extraDetailList"></div>
@@ -5012,6 +5053,7 @@ function renderReport(){
   const dates = Object.keys(groups).sort((a,b)=> b.localeCompare(a));
 
   let html = '';
+  let overallTotal = 0, overallCash = 0, overallMCB = 0, overallAlfalah = 0;
 
   dates.forEach(date=>{
     const dayRows = groups[date];
@@ -5070,7 +5112,26 @@ function renderReport(){
           </tfoot>
         </table>
       </div>`;
+    overallTotal += dayTotal;
+    overallCash += dayCash;
+    overallMCB += dayMCB;
+    overallAlfalah += dayAlfalah;
   });
+
+  if(dates.length > 1){
+    const oldestDate = dates[dates.length - 1];
+    const newestDate = dates[0];
+    const overallAccount = overallMCB + overallAlfalah;
+    html = `
+      <div class="rpt-grandtotal-box">
+        <div class="rpt-grandtotal-label">Grand Total</div>
+        <div class="rpt-grandtotal-range">${formatDate(oldestDate)} to ${formatDate(newestDate)}</div>
+        <div class="rpt-grandtotal-breakdown">
+          Cash: Rs. ${overallCash.toLocaleString()} &nbsp;|&nbsp; Account: Rs. ${overallAccount.toLocaleString()} (MCB: ${overallMCB.toLocaleString()}, Alfalah: ${overallAlfalah.toLocaleString()})
+        </div>
+        <div class="rpt-grandtotal-amount">Rs. ${overallTotal.toLocaleString()}</div>
+      </div>` + html;
+  }
 
   container.innerHTML = html;
 }
