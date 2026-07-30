@@ -768,20 +768,36 @@
     color:var(--muted);
   }
   .rpt-total-account-box{
+    position:relative;
     display:flex;
     align-items:center;
     justify-content:space-between;
     box-sizing:border-box;
+    margin-top:3px;
     margin-left:auto;
     margin-right:150px;
     width:200px;
-    padding:7.6px 16px;
+    padding:6.65px 16px;
     border-top:2px solid var(--ink);
+    border-left:1px solid #00000018;
+    border-right:1px solid #00000018;
+    border-bottom:1px solid #00000018;
     background:#F7F8FA;
   }
+  .rpt-total-account-box::before,
+  .rpt-total-account-box::after{
+    content:"";
+    position:absolute;
+    top:-5px;
+    width:2px;
+    height:5px;
+    background:var(--ink);
+  }
+  .rpt-total-account-box::before{ left:-1px; }
+  .rpt-total-account-box::after{ right:-1px; }
   .rpt-total-account-label{
     font-family:'Inter',sans-serif;
-    font-size:11px;
+    font-size:10.23px;
     font-weight:700;
     color:var(--muted);
     text-transform:uppercase;
@@ -791,7 +807,7 @@
   }
   .rpt-total-account-amount{
     font-family:'Inter',sans-serif;
-    font-size:13px;
+    font-size:12.09px;
     font-weight:700;
     color:var(--account);
     padding-left:10px;
@@ -5181,7 +5197,7 @@ function renderReport(){
         </table>
         <div class="rpt-total-account-box">
           <span class="rpt-total-account-label">Total Account</span>
-          <span class="rpt-total-account-amount">Rs. ${dayAccountTotal.toLocaleString()}</span>
+          <span class="rpt-total-account-amount">${dayAccountTotal.toLocaleString()}</span>
         </div>
       </div>`;
     overallTotal += dayTotal;
