@@ -771,23 +771,27 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
-    margin-top:10px;
-    padding:10px 16px;
-    border:2px solid #000;
-    border-radius:8px;
-    background:var(--account);
-    color:#fff;
+    box-sizing:border-box;
+    margin-left:auto;
+    margin-right:150px;
+    width:200px;
+    padding:8px 16px;
+    border-top:2px solid var(--ink);
+    background:#F7F8FA;
   }
   .rpt-total-account-label{
     font-family:'Inter',sans-serif;
-    font-size:12px;
+    font-size:11px;
     font-weight:700;
+    color:var(--muted);
     text-transform:uppercase;
-    letter-spacing:0.06em;
+    letter-spacing:0.04em;
   }
   .rpt-total-account-amount{
-    font-size:18px;
-    font-weight:800;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    color:var(--account);
   }
   .rpd-guest-block{
     margin-bottom:10px;
