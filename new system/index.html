@@ -767,6 +767,28 @@
     letter-spacing:0.04em;
     color:var(--muted);
   }
+  .rpt-total-account-box{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:10px;
+    padding:10px 16px;
+    border:2px solid #000;
+    border-radius:8px;
+    background:var(--account);
+    color:#fff;
+  }
+  .rpt-total-account-label{
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+  }
+  .rpt-total-account-amount{
+    font-size:18px;
+    font-weight:800;
+  }
   .rpd-guest-block{
     margin-bottom:10px;
   }
@@ -1650,8 +1672,8 @@
             <th style="width:36px;">#</th>
             <th style="width:88px;">Date</th>
             <th style="width:136px;">Type</th>
-            <th style="width:120px;">Mode</th>
-            <th style="width:100px;">Bank</th>
+            <th style="width:126px;">Mode</th>
+            <th style="width:105px;">Bank</th>
             <th>Remarks</th>
             <th style="width:110px;">Cash Amount</th>
             <th style="width:110px;">Account Amount</th>
@@ -1775,6 +1797,7 @@
               <option value="">-</option>
               <option value="Alfalah">Alfalah</option>
               <option value="MCB">MCB</option>
+              <option value="Haji (MCB)">Haji (MCB)</option>
             </select>
           </div>
           <div>
@@ -3117,6 +3140,7 @@ function addPayRow(){
         <option value="">-</option>
         <option value="Alfalah">Alfalah</option>
         <option value="MCB">MCB</option>
+        <option value="Haji (MCB)">Haji (MCB)</option>
       </select>
     </td>
     <td><input type="text" class="payRemarks" placeholder="Optional note" autocomplete="off"></td>
@@ -5085,17 +5109,18 @@ function renderReport(){
   const dates = Object.keys(groups).sort((a,b)=> b.localeCompare(a));
 
   let html = '';
-  let overallTotal = 0, overallCash = 0, overallMCB = 0, overallAlfalah = 0;
+  let overallTotal = 0, overallCash = 0, overallMCB = 0, overallAlfalah = 0, overallHaji = 0;
 
   dates.forEach(date=>{
     const dayRows = groups[date];
-    let dayTotal = 0, dayCash = 0, dayMCB = 0, dayAlfalah = 0;
+    let dayTotal = 0, dayCash = 0, dayMCB = 0, dayAlfalah = 0, dayHaji = 0;
     let bodyRows = '';
     dayRows.forEach(r=>{
       dayTotal += r.total;
       dayCash += r.cash;
       if(r.bank === 'MCB') dayMCB += r.account;
       else if(r.bank === 'Alfalah') dayAlfalah += r.account;
+      else if(r.bank === 'Haji (MCB)') dayHaji += r.account;
       const isCash = r.mode === 'Cash';
       const modeShort = r.mode === 'Bank Transfer' ? 'Transfer' : r.mode;
       const modeLabel = isCash ? modeShort : `${modeShort}${r.bank ? ' (' + r.bank + ')' : ''}`;
@@ -5109,10 +5134,12 @@ function renderReport(){
           <td class="cash-amt">${r.cash ? r.cash.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.bank === 'MCB' && r.account ? r.account.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.bank === 'Alfalah' && r.account ? r.account.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.bank === 'Haji (MCB)' && r.account ? r.account.toLocaleString() : '-'}</td>
           <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${r.total.toLocaleString()}</td>
         </tr>`;
     });
 
+    const dayAccountTotal = dayMCB + dayAlfalah + dayHaji;
     html += `
       <div class="day-group rpt-day-group">
         <div class="day-head rpt-day-head">
@@ -5129,6 +5156,7 @@ function renderReport(){
               <th style="width:100px;">Cash</th>
               <th style="width:100px;">MCB</th>
               <th style="width:100px;">Alfalah</th>
+              <th style="width:100px;">Haji (MCB)</th>
               <th style="width:100px;">Total</th>
             </tr>
           </thead>
@@ -5139,27 +5167,33 @@ function renderReport(){
               <td class="cash-amt">${dayCash.toLocaleString()}</td>
               <td class="account-amt">${dayMCB.toLocaleString()}</td>
               <td class="account-amt">${dayAlfalah.toLocaleString()}</td>
+              <td class="account-amt">${dayHaji.toLocaleString()}</td>
               <td>${dayTotal.toLocaleString()}</td>
             </tr>
           </tfoot>
         </table>
+        <div class="rpt-total-account-box">
+          <span class="rpt-total-account-label">Total Account</span>
+          <span class="rpt-total-account-amount">Rs. ${dayAccountTotal.toLocaleString()}</span>
+        </div>
       </div>`;
     overallTotal += dayTotal;
     overallCash += dayCash;
     overallMCB += dayMCB;
     overallAlfalah += dayAlfalah;
+    overallHaji += dayHaji;
   });
 
   if(dates.length > 1){
     const oldestDate = dates[dates.length - 1];
     const newestDate = dates[0];
-    const overallAccount = overallMCB + overallAlfalah;
+    const overallAccount = overallMCB + overallAlfalah + overallHaji;
     html = `
       <div class="rpt-grandtotal-box">
         <div class="rpt-grandtotal-label">Grand Total</div>
         <div class="rpt-grandtotal-range">${formatDate(oldestDate)} to ${formatDate(newestDate)}</div>
         <div class="rpt-grandtotal-breakdown">
-          Cash: Rs. ${overallCash.toLocaleString()} &nbsp;|&nbsp; Account: Rs. ${overallAccount.toLocaleString()} (MCB: ${overallMCB.toLocaleString()}, Alfalah: ${overallAlfalah.toLocaleString()})
+          Cash: Rs. ${overallCash.toLocaleString()} &nbsp;|&nbsp; Account: Rs. ${overallAccount.toLocaleString()} (MCB: ${overallMCB.toLocaleString()}, Alfalah: ${overallAlfalah.toLocaleString()}, Haji (MCB): ${overallHaji.toLocaleString()})
         </div>
         <div class="rpt-grandtotal-amount">Rs. ${overallTotal.toLocaleString()}</div>
       </div>` + html;
