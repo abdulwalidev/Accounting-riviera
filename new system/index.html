@@ -1569,6 +1569,33 @@
   html[data-theme="dark"] .theme-toggle .icon-sun{ display:block; }
   .theme-toggle:hover{ background:var(--ink); color:var(--paper); }
   html[data-theme="dark"] .theme-toggle:hover{ color:#0B1220; }
+
+  /* Printed paper is always white — force light-theme colors regardless of
+     the on-screen theme (placed after the dark-theme rules above so it wins
+     the cascade), so dark mode never bleeds into a printout. */
+  @media print{
+    html[data-theme="dark"]{
+      --ink:#0284C7;
+      --ink-fill:#0EA5E9;
+      --paper:#FFFFFF;
+      --muted:#5B6B84;
+      --cash:#166534;
+      --account:#1D4ED8;
+      --line:#0284C726;
+      --amber:#E7C55A;
+      --gold-deep:#A16207;
+      --danger:#B91C1C;
+      --danger-bg:#FEE2E2;
+    }
+    html[data-theme="dark"] .rpt-day-group,
+    html[data-theme="dark"] .total-due-box,
+    html[data-theme="dark"] .rpt-grandtotal-box,
+    html[data-theme="dark"] .panel.accent-guest,
+    html[data-theme="dark"] .panel.accent-rooms,
+    html[data-theme="dark"] .panel.accent-payments{
+      border-color:#000 !important;
+    }
+  }
 </style>
 <script>
   (function(){
