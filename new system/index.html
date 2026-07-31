@@ -169,17 +169,6 @@
     border-collapse:collapse;
     font-size:13px;
   }
-  /* Phone only: every long table scrolls sideways inside its own box
-     instead of squeezing columns or overflowing the page. Nothing else
-     on the page changes — same single-column layout as before. */
-  @media (max-width:600px){
-    table{
-      display:block;
-      overflow-x:auto;
-      -webkit-overflow-scrolling:touch;
-      white-space:nowrap;
-    }
-  }
   th{
     text-align:left;
     color:#fff;
@@ -1606,6 +1595,24 @@
     html[data-theme="dark"] .panel.accent-payments{
       border-color:#000 !important;
     }
+  }
+
+  /* Phone only: every long table scrolls sideways inside its own box
+     instead of squeezing columns or overflowing the page, and the nav
+     tabs stay a single swipeable row instead of wrapping into an awkward
+     2x2 block. Nothing else on the page changes — same single-column
+     layout, same desktop/tablet behavior above 600px. Placed last so it
+     wins over the earlier unconditional table/topnav rules. */
+  @media (max-width:600px){
+    table{
+      display:block;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      white-space:nowrap;
+    }
+    th, td{ padding:5px 6px; }
+    .topnav{ flex-wrap:nowrap; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .topnav .navbtn{ flex:0 0 auto; }
   }
 </style>
 <script>
