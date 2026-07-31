@@ -7,9 +7,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <!-- self-hosted: Edge/Brave Tracking Prevention silently blocks some CDN
      copies (this is why supabase.js is served locally too) -->
-<script src="xlsx.full.min.js"></script>
-<script src="flatpickr.min.js"></script>
-<link rel="stylesheet" href="flatpickr.min.css">
+<script src="/new%20system/xlsx.full.min.js"></script>
+<script src="/new%20system/flatpickr.min.js"></script>
+<link rel="stylesheet" href="/new%20system/flatpickr.min.css">
 <style>
   :root{
     /* Luxury hospitality palette: sky blue + gold, slate-cool surfaces */
@@ -707,6 +707,20 @@
     background:#fff;
     box-shadow:0 4px 14px rgba(0,0,0,0.14);
   }
+  .total-due-box{
+    border:2px solid #000;
+    border-radius:8px;
+    padding:10px 16px;
+    background:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,0.14);
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    font-weight:700;
+    color:var(--danger);
+    width:fit-content;
+    margin:0 0 14px auto;
+  }
+  .total-due-box:empty{ display:none; }
   .rpt-grandtotal-box{
     border:2px solid #000;
     border-radius:8px;
@@ -1462,11 +1476,13 @@
   html[data-theme="dark"] .panel,
   html[data-theme="dark"] .smart-panel,
   html[data-theme="dark"] .rpt-day-group,
+  html[data-theme="dark"] .total-due-box,
   html[data-theme="dark"] .login-card{ background:var(--paper); }
   html[data-theme="dark"] .panel.accent-guest,
   html[data-theme="dark"] .panel.accent-rooms,
   html[data-theme="dark"] .panel.accent-payments{ border-color:#2E2E2E; }
-  html[data-theme="dark"] .rpt-day-group{ border-color:#fff; }
+  html[data-theme="dark"] .rpt-day-group,
+  html[data-theme="dark"] .total-due-box{ border-color:#fff; }
   html[data-theme="dark"] input,
   html[data-theme="dark"] select,
   html[data-theme="dark"] .roomctrl button,
@@ -1498,7 +1514,8 @@
   html[data-theme="dark"] .mode-badge.cash{ background:rgba(74,222,128,0.22); }
   html[data-theme="dark"] .mode-badge.bank{ background:rgba(96,165,250,0.22); }
   html[data-theme="dark"] .sidebar{ background:#0A0A0A; box-shadow:3px 0 14px rgba(0,0,0,0.6); }
-  html[data-theme="dark"] .rpt-day-group{ box-shadow:0 4px 14px rgba(0,0,0,0.5); }
+  html[data-theme="dark"] .rpt-day-group,
+  html[data-theme="dark"] .total-due-box{ box-shadow:0 4px 14px rgba(0,0,0,0.5); }
   html[data-theme="dark"] tr.day-foot-total td{ background:rgba(255,255,255,0.04); }
   html[data-theme="dark"] .rpt-total-account-box{
     border-left-color:rgba(255,255,255,0.1);
@@ -1992,7 +2009,7 @@
     <div class="sub">Find any guest and check balance due, or open to add a payment</div>
 
     <div class="panel accent-guest">
-      <div id="gsearchTotalDue" style="font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--danger); margin-bottom:12px; text-align:right;"></div>
+      <div id="gsearchTotalDue" class="total-due-box"></div>
       <div class="search-row">
         <div class="grow">
           <label>Search (name, father name, CNIC, room no)</label>
@@ -2503,7 +2520,7 @@
   </div>
 </div>
 
-<script src="../supabase.js"></script>
+<script src="/supabase.js"></script>
 
 <script>
 // Bright in-page notice instead of the browser's plain alert() popup.
