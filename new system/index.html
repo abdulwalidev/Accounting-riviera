@@ -1597,22 +1597,50 @@
     }
   }
 
-  /* Phone only: every long table scrolls sideways inside its own box
-     instead of squeezing columns or overflowing the page, and the nav
-     tabs stay a single swipeable row instead of wrapping into an awkward
-     2x2 block. Nothing else on the page changes — same single-column
-     layout, same desktop/tablet behavior above 600px. Placed last so it
-     wins over the earlier unconditional table/topnav rules. */
+  /* ============== Phone layout (<=600px) ==============
+     Additive only — every rule here is scoped to this media query so
+     desktop/tablet (>600px) is completely untouched. Placed last in the
+     stylesheet so it wins the cascade against the earlier unconditional
+     rules for the same selectors (table, .topnav, .grid, etc). */
   @media (max-width:600px){
+    /* Nav: the topnav wraps into an awkward 2x2 block at this width —
+       keep it one swipeable row instead. All 4 destinations stay
+       reachable by horizontal swipe/scroll, nothing is hidden. */
+    .topnav{ flex-wrap:nowrap; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .topnav .navbtn{ flex:0 0 auto; }
+    .topbar-left{ flex-wrap:wrap; }
+
+    /* Multi-column forms/info-grids stack to one column — two side-by-side
+       fields under a phone keyboard is unusable. (.grid already auto-fits
+       to 1 column at this width via its minmax(200px) floor in most cases;
+       this is a belt-and-suspenders override, and the only way to win
+       against the three call sites that set an inline minmax(160px) style.)
+       Two of those call sites also give one child an inline
+       grid-column:span 2 — with only one explicit column left that just
+       forces the grid engine to fabricate an implicit second column and
+       place the next field into it, so the span has to be neutralized too. */
+    .grid{ grid-template-columns:1fr !important; }
+    .grid > div{ grid-column:auto !important; }
+    .addpay-form{ grid-template-columns:1fr; }
+    .smart-grid{ grid-template-columns:1fr; }
+
+    /* Tables: keep the horizontal scroll fallback, but tighten padding
+       and font-size first so less scrolling is needed to see a row. */
     table{
       display:block;
       overflow-x:auto;
       -webkit-overflow-scrolling:touch;
       white-space:nowrap;
+      font-size:11.5px;
     }
-    th, td{ padding:5px 6px; }
-    .topnav{ flex-wrap:nowrap; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .topnav .navbtn{ flex:0 0 auto; }
+    th, td{ padding:4px 5px; }
+
+    /* Headers pairing a title with filter/action controls: wrap onto
+       their own line instead of overlapping or clipping when they don't
+       fit side by side. */
+    .day-head, .rpd-guest-head, .collapse-head, .avail-year-nav{
+      flex-wrap:wrap;
+    }
   }
 </style>
 <script>
