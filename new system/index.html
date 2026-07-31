@@ -13,7 +13,8 @@
 <style>
   :root{
     /* Luxury hospitality palette: sky blue + gold, slate-cool surfaces */
-    --ink:#0284C7;        /* sky blue — text, buttons, table borders */
+    --ink:#0284C7;        /* sky blue — text, borders */
+    --ink-fill:#0EA5E9;   /* solid button/badge fills — same shade in both themes */
     --paper:#FFFFFF;      /* white page background */
     --muted:#5B6B84;      /* slate — labels, secondary text */
     --cash:#166534;       /* green — cash amounts */
@@ -177,7 +178,7 @@
     text-transform:uppercase;
     letter-spacing:0.05em;
     padding:10px 8px;
-    background:var(--ink);
+    background:var(--ink-fill);
     border:1px solid #026591;
   }
   td{
@@ -212,7 +213,7 @@
     line-height:1;
   }
   .roomctrl button:hover{
-    background:var(--ink);
+    background:var(--ink-fill);
     color:#fff;
   }
   .roomctrl span{
@@ -239,9 +240,9 @@
   }
   .btn{
     font-family:'Inter',sans-serif;
-    background:var(--ink);
+    background:var(--ink-fill);
     color:var(--paper);
-    border:1px solid var(--ink);
+    border:1px solid var(--ink-fill);
     padding:9px 16px;
     border-radius:4px;
     font-size:12px;
@@ -258,7 +259,7 @@
     border:1px solid var(--ink);
   }
   .btn.secondary:hover{
-    background:var(--ink);
+    background:var(--ink-fill);
     color:var(--paper);
   }
   /* Moved Out only makes sense once a booking already exists to amend —
@@ -425,7 +426,7 @@
     margin-top:16px;
   }
   .dash-action-card{
-    background:var(--ink);
+    background:var(--ink-fill);
     color:#fff;
     border-radius:8px;
     padding:18px 16px;
@@ -570,9 +571,9 @@
   .sidebar-toggle{
     position:fixed; top:14px; left:14px; z-index:60;
     width:38px; height:38px;
-    border:1px solid var(--ink);
+    border:1px solid var(--ink-fill);
     border-radius:6px;
-    background:var(--ink);
+    background:var(--ink-fill);
     color:var(--paper);
     font-size:17px;
     cursor:pointer;
@@ -633,7 +634,7 @@
   }
   .navitem:hover{ border-color:var(--ink); }
   .navitem.active{
-    background:var(--ink);
+    background:var(--ink-fill);
     color:var(--paper);
     font-weight:600;
   }
@@ -688,7 +689,7 @@
     justify-content:space-between;
     align-items:center;
     padding:8px 10px;
-    background:var(--ink);
+    background:var(--ink-fill);
     color:var(--paper);
     font-family:'Inter',sans-serif;
     font-size:13px;
@@ -726,7 +727,7 @@
     border-radius:8px;
     padding:16px 20px;
     margin-bottom:20px;
-    background:var(--ink);
+    background:var(--ink-fill);
     color:#fff;
     box-shadow:0 4px 14px rgba(0,0,0,0.14);
     text-align:center;
@@ -894,7 +895,7 @@
   .topnav .navbtn + .navbtn{ border-left:1px solid var(--ink); }
   .topnav .navbtn:hover{ background:#E9EEF8; }
   .topnav .navbtn.active{
-    background:var(--ink);
+    background:var(--ink-fill);
     color:var(--paper);
   }
   .search-row{
@@ -957,7 +958,7 @@
     cursor:pointer;
   }
   .rd-switch-btn.active{
-    background:var(--ink);
+    background:var(--ink-fill);
     color:#fff;
   }
   .beta-tag{
@@ -1048,7 +1049,7 @@
     border-radius:4px;
     padding:6px 12px;
   }
-  .backlink:hover{ background:var(--ink); color:#fff; }
+  .backlink:hover{ background:var(--ink-fill); color:#fff; }
   .detail-payhist td{
     font-size:13px;
   }
@@ -1456,7 +1457,6 @@
   html[data-theme="dark"]{
     color-scheme: dark;
     --ink:#7DD3FC;
-    --ink-fill:#0EA5E9;
     --paper:#0A0A0A;
     --muted:#9C9C9C;
     --cash:#4ADE80;
