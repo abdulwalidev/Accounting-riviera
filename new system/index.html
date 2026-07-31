@@ -1437,7 +1437,124 @@
     table{ font-size:11px; }
     th{ background:#eee !important; color:#000 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   }
+
+  /* ================= Dark theme ================= */
+  html[data-theme="dark"]{
+    color-scheme: dark;
+    --ink:#7DD3FC;
+    --ink-fill:#0EA5E9;
+    --paper:#0A0A0A;
+    --muted:#9C9C9C;
+    --cash:#4ADE80;
+    --account:#60A5FA;
+    --line:rgba(255,255,255,0.14);
+    --amber:#F0D078;
+    --gold-deep:#FBBF24;
+    --danger:#F87171;
+    --danger-bg:#3A1414;
+    --bg:var(--paper);
+    --panel:var(--paper);
+    --text:var(--ink);
+    --accent:var(--account);
+    --accent2:var(--cash);
+  }
+
+  html[data-theme="dark"] .panel,
+  html[data-theme="dark"] .smart-panel,
+  html[data-theme="dark"] .rpt-day-group,
+  html[data-theme="dark"] .login-card{ background:var(--paper); }
+  html[data-theme="dark"] .panel.accent-guest,
+  html[data-theme="dark"] .panel.accent-rooms,
+  html[data-theme="dark"] .panel.accent-payments{ border-color:#2E2E2E; }
+  html[data-theme="dark"] .rpt-day-group{ border-color:#fff; }
+  html[data-theme="dark"] input,
+  html[data-theme="dark"] select,
+  html[data-theme="dark"] .roomctrl button,
+  html[data-theme="dark"] .roomno-list,
+  html[data-theme="dark"] .rd-switch-btn{ background:#1A1A1A; }
+  html[data-theme="dark"] .roomno-list{ box-shadow:0 6px 18px rgba(0,0,0,0.6); }
+  html[data-theme="dark"] th{ border-color:rgba(255,255,255,0.15); }
+  html[data-theme="dark"] td{ border-color:rgba(255,255,255,0.08); }
+  html[data-theme="dark"] tbody tr:nth-child(even) td{ background:rgba(255,255,255,0.035); }
+  html[data-theme="dark"] th,
+  html[data-theme="dark"] .btn,
+  html[data-theme="dark"] .roomctrl button:hover,
+  html[data-theme="dark"] .btn.secondary:hover,
+  html[data-theme="dark"] .dash-action-card,
+  html[data-theme="dark"] .sidebar-toggle,
+  html[data-theme="dark"] .navitem.active,
+  html[data-theme="dark"] .day-head,
+  html[data-theme="dark"] .rpt-grandtotal-box,
+  html[data-theme="dark"] .topnav .navbtn.active,
+  html[data-theme="dark"] .rd-switch-btn.active,
+  html[data-theme="dark"] .backlink:hover{ background:var(--ink-fill); color:#fff; }
+  html[data-theme="dark"] .topnav .navbtn:hover{ background:rgba(255,255,255,0.06); }
+  html[data-theme="dark"] .status.paid{ background:rgba(74,222,128,0.18); }
+  html[data-theme="dark"] .status.partial{ background:rgba(240,208,120,0.18); }
+  html[data-theme="dark"] tr.mode-cash td{ background:rgba(74,222,128,0.08); }
+  html[data-theme="dark"] tr.mode-bank td{ background:rgba(96,165,250,0.08); }
+  html[data-theme="dark"] tbody tr.mode-cash:nth-child(even) td{ background:rgba(74,222,128,0.14); }
+  html[data-theme="dark"] tbody tr.mode-bank:nth-child(even) td{ background:rgba(96,165,250,0.14); }
+  html[data-theme="dark"] .mode-badge.cash{ background:rgba(74,222,128,0.22); }
+  html[data-theme="dark"] .mode-badge.bank{ background:rgba(96,165,250,0.22); }
+  html[data-theme="dark"] .sidebar{ background:#0A0A0A; box-shadow:3px 0 14px rgba(0,0,0,0.6); }
+  html[data-theme="dark"] .rpt-day-group{ box-shadow:0 4px 14px rgba(0,0,0,0.5); }
+  html[data-theme="dark"] tr.day-foot-total td{ background:rgba(255,255,255,0.04); }
+  html[data-theme="dark"] .rpt-total-account-box{
+    border-left-color:rgba(255,255,255,0.1);
+    border-right-color:rgba(255,255,255,0.1);
+    border-bottom-color:rgba(255,255,255,0.1);
+    background:rgba(255,255,255,0.04);
+  }
+  html[data-theme="dark"] .rpt-total-account-label{ border-right-color:rgba(255,255,255,0.1); }
+  html[data-theme="dark"] .rpd-guest-head{ background:#1A1A1A; }
+  html[data-theme="dark"] .rpd-guest-head:hover{ background:#242424; }
+  html[data-theme="dark"] .smart-panel-head{ background:#1A1A1A; }
+  html[data-theme="dark"] .smart-row{ border-bottom-color:rgba(255,255,255,0.07); }
+  html[data-theme="dark"] .smart-row .sr-room,
+  html[data-theme="dark"] .smart-row .sr-type,
+  html[data-theme="dark"] .smart-row .sr-status,
+  html[data-theme="dark"] .smart-row .sr-arrival{ border-right-color:rgba(255,255,255,0.07); }
+  html[data-theme="dark"] .smart-row.clickable:hover,
+  html[data-theme="dark"] .collapse-head:hover{ background:rgba(255,255,255,0.04); }
+  html[data-theme="dark"] .editing-bar{ background:rgba(240,208,120,0.12); }
+  html[data-theme="dark"] .unitType.auto-detected{ background:rgba(74,222,128,0.12); }
+  html[data-theme="dark"] .modal-backdrop{ background:rgba(0,0,0,0.65); }
+  /* gold/amber stays a light accent in dark mode, so text sitting on a solid
+     gold fill needs to flip dark rather than inherit the (now light) --ink */
+  html[data-theme="dark"] .avail-day-box:hover,
+  html[data-theme="dark"] .roomno-item:hover,
+  html[data-theme="dark"] .new-flag,
+  html[data-theme="dark"] .beta-tag,
+  html[data-theme="dark"] .btn.edit-gold,
+  html[data-theme="dark"] .btn.edit-gold:hover{ color:#0B1220; }
+
+  .theme-toggle{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:32px;
+    min-height:32px;
+    border-radius:4px;
+    border:1px solid var(--ink);
+    background:transparent;
+    color:var(--ink);
+    cursor:pointer;
+    margin-right:8px;
+  }
+  .theme-toggle svg{ width:17px; height:17px; }
+  .theme-toggle .icon-sun{ display:none; }
+  html[data-theme="dark"] .theme-toggle .icon-moon{ display:none; }
+  html[data-theme="dark"] .theme-toggle .icon-sun{ display:block; }
+  .theme-toggle:hover{ background:var(--ink); color:var(--paper); }
+  html[data-theme="dark"] .theme-toggle:hover{ color:#0B1220; }
 </style>
+<script>
+  (function(){
+    var saved = localStorage.getItem('theme');
+    if(saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  })();
+</script>
 </head>
 
 <body>
@@ -1496,6 +1613,10 @@
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
     </div>
+    <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"></path></svg>
+    </button>
     <button class="btn secondary" id="logoutBtn" style="min-height:32px; padding:5px 10px;">Sign Out</button>
   </div>
 
@@ -1871,6 +1992,7 @@
     <div class="sub">Find any guest and check balance due, or open to add a payment</div>
 
     <div class="panel accent-guest">
+      <div id="gsearchTotalDue" style="font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--danger); margin-bottom:12px;"></div>
       <div class="search-row">
         <div class="grow">
           <label>Search (name, father name, CNIC, room no)</label>
@@ -4082,6 +4204,7 @@ const newPaymentIds = new Set();
 function renderSearch(){
   if(!initialLoadDone){
     document.getElementById('gsearchList').innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    document.getElementById('gsearchTotalDue').textContent = '';
     return;
   }
   const all = loadAllEntries();
@@ -4134,6 +4257,10 @@ function renderSearch(){
   if(hideCheckedOut){
     items = items.filter(({entry})=> !getDetailValue(entry, 'Actual Checkout'));
   }
+
+  // Total due across every guest currently matching the filters above (not just those on screen).
+  const totalDue = items.reduce((sum, {t})=> sum + t.due, 0);
+  document.getElementById('gsearchTotalDue').textContent = 'TOTAL DUE: Rs. ' + totalDue.toLocaleString();
 
   if(items.length === 0){
     listEl.innerHTML = '<div class="empty-note">No guests match.</div>';
@@ -6487,6 +6614,17 @@ document.getElementById('logoutBtn').addEventListener('click', ()=>{
   if(pendingPushIds.size > 0 && !confirm('Some saves have not reached the cloud database yet. Sign out anyway?')) return;
   try{ sessionStorage.removeItem(LOGIN_SESSION_KEY); }catch(e){ /* best effort */ }
   location.reload();
+});
+
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  if(isDark){
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('theme', 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('theme', 'dark');
+  }
 });
 
 // start with 1 room row and 1 payment row
