@@ -1483,12 +1483,15 @@
   html[data-theme="dark"] .panel.accent-payments{ border-color:#2E2E2E; }
   html[data-theme="dark"] .rpt-day-group,
   html[data-theme="dark"] .total-due-box{ border-color:#fff; }
-  html[data-theme="dark"] input,
-  html[data-theme="dark"] select,
   html[data-theme="dark"] .roomctrl button,
   html[data-theme="dark"] .roomno-list,
   html[data-theme="dark"] .rd-switch-btn{ background:#1A1A1A; }
   html[data-theme="dark"] .roomno-list{ box-shadow:0 6px 18px rgba(0,0,0,0.6); }
+  /* typed/selected content (inputs, dates) stays on a light field so the
+     text itself can be plain black, instead of following the dark chrome */
+  html[data-theme="dark"] input,
+  html[data-theme="dark"] select{ background:#fff; color:#111; }
+  html[data-theme="dark"] input::placeholder{ color:#8A8A8A; }
   html[data-theme="dark"] th{ border-color:rgba(255,255,255,0.15); }
   html[data-theme="dark"] td{ border-color:rgba(255,255,255,0.08); }
   html[data-theme="dark"] tbody tr:nth-child(even) td{ background:rgba(255,255,255,0.035); }
