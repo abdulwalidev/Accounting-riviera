@@ -3109,11 +3109,37 @@ function deleteRow(btn){
 
 // ---- Delete confirmation: every ✕ shows what is being removed and
 // requires typing "delete", so a mis-click can't wipe entered data. ----
+// Exception: a row nobody has touched yet (every field still at its
+// blank/default state) skips the modal entirely — there's nothing to lose.
 let pendingDelete = null; // { tr, kind: 'room' | 'payment' }
 
+function isRowEmpty(tr, kind){
+  if(kind === 'room'){
+    return !tr.querySelector('.roomNo').value.trim() &&
+           !tr.querySelector('.unitType').value &&
+           !tr.querySelector('.rent').value.trim() &&
+           !tr.querySelector('.movedOut').value;
+  }
+  if(kind === 'payment'){
+    return !tr.querySelector('.payRemarks').value.trim() &&
+           !(parseFloat(tr.querySelector('.payCash').value) || 0) &&
+           !(parseFloat(tr.querySelector('.payAccount').value) || 0) &&
+           !tr.querySelector('.payBank').value;
+  }
+  // detail row
+  return !tr.querySelector('.edKind').value && !tr.querySelector('.edValue').value.trim();
+}
+
 function requestDeleteRow(btn, kind){
-  // Every ✕ in the app goes through this modal — no exceptions.
   const tr = btn.closest(kind === 'detail' ? '.extra-detail-row' : 'tr');
+
+  if(isRowEmpty(tr, kind)){
+    if(kind === 'room') deleteRow(tr);
+    else if(kind === 'payment') deletePayRow(tr);
+    else tr.remove();
+    return;
+  }
+
   pendingDelete = { tr, kind };
   const body = document.getElementById('deleteBody');
 
