@@ -169,6 +169,17 @@
     border-collapse:collapse;
     font-size:13px;
   }
+  /* Phone only: every long table scrolls sideways inside its own box
+     instead of squeezing columns or overflowing the page. Nothing else
+     on the page changes — same single-column layout as before. */
+  @media (max-width:600px){
+    table{
+      display:block;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      white-space:nowrap;
+    }
+  }
   th{
     text-align:left;
     color:#fff;
