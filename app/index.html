@@ -961,18 +961,6 @@
     background:var(--ink-fill);
     color:#fff;
   }
-  .beta-tag{
-    display:inline-block;
-    background:var(--gold-deep);
-    color:#fff;
-    font-size:8px;
-    font-weight:700;
-    letter-spacing:0.05em;
-    padding:2px 5px;
-    border-radius:8px;
-    vertical-align:middle;
-    margin-left:2px;
-  }
   .smart-grid{
     display:grid;
     grid-template-columns:repeat(4,1fr);
@@ -1546,7 +1534,6 @@
   html[data-theme="dark"] .avail-day-box:hover,
   html[data-theme="dark"] .roomno-item:hover,
   html[data-theme="dark"] .new-flag,
-  html[data-theme="dark"] .beta-tag,
   html[data-theme="dark"] .btn.edit-gold,
   html[data-theme="dark"] .btn.edit-gold:hover{ color:#0B1220; }
 
@@ -1681,13 +1668,14 @@
   <div class="sidebar-inner">
     <div class="navitem" id="navDashboard" onclick="showView('dashboard')">Dashboard</div>
     <div class="navitem" id="navCico" onclick="showView('cico')">Check-in / Check-out</div>
-    <div class="navitem" id="navRoomDetail" onclick="showView('roomdetail')">Room Detail <span class="beta-tag">BETA</span></div>
+    <div class="navitem" id="navRoomDetail" onclick="showView('roomdetail')">Room Detail</div>
     <div class="navitem active" id="navEntry" onclick="showView('entry')">Guest Entry</div>
     <div class="navitem" id="navReservations" onclick="showView('reservations')">Reservations</div>
     <div class="navitem" id="navAddPay" onclick="showView('addpay')">Add Payment</div>
     <div class="navitem" id="navSearch" onclick="showView('search')">Search</div>
     <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
     <div class="navitem" id="navLedgers" onclick="showView('ledgers')">Ledgers</div>
+    <div class="navitem" id="navFullAudit" onclick="showView('audit')">Full Audit</div>
     <div class="navitem" id="navDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</div>
   </div>
   <div class="sidebar-inner" style="margin-top:auto;">
@@ -2403,17 +2391,32 @@
       <div id="dayLockList"><div class="empty-note">No data yet.</div></div>
     </div>
 
+  </div>
+
+  <div class="view" id="view-audit">
+
+    <h1>Full Audit</h1>
+    <div class="sub">Every entry created, entry edited, and payment added, for the day picked below — recorded automatically, cannot be edited.</div>
+
     <div class="panel accent-report">
-      <h2>Full Audit — All Changes <span class="locked-note">Recorded automatically — cannot be edited</span></h2>
-      <div class="sub" style="margin-bottom:14px;">Every entry created, entry edited, and payment added, for the day picked below — useful to review before locking it.</div>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); margin-bottom:12px;">
         <div>
-          <label>Date</label>
-          <input type="date" id="auditLockDate">
-          <div class="date-readout" id="auditLockDateReadout"></div>
+          <label>Date <span class="locked-note">clear it to see every day</span></label>
+          <input type="date" id="auditPageDate">
+          <div class="date-readout" id="auditPageDateReadout"></div>
+        </div>
+        <div>
+          <label>Rows to show</label>
+          <select id="auditPageLimit">
+            <option value="50">Latest 50</option>
+            <option value="100" selected>Latest 100</option>
+            <option value="250">Latest 250</option>
+            <option value="500">Latest 500</option>
+            <option value="0">All (no limit)</option>
+          </select>
         </div>
       </div>
-      <div id="auditLockBody"><div class="empty-note">No data yet.</div></div>
+      <div id="auditPageBody"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -2670,7 +2673,7 @@ function showView(view){
     return;
   }
   currentView = view;
-  ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','daylock','deleteentity','roomdetail'].forEach(v=>{
+  ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','audit','daylock','deleteentity','roomdetail'].forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
@@ -2683,6 +2686,7 @@ function showView(view){
   document.getElementById('navSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('navReport').classList.toggle('active', view === 'report' || view === 'graphs');
   document.getElementById('navLedgers').classList.toggle('active', view === 'ledgers');
+  document.getElementById('navFullAudit').classList.toggle('active', view === 'audit');
   document.getElementById('navDayLock').classList.toggle('active', view === 'daylock');
   document.getElementById('navDeleteEntity').classList.toggle('active', view === 'deleteentity');
   document.getElementById('topNavEntry').classList.toggle('active', view === 'entry');
@@ -2698,6 +2702,7 @@ function showView(view){
   if(view === 'entry') renderTodayEntries();
   if(view === 'addpay') renderApList();
   if(view === 'ledgers') renderLedgers();
+  if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
   if(view === 'deleteentity') renderDeleteEntityList();
   if(view === 'roomdetail') renderRoomDetail();
@@ -2812,14 +2817,15 @@ document.addEventListener('DOMContentLoaded', ()=>{
   updateDateReadout(document.getElementById('auditEntryDate'), document.getElementById('auditEntryDateReadout'));
   document.getElementById('auditEntryDate').addEventListener('input', e=>{
     updateDateReadout(e.target, document.getElementById('auditEntryDateReadout'));
-    renderAuditLog('auditEntryBody', e.target.value);
+    renderAuditLog('auditEntryBody', e.target.value, 200);
   });
-  document.getElementById('auditLockDate').value = todayStr();
-  updateDateReadout(document.getElementById('auditLockDate'), document.getElementById('auditLockDateReadout'));
-  document.getElementById('auditLockDate').addEventListener('input', e=>{
-    updateDateReadout(e.target, document.getElementById('auditLockDateReadout'));
-    renderAuditLog('auditLockBody', e.target.value);
+  document.getElementById('auditPageDate').value = todayStr();
+  updateDateReadout(document.getElementById('auditPageDate'), document.getElementById('auditPageDateReadout'));
+  document.getElementById('auditPageDate').addEventListener('input', e=>{
+    updateDateReadout(e.target, document.getElementById('auditPageDateReadout'));
+    renderAuditPage();
   });
+  document.getElementById('auditPageLimit').addEventListener('change', renderAuditPage);
   document.getElementById('delSearchInput').addEventListener('input', renderDeleteEntityList);
   ['input','change'].forEach(evt=>{
     document.getElementById('dNewDate').addEventListener(evt, e=>{
@@ -3382,7 +3388,7 @@ function scheduleKarachiMidnightRollover(){
 function handleKarachiMidnightRollover(){
   const newToday = todayStr();
   if(newToday === lastKnownToday) return;
-  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','dlDate','auditEntryDate','auditLockDate'].forEach(id=>{
+  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','dlDate','auditEntryDate','auditPageDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(el && el.value === lastKnownToday) el.value = newToday;
   });
@@ -3401,8 +3407,8 @@ function handleKarachiMidnightRollover(){
   if(dlDateEl) updateDateReadout(dlDateEl, document.getElementById('dlDateReadout'));
   const auditEntryDateEl = document.getElementById('auditEntryDate');
   if(auditEntryDateEl) updateDateReadout(auditEntryDateEl, document.getElementById('auditEntryDateReadout'));
-  const auditLockDateEl = document.getElementById('auditLockDate');
-  if(auditLockDateEl) updateDateReadout(auditLockDateEl, document.getElementById('auditLockDateReadout'));
+  const auditPageDateEl = document.getElementById('auditPageDate');
+  if(auditPageDateEl) updateDateReadout(auditPageDateEl, document.getElementById('auditPageDateReadout'));
   const cicoFromEl = document.getElementById('cicoFrom');
   if(cicoFromEl) updateDateReadout(cicoFromEl, document.getElementById('cicoFromReadout'));
   const cicoToEl = document.getElementById('cicoTo');
@@ -3413,6 +3419,7 @@ function handleKarachiMidnightRollover(){
   if(currentView === 'graphs') renderGraphs();
   if(currentView === 'search') renderSearch();
   if(currentView === 'ledgers') renderLedgers();
+  if(currentView === 'audit') renderAuditPage();
   if(currentView === 'daylock') renderDayLock();
   if(currentView === 'roomdetail') renderRoomDetail();
   if(currentView === 'dashboard') renderDashboard();
@@ -4114,7 +4121,7 @@ function resetEntryForm(){
 function renderTodayEntries(){
   const box = document.getElementById('todayEntriesBody');
   const auditEntryDateEl = document.getElementById('auditEntryDate');
-  renderAuditLog('auditEntryBody', auditEntryDateEl ? auditEntryDateEl.value : todayStr());
+  renderAuditLog('auditEntryBody', auditEntryDateEl ? auditEntryDateEl.value : todayStr(), 200);
   if(!initialLoadDone){
     box.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     return;
@@ -5055,21 +5062,28 @@ function guestNameForAudit(guestId){
   return e ? (e.guestName || '(no name)') : '(deleted entry)';
 }
 
-function renderAuditLog(bodyId, dateStr){
+// `dateStr` empty/omitted shows every day on record. `limit` (0 = no limit)
+// caps how many rows get rendered — the whole guest_edits table is already
+// pulled into memory, so this is purely about not choking the DOM/browser
+// on a long history, not an extra query.
+function renderAuditLog(bodyId, dateStr, limit){
   const box = document.getElementById(bodyId);
   if(!box) return;
   if(!initialLoadDone){
     box.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     return;
   }
-  const day = dateStr || todayStr();
-  const logs = getAllAuditLogs().filter(l=> l.at && toKarachiDateStr(l.at) === day);
+  let logs = getAllAuditLogs();
+  if(dateStr) logs = logs.filter(l=> l.at && toKarachiDateStr(l.at) === dateStr);
   if(logs.length === 0){
-    box.innerHTML = '<div class="empty-note">No changes recorded on ' + formatDate(day) + '.</div>';
+    box.innerHTML = '<div class="empty-note">No changes recorded' + (dateStr ? ' on ' + formatDate(dateStr) : '') + '.</div>';
     return;
   }
   logs.sort((a,b)=> (b.at || '').localeCompare(a.at || ''));
+  const total = logs.length;
+  if(limit && total > limit) logs = logs.slice(0, limit);
   box.innerHTML = `
+    ${limit && total > limit ? `<div class="sub" style="margin-bottom:8px;">Showing the latest ${limit.toLocaleString()} of ${total.toLocaleString()} changes.</div>` : ''}
     <table>
       <thead>
         <tr>
@@ -5093,6 +5107,13 @@ function renderAuditLog(bodyId, dateStr){
         }).join('')}
       </tbody>
     </table>`;
+}
+
+function renderAuditPage(){
+  const dateEl = document.getElementById('auditPageDate');
+  const limitEl = document.getElementById('auditPageLimit');
+  const limit = limitEl ? parseInt(limitEl.value, 10) || 0 : 100;
+  renderAuditLog('auditPageBody', dateEl ? dateEl.value : '', limit);
 }
 
 function toggleRoomDetail(){
@@ -6077,9 +6098,6 @@ function renderDayLock(){
   const dateEl = document.getElementById('dlDate');
   const actionBtn = document.getElementById('dlActionBtn');
   if(!listEl || !dateEl || !actionBtn) return;
-
-  const auditLockDateEl = document.getElementById('auditLockDate');
-  renderAuditLog('auditLockBody', auditLockDateEl ? auditLockDateEl.value : todayStr());
 
   if(!initialLoadDone){
     listEl.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
