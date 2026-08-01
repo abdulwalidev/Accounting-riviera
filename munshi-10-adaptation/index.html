@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guest Entry Form</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<!-- self-hosted: Edge/Brave Tracking Prevention silently blocks some CDN
+     copies (this is why supabase.js is served locally too) -->
+<script src="xlsx.full.min.js"></script>
+<script src="flatpickr.min.js"></script>
+<link rel="stylesheet" href="flatpickr.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <h2>Guest Entry System</h2>
+    <div class="sub">Sign in to open the guest register</div>
+    <label for="loginUsername">Username</label>
+    <input type="text" id="loginUsername" autocomplete="username" placeholder="accountant@riviera">
+    <label for="loginPassword">Password</label>
+    <input type="password" id="loginPassword" autocomplete="current-password">
+    <div class="login-error" id="loginError"></div>
+    <button class="btn" id="loginBtn" style="width:100%; margin-top:6px;">Sign In</button>
+  </div>
+</div>
+
+<div id="loadingOverlay" class="hidden">
+  <div class="login-card" style="text-align:center;">
+    <h2>One moment…</h2>
+    <div class="sub" id="loadingOverlayText" style="margin-bottom:0;">Fetching the latest data from the cloud database…</div>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
+
+<button class="sidebar-toggle no-print" id="sidebarToggle" onclick="toggleSidebar()" title="Menu" aria-label="Open menu">☰</button>
+<div class="sidebar-backdrop no-print" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+<div class="sidebar no-print" id="sidebar">
+  <div class="sidebar-inner">
+    <div class="navitem" id="navDashboard" onclick="showView('dashboard')">Dashboard</div>
+    <div class="navitem" id="navCico" onclick="showView('cico')">Check-in / Check-out</div>
+    <div class="navitem" id="navRoomDetail" onclick="showView('roomdetail')">Room Detail <span class="beta-tag">BETA</span></div>
+    <div class="navitem active" id="navEntry" onclick="showView('entry')">Guest Entry</div>
+    <div class="navitem" id="navReservations" onclick="showView('reservations')">Reservations</div>
+    <div class="navitem" id="navAddPay" onclick="showView('addpay')">Add Payment</div>
+    <div class="navitem" id="navSearch" onclick="showView('search')">Search</div>
+    <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
+    <div class="navitem" id="navLedgers" onclick="showView('ledgers')">Ledgers</div>
+    <div class="navitem" id="navDayLock" onclick="showView('daylock')" style="display:none;">Night Audit</div>
+    <div class="navitem" id="navAudit" onclick="showView('audit')" style="display:none;">Audit</div>
+  </div>
+  <div class="sidebar-inner" style="margin-top:auto;">
+    <div class="navitem" id="navDeleteEntity" onclick="showView('deleteentity')" style="display:none;"><span style="color:var(--danger);">⚠</span> Delete Entity</div>
+  </div>
+</div>
+
+<div id="munshiChrome" class="no-print">
+  <div class="mn-header">
+    <div class="mn-logo">🏨 <span>RIVIERA RESORT</span></div>
+    <div class="mn-search">
+      <div class="search-input-wrap">
+        <input type="text" id="mnSearchInput" placeholder="Search reservations, folios, invoices..." autocomplete="off" onkeydown="if(event.key==='Enter'){ mnJumpToSearch(); }">
+        <button type="button" class="search-clear-btn" tabindex="-1" title="Clear search">✕</button>
+      </div>
+    </div>
+    <div class="mn-header-right">
+      <div class="mn-date" id="mnDate"></div>
+      <div class="mn-user" id="mnUser"></div>
+      <div class="mode-switch" onclick="toggleUiMode()" title="Switch between the Smart and Munshi look">
+        <span>Smart</span>
+        <div class="mode-switch-track"><div class="mode-switch-knob"></div></div>
+        <span>Munshi</span>
+      </div>
+      <button class="btn secondary" id="mnLogoutBtn" style="min-height:32px; padding:5px 10px;">Sign Out</button>
+    </div>
+  </div>
+  <div class="mn-tabs" id="mnTabs">
+    <button class="mn-tab active" id="mnTabHome" onclick="mnGoTo('home')">Home</button>
+    <button class="mn-tab" id="mnTabReservations" onclick="mnGoTo('reservations')">Reservations</button>
+    <button class="mn-tab" id="mnTabFrontdesk" onclick="mnGoTo('frontdesk')">Front Desk</button>
+    <button class="mn-tab" id="mnTabAnalysis" onclick="mnGoTo('analysis')">Analysis</button>
+    <button class="mn-tab mn-tab-disabled" id="mnTabPos" disabled title="Not used in this system">POS</button>
+    <button class="mn-tab" id="mnTabCashier" onclick="mnGoTo('cashier')">Cashier</button>
+    <button class="mn-tab" id="mnTabNightaudit" onclick="mnGoTo('nightaudit')">Night Audit</button>
+    <button class="mn-tab mn-tab-disabled" id="mnTabHousekeeping" disabled title="Not used in this system">Housekeeping</button>
+    <button class="mn-tab" id="mnTabCityledger" onclick="mnGoTo('cityledger')">City Ledger</button>
+    <button class="mn-tab" id="mnTabAccounts" onclick="mnGoTo('accounts')">Accounts</button>
+  </div>
+  <div class="mn-subtabs" id="mnSubtabs"></div>
+</div>
+
+<div class="main">
+  <div class="topbar no-print">
+    <div class="topbar-left">
+      <div id="cloudStatus"></div>
+      <div id="whoami"></div>
+    </div>
+    <div class="topnav">
+      <button class="navbtn active" id="topNavEntry" onclick="showView('entry')">Guest Entry</button>
+      <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
+      <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
+      <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
+    </div>
+    <div class="mode-switch" onclick="toggleUiMode()" title="Switch between the Smart and Munshi look">
+      <span>Smart</span>
+      <div class="mode-switch-track"><div class="mode-switch-knob"></div></div>
+      <span>Munshi</span>
+    </div>
+    <button class="btn secondary" id="logoutBtn" style="min-height:32px; padding:5px 10px;">Sign Out</button>
+  </div>
+
+  <div class="view" id="view-dashboard">
+
+    <div class="smart-only smart-only-row">
+      <div>
+        <h1>Dashboard</h1>
+        <div class="sub">Today at a glance</div>
+      </div>
+      <button class="btn" onclick="openAvailModal()">Check Availability</button>
+    </div>
+
+    <!-- Smart mode: original plain tiles, untouched -->
+    <div class="smart-only">
+      <div class="dash-tiles">
+        <div class="dash-tile" onclick="showView('roomdetail')">
+          <div class="dash-tile-val" data-dash="arrivals">0</div>
+          <div class="dash-tile-lbl">Arrivals</div>
+        </div>
+        <div class="dash-tile" onclick="showView('roomdetail')">
+          <div class="dash-tile-val" data-dash="inhouse">0</div>
+          <div class="dash-tile-lbl">Inhouse</div>
+        </div>
+        <div class="dash-tile" onclick="showView('cico')">
+          <div class="dash-tile-val" data-dash="departures">0</div>
+          <div class="dash-tile-lbl">Departures</div>
+        </div>
+        <div class="dash-tile" onclick="showView('cico')">
+          <div class="dash-tile-val" data-dash="checkedout">0</div>
+          <div class="dash-tile-lbl">Checked out</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Room status</h2>
+        <div class="dash-tiles">
+          <div class="dash-tile"><div class="dash-tile-val" data-dash="occ">0</div><div class="dash-tile-lbl">Occ</div></div>
+          <div class="dash-tile"><div class="dash-tile-val" data-dash="ready">0</div><div class="dash-tile-lbl">Ready</div></div>
+          <div class="dash-tile"><div class="dash-tile-val" data-dash="dirty">0</div><div class="dash-tile-lbl">Dirty</div></div>
+          <div class="dash-tile"><div class="dash-tile-val" data-dash="ooo">0</div><div class="dash-tile-lbl">OOO</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Night summary</h2>
+        <div class="dash-tiles">
+          <div class="dash-tile"><div class="dash-tile-val" data-dash="nightocc">0</div><div class="dash-tile-lbl">Occupied</div></div>
+          <div class="dash-tile"><div class="dash-tile-val" data-dash="nightavail">0</div><div class="dash-tile-lbl">Available</div></div>
+        </div>
+      </div>
+
+      <div class="dash-actions">
+        <div class="dash-action-card" onclick="showView('entry')">
+          <div class="dash-action-title">New reservation</div>
+          <div class="dash-action-sub">Click to create</div>
+        </div>
+        <div class="dash-action-card" onclick="showView('addpay')">
+          <div class="dash-action-title">Add Payment</div>
+          <div class="dash-action-sub">Record cash or bank</div>
+        </div>
+        <div class="dash-action-card" onclick="showView('entry')">
+          <div class="dash-action-title">New check-in</div>
+          <div class="dash-action-sub">Walk-in or booked</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Munshi mode: PMS-style icon stat cards, exact replica of the reference layout -->
+    <div class="mn-only">
+      <div class="mn-dash-grid">
+        <div class="mn-dash-tile" onclick="showView('roomdetail')">
+          <div class="mn-tile-head"><span class="mn-tile-icon" style="background:#eaf2fe;">📥</span><span class="mn-dash-lbl">Arrivals</span></div>
+          <div class="mn-dash-val" data-dash="arrivals">0</div>
+        </div>
+        <div class="mn-dash-tile" onclick="showView('roomdetail')">
+          <div class="mn-tile-head"><span class="mn-tile-icon" style="background:#e6f4ea;">🏠</span><span class="mn-dash-lbl">Inhouse</span></div>
+          <div class="mn-dash-val" data-dash="inhouse">0</div>
+        </div>
+        <div class="mn-dash-tile" onclick="showView('cico')">
+          <div class="mn-tile-head"><span class="mn-tile-icon" style="background:#fff4d6;">📤</span><span class="mn-dash-lbl">Departures</span></div>
+          <div class="mn-dash-val" data-dash="departures">0</div>
+        </div>
+        <div class="mn-dash-tile" onclick="showView('cico')">
+          <div class="mn-tile-head"><span class="mn-tile-icon" style="background:#fce8ef;">✅</span><span class="mn-dash-lbl">Checked out</span></div>
+          <div class="mn-dash-val" data-dash="checkedout">0</div>
+        </div>
+        <div class="mn-dash-tile" onclick="showView('roomdetail')">
+          <div class="mn-tile-head"><span class="mn-tile-icon" style="background:#eaf2fe;">🚪</span><span class="mn-dash-lbl">Room Status</span></div>
+          <div class="mn-substats">
+            <div class="mn-substat"><span class="mn-substat-icon" style="color:#1a73e8;">🧍</span><span class="mn-substat-val" data-dash="occ">0</span><span class="mn-substat-lbl">Occ</span></div>
+            <div class="mn-substat"><span class="mn-substat-icon" style="color:#1e8e3e;">✅</span><span class="mn-substat-val" data-dash="ready">0</span><span class="mn-substat-lbl">Ready</span></div>
+            <div class="mn-substat"><span class="mn-substat-icon" style="color:#d33b6a;">✏️</span><span class="mn-substat-val" data-dash="dirty">0</span><span class="mn-substat-lbl">Dirty</span></div>
+            <div class="mn-substat"><span class="mn-substat-icon" style="color:#8a8f98;">✂️</span><span class="mn-substat-val" data-dash="ooo">0</span><span class="mn-substat-lbl">OOO</span></div>
+          </div>
+        </div>
+        <div class="mn-dash-tile" onclick="showView('roomdetail')">
+          <div class="mn-tile-head"><span class="mn-tile-icon" style="background:#eaf2fe;">🌙</span><span class="mn-dash-lbl">Night Summary</span></div>
+          <div class="mn-substats">
+            <div class="mn-substat"><span class="mn-substat-icon" style="color:#1a73e8;">🧍</span><span class="mn-substat-val" data-dash="nightocc">0</span><span class="mn-substat-lbl">Occupied</span></div>
+            <div class="mn-substat"><span class="mn-substat-icon" style="color:#1e8e3e;">✅</span><span class="mn-substat-val" data-dash="nightavail">0</span><span class="mn-substat-lbl">Available</span></div>
+          </div>
+        </div>
+        <div class="mn-action-card" onclick="showView('entry')">
+          <div class="mn-tile-head"><span class="mn-tile-icon" style="background:#eef0fd;">📅</span><span class="mn-action-title">New reservation</span></div>
+          <div class="mn-action-sub">Click to create</div>
+        </div>
+        <div class="mn-action-card mn-disabled" onclick="mnNotAvailable()">
+          <div class="mn-tile-head"><span class="mn-tile-icon" style="background:#e6f4ea;">🧾</span><span class="mn-action-title">Point-of-Sale</span></div>
+          <div class="mn-action-sub">Open register</div>
+        </div>
+        <div class="mn-action-card" onclick="showView('entry')">
+          <div class="mn-tile-head"><span class="mn-tile-icon" style="background:#eaf2fe;">🔑</span><span class="mn-action-title">New check-in</span></div>
+          <div class="mn-action-sub">Walk-in or booked</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-frontdesk">
+
+    <h1>Front Desk Dashboard</h1>
+
+    <div class="mn-fd-grid">
+      <div class="mn-card">
+        <div class="mn-card-title">Entry</div>
+        <ul class="mn-linklist">
+          <li onclick="showView('newcheckin')"><span class="mn-link-num">1</span><span class="mn-link-text">Checkin</span></li>
+          <li class="mn-disabled" onclick="mnNotAvailable()"><span class="mn-link-num">2</span><span class="mn-link-text">POS</span></li>
+          <li class="mn-disabled" onclick="mnNotAvailable('Open a guest\'s detail page and use Change Room there.')"><span class="mn-link-num">3</span><span class="mn-link-text">Change Room</span></li>
+          <li class="mn-disabled" onclick="mnNotAvailable()"><span class="mn-link-num">4</span><span class="mn-link-text">Change Rate</span></li>
+          <li class="mn-disabled" onclick="mnNotAvailable()"><span class="mn-link-num">5</span><span class="mn-link-text">Re-checkin</span></li>
+          <li onclick="showView('search')"><span class="mn-link-num">6</span><span class="mn-link-text">Add / Search Customers</span></li>
+        </ul>
+      </div>
+      <div class="mn-card">
+        <div class="mn-card-title">Frontoffice</div>
+        <ul class="mn-linklist">
+          <li class="mn-disabled" onclick="mnNotAvailable()"><span class="mn-link-num">1</span><span class="mn-link-text">Forecast</span></li>
+          <li onclick="showView('reservations')"><span class="mn-link-num">2</span><span class="mn-link-text">Reservations</span><span class="mn-link-badge">New</span></li>
+          <li onclick="showView('search')"><span class="mn-link-num">3</span><span class="mn-link-text">Search Reservations</span></li>
+          <li onclick="showView('cico')"><span class="mn-link-num">4</span><span class="mn-link-text">Expected Checkins</span></li>
+          <li onclick="showView('cico')"><span class="mn-link-num">5</span><span class="mn-link-text">Expected Checkouts</span></li>
+          <li onclick="showView('cico')"><span class="mn-link-num">6</span><span class="mn-link-text">Actual Checkins</span></li>
+          <li onclick="showView('cico')"><span class="mn-link-num">7</span><span class="mn-link-text">Actual Checkouts</span></li>
+        </ul>
+        <div class="mn-card-title" style="margin-top:16px;">Cashier</div>
+        <ul class="mn-linklist">
+          <li onclick="showView('report')"><span class="mn-link-num">1</span><span class="mn-link-text">Invoices</span></li>
+          <li onclick="showView('addpay')"><span class="mn-link-num">2</span><span class="mn-link-text">Receipts</span></li>
+          <li onclick="showView('report')"><span class="mn-link-num">3</span><span class="mn-link-text">Charges Summary</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mn-card-title" style="margin-top:20px;">Rooms By Floor</div>
+
+    <div class="panel accent-guest">
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (room no or guest name)</label>
+          <input type="text" id="fdSearchInput" placeholder="Type to search..." autocomplete="off">
+        </div>
+        <div>
+          <label>Occupancy as of</label>
+          <input type="date" id="fdDate">
+          <div class="date-readout" id="fdDateReadout"></div>
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="fdOccupiedOnly">
+          <label for="fdOccupiedOnly" style="margin:0;">Only show occupied rooms</label>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:12px;">
+        <div class="room-summary" id="fdSummary" style="margin:0;"></div>
+        <div class="rd-switch">
+          <button type="button" class="rd-switch-btn" id="fdModeSmart" onclick="setRoomDetailMode('fd','smart')">SMART</button>
+          <button type="button" class="rd-switch-btn active" id="fdModeMunchi" onclick="setRoomDetailMode('fd','munchi')">MUNCHI</button>
+        </div>
+      </div>
+      <div id="fdSmartBody" style="overflow-x:auto; display:none; margin-top:14px;"></div>
+    </div>
+
+    <div class="smart-grid full-bleed" id="fdMunchiBody"></div>
+
+  </div>
+
+  <div class="view" id="view-newcheckin">
+
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1>New Checkin</h1>
+        <div class="sub">Find an existing guest, or create entirely new.</div>
+      </div>
+      <button class="btn" onclick="showView('entry')">+ Create entirely new check-in</button>
+    </div>
+
+    <div class="panel accent-guest">
+      <h2>Search Existing Reservations</h2>
+      <div class="search-row">
+        <div class="grow">
+          <label>Name</label>
+          <input type="text" id="ncSearchName" autocomplete="off">
+        </div>
+        <div class="grow">
+          <label>Mobile</label>
+          <input type="text" id="ncSearchMobile" autocomplete="off">
+        </div>
+        <div class="grow">
+          <label>CNIC / Passport</label>
+          <input type="text" id="ncSearchCnic" autocomplete="off">
+        </div>
+        <div class="grow">
+          <label>Email</label>
+          <input type="text" id="ncSearchEmail" autocomplete="off">
+        </div>
+        <div class="grow">
+          <label>Res ID</label>
+          <input type="text" id="ncSearchResId" autocomplete="off">
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn secondary" onclick="clearNewCheckinSearch()">⊗ Clear</button>
+        </div>
+      </div>
+      <div class="sub" style="margin-top:10px;">Type any combination of fields. Results refresh as you type, ranked by match score (100–1000).</div>
+    </div>
+
+    <div class="panel">
+      <h2>Search Tips</h2>
+      <div class="grid" id="ncTipsBody">
+        <div><b>Live results</b> — Results refresh as you type. Use any combination of Name, Mobile, CNIC/Passport, Email, or Res ID — more fields means tighter matches.</div>
+        <div><b>Match scoring</b> — Each row is scored 100–1000. Exact matches on Mobile, CNIC/Passport, or Res ID weigh more than partial name matches; multi-field matches score higher.</div>
+        <div><b>Re-using a guest</b> — Click Select on any result to start a new check-in pre-filled with that guest's profile (name, contact, ID, marketing, BTC, payment preferences).</div>
+        <div><b>Brand-new guest</b> — If the guest has never stayed before, click Create entirely new check-in above to skip search and go straight to a blank form.</div>
+      </div>
+      <label class="na-check" style="margin-top:14px;"><input type="checkbox" id="ncHideTips" onchange="toggleNcTips()"> Hide these tips</label>
+    </div>
+
+    <div class="panel">
+      <h2>Matching Reservations</h2>
+      <table>
+        <thead>
+          <tr><th>Score</th><th>ID</th><th>Checkin</th><th>Nights</th><th>Adults</th><th>Name</th><th>Mobile</th><th>Passport</th><th>Room</th><th>Type</th><th>Rate</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="12" class="empty-note">🔍 Enter any criteria above to search.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-housecount">
+
+    <h1>House Count</h1>
+    <div class="sub">Rooms by type and status, as of today</div>
+
+    <div class="panel" style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Room Type</th>
+            <th style="width:80px; text-align:center;">OOS</th>
+            <th style="width:80px; text-align:center;">Dirty</th>
+            <th style="width:80px; text-align:center;">Vacant</th>
+            <th style="width:80px; text-align:center;">Occupied</th>
+            <th style="width:80px; text-align:center;">OOO</th>
+          </tr>
+        </thead>
+        <tbody id="houseCountBody"></tbody>
+        <tfoot>
+          <tr id="houseCountTotal" style="font-weight:700;"></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Legend</h2>
+      <div style="display:flex; gap:18px; flex-wrap:wrap; font-size:12.5px; color:var(--muted);">
+        <span>⬤ OOS — out of service (not tracked in this system)</span>
+        <span>⬤ Dirty — needs housekeeping (not tracked in this system)</span>
+        <span>⬤ Vacant</span>
+        <span>⬤ Occupied</span>
+        <span>⬤ OOO — out of order (not tracked in this system)</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-cico">
+
+    <h1>Check-in / Check-out</h1>
+    <div class="sub">Expected &amp; actual guest movement</div>
+
+    <div class="panel">
+      <div class="search-row">
+        <div>
+          <label>From</label>
+          <input type="date" id="cicoFrom">
+          <div class="date-readout" id="cicoFromReadout"></div>
+        </div>
+        <div>
+          <label>To</label>
+          <input type="date" id="cicoTo">
+          <div class="date-readout" id="cicoToReadout"></div>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="btn secondary" onclick="setCicoToday()">Today</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cico-grid">
+      <div class="panel">
+        <h2>Expected Checkins</h2>
+        <div id="cicoExpectedCheckins"></div>
+      </div>
+      <div class="panel">
+        <h2>Expected Checkouts</h2>
+        <div id="cicoExpectedCheckouts"></div>
+      </div>
+      <div class="panel">
+        <h2>Actual Checkins</h2>
+        <div id="cicoActualCheckins"></div>
+      </div>
+      <div class="panel">
+        <h2>Actual Checkouts</h2>
+        <div id="cicoActualCheckouts"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view active" id="view-entry">
+
+    <div class="editing-bar no-print" id="editModeBar" style="display:none;">
+      <span>✎ EDITING: <b id="editModeName"></b> — saving will update this existing entry, not create a new one.</span>
+      <button class="btn secondary" onclick="cancelEditMode()">Cancel Edit</button>
+    </div>
+
+    <h1>Guest Entry</h1>
+    <div class="sub">Customer detail &amp; room/apartment booking</div>
+
+    <div class="panel accent-guest">
+      <h2>Customer Detail</h2>
+      <div class="entry-subgrid">
+        <div class="entry-subpanel">
+          <div class="entry-subpanel-title">Guest Information</div>
+          <div class="grid">
+            <div>
+              <label>Guest Name <span class="req">*</span></label>
+              <input type="text" id="guestName" placeholder="Full name" autocomplete="off" required>
+            </div>
+            <div>
+              <label>Father Name <span class="req">*</span></label>
+              <input type="text" id="fatherName" placeholder="Father's name" value="N/A" autocomplete="off" disabled required>
+              <label class="na-check"><input type="checkbox" id="fatherNameNA" onchange="toggleNA('fatherName')" checked> N/A</label>
+            </div>
+            <div>
+              <label>CNIC <span class="req">*</span></label>
+              <input type="text" id="cnic" placeholder="XXXXX-XXXXXXX-X" autocomplete="off" required oninput="formatCNIC(this)" onblur="offerReturningGuestPrefill()">
+              <label class="na-check"><input type="checkbox" id="cnicNA" onchange="toggleNA('cnic')"> N/A</label>
+            </div>
+            <div>
+              <label>Contact No</label>
+              <input type="text" id="contactNo" placeholder="03XXXXXXXXX" autocomplete="off" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            </div>
+          </div>
+        </div>
+        <div class="entry-subpanel">
+          <div class="entry-subpanel-title">Stay &amp; Status</div>
+          <div class="grid entry-second-grid">
+            <div>
+              <label>Check-in Date</label>
+              <input type="text" id="checkInDate" placeholder="Pick a date..." autocomplete="off" title="Reference only — does not affect any amount">
+              <div class="date-readout" id="checkInDateReadout" style="display:none;"></div>
+            </div>
+            <div>
+              <label>Expected Checkout</label>
+              <input type="text" id="checkOutDate" placeholder="Pick a date..." autocomplete="off" title="Reference only — does not affect any amount">
+              <div class="date-readout" id="checkOutDateReadout" style="display:none;"></div>
+            </div>
+            <div>
+              <label>Actual Checkout</label>
+              <input type="text" id="actualCheckoutDate" placeholder="Pick a date..." autocomplete="off" title="Reference only — does not affect any amount">
+              <div class="date-readout" id="actualCheckoutDateReadout" style="display:none;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="extraDetailList"></div>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn secondary" onclick="addExtraDetailRow()">+ Detail</button>
+      </div>
+    </div>
+
+    <div class="mn-only">
+      <div class="mn-entry-grid" id="mnEntryPanels"></div>
+    </div>
+
+    <div class="panel accent-rooms">
+      <h2>Room / Apartment Detail</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px;">#</th>
+            <th style="width:170px;">Room No / Apt No</th>
+            <th style="width:130px;">Type</th>
+            <th style="width:130px;">Rent Per Day</th>
+            <th style="width:120px;">No of Days</th>
+            <th style="width:130px;" class="edit-only">Moved Out</th>
+            <th style="width:120px;">Total</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody id="roomBody"></tbody>
+      </table>
+      <div class="actions">
+        <button class="btn secondary" onclick="addRow()">+ Add Row</button>
+        <button class="btn secondary edit-only" onclick="openChangeRoomModal()" title="Guest is moving to a different room mid-stay">⇄ Change Room</button>
+        <div class="grandtotal">Grand Total: Rs. <span id="grandTotal">0</span></div>
+      </div>
+    </div>
+
+    <div class="panel accent-payments">
+      <h2>Payment Detail</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px;">#</th>
+            <th style="width:88px;">Date</th>
+            <th style="width:136px;">Type</th>
+            <th style="width:120px;">Mode</th>
+            <th style="width:100px;">Bank</th>
+            <th>Remarks</th>
+            <th style="width:110px;">Cash Amount</th>
+            <th style="width:110px;">Account Amount</th>
+            <th style="width:110px;">Row Total</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody id="payBody"></tbody>
+      </table>
+      <div class="actions">
+        <button class="btn secondary" onclick="addPayRow()">+ Add Payment</button>
+      </div>
+
+      <div class="summary">
+        <div class="box">
+          <div class="lbl">Booking Total</div>
+          <div class="val" id="sumBookingTotal">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Total Paid</div>
+          <div class="val" id="sumPaid">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Balance Due</div>
+          <div class="val" id="sumDue">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Status</div>
+          <div class="val"><span class="status pending" id="sumStatus">Pending</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn success" onclick="reviewEntry()">Save Entry</button>
+      <button class="btn" id="checkoutTodayBtn" onclick="openCheckoutModal()" style="display:none;">Check Out Today</button>
+    </div>
+
+    <div class="section-divider"></div>
+    <h2 class="standalone-heading">Today's Entries</h2>
+    <div id="todayEntriesBody"><div class="empty-note">No entries saved today yet.</div></div>
+
+  </div>
+
+  <div class="view" id="view-reservations">
+
+    <div class="smart-only smart-only-row">
+      <div>
+        <h1>Reservations</h1>
+        <div class="sub">Future check-ins — booked ahead, not arrived yet</div>
+      </div>
+      <button class="btn" onclick="showView('entry')">+ Add Reservation</button>
+    </div>
+
+    <div class="mn-only">
+      <h1>Reservations Dashboard</h1>
+      <div class="sub">Add, search and track reservations; manage rate plans and templates</div>
+    </div>
+
+    <div class="mn-only mn-resv-grid-4" style="margin-top:16px;">
+      <div class="mn-card">
+        <div class="mn-card-title">Entry</div>
+        <ul class="mn-linklist">
+          <li onclick="showView('entry')"><span class="mn-link-num">1</span><span class="mn-link-text">Add Reservation</span></li>
+          <li class="mn-disabled" onclick="mnNotAvailable('Open a guest\'s detail page and use Cancel Reservation there.')"><span class="mn-link-num">2</span><span class="mn-link-text">Cancel Reservations</span></li>
+          <li class="mn-disabled" onclick="mnNotAvailable()"><span class="mn-link-num">3</span><span class="mn-link-text">Get booking.com</span></li>
+          <li onclick="showView('search')"><span class="mn-link-num">4</span><span class="mn-link-text">Add / Search Customers</span></li>
+          <li class="mn-disabled" onclick="mnNotAvailable()"><span class="mn-link-num">5</span><span class="mn-link-text">Edit reservation &amp; regcard print</span></li>
+        </ul>
+        <div class="mn-card-title" style="margin-top:16px;">Guest Emails</div>
+        <div class="mn-empty-note">Not tracked in this system.</div>
+      </div>
+      <div class="mn-card">
+        <div class="mn-card-title">Reports</div>
+        <ul class="mn-linklist">
+          <li onclick="mnScrollToResvList()"><span class="mn-link-num">1</span><span class="mn-link-text">Reservations</span><span class="mn-link-badge">New</span></li>
+          <li onclick="mnScrollToResvList()"><span class="mn-link-num">2</span><span class="mn-link-text">Reservations List</span></li>
+          <li onclick="showView('roomdetail')"><span class="mn-link-num">3</span><span class="mn-link-text">Inhouse Guests</span></li>
+          <li class="mn-disabled" onclick="mnNotAvailable()"><span class="mn-link-num">4</span><span class="mn-link-text">Forecast</span></li>
+          <li onclick="showView('cico')"><span class="mn-link-num">5</span><span class="mn-link-text">Expected Checkins</span></li>
+          <li onclick="showView('cico')"><span class="mn-link-num">6</span><span class="mn-link-text">Expected Checkouts</span></li>
+        </ul>
+      </div>
+      <div class="mn-card">
+        <div class="mn-card-title">New Tutorials</div>
+        <div class="mn-empty-note">No tutorials available.</div>
+      </div>
+      <div class="mn-card">
+        <div class="mn-card-title">Rate Plans</div>
+        <div class="mn-ratetable" id="mnRoomTypes"></div>
+      </div>
+    </div>
+
+    <div class="mn-only mn-card-title" style="margin-top:20px;">Upcoming Reservations</div>
+
+    <div class="panel accent-guest" id="resvListPanel">
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (name, father name, CNIC, room no)</label>
+          <input type="text" id="resvSearchInput" placeholder="Type to search..." autocomplete="off">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel smart-only">
+      <div id="resvList"><div class="empty-note">No upcoming reservations.</div></div>
+    </div>
+
+    <div class="panel mn-only" style="overflow-x:auto;">
+      <div id="mnResvReport"><div class="empty-note">No upcoming reservations.</div></div>
+    </div>
+
+    <div class="mn-only" style="margin-top:24px;">
+      <h2 style="font-size:18px; font-weight:700; margin:0 0 2px;">Last 10 reservations</h2>
+      <div class="sub" style="margin-bottom:0;">Most recent entries split by status</div>
+    </div>
+
+    <div class="mn-only mn-resv-grid" id="mnLastResv" style="margin-top:12px;"></div>
+
+  </div>
+
+  <div class="view" id="view-addpay">
+
+    <h1>Add Payment</h1>
+    <div class="sub">Take a payment against an existing entry</div>
+
+    <div class="panel accent-payments">
+      <h2>Step 1 — Find The Guest</h2>
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (name, father name, CNIC, room no)</label>
+          <input type="text" id="apSearchInput" placeholder="Type to search..." autocomplete="off">
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="apDueOnly" checked>
+          <label for="apDueOnly" style="margin:0;">Only balance due</label>
+        </div>
+      </div>
+      <div class="glist" id="apGuestList"></div>
+    </div>
+
+    <div id="apPaySection" style="display:none;">
+
+      <div class="panel accent-guest" id="apGuestStrip"></div>
+
+      <div class="panel accent-payments">
+        <h2>Step 2 — Payment</h2>
+        <div class="addpay-form">
+          <div>
+            <label>Date</label>
+            <input type="date" id="dNewDate">
+            <div class="date-readout" id="dNewDateReadout"></div>
+          </div>
+          <div>
+            <label>Type</label>
+            <select id="dNewType">
+              <option value="Reservation" style="color:var(--muted);">Reservation</option>
+              <option value="Check-in" style="color:var(--muted);">Check-in</option>
+              <option value="Due Payment" selected>Due Payment</option>
+            </select>
+          </div>
+          <div>
+            <label>Mode</label>
+            <select id="dNewMode" onchange="toggleDetailMode()">
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Card">Card</option>
+            </select>
+          </div>
+          <div>
+            <label>Bank</label>
+            <select id="dNewBank" disabled>
+              <option value="">-</option>
+              <option value="Alfalah">Alfalah</option>
+              <option value="MCB">MCB</option>
+            </select>
+          </div>
+          <div>
+            <label>Cash Amount</label>
+            <input type="number" id="dNewCash" min="0" placeholder="0">
+          </div>
+          <div>
+            <label>Account Amount</label>
+            <input type="number" id="dNewAccount" min="0" placeholder="0" disabled>
+          </div>
+          <div>
+            <label>Remarks</label>
+            <input type="text" id="dNewRemarks" placeholder="Optional note" autocomplete="off">
+          </div>
+          <div>
+            <button class="btn" onclick="addDetailPayment()">+ Add Payment</button>
+          </div>
+        </div>
+
+        <div class="summary" id="addPayPreview">
+          <div class="box">
+            <div class="lbl">This Payment</div>
+            <div class="val" id="prevAmount">0</div>
+            <div class="date-readout" id="prevAmountWords"></div>
+          </div>
+          <div class="box">
+            <div class="lbl">Balance Due Now</div>
+            <div class="val" id="prevDueNow">0</div>
+          </div>
+          <div class="box">
+            <div class="lbl">Due After This Payment</div>
+            <div class="val" id="prevDueAfter">0</div>
+          </div>
+          <div class="box">
+            <div class="lbl">Result</div>
+            <div class="val"><span class="status pending" id="prevStatus">—</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="view" id="view-search">
+
+    <h1>Search Guests</h1>
+    <div class="sub">Find any guest and check balance due, or open to add a payment</div>
+
+    <div class="panel accent-guest">
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (name, father name, CNIC, room no)</label>
+          <input type="text" id="gsearchInput" placeholder="Type to search..." autocomplete="off">
+        </div>
+        <div>
+          <label>System Entry Date</label>
+          <input type="date" id="gsearchDate">
+          <div class="date-readout" id="gsearchDateReadout"></div>
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="gsearchDueOnly">
+          <label for="gsearchDueOnly" style="margin:0;">Only show balance due</label>
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="gsearchHideCheckedOut" checked>
+          <label for="gsearchHideCheckedOut" style="margin:0;">Hide guests who've checked out</label>
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="gsearchShowZero">
+          <label for="gsearchShowZero" style="margin:0;">Show 0Rs guests</label>
+        </div>
+      </div>
+      <div class="glist" id="gsearchList"></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-detail">
+
+    <span class="backlink" onclick="showView('search')">&larr; Back to Search</span>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+      <div>
+        <h1 id="detailName">Guest <span class="res-status-badge active" id="detailResBadge" style="display:none;"></span></h1>
+        <div class="sub" id="detailMeta"></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn secondary" id="cancelResBtn" onclick="cancelCurrentReservation()">Cancel Reservation</button>
+        <button class="btn secondary" id="noShowResBtn" onclick="markCurrentNoShow()">Mark No-show</button>
+        <button class="btn secondary" id="reactivateResBtn" onclick="reactivateCurrentReservation()" style="display:none;">Reactivate</button>
+        <button class="btn edit-gold" id="editEntryBtn" onclick="openEditModal()">✎ Edit This Entry</button>
+      </div>
+    </div>
+
+    <div class="panel accent-guest">
+      <h2>Customer Detail <span class="locked-note">Locked — use the Edit button to change anything</span></h2>
+      <div class="grid">
+        <div>
+          <label>Guest Name</label>
+          <input type="text" id="dGuestName" disabled>
+        </div>
+        <div>
+          <label>Father Name</label>
+          <input type="text" id="dFatherName" disabled>
+        </div>
+        <div>
+          <label>CNIC</label>
+          <input type="text" id="dCnic" disabled>
+        </div>
+        <div>
+          <label>Contact No</label>
+          <input type="text" id="dContactNo" disabled>
+        </div>
+        <div>
+          <label>Check-in</label>
+          <input type="text" id="dCheckIn" disabled>
+        </div>
+        <div>
+          <label>Expected Checkout</label>
+          <input type="text" id="dCheckOut" disabled>
+        </div>
+        <div>
+          <label>Actual Checkout</label>
+          <input type="text" id="dActualCheckout" disabled>
+        </div>
+      </div>
+      <div class="grid" id="dExtraDetails" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="panel accent-rooms" style="padding:0;">
+      <div class="collapse-head" onclick="toggleRoomDetail()">
+        <span>Room / Apartment Detail</span>
+        <span id="roomCollapseChev" class="collapse-chev">▸ Show</span>
+      </div>
+      <div id="roomDetailCollapse" style="display:none; padding:0 18px 18px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Room No / Apt No</th>
+              <th style="width:120px;">Type</th>
+              <th style="width:130px;">Rent Per Day</th>
+              <th style="width:110px;">No of Days</th>
+              <th style="width:120px;">Moved Out</th>
+              <th style="width:120px;">Total</th>
+            </tr>
+          </thead>
+          <tbody id="detailRoomBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel accent-payments">
+      <h2>Payment History</h2>
+      <table class="detail-payhist">
+        <thead>
+          <tr>
+            <th style="width:110px;">Date</th>
+            <th style="width:100px;">Type</th>
+            <th style="width:90px;">Mode</th>
+            <th style="width:90px;">Bank</th>
+            <th>Remarks</th>
+            <th style="width:130px;">Taken By</th>
+            <th style="width:100px;">Cash</th>
+            <th style="width:100px;">Account</th>
+            <th style="width:100px;">Total</th>
+          </tr>
+        </thead>
+        <tbody id="detailPayBody"></tbody>
+      </table>
+
+      <div class="summary">
+        <div class="box">
+          <div class="lbl">Booking Total</div>
+          <div class="val" id="dSumBooking">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Total Paid</div>
+          <div class="val" id="dSumPaid">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Balance Due</div>
+          <div class="val" id="dSumDue">0</div>
+        </div>
+        <div class="box">
+          <div class="lbl">Status</div>
+          <div class="val"><span class="status pending" id="dSumStatus">Pending</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-guest">
+      <h2>Change History <span class="locked-note">Recorded automatically — cannot be edited</span></h2>
+      <div id="detailChangeLog"></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-report">
+
+    <h1 class="no-print">Report</h1>
+    <div class="sub no-print">Payment detail, grouped by day</div>
+
+    <div class="print-header">
+      <h1>Payment Report</h1>
+      <div class="print-header-sub" id="printHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <h2>Filters</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>From Date</label>
+          <input type="date" id="filterFrom">
+          <div class="date-readout" id="filterFromReadout"></div>
+        </div>
+        <div>
+          <label>To Date</label>
+          <input type="date" id="filterTo">
+          <div class="date-readout" id="filterToReadout"></div>
+        </div>
+        <div style="grid-column:span 2;">
+          <label>Search (name, father name, CNIC, room no, type, mode)</label>
+          <input type="text" id="filterSearch" placeholder="Type to search..." autocomplete="off">
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="clearFilters()">Clear Filters</button>
+          <button class="btn secondary" onclick="setFiltersToday()">Today</button>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <input type="text" id="filterCashSearch" placeholder="type total amount" style="width:180px;" autocomplete="off">
+          <button class="btn secondary" onclick="showView('graphs')">📊 Detailed Graphs</button>
+          <button class="btn" onclick="openExportModal()">⬇ Export</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="reportBody"><div class="empty-note">No payments saved yet.</div></div>
+      <div class="report-grandbar" id="reportGrandbar" style="display:none;">
+        <span>Total Cash: Rs. <b id="repCash" class="cash-amt">0</b></span>
+        <span>Total Account: Rs. <b id="repAccount" class="account-amt">0</b></span>
+        <span>Grand Total: Rs. <b id="repGrand">0</b></span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-graphs">
+
+    <span class="backlink" onclick="showView('report')">&larr; Back to Report</span>
+    <h1>Detailed Graphs</h1>
+    <div class="sub" id="graphsSub">Sales &amp; payment breakdown for the Report filters currently applied</div>
+
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div class="sub" style="margin:0;">Group the timeline by</div>
+        <div class="rd-switch">
+          <button type="button" class="rd-switch-btn active" id="gPeriodDay" onclick="setGraphsPeriod('day')">DAY</button>
+          <button type="button" class="rd-switch-btn" id="gPeriodWeek" onclick="setGraphsPeriod('week')">WEEK</button>
+          <button type="button" class="rd-switch-btn" id="gPeriodMonth" onclick="setGraphsPeriod('month')">MONTH</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Sales Over Time</h2>
+      <div id="graphSales"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Cash vs Account</h2>
+      <div id="graphCashAccount"></div>
+    </div>
+
+    <div class="graphs-grid">
+      <div class="panel">
+        <h2>Revenue by Type</h2>
+        <div id="graphByType"></div>
+      </div>
+      <div class="panel">
+        <h2>Revenue by Payment Mode</h2>
+        <div id="graphByMode"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-ledgers">
+
+    <h1 class="no-print">Ledgers</h1>
+    <div class="sub no-print">Room-night by room-night — rent charged, what was received against it (oldest payment first), and what's left for that night, by guest</div>
+
+    <div class="print-header">
+      <h1 id="lgPrintTitle">Ledgers</h1>
+      <div class="print-header-sub" id="lgPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <h2>Filters</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>From Date</label>
+          <input type="date" id="lgFrom">
+          <div class="date-readout" id="lgFromReadout"></div>
+        </div>
+        <div>
+          <label>To Date</label>
+          <input type="date" id="lgTo">
+          <div class="date-readout" id="lgToReadout"></div>
+        </div>
+        <div style="grid-column:span 2;">
+          <label>Guest (detailed ledger for one guest — leave blank for everyone)</label>
+          <select id="lgPersonSelect" onchange="renderLedgers()"></select>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="clearLedgersFilters()">Clear Filters</button>
+          <button class="btn secondary" onclick="setLedgersToday()">Today</button>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" onclick="exportLedgersExcel()">⬇ Export</button>
+          <button class="btn secondary" onclick="printLedgers()">🖶 Print</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="ledgersBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+      <div class="report-grandbar" id="ledgersGrandbar" style="display:none;">
+        <span>Total Debt: Rs. <b id="lgDebt">0</b></span>
+        <span>Total Credit: Rs. <b id="lgCredit" class="cash-amt">0</b></span>
+        <span>Total Balance: Rs. <b id="lgBalance">0</b></span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-daylock">
+
+    <h1>Night Audit</h1>
+    <div class="sub">Close out a business day — admin only. Posting locks the date so no new payment can be backdated onto it; payments already saved on that date are untouched.</div>
+
+    <div class="panel accent-filters">
+      <h2>Pick a Night</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>Date</label>
+          <input type="date" id="dlDate">
+          <div class="date-readout" id="dlDateReadout"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2>Night Audit Summary</h2>
+      <div id="naSummary"><div class="empty-note">Loading…</div></div>
+      <div class="actions" style="margin-top:14px;">
+        <button class="btn" id="dlActionBtn" onclick="openDayLockModal('lock', document.getElementById('dlDate').value)">Post Night Audit</button>
+      </div>
+    </div>
+
+    <div class="panel accent-payments">
+      <h2>Possible No-shows</h2>
+      <div class="sub" style="margin-bottom:12px;">Guests booked to arrive this date whose entry was created before check-in and who haven't checked in or been flagged yet — a signal, not a certainty. Confirm before marking.</div>
+      <div id="naNoShows"><div class="empty-note">Loading…</div></div>
+    </div>
+
+    <div class="panel accent-guest">
+      <h2>Recent Night Audits</h2>
+      <div id="dayLockList"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-audit">
+
+    <h1>Audit</h1>
+    <div class="sub">Every recorded action, for one date at a time — entries created or edited, payments recorded, reservation status changes, deletions, and nights posted or reopened. Admin only.</div>
+
+    <div class="panel accent-filters">
+      <div class="search-row">
+        <div>
+          <label>Date</label>
+          <input type="date" id="auditDate">
+          <div class="date-readout" id="auditDateReadout"></div>
+        </div>
+        <div>
+          <label>Rows to show</label>
+          <select id="auditPageSize">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2>Activity Log</h2>
+      <div id="auditLogBody"><div class="empty-note">Loading…</div></div>
+      <div id="auditPager" style="margin-top:12px;"></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-deleteentity">
+
+    <h1 style="color:var(--danger);">⚠ Delete Entity</h1>
+    <div class="sub">Remove an accidentally created entry — admin only. This is a soft delete: the entry (with its rooms and payments) disappears from every screen immediately. Nothing is destroyed — an admin can still restore it directly in the Supabase SQL Editor — but there is no Undo button inside the app, so search carefully and confirm you have the right guest.</div>
+
+    <div class="panel accent-guest">
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (name, father name, CNIC, room no)</label>
+          <input type="text" id="delSearchInput" placeholder="Type to search..." autocomplete="off">
+        </div>
+      </div>
+      <div class="glist" id="delGuestList"></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-roomdetail">
+
+    <h1>Room Detail</h1>
+    <div class="sub">Rooms by floor — who's in each one right now, at a glance</div>
+
+    <div class="panel accent-guest">
+      <div class="search-row">
+        <div class="grow">
+          <label>Search (room no or guest name)</label>
+          <input type="text" id="rdSearchInput" placeholder="Type to search..." autocomplete="off">
+        </div>
+        <div>
+          <label>Occupancy as of</label>
+          <input type="date" id="rdDate">
+          <div class="date-readout" id="rdDateReadout"></div>
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="rdOccupiedOnly">
+          <label for="rdOccupiedOnly" style="margin:0;">Only show occupied rooms</label>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:12px;">
+        <div class="room-summary" id="rdSummary" style="margin:0;"></div>
+        <div class="rd-switch">
+          <button type="button" class="rd-switch-btn" id="rdModeSmart" onclick="setRoomDetailMode('rd','smart')">SMART</button>
+          <button type="button" class="rd-switch-btn active" id="rdModeMunchi" onclick="setRoomDetailMode('rd','munchi')">MUNCHI</button>
+        </div>
+      </div>
+      <div id="rdSmartBody" style="overflow-x:auto; display:none; margin-top:14px;"></div>
+    </div>
+
+    <div class="smart-grid full-bleed" id="rdMunchiBody"></div>
+
+  </div>
+
+</div>
+
+<div class="cloud-banner no-print" id="cloudBanner">
+  <b>⚠ Not connected to the cloud database.</b>
+  <span id="cloudBannerText">Entries cannot be saved or loaded until the connection is back — it retries automatically.</span>
+</div>
+
+</div><!-- /appRoot -->
+
+<div class="notice-wrap" id="noticeWrap"></div>
+
+<div class="modal-backdrop" id="confirmModalBackdrop">
+  <div class="modal">
+    <h3>Confirm Guest Entry</h3>
+    <div class="sub" style="margin-bottom:14px;">Please check every detail below carefully before saving — this cannot be edited from the Report page later.</div>
+    <div id="confirmBody"></div>
+    <label for="confirmTotalInput" style="margin-top:4px;">Re-type the Grand Total (numbers only) to confirm it is correct</label>
+    <input type="text" id="confirmTotalInput" placeholder="total amount" autocomplete="off" inputmode="numeric" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmSaveEntry(); }">
+    <label for="confirmTypeInput" style="margin-top:10px;">Type CONFIRM to save this entry</label>
+    <input type="text" id="confirmTypeInput" placeholder="confirm" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmSaveEntry(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeConfirmModal()">Cancel</button>
+      <button class="btn" onclick="confirmSaveEntry()">Confirm &amp; Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="deleteModalBackdrop">
+  <div class="modal">
+    <h3 style="color:var(--danger);">Confirm Delete</h3>
+    <div class="sub" style="margin-bottom:14px;">Check carefully — this is the row you are about to remove.</div>
+    <div id="deleteBody"></div>
+    <label for="deleteTypeInput" style="margin-top:4px;">Type DELETE to remove this row</label>
+    <input type="text" id="deleteTypeInput" placeholder="delete" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmDeleteRow(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn danger-solid" onclick="confirmDeleteRow()">Delete Row</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="deleteEntityModalBackdrop">
+  <div class="modal">
+    <h3 style="color:var(--danger);">⚠ Confirm Delete Entity</h3>
+    <div class="sub" style="margin-bottom:14px;">This removes the entry — and its rooms and payments — from every screen immediately. It isn't destroyed (an admin can restore it from the Supabase SQL Editor), but there is no Undo inside the app.</div>
+    <div id="deleteEntityBody"></div>
+    <label for="deleteEntityReason" style="margin-top:10px;">Reason (optional, saved with the delete)</label>
+    <input type="text" id="deleteEntityReason" placeholder="e.g. accidental duplicate" autocomplete="off">
+    <label for="deleteEntityTypeInput" style="margin-top:10px;">Type DELETE to remove this entry</label>
+    <input type="text" id="deleteEntityTypeInput" placeholder="delete" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmDeleteEntity(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeDeleteEntityModal()">Cancel</button>
+      <button class="btn danger-solid" onclick="confirmDeleteEntity()">Delete Entry</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="dayLockModalBackdrop">
+  <div class="modal">
+    <h3 id="dayLockModalTitle">Confirm</h3>
+    <div class="sub" style="margin-bottom:14px;" id="dayLockModalSub"></div>
+    <label for="dayLockTypeInput" id="dayLockModalLabel" style="margin-top:4px;"></label>
+    <input type="text" id="dayLockTypeInput" placeholder="" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmDayLockAction(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeDayLockModal()">Cancel</button>
+      <button class="btn" id="dayLockModalConfirmBtn" onclick="confirmDayLockAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="editModalBackdrop">
+  <div class="modal">
+    <h3>Edit This Entry</h3>
+    <div class="sub" style="margin-bottom:14px;">Check that this is the right guest — the whole entry will open for editing on the Guest Entry page.</div>
+    <div id="editBody"></div>
+    <label for="editTypeInput" style="margin-top:4px;">Type EDIT to open this entry for editing</label>
+    <input type="text" id="editTypeInput" placeholder="edit" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmEditEntry(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeEditModal()">Cancel</button>
+      <button class="btn" onclick="confirmEditEntry()">Open For Editing</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="checkoutModalBackdrop">
+  <div class="modal" style="width:420px;">
+    <h3>Confirm Checkout</h3>
+    <div class="sub" style="margin-bottom:14px;" id="checkoutModalSub">Set today as the Actual Checkout date for this guest?</div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeCheckoutModal()">Cancel</button>
+      <button class="btn" onclick="confirmCheckoutToday()">Check Out Today</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="changeRoomModalBackdrop">
+  <div class="modal">
+    <h3>Change Room</h3>
+    <div class="sub" style="margin-bottom:14px;">The guest leaves one room and moves into another — this always happens on the same day.</div>
+    <label for="crFromRoom" style="margin-top:4px;">Room the guest is leaving</label>
+    <select id="crFromRoom"></select>
+    <label for="crToRoom" style="margin-top:10px;">Room the guest is moving into</label>
+    <div class="roomno-wrap">
+      <input type="text" id="crToRoom" placeholder="Search room / apt no" autocomplete="off">
+      <div class="roomno-list" id="crToRoomList"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeChangeRoomModal()">Cancel</button>
+      <button class="btn" onclick="confirmChangeRoom()">Change Room</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="addPayModalBackdrop">
+  <div class="modal">
+    <h3>Confirm Payment</h3>
+    <div class="sub" style="margin-bottom:14px;">Check the amount carefully before adding this payment.</div>
+    <div id="addPayModalBody"></div>
+    <label for="addPayTypeInput" style="margin-top:4px;">Type CONFIRM to add this payment</label>
+    <input type="text" id="addPayTypeInput" placeholder="confirm" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmAddPayment(); }">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeAddPayModal()">Cancel</button>
+      <button class="btn" onclick="confirmAddPayment()">Confirm &amp; Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="exportModalBackdrop">
+  <div class="modal" style="width:420px;">
+    <h3>Export Report</h3>
+    <div class="sub" style="margin-bottom:14px;">Choose a format. The export uses the filters currently applied.</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn" onclick="closeExportModal(); exportReportExcel();">Excel File (.xlsx)</button>
+      <button class="btn" onclick="closeExportModal(); printReport();">PDF / Print</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeExportModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="availModalBackdrop">
+  <div class="modal" style="width:460px;">
+    <h3 id="availModalTitle">Check Availability</h3>
+    <div class="sub" style="margin-bottom:14px;" id="availModalSub">Pick a month, then a day, to see that day's room detail.</div>
+    <div id="availModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeAvailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="../supabase.js"></script>
+
+<script src="js/app-core.js"></script>
+<script src="js/app-munshi-shell.js"></script>
+<script src="js/app-units.js"></script>
+<script src="js/app-delete-confirm.js"></script>
+<script src="js/app-payments-entry.js"></script>
+<script src="js/app-entry-details.js"></script>
+<script src="js/app-returning-guest.js"></script>
+<script src="js/app-today-entries.js"></script>
+<script src="js/app-guest-shared.js"></script>
+<script src="js/app-edit-mode.js"></script>
+<script src="js/app-search.js"></script>
+<script src="js/app-reservations.js"></script>
+<script src="js/app-room-detail.js"></script>
+<script src="js/app-availability.js"></script>
+<script src="js/app-dashboard.js"></script>
+<script src="js/app-cico.js"></script>
+<script src="js/app-guest-detail-page.js"></script>
+<script src="js/app-add-payment.js"></script>
+<script src="js/app-payment-preview.js"></script>
+<script src="js/app-report.js"></script>
+<script src="js/app-graphs.js"></script>
+<script src="js/app-report-export.js"></script>
+<script src="js/app-ledgers.js"></script>
+<script src="js/app-daylock.js"></script>
+<script src="js/app-delete-entity.js"></script>
+<script src="js/app-cloud-core.js"></script>
+<script src="js/app-cloud-sync.js"></script>
+<script src="js/app-cloud-auth.js"></script>
+<script src="js/app-audit.js"></script>
+
+</body>
+</html>

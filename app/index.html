@@ -7,9 +7,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <!-- self-hosted: Edge/Brave Tracking Prevention silently blocks some CDN
      copies (this is why supabase.js is served locally too) -->
-<script src="/new%20system/xlsx.full.min.js"></script>
-<script src="/new%20system/flatpickr.min.js"></script>
-<link rel="stylesheet" href="/new%20system/flatpickr.min.css">
+<script src="/app/vendor/xlsx.full.min.js"></script>
+<script src="/app/vendor/flatpickr.min.js"></script>
+<link rel="stylesheet" href="/app/vendor/flatpickr.min.css">
 <style>
   :root{
     /* Luxury hospitality palette: sky blue + gold, slate-cool surfaces */
@@ -1954,6 +1954,18 @@
     <h2 class="standalone-heading">Today's Entries</h2>
     <div id="todayEntriesBody"><div class="empty-note">No entries saved today yet.</div></div>
 
+    <div class="section-divider"></div>
+    <h2 class="standalone-heading">Full Audit — All Changes <span class="locked-note">Recorded automatically — cannot be edited</span></h2>
+    <div class="sub">Every entry created, entry edited, and payment added, for the day picked below.</div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); margin-bottom:12px;">
+      <div>
+        <label>Date</label>
+        <input type="date" id="auditEntryDate">
+        <div class="date-readout" id="auditEntryDateReadout"></div>
+      </div>
+    </div>
+    <div id="auditEntryBody"><div class="empty-note">No data yet.</div></div>
+
   </div>
 
   <div class="view" id="view-reservations">
@@ -2391,6 +2403,19 @@
       <div id="dayLockList"><div class="empty-note">No data yet.</div></div>
     </div>
 
+    <div class="panel accent-report">
+      <h2>Full Audit — All Changes <span class="locked-note">Recorded automatically — cannot be edited</span></h2>
+      <div class="sub" style="margin-bottom:14px;">Every entry created, entry edited, and payment added, for the day picked below — useful to review before locking it.</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); margin-bottom:12px;">
+        <div>
+          <label>Date</label>
+          <input type="date" id="auditLockDate">
+          <div class="date-readout" id="auditLockDateReadout"></div>
+        </div>
+      </div>
+      <div id="auditLockBody"><div class="empty-note">No data yet.</div></div>
+    </div>
+
   </div>
 
   <div class="view" id="view-deleteentity">
@@ -2782,6 +2807,18 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('dlDate').addEventListener('input', e=>{
     updateDateReadout(e.target, document.getElementById('dlDateReadout'));
     renderDayLock();
+  });
+  document.getElementById('auditEntryDate').value = todayStr();
+  updateDateReadout(document.getElementById('auditEntryDate'), document.getElementById('auditEntryDateReadout'));
+  document.getElementById('auditEntryDate').addEventListener('input', e=>{
+    updateDateReadout(e.target, document.getElementById('auditEntryDateReadout'));
+    renderAuditLog('auditEntryBody', e.target.value);
+  });
+  document.getElementById('auditLockDate').value = todayStr();
+  updateDateReadout(document.getElementById('auditLockDate'), document.getElementById('auditLockDateReadout'));
+  document.getElementById('auditLockDate').addEventListener('input', e=>{
+    updateDateReadout(e.target, document.getElementById('auditLockDateReadout'));
+    renderAuditLog('auditLockBody', e.target.value);
   });
   document.getElementById('delSearchInput').addEventListener('input', renderDeleteEntityList);
   ['input','change'].forEach(evt=>{
@@ -3345,7 +3382,7 @@ function scheduleKarachiMidnightRollover(){
 function handleKarachiMidnightRollover(){
   const newToday = todayStr();
   if(newToday === lastKnownToday) return;
-  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','dlDate'].forEach(id=>{
+  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','dlDate','auditEntryDate','auditLockDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(el && el.value === lastKnownToday) el.value = newToday;
   });
@@ -3362,6 +3399,10 @@ function handleKarachiMidnightRollover(){
   if(rdDateEl) updateDateReadout(rdDateEl, document.getElementById('rdDateReadout'));
   const dlDateEl = document.getElementById('dlDate');
   if(dlDateEl) updateDateReadout(dlDateEl, document.getElementById('dlDateReadout'));
+  const auditEntryDateEl = document.getElementById('auditEntryDate');
+  if(auditEntryDateEl) updateDateReadout(auditEntryDateEl, document.getElementById('auditEntryDateReadout'));
+  const auditLockDateEl = document.getElementById('auditLockDate');
+  if(auditLockDateEl) updateDateReadout(auditLockDateEl, document.getElementById('auditLockDateReadout'));
   const cicoFromEl = document.getElementById('cicoFrom');
   if(cicoFromEl) updateDateReadout(cicoFromEl, document.getElementById('cicoFromReadout'));
   const cicoToEl = document.getElementById('cicoTo');
@@ -4072,6 +4113,8 @@ function resetEntryForm(){
 // ---- Today's Entries: everything saved today, newest at the top ----
 function renderTodayEntries(){
   const box = document.getElementById('todayEntriesBody');
+  const auditEntryDateEl = document.getElementById('auditEntryDate');
+  renderAuditLog('auditEntryBody', auditEntryDateEl ? auditEntryDateEl.value : todayStr());
   if(!initialLoadDone){
     box.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     return;
@@ -4995,6 +5038,61 @@ function fmtLogTime(iso){
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric', timeZone:'Asia/Karachi' })
     + ', ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Karachi' });
+}
+
+// ---- Full audit trail: every guest_edits row for a chosen day, across all guests ----
+function getAllAuditLogs(){
+  const seen = new Set();
+  return editLogs.concat(pendingEditLogs).filter(l=>{
+    if(seen.has(l.id)) return false;
+    seen.add(l.id);
+    return true;
+  });
+}
+
+function guestNameForAudit(guestId){
+  const e = entries.find(x=> x.id === guestId);
+  return e ? (e.guestName || '(no name)') : '(deleted entry)';
+}
+
+function renderAuditLog(bodyId, dateStr){
+  const box = document.getElementById(bodyId);
+  if(!box) return;
+  if(!initialLoadDone){
+    box.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const day = dateStr || todayStr();
+  const logs = getAllAuditLogs().filter(l=> l.at && toKarachiDateStr(l.at) === day);
+  if(logs.length === 0){
+    box.innerHTML = '<div class="empty-note">No changes recorded on ' + formatDate(day) + '.</div>';
+    return;
+  }
+  logs.sort((a,b)=> (b.at || '').localeCompare(a.at || ''));
+  box.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th style="width:150px;">When</th>
+          <th>Guest</th>
+          <th style="width:140px;">Action</th>
+          <th>By</th>
+          <th style="width:90px;">Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${logs.map(l=>{
+          const hasEntry = entries.some(x=> x.id === l.guest_id);
+          return `<tr ${hasEntry ? `style="cursor:pointer;" onclick="openDetail('${l.guest_id}')" title="Open this guest"` : ''}>
+            <td>${fmtLogTime(l.at)}</td>
+            <td>${guestNameForAudit(l.guest_id)}</td>
+            <td>${LOG_ACTION_LABELS[l.action] || l.action}</td>
+            <td>${l.username || '-'}</td>
+            <td><span class="mode-badge ${l.role === 'admin' ? 'bank' : 'cash'}">${l.role || '-'}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
 }
 
 function toggleRoomDetail(){
@@ -5979,6 +6077,9 @@ function renderDayLock(){
   const dateEl = document.getElementById('dlDate');
   const actionBtn = document.getElementById('dlActionBtn');
   if(!listEl || !dateEl || !actionBtn) return;
+
+  const auditLockDateEl = document.getElementById('auditLockDate');
+  renderAuditLog('auditLockBody', auditLockDateEl ? auditLockDateEl.value : todayStr());
 
   if(!initialLoadDone){
     listEl.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
