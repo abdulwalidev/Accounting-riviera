@@ -891,6 +891,32 @@
     margin:5px 0 14px auto;
   }
   .total-due-box:empty{ display:none; }
+  .settings-table-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:12px 0;
+    border-top:1px solid rgba(0,0,0,0.1);
+  }
+  html[data-theme="dark"] .settings-table-row{ border-top-color:rgba(255,255,255,0.12); }
+  .settings-table-name{ font-weight:700; }
+  .settings-table-desc{ font-size:13px; color:var(--muted); margin-top:2px; max-width:640px; }
+  .settings-table-status{
+    flex:none;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    padding:4px 10px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .settings-status-on{ background:rgba(74,222,128,0.18); color:#166534; }
+  .settings-status-off{ background:rgba(255,255,255,0.12); color:#6B7280; }
+  html[data-theme="dark"] .settings-status-on{ color:#4ADE80; }
+  html[data-theme="dark"] .settings-status-off{ color:#D1D5DB; }
   .rpt-grandtotal-box{
     border:2px solid #000;
     border-radius:8px;
@@ -1660,7 +1686,6 @@
   html[data-theme="dark"] .roomctrl button:hover,
   html[data-theme="dark"] .btn.secondary:hover,
   html[data-theme="dark"] .day-head,
-  html[data-theme="dark"] .rpt-grandtotal-box,
   html[data-theme="dark"] .rd-switch-btn.active,
   html[data-theme="dark"] .backlink:hover{ background:var(--ink-fill); color:#fff; }
   html[data-theme="dark"] .status.paid{ background:rgba(74,222,128,0.18); }
@@ -1869,10 +1894,8 @@
       <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
-      <button class="navbtn" id="topNavFullAudit" onclick="showView('audit')">Full Audit</button>
-      <button class="navbtn" id="topNavReviewToday" onclick="showView('reviewtoday')">Review Today</button>
       <button class="navbtn" id="topNavDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</button>
-      <button class="navbtn" id="topNavDeleteEntity" onclick="showView('deleteentity')" style="display:none; color:var(--danger); font-weight:700; margin-left:auto;">⚠ Delete Entity</button>
+      <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="margin-left:auto;" title="Settings" aria-label="Settings">⚙</button>
     </div>
   </div>
   <div class="hdr-row3">
@@ -1977,18 +2000,6 @@
         </div>
         <div class="dash-card-sub">Walk-in or booked</div>
       </div>
-    </div>
-
-  </div>
-
-  <div class="view" id="view-reviewtoday">
-    <h1>Review Today</h1>
-    <div class="sub">Guests who were in-house yesterday — check each one in person for an extension nobody logged</div>
-
-    <div class="panel accent-report">
-      <h2>Yesterday's In-House Guests</h2>
-      <div class="sub" style="margin-top:-6px;">Anyone on this list could have extended without telling the front desk — confirm they checked out, or update their booked nights now</div>
-      <div id="reviewPrevInhouseBody"><div class="empty-note">Nothing to review.</div></div>
     </div>
 
   </div>
@@ -2723,11 +2734,11 @@
   <div class="view" id="view-autocheckout">
 
     <h1>Auto Checkout / Extend</h1>
-    <div class="sub">Guests whose checkout date has arrived — settle up and check them out, one at a time or all at once. "Extend" is just a label here: these are the guests who might be extending their stay — nothing on this page extends anything automatically.</div>
+    <div class="sub">Guests whose checkout date has arrived — settle up and check them out one at a time. "Extend" is just a label here: these are the guests who might be extending their stay — nothing on this page extends anything automatically.</div>
 
     <div class="panel accent-filters">
       <h2>As Of Date</h2>
-      <div class="sub" style="margin-top:-6px;">For review only — Checkout/Undo/Run Auto Checkout are only ever available when this is set to today, so nothing can be checked out under the wrong date.</div>
+      <div class="sub" style="margin-top:-6px;">For review only — Checkout/Undo are only ever available when this is set to today, so nothing can be checked out under the wrong date.</div>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
           <label>Date</label>
@@ -2742,10 +2753,7 @@
 
     <div class="panel accent-filters">
       <h2>Checkout Due <span id="acDueDateLabel"></span></h2>
-      <div class="sub" style="margin-top:-6px;">Last booked night was the day before. Rows in red owe money (or have paid for nights beyond what's booked) — Auto Checkout skips them; check them out here manually once it's sorted.</div>
-      <div class="actions" style="margin-top:12px;">
-        <button class="btn" id="acRunBtn" onclick="runAutoCheckout()">▶ Run Auto Checkout</button>
-      </div>
+      <div class="sub" style="margin-top:-6px;">Last booked night was the day before. Rows in red owe money (or have paid for nights beyond what's booked) — check them out here manually once it's sorted.</div>
       <div id="autoCheckoutDueBody" style="overflow-x:auto; margin-top:14px;"><div class="empty-note">No data yet.</div></div>
     </div>
 
@@ -2780,6 +2788,41 @@
         </div>
       </div>
       <div id="auditPageBody"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-settings">
+
+    <h1>Settings</h1>
+    <div class="sub">Admin tools and data/sync controls</div>
+
+    <div class="panel accent-guest">
+      <h2>Pages</h2>
+      <div class="sub" style="margin-top:-6px;">Moved here to keep the main nav short</div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <button class="btn secondary" onclick="showView('audit')">Full Audit</button>
+        <button class="btn danger-solid" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</button>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2>Data &amp; Sync</h2>
+      <div class="sub" style="margin-top:-6px;">What this app fetches from the cloud database, and what it deliberately doesn't</div>
+      <div class="settings-table-row">
+        <div>
+          <div class="settings-table-name">Guests / Rooms / Payments</div>
+          <div class="settings-table-desc">The actual booking data — required for the app to function, always on.</div>
+        </div>
+        <span class="settings-table-status settings-status-on">Always On</span>
+      </div>
+      <div class="settings-table-row">
+        <div>
+          <div class="settings-table-name">🚨 Audit Log (guest_edits)</div>
+          <div class="settings-table-desc">Who-did-what history. Never fetched from the cloud — saves fetching an ever-growing table on every sync. Full Audit, the per-guest audit tab, and Auto Checkout's "already checked out today" list only show actions taken on this device this session, not full history.</div>
+        </div>
+        <span class="settings-table-status settings-status-off">Off</span>
+      </div>
     </div>
 
   </div>
@@ -3085,7 +3128,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday','inhouse','autocheckout'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','inhouse','autocheckout','settings'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -3115,7 +3158,7 @@ function showView(view, fromPopState){
     return;
   }
   currentView = view;
-  ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday','inhouse','autocheckout'].forEach(v=>{
+  ROUTABLE_VIEWS.forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
@@ -3127,13 +3170,11 @@ function showView(view, fromPopState){
   document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('topNavReport').classList.toggle('active', view === 'report' || view === 'graphs');
-  document.getElementById('topNavReviewToday').classList.toggle('active', view === 'reviewtoday');
   document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
-  document.getElementById('topNavFullAudit').classList.toggle('active', view === 'audit');
   document.getElementById('topNavDayLock').classList.toggle('active', view === 'daylock');
-  document.getElementById('topNavDeleteEntity').classList.toggle('active', view === 'deleteentity');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
+  document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity');
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -3146,11 +3187,11 @@ function showView(view, fromPopState){
   if(view === 'daylock') renderDayLock();
   if(view === 'deleteentity') renderDeleteEntityList();
   if(view === 'roomdetail') renderRoomDetail();
-  if(view === 'reviewtoday') renderReviewToday();
   if(view === 'inhouse') renderInhouse();
   if(view === 'autocheckout') renderAutoCheckout();
   if(view === 'dashboard') renderDashboard();
   if(view === 'cico') renderCico();
+  if(view === 'settings') renderSettings();
 
   // A popstate-triggered call must NOT push a new entry — that would fight
   // the browser's own history stack it's currently traversing. Every other
@@ -5233,14 +5274,14 @@ const GLOBAL_SEARCH_PAGES = [
   { label: 'Reservations', view: 'reservations', keywords: ['advance', 'booking', 'future check-ins'] },
   { label: 'Ledgers', view: 'ledgers', keywords: ['room-night', 'balance', 'credit', 'debt'] },
   { label: 'Full Audit', view: 'audit', keywords: ['change history', 'entry created', 'entry edited', 'all changes'] },
-  { label: 'Review Today', view: 'reviewtoday', keywords: ['nights ending', 'extended stays'] },
   { label: 'Day Lock', view: 'daylock', keywords: ['lock day', 'unlock day', 'locked days'] },
   { label: 'Delete Entity', view: 'deleteentity', keywords: ['delete', 'remove entry'] },
   { label: 'Guest Entry / Reservation', view: 'entry', keywords: ['guest name', 'father name', 'cnic', 'room / apartment detail', 'today\'s entries'] },
   { label: 'Add Payment', view: 'addpay', keywords: ['cash amount', 'account amount', 'this payment'] },
   { label: 'Search', view: 'search', keywords: ['balance due', 'total due'] },
   { label: 'Report', view: 'report', keywords: ['payment detail', 'grand total'] },
-  { label: 'Revenue Report', view: 'revenue', keywords: ['payments by date', 'extra money', 'rooms occupied'] }
+  { label: 'Revenue Report', view: 'revenue', keywords: ['payments by date', 'extra money', 'rooms occupied'] },
+  { label: 'Settings', view: 'settings', keywords: ['delete entity', 'full audit', 'data', 'sync', 'tables'] }
 ];
 
 function globalSearchPageMatches(query){
@@ -5604,8 +5645,7 @@ function computeRoomStatuses(asOfDate){
     // night was yesterday and nothing's been booked since. Treat it as
     // still inhouse (gold "Extended") rather than silently reading Vacant,
     // until someone either books it fresh or marks the room Dirty/OOO/Ready
-    // via Check Out Today or the room-status modal — same forcing function
-    // as "Review Today"'s Nights Ending list.
+    // via Check Out Today or the room-status modal.
     const extended = !todayNight && lastNightDate === addDaysToDateStr(refDate, -1) && !resolvedByHousekeeping;
     return {
       roomNo,
@@ -5615,9 +5655,9 @@ function computeRoomStatuses(asOfDate){
       // Strictly "booked for this exact night" — Extended is NOT folded in
       // here. Dashboard and Room Detail are the only two places that treat
       // an Extended room as occupied (they explicitly check `occupied ||
-      // extended`); every other consumer (Revenue Report, Review Today,
-      // Reservations) only counts a room once its booking actually covers
-      // this night — an unconfirmed departure isn't real rent yet.
+      // extended`); every other consumer (Revenue Report, Reservations)
+      // only counts a room once its booking actually covers this night —
+      // an unconfirmed departure isn't real rent yet.
       occupied: !!todayNight,
       extended,
       housekeepingStatus,
@@ -5915,7 +5955,7 @@ function renderDashboard(){
   const totalRooms = rooms.length;
   // Dashboard is one of only two places (the other being Room Detail) that
   // still counts Extended rooms as occupied — everywhere else (Revenue
-  // Report, Review Today) an Extended room is NOT counted as occupied,
+  // Report, Reservations) an Extended room is NOT counted as occupied,
   // since nobody's confirmed it's actually still generating rent.
   const occupiedCount = rooms.filter(r=> r.occupied || r.extended).length;
   const vacantCount = totalRooms - occupiedCount;
@@ -5935,60 +5975,6 @@ function renderDashboard(){
   document.getElementById('dashOOO').textContent = oooCount;
   document.getElementById('dashNightOcc').textContent = occupiedCount;
   document.getElementById('dashNightAvail').textContent = vacantCount;
-}
-
-// ---- Review Today: catches guests who extend their stay without telling
-// the front desk. Occupancy and billing both run purely off each room's
-// booked-nights count (see computeRoomStatuses/buildLedgersRecords) — an
-// extension nobody logs into that count never surfaces on its own. Anyone
-// who was in-house *yesterday* is a candidate for having quietly extended,
-// so that's the whole list: run it once after the daily checkout cutoff and
-// check each name in person.
-function buildReviewToday(){
-  const yesterday = addDaysToDateStr(todayStr(), -1);
-  const nights = buildLedgersRecords();
-
-  const totalRentByEntry = {};
-  nights.forEach(n=>{ totalRentByEntry[n.guestId] = (totalRentByEntry[n.guestId] || 0) + n.rent; });
-
-  const prevInhouse = computeRoomStatuses(yesterday)
-    .filter(rs=> rs.occupied && rs.entry)
-    .map(rs=>{
-      const entry = rs.entry;
-      const paid = (entry.payments || []).reduce((s,p)=> s + (parseFloat(p.total) || 0), 0);
-      const rentOwed = totalRentByEntry[entry.id] || 0;
-      return { roomNo: rs.roomNo, guestId: entry.id, guest: entry.guestName || '(no name)', paid, rentOwed, extra: Math.round((paid - rentOwed) * 100) / 100 };
-    })
-    .sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
-
-  return { prevInhouse };
-}
-
-function renderReviewToday(){
-  const body = document.getElementById('reviewPrevInhouseBody');
-  if(!initialLoadDone){
-    body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
-    return;
-  }
-  const { prevInhouse } = buildReviewToday();
-
-  if(prevInhouse.length === 0){
-    body.innerHTML = '<div class="empty-note">Nothing to review — no rooms were occupied yesterday.</div>';
-  } else {
-    body.innerHTML = `
-      <table>
-        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:120px;">Paid</th><th style="width:140px;">Booked Rent</th><th style="width:120px;">Extra Paid</th></tr></thead>
-        <tbody>${prevInhouse.map(r=> `
-          <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
-            <td>${r.roomNo}</td>
-            <td>${r.guest}</td>
-            <td>${r.paid.toLocaleString()}</td>
-            <td>${r.rentOwed.toLocaleString()}</td>
-            <td style="font-weight:700; ${r.extra > 0.5 ? 'color:var(--danger);' : ''}">${r.extra > 0.5 ? r.extra.toLocaleString() : '-'}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
-  }
 }
 
 // ---- Check-in / Check-out ----
@@ -6166,9 +6152,10 @@ function guestNameForAudit(guestId){
 }
 
 // `dateStr` empty/omitted shows every day on record. `limit` (0 = no limit)
-// caps how many rows get rendered — the whole guest_edits table is already
-// pulled into memory, so this is purely about not choking the DOM/browser
-// on a long history, not an extra query.
+// caps how many rows get rendered, purely to not choke the DOM/browser on a
+// long history — not an extra query. Reads from whatever's currently in
+// `editLogs`, which is never fetched from the server (see the note above
+// pullFreshFromCloud/realtime setup) — only this session's own actions.
 function renderAuditLog(bodyId, dateStr, limit){
   const box = document.getElementById(bodyId);
   if(!box) return;
@@ -7203,9 +7190,14 @@ function buildRevenueReport(asOfDate){
           nightsByEntryRoom[guestId][night.roomNo].received += applied;
           if(!chunksByEntryRoom[guestId]) chunksByEntryRoom[guestId] = {};
           if(!chunksByEntryRoom[guestId][night.roomNo]) chunksByEntryRoom[guestId][night.roomNo] = {};
-          if(!chunksByEntryRoom[guestId][night.roomNo][pay.date]) chunksByEntryRoom[guestId][night.roomNo][pay.date] = { cash: 0, account: 0 };
+          if(!chunksByEntryRoom[guestId][night.roomNo][pay.date]) chunksByEntryRoom[guestId][night.roomNo][pay.date] = { cash: 0, account: 0, banks: {} };
           const bucket = pay.mode === 'Cash' ? 'cash' : 'account';
           chunksByEntryRoom[guestId][night.roomNo][pay.date][bucket] += applied;
+          if(bucket === 'account'){
+            const bankName = pay.bank || pay.mode || 'Account';
+            const banks = chunksByEntryRoom[guestId][night.roomNo][pay.date].banks;
+            banks[bankName] = (banks[bankName] || 0) + applied;
+          }
           pay.towardAsOfNight += applied;
         }
         pay.remaining -= applied;
@@ -7243,7 +7235,9 @@ function buildRevenueReport(asOfDate){
         .map(date=>{
           const cash = Math.round(chunkMap[date].cash * 100) / 100;
           const account = Math.round(chunkMap[date].account * 100) / 100;
-          return { date, cash, account, total: Math.round((cash + account) * 100) / 100 };
+          const banks = {};
+          Object.keys(chunkMap[date].banks || {}).forEach(b=>{ banks[b] = Math.round(chunkMap[date].banks[b] * 100) / 100; });
+          return { date, cash, account, banks, total: Math.round((cash + account) * 100) / 100 };
         });
       const rent = roomData.rent;
       const collected = roomData.received;
@@ -7266,16 +7260,19 @@ function buildRevenueReport(asOfDate){
   // room) actually landed on this specific day, cash vs account."
   const byDate = {};
   roomRows.forEach(r=> r.chunks.forEach(c=>{
-    if(!byDate[c.date]) byDate[c.date] = { cash: 0, account: 0 };
+    if(!byDate[c.date]) byDate[c.date] = { cash: 0, account: 0, banks: {} };
     byDate[c.date].cash += c.cash;
     byDate[c.date].account += c.account;
+    Object.keys(c.banks || {}).forEach(b=>{ byDate[c.date].banks[b] = (byDate[c.date].banks[b] || 0) + c.banks[b]; });
   }));
   const paymentsByDate = Object.keys(byDate)
     .sort((a,b)=> a.localeCompare(b))
     .map(date=>{
       const cash = Math.round(byDate[date].cash * 100) / 100;
       const account = Math.round(byDate[date].account * 100) / 100;
-      return { date, cash, account, total: Math.round((cash + account) * 100) / 100 };
+      const banks = {};
+      Object.keys(byDate[date].banks).forEach(b=>{ banks[b] = Math.round(byDate[date].banks[b] * 100) / 100; });
+      return { date, cash, account, banks, total: Math.round((cash + account) * 100) / 100 };
     });
   const paymentsByDateCashTotal = paymentsByDate.reduce((s,r)=> s + r.cash, 0);
   const paymentsByDateAccountTotal = paymentsByDate.reduce((s,r)=> s + r.account, 0);
@@ -7337,7 +7334,12 @@ function renderRevenue(){
       if(!c) return '-';
       const lines = [];
       if(c.cash > 0) lines.push(`<span class="cash-amt">Cash: Rs. ${c.cash.toLocaleString()}</span>`);
-      if(c.account > 0) lines.push(`<span class="account-amt">Account: Rs. ${c.account.toLocaleString()}</span>`);
+      const bankNames = Object.keys(c.banks || {});
+      if(bankNames.length){
+        bankNames.forEach(b=> lines.push(`<span class="account-amt">${b}: Rs. ${c.banks[b].toLocaleString()}</span>`));
+      } else if(c.account > 0){
+        lines.push(`<span class="account-amt">Account: Rs. ${c.account.toLocaleString()}</span>`);
+      }
       return formatDate(c.date) + '<br>' + lines.join('<br>');
     };
     roomsBody.innerHTML = `
@@ -7371,16 +7373,18 @@ function renderRevenue(){
   if(data.paymentsByDate.length === 0){
     byDateBody.innerHTML = '<div class="empty-note">No payments recorded toward ' + dayWord + '\'s rent.</div>';
   } else {
-    const dateBox = (label, cash, account, total)=> `
+    const dateBox = (label, cash, banks, account, total)=> `
       <div class="date-box">
         <div class="date-box-head">${label}</div>
         ${cash > 0 ? `<div class="cash-amt">Cash: ${cash.toLocaleString()}</div>` : ''}
-        ${account > 0 ? `<div class="account-amt">Account: ${account.toLocaleString()}</div>` : ''}
+        ${Object.keys(banks || {}).length
+          ? Object.keys(banks).map(b=> `<div class="account-amt">${b}: ${banks[b].toLocaleString()}</div>`).join('')
+          : (account > 0 ? `<div class="account-amt">Account: ${account.toLocaleString()}</div>` : '')}
         <div class="date-box-total">Total: ${total.toLocaleString()}</div>
       </div>`;
     byDateBody.innerHTML = `
       <div class="date-box-row">
-        ${data.paymentsByDate.map(r=> dateBox(formatDate(r.date), r.cash, r.account, r.total)).join('')}
+        ${data.paymentsByDate.map(r=> dateBox(formatDate(r.date), r.cash, r.banks, r.account, r.total)).join('')}
       </div>
       <div class="rev-grandtotal-box">
         <div class="date-box-head">Revenue Grand Total</div>
@@ -7435,7 +7439,11 @@ function exportRevenueExcel(){
 
   const wb = XLSX.utils.book_new();
 
-  const chunkText = (r)=> r.chunks.map(c=> formatDate(c.date) + ' — Cash: ' + c.cash + ', Account: ' + c.account + ', Total: ' + c.total).join(' | ');
+  const chunkText = (r)=> r.chunks.map(c=>{
+    const bankNames = Object.keys(c.banks || {});
+    const accountText = bankNames.length ? bankNames.map(b=> b + ': ' + c.banks[b]).join(', ') : ('Account: ' + c.account);
+    return formatDate(c.date) + ' — Cash: ' + c.cash + ', ' + accountText + ', Total: ' + c.total;
+  }).join(' | ');
   const roomsData = data.roomRows.map(r=> ({
     'Room No': r.roomNo, 'Guest': r.guest, 'Room Rent': r.rent,
     'Payments': chunkText(r),
@@ -7721,11 +7729,10 @@ function renderDayLock(){
 // AUTO CHECKOUT / EXTEND — admin-only. "Checkout due today" is the same
 // signal Room Detail's red Pending badge and gold-then-red Extended flag
 // used: a room's last booked night was yesterday and nobody's confirmed
-// the guest actually left. Auto Checkout only ever processes a guest whose
-// balance is settled at exactly 0 — owing money, or having paid for more
-// nights than are booked, both mean a human needs to look at it first, so
-// those stay listed here for a manual Checkout instead. Nothing on this
-// page is a live/background job — it only runs when the button is clicked.
+// the guest actually left. Checkout here is always a manual, per-guest
+// action — a guest whose balance isn't settled at exactly 0 (owing money,
+// or paid for more nights than are booked) can't be checked out at all
+// until a human sorts that out first.
 // =========================================================
 // Check-in + the longest room's booked nights (not summed across DIFFERENT
 // rooms — same formula used on the Reservations page's Expected Checkout).
@@ -7812,10 +7819,8 @@ function renderAutoCheckout(){
   const dayWord = isToday ? 'Today' : 'on ' + formatDate(asOfDate);
   document.getElementById('acDueDateLabel').textContent = dayWord;
   document.getElementById('acLogDateLabel').textContent = dayWord;
-  // Checkout/Undo/Run Auto Checkout only ever act on today — a past or
-  // future date here is for review only, so nothing can be checked out
-  // under the wrong date.
-  document.getElementById('acRunBtn').style.display = isToday ? '' : 'none';
+  // Checkout/Undo only ever act on today — a past or future date here is
+  // for review only, so nothing can be checked out under the wrong date.
 
   const rows = buildAutoCheckoutRows(asOfDate);
   const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'] };
@@ -7903,24 +7908,6 @@ async function undoAutoCheckout(guestId){
   queueEntryPush(entry.id);
   renderAutoCheckout();
   showNotice((entry.guestName || 'Guest') + '\'s checkout was undone.', 'success');
-}
-
-async function runAutoCheckout(){
-  const eligible = buildAutoCheckoutRows(todayStr()).filter(r=> r.status === 'ready');
-  if(eligible.length === 0){
-    showNotice('Nobody is eligible for Auto Checkout right now — everyone whose checkout is due today either has a balance due, has paid ahead, or is already checked out.');
-    return;
-  }
-  const ok = await showConfirmModal(
-    'This will check out ' + eligible.length + ' guest' + (eligible.length === 1 ? '' : 's') + ' whose stay ended and balance is fully settled — Actual Checkout gets set to today and each room is marked Dirty. Continue?',
-    { title: 'Run Auto Checkout', okText: 'Run', danger: true }
-  );
-  if(!ok) return;
-  for(const r of eligible){
-    await checkOutEntryRoom(r.guestId, r.roomNo, 'checked_out');
-  }
-  renderAutoCheckout();
-  showNotice(eligible.length + ' guest' + (eligible.length === 1 ? '' : 's') + ' auto-checked-out.', 'success');
 }
 
 // =========================================================
@@ -8313,7 +8300,11 @@ async function pushPendingNow(){
       editLogs = editLogs.concat(pendingEditLogs.splice(0));
     }
     if(syncProblem) syncProblem = null;
-    requestBackgroundPull();
+    // No full pull here on purpose: the entry/room/payment objects saved
+    // above already ARE the new local state (this device wrote them), and
+    // this device's own write also triggers its own realtime echo, which
+    // reconciles it precisely for a fraction of the cost of a full
+    // guests/rooms/payments refetch on every single save.
   }catch(e){
     console.error('Cloud push failed — will keep retrying automatically', e);
     setSyncProblem(navigator.onLine === false
@@ -8331,6 +8322,50 @@ async function pushPendingNow(){
 let pullInFlight = null;
 let lastServerHash = '';
 
+// Shared row -> local-shape mappers, used both by the full snapshot pull
+// (applyServerData) and by the incremental realtime patchers below, so a
+// single row update takes the exact same shape as a full refetch would.
+function mapServerRoom(r){
+  let roomNo = r.room_no || '';
+  let unitType = r.unit_type || '';
+  const miscMatch = /^Miscellaneous \(([^)]+)\)$/.exec(roomNo);
+  if(miscMatch && MISC_TYPES.includes(miscMatch[1])){
+    roomNo = MISC_ROOM_NO;
+    unitType = miscMatch[1];
+  }
+  return {
+    id: r.id, roomNo, unitType,
+    rent: num(r.rent_per_day), adults: r.adults || '', children: r.children || '', count: parseInt(r.days_count) || 1,
+    movedOut: r.moved_out_date || '', total: num(r.total)
+  };
+}
+
+function mapServerPayment(p){
+  return {
+    id: p.id, date: p.payment_date, type: p.pay_type || 'Other', mode: p.mode || 'Cash',
+    bank: p.bank || '', remarks: p.remarks || '', cash: num(p.cash), account: num(p.account), total: num(p.total),
+    createdBy: p.created_by || '', enteredAt: p.created_at || ''
+  };
+}
+
+function mapServerGuest(g, roomRows, paymentRows){
+  return {
+    id: g.id,
+    guestName: g.guest_name || '',
+    fatherName: g.father_name || '',
+    cnic: g.cnic || '',
+    extraDetails: Array.isArray(g.extra_details) ? g.extra_details : [],
+    savedAt: g.saved_at,
+    editedAt: g.edited_at || undefined,
+    rooms: (roomRows || []).map(mapServerRoom),
+    savedBy: g.saved_by || '',
+    editedBy: g.edited_by || '',
+    checkIn: g.check_in || '',
+    checkOut: g.check_out || '',
+    payments: (paymentRows || []).map(mapServerPayment)
+  };
+}
+
 function applyServerData(gRows, rRows, pRows){
   const roomsByGuest = {};
   rRows.slice().sort((a,b)=> (a.created_at || '').localeCompare(b.created_at || ''))
@@ -8339,38 +8374,7 @@ function applyServerData(gRows, rRows, pRows){
   pRows.slice().sort((a,b)=> (a.created_at || '').localeCompare(b.created_at || ''))
     .forEach(p=>{ (paysByGuest[p.guest_id] = paysByGuest[p.guest_id] || []).push(p); });
 
-  const fromServer = gRows.map(g=> ({
-    id: g.id,
-    guestName: g.guest_name || '',
-    fatherName: g.father_name || '',
-    cnic: g.cnic || '',
-    extraDetails: Array.isArray(g.extra_details) ? g.extra_details : [],
-    savedAt: g.saved_at,
-    editedAt: g.edited_at || undefined,
-    rooms: (roomsByGuest[g.id] || []).map(r=>{
-      let roomNo = r.room_no || '';
-      let unitType = r.unit_type || '';
-      const miscMatch = /^Miscellaneous \(([^)]+)\)$/.exec(roomNo);
-      if(miscMatch && MISC_TYPES.includes(miscMatch[1])){
-        roomNo = MISC_ROOM_NO;
-        unitType = miscMatch[1];
-      }
-      return {
-        id: r.id, roomNo, unitType,
-        rent: num(r.rent_per_day), adults: r.adults || '', children: r.children || '', count: parseInt(r.days_count) || 1,
-        movedOut: r.moved_out_date || '', total: num(r.total)
-      };
-    }),
-    savedBy: g.saved_by || '',
-    editedBy: g.edited_by || '',
-    checkIn: g.check_in || '',
-    checkOut: g.check_out || '',
-    payments: (paysByGuest[g.id] || []).map(p=> ({
-      id: p.id, date: p.payment_date, type: p.pay_type || 'Other', mode: p.mode || 'Cash',
-      bank: p.bank || '', remarks: p.remarks || '', cash: num(p.cash), account: num(p.account), total: num(p.total),
-      createdBy: p.created_by || '', enteredAt: p.created_at || ''
-    }))
-  }));
+  const fromServer = gRows.map(g=> mapServerGuest(g, roomsByGuest[g.id], paysByGuest[g.id]));
 
   // entries with a push still on the way keep their local version —
   // everything else becomes exactly what the server returned
@@ -8384,24 +8388,115 @@ function applyServerData(gRows, rRows, pRows){
   entries = next;
 }
 
+// ---- Realtime incremental patching ----
+// A full pull re-downloads every guest/room/payment ever entered — fine
+// once, ruinous if it happens on every single change from every connected
+// device. These handlers apply the changed row straight out of the
+// realtime payload (Postgres already sends the full new row, no extra
+// query needed) so cross-device changes still land instantly, at the cost
+// of one row instead of the whole history. `pendingPushIds` is checked so
+// a realtime echo can never stomp a newer edit this device hasn't pushed
+// yet.
+function applyGuestRealtimeEvent(payload){
+  const g = (payload.new && payload.new.id) ? payload.new : payload.old;
+  if(!g || !g.id || pendingPushIds.has(g.id)) return;
+  const idx = entries.findIndex(e=> e.id === g.id);
+  if(g.deleted_at){
+    if(idx !== -1){ entries.splice(idx, 1); rerenderActiveView(); }
+    return;
+  }
+  const existing = idx !== -1 ? entries[idx] : null;
+  const merged = mapServerGuest(g, [], []);
+  // rooms/payments arrive as their own separate realtime events — keep
+  // whatever this entry already has rather than blanking it out
+  merged.rooms = existing ? existing.rooms : [];
+  merged.payments = existing ? existing.payments : [];
+  if(idx !== -1) entries[idx] = merged; else entries.push(merged);
+  rerenderActiveView();
+}
+
+function applyRoomRealtimeEvent(payload){
+  const r = (payload.new && payload.new.id) ? payload.new : payload.old;
+  if(!r || !r.guest_id || pendingPushIds.has(r.guest_id)) return;
+  const entry = entries.find(e=> e.id === r.guest_id);
+  // the guest itself isn't loaded locally yet (e.g. a brand-new entry whose
+  // room event arrived before its guest event) — fetch that one guest
+  // rather than dropping the update
+  if(!entry){ fetchSingleGuest(r.guest_id); return; }
+  entry.rooms = entry.rooms || [];
+  const idx = entry.rooms.findIndex(x=> x.id === r.id);
+  if(r.deleted_at){
+    if(idx !== -1) entry.rooms.splice(idx, 1);
+  } else {
+    const mapped = mapServerRoom(r);
+    if(idx !== -1) entry.rooms[idx] = mapped; else entry.rooms.push(mapped);
+  }
+  rerenderActiveView();
+}
+
+function applyPaymentRealtimeEvent(payload){
+  const p = (payload.new && payload.new.id) ? payload.new : payload.old;
+  if(!p || !p.guest_id || pendingPushIds.has(p.guest_id)) return;
+  const entry = entries.find(e=> e.id === p.guest_id);
+  if(!entry){ fetchSingleGuest(p.guest_id); return; }
+  entry.payments = entry.payments || [];
+  const idx = entry.payments.findIndex(x=> x.id === p.id);
+  if(p.deleted_at){
+    if(idx !== -1) entry.payments.splice(idx, 1);
+  } else {
+    const mapped = mapServerPayment(p);
+    if(idx !== -1) entry.payments[idx] = mapped; else entry.payments.push(mapped);
+  }
+  rerenderActiveView();
+}
+
+// Scoped fallback for the ordering edge case above — fetches just the one
+// guest (plus its rooms/payments), never the whole table.
+async function fetchSingleGuest(guestId){
+  if(!sb || !guestId) return;
+  const [gRes, rRes, pRes] = await Promise.all([
+    sb.from('guests').select('*').eq('id', guestId),
+    sb.from('booking_rooms_active').select('*').eq('guest_id', guestId),
+    sb.from('guest_payments_active').select('*').eq('guest_id', guestId)
+  ]);
+  if(gRes.error || rRes.error || pRes.error) return;
+  const g = gRes.data && gRes.data[0];
+  const idx = entries.findIndex(e=> e.id === guestId);
+  if(!g || g.deleted_at){
+    if(idx !== -1){ entries.splice(idx, 1); rerenderActiveView(); }
+    return;
+  }
+  if(pendingPushIds.has(guestId)) return;
+  const merged = mapServerGuest(g, rRes.data, pRes.data);
+  if(idx !== -1) entries[idx] = merged; else entries.push(merged);
+  rerenderActiveView();
+}
+
+// locked_days is small and bounded (one row per locked calendar day) —
+// unlike guests/rooms/payments it's cheap to just refetch in full whenever
+// it changes.
+async function fetchLockedDaysOnly(){
+  if(!sb) return;
+  const { data, error } = await sb.from('locked_days').select('*');
+  if(!error){ lockedDays = data || []; rerenderActiveView(); }
+}
+
 async function pullFreshFromCloud(){
   if(!sb) return;
   if(pullInFlight) return pullInFlight; // already fetching — don't pile up requests
   pullInFlight = (async ()=>{
     const stampAtStart = mutationStamp;
     try{
-      const [gRes, rRes, pRes, lRes, lkRes, rsRes] = await Promise.all([
+      const [gRes, rRes, pRes, lkRes, rsRes] = await Promise.all([
         sb.from('guests_active').select('*'),
         sb.from('booking_rooms_active').select('*'),
         sb.from('guest_payments_active').select('*'),
-        sb.from('guest_edits').select('*'),
         sb.from('locked_days').select('*'), // optional table — see catch below, not fatal if the migration hasn't been run yet
         sb.from('room_status').select('*')  // optional table — see catch below, not fatal if the migration hasn't been run yet
       ]);
       if(gRes.error) throw gRes.error;
       if(rRes.error) throw rRes.error;
       if(pRes.error) throw pRes.error;
-      if(lRes.error) throw lRes.error;
       // a write finished while this snapshot was on the wire — the snapshot
       // is already stale, so fetch again instead of applying it
       if(mutationStamp !== stampAtStart){ requestBackgroundPull(); return; }
@@ -8413,12 +8508,11 @@ async function pullFreshFromCloud(){
       // queued, the warning stays up until the push itself succeeds
       if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0) syncProblem = null;
 
-      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data, lRes.data, lkRes.data, rsRes.data]);
+      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data, lkRes.data, rsRes.data]);
       const changed = hash !== lastServerHash;
       lastServerHash = hash;
       if(changed || firstLoad){
         applyServerData(gRes.data || [], rRes.data || [], pRes.data || []);
-        editLogs = lRes.data || [];
         if(!lkRes.error) lockedDays = lkRes.data || [];
         if(!rsRes.error){
           const nextRoomStatus = {};
@@ -8456,6 +8550,15 @@ function requestBackgroundPull(){
   pullDebounceTimer = setTimeout(()=> pullFreshFromCloud(), 500);
 }
 
+// guest_edits (the audit log) is never fetched at all — not on the routine
+// poll, not on realtime events, not even on-demand when the audit-facing
+// pages are opened. It's write-only from the client's perspective: saves
+// still log to it (logGuestAction/pushPendingNow) for accountability, but
+// nothing ever reads it back, so `editLogs` only ever holds this session's
+// own actions. The Full Audit page, the per-guest audit tab, and Auto
+// Checkout's "already checked out today" list will only show what this
+// device itself did this session — that's the deliberate tradeoff.
+
 // Repaint whatever page is on screen from the fresh snapshot. The entry
 // form itself is never data-bound, so a pull can never wipe mid-typing
 // input — only the display lists rebuild.
@@ -8487,19 +8590,21 @@ function rerenderActiveView(){
 window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); resumeAppFromIdle(); });
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && appStarted) resumeAppFromIdle(); });
 // This periodic tick is just the background safety-net poll (catching
-// changes made on OTHER devices) — it's slow on purpose to save egress on
-// a tab left open. Your OWN edits never wait on it: queueEntryPush() calls
-// pushPendingNow() immediately when you save anything, and a successful
-// push already triggers its own background pull right after, so your own
-// changes round-trip instantly regardless of this interval.
-setInterval(()=>{ if(appStarted){ pushPendingNow(); if(!appPaused) pullFreshFromCloud(); } }, 60000);
+// changes made on OTHER devices, in case a realtime event was missed) —
+// it's slow on purpose to save egress on a tab left open. Your OWN edits
+// never wait on it: queueEntryPush() calls pushPendingNow() immediately
+// when you save anything, and a successful push already triggers its own
+// background pull right after, so your own changes round-trip instantly
+// regardless of this interval. Other devices' changes also arrive instantly
+// via the realtime subscription below — this is only a fallback.
+setInterval(()=>{ if(appStarted){ pushPendingNow(); if(!appPaused) pullFreshFromCloud(); } }, 300000);
 
-// ---- Idle pause: 5 minutes with no activity stops the poll and covers the
+// ---- Idle pause: 2 minutes with no activity stops the poll and covers the
 // screen. Once paused, only an actual click proves the user is back —
 // mousemove/scroll/keypress alone (a cat on the keyboard, momentum
 // scrolling, a stray key) do NOT dismiss it, they only ever prevent the
 // pause from triggering in the first place while still active. ----
-const IDLE_PAUSE_MS = 5 * 60 * 1000;
+const IDLE_PAUSE_MS = 2 * 60 * 1000;
 let idleTimer = null;
 let appPaused = false;
 
@@ -8527,24 +8632,38 @@ function resumeAppFromIdle(){
 ['mousemove','keydown','touchstart','wheel'].forEach(evt=>{
   document.addEventListener(evt, ()=>{ if(!appPaused) armIdleTimer(); }, { passive: true });
 });
+
+// Chrome/Edge silently bump a focused <input type="number">'s value on any
+// scroll-wheel movement over it — a stray scroll while typing an amount
+// (e.g. 20000) quietly turns it into 19998 or similar with no visual cue.
+// Blurring on wheel kills that: the field loses focus so the scroll just
+// scrolls the page like normal, instead of editing whatever number field
+// happens to be focused.
+document.addEventListener('wheel', ()=>{
+  const el = document.activeElement;
+  if(el && el.tagName === 'INPUT' && el.type === 'number') el.blur();
+}, { passive: true });
 // A real click is the only thing that dismisses the pause overlay.
 document.addEventListener('click', resumeAppFromIdle);
 armIdleTimer();
 
 // Realtime (instant cross-device updates): if Realtime is enabled for these
 // tables (migration/new_system_schema.sql does it), any change made on
-// another device triggers an immediate pull here. If it isn't enabled this
-// simply never fires — the 5-second poll above remains the guarantee.
+// another device patches local state straight from the change payload —
+// see "Realtime incremental patching" above. If Realtime isn't enabled
+// this simply never fires — the periodic poll remains the guarantee, just
+// slower (up to 5 minutes instead of instant).
+// guest_edits (audit log) is deliberately NOT in this list — it's never
+// fetched at all, see the note above pullFreshFromCloud.
 if(sb && typeof sb.channel === 'function'){
   try{
     sb.channel('guest-system-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, ()=> requestBackgroundPull())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_rooms' }, ()=> requestBackgroundPull())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_payments' }, ()=> requestBackgroundPull())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_edits' }, ()=> requestBackgroundPull())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'locked_days' }, ()=> requestBackgroundPull())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guests' }, applyGuestRealtimeEvent)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_rooms' }, applyRoomRealtimeEvent)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_payments' }, applyPaymentRealtimeEvent)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'locked_days' }, ()=> fetchLockedDaysOnly())
       .subscribe();
-  }catch(e){ console.error('Realtime unavailable — the 5s poll covers it', e); }
+  }catch(e){ console.error('Realtime unavailable — the periodic poll covers it', e); }
 }
 
 // Nobody leaves with unsaved work silently: anything still queued gets
@@ -8649,13 +8768,18 @@ function isAdmin(){
   return !!currentUser && currentUser.role === 'admin';
 }
 
+function renderSettings(){
+  const deleteEntityBtn = document.getElementById('settingsDeleteEntityBtn');
+  if(deleteEntityBtn) deleteEntityBtn.style.display = isAdmin() ? '' : 'none';
+}
+
 function applyRolePermissions(){
   const editBtn = document.getElementById('editEntryBtn');
   if(editBtn) editBtn.style.display = isAdmin() ? '' : 'none';
   const dayLockNav = document.getElementById('topNavDayLock');
   if(dayLockNav) dayLockNav.style.display = isAdmin() ? '' : 'none';
-  const deleteEntityNav = document.getElementById('topNavDeleteEntity');
-  if(deleteEntityNav) deleteEntityNav.style.display = isAdmin() ? '' : 'none';
+  const deleteEntityBtn = document.getElementById('settingsDeleteEntityBtn');
+  if(deleteEntityBtn) deleteEntityBtn.style.display = isAdmin() ? '' : 'none';
   const autoCheckoutNav = document.getElementById('topNavAutoCheckout');
   if(autoCheckoutNav) autoCheckoutNav.style.display = isAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
