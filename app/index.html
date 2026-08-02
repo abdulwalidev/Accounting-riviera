@@ -659,10 +659,17 @@
     padding:8px 20px;
     min-height:48px;
   }
+  .hdr-left{
+    display:flex;
+    align-items:center;
+    gap:20px;
+    min-width:0;
+  }
   .hdr-brand{
     display:flex;
     flex-direction:column;
     white-space:nowrap;
+    flex:0 0 auto;
   }
   .hdr-brand-name{
     font-family:'Inter',sans-serif;
@@ -678,8 +685,8 @@
   }
   .hdr-search-wrap{
     position:relative;
-    flex:1;
-    max-width:520px;
+    width:320px;
+    flex:0 0 auto;
   }
   .hdr-search{
     width:100%;
@@ -1725,14 +1732,16 @@
 
 <div class="app-header no-print">
   <div class="hdr-row1">
-    <div class="hdr-brand">
-      <span class="hdr-brand-name">RIVIERA RESORT</span>
-      <span id="cloudStatus"></span>
-    </div>
-    <div class="hdr-search-wrap">
-      <input type="text" id="globalSearchInput" class="hdr-search" placeholder="Search guests, rooms, CNIC, contact..." autocomplete="off" oninput="renderGlobalSearch()" onkeydown="globalSearchKeydown(event)" onfocus="renderGlobalSearch()">
-      <span class="hdr-search-kbd">Ctrl + /</span>
-      <div class="hdr-search-results" id="globalSearchResults"></div>
+    <div class="hdr-left">
+      <div class="hdr-brand">
+        <span class="hdr-brand-name">RIVIERA RESORT</span>
+        <span id="cloudStatus"></span>
+      </div>
+      <div class="hdr-search-wrap">
+        <input type="text" id="globalSearchInput" class="hdr-search" placeholder="Search guests, rooms, CNIC, contact..." autocomplete="off" oninput="renderGlobalSearch()" onkeydown="globalSearchKeydown(event)" onfocus="renderGlobalSearch()">
+        <span class="hdr-search-kbd">Ctrl + /</span>
+        <div class="hdr-search-results" id="globalSearchResults"></div>
+      </div>
     </div>
     <div class="hdr-right">
       <span class="hdr-date-pill" id="hdrDatePill"></span>
@@ -1920,7 +1929,7 @@
       <button class="btn secondary" onclick="cancelEditMode()">Cancel Edit</button>
     </div>
 
-    <h1>Guest Entry</h1>
+    <h1>Guest Entry / Reservation</h1>
     <div class="sub">Customer detail &amp; room/apartment booking</div>
 
     <div class="panel accent-guest">
