@@ -133,9 +133,11 @@
   label{
     display:block;
     font-family:'Inter',sans-serif;
-    font-size:10.5px;
-    letter-spacing:0.06em;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.04em;
     text-transform:uppercase;
+    text-align:center;
     color:var(--muted);
     margin-bottom:5px;
   }
@@ -634,45 +636,164 @@
 
   /* ---- Layout ---- */
   .main{
-    flex:1;
-    min-width:0;
     max-width:1280px;
     margin:0 auto;
-    padding:28px 20px 60px;
+    padding:20px 20px 60px;
   }
-  .topnav-upper{
-    margin-top:20px;
-    margin-bottom:12px;
+
+  /* ---- Header: 3 fixed/sticky rows, always the same blue/white/gray
+     regardless of the app's own light/dark theme toggle — a brand header
+     rather than page content. ---- */
+  .app-header{
+    position:sticky;
+    top:0;
+    z-index:40;
   }
-  .topbar{
+  .hdr-row1{
+    background:#1a73e8;
+    color:#fff;
     display:flex;
+    align-items:center;
     justify-content:space-between;
-    align-items:center;
-    gap:12px;
-    flex-wrap:wrap;
-    margin-bottom:18px;
-    border-bottom:2px solid var(--ink);
-    padding-bottom:16px;
+    gap:16px;
+    padding:8px 20px;
+    min-height:48px;
   }
-  .topbar-left{
+  .hdr-brand{
     display:flex;
-    align-items:center;
-    gap:12px;
+    flex-direction:column;
+    white-space:nowrap;
+  }
+  .hdr-brand-name{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:0.03em;
   }
   #cloudStatus{
     font-family:'Inter',sans-serif;
-    font-size:11px;
+    font-size:10px;
     font-weight:600;
-    letter-spacing:0.03em;
+    letter-spacing:0.02em;
   }
+  .hdr-search-wrap{
+    position:relative;
+    flex:1;
+    max-width:520px;
+  }
+  .hdr-search{
+    width:100%;
+    background:#fff;
+    color:#333;
+    border:none;
+    border-radius:6px;
+    padding:8px 70px 8px 12px;
+    font-size:13px;
+    min-height:0;
+  }
+  .hdr-search-kbd{
+    position:absolute;
+    right:10px;
+    top:50%;
+    transform:translateY(-50%);
+    background:#eee;
+    color:#333;
+    border-radius:4px;
+    padding:2px 6px;
+    font-size:11px;
+    pointer-events:none;
+  }
+  .hdr-search-results{
+    display:none;
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    right:0;
+    background:#fff;
+    color:#111;
+    border-radius:6px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.3);
+    max-height:360px;
+    overflow-y:auto;
+    z-index:50;
+    text-align:left;
+  }
+  .hdr-search-results.show{ display:block; }
+  .hdr-search-row{
+    padding:9px 12px;
+    cursor:pointer;
+    font-size:13px;
+    border-bottom:1px solid #eee;
+  }
+  .hdr-search-row:last-child{ border-bottom:none; }
+  .hdr-search-row:hover{ background:#F0F6FF; }
+  .hdr-search-row b{ color:#1a73e8; }
+  .hdr-search-sub{ color:#888; font-size:11.5px; margin-top:1px; }
+  .hdr-search-empty{ padding:10px 12px; font-size:12px; color:#888; }
+  .hdr-right{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    white-space:nowrap;
+  }
+  .hdr-date-pill{
+    font-family:'Inter',sans-serif;
+    background:rgba(255,255,255,0.18);
+    padding:5px 10px;
+    border-radius:5px;
+    font-size:12px;
+  }
+  .hdr-row1 .theme-toggle{
+    border-color:rgba(255,255,255,0.7);
+    color:#fff;
+    margin-right:0;
+  }
+  .hdr-row1 .theme-toggle:hover{ background:rgba(255,255,255,0.2); color:#fff; }
   #whoami{
     font-family:'Inter',sans-serif;
-    font-size:10.5px;
+    font-size:12px;
     font-weight:600;
-    letter-spacing:0.05em;
-    text-transform:uppercase;
-    color:var(--muted);
   }
+  .hdr-avatar{
+    width:28px;
+    height:28px;
+    background:#fff;
+    color:#1a73e8;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    flex:0 0 auto;
+  }
+  #logoutBtn{
+    font-family:'Inter',sans-serif;
+    background:transparent;
+    border:none;
+    color:rgba(255,255,255,0.85);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    cursor:pointer;
+    padding:0;
+    min-height:0;
+  }
+  #logoutBtn:hover{ color:#fff; text-decoration:underline; }
+  .hdr-row2{
+    background:#fff;
+    border-bottom:1px solid #e0e0e0;
+    padding:0 20px;
+  }
+  .hdr-row3{
+    background:#f0f2f5;
+    border-bottom:1px solid #e0e0e0;
+    padding:0 20px;
+  }
+  .hdr-row3 .navbtn{ font-size:13px; color:#555; padding:10px 0; }
+  .hdr-row3 .navbtn:hover{ color:#1a73e8; }
+  .hdr-row3 .navbtn.active{ color:#1a73e8; font-weight:700; border-bottom-color:#1a73e8; }
   .view{
     display:none;
   }
@@ -818,29 +939,30 @@
     font-size:15px;
   }
   .topnav{
-    display:inline-flex;
-    flex-wrap:wrap;
-    border:1px solid var(--ink);
-    border-radius:4px;
-    overflow:hidden;
+    display:flex;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    gap:26px;
+    -webkit-overflow-scrolling:touch;
   }
   .topnav .navbtn{
     font-family:'Inter',sans-serif;
-    font-size:12px;
-    letter-spacing:0.06em;
-    text-transform:uppercase;
+    font-size:14px;
+    font-weight:500;
     border:none;
+    border-bottom:3px solid transparent;
     background:transparent;
-    color:var(--ink);
-    padding:10px 20px;
+    color:#333;
+    padding:12px 0;
     cursor:pointer;
-    min-height:40px;
+    white-space:nowrap;
+    flex:0 0 auto;
   }
-  .topnav .navbtn + .navbtn{ border-left:1px solid var(--ink); }
-  .topnav .navbtn:hover{ background:#E9EEF8; }
+  .topnav .navbtn:hover{ color:#1a73e8; }
   .topnav .navbtn.active{
-    background:var(--ink-fill);
-    color:var(--paper);
+    color:#1a73e8;
+    font-weight:700;
+    border-bottom-color:#1a73e8;
   }
   .search-row{
     display:flex;
@@ -862,6 +984,11 @@
     text-transform:uppercase;
     letter-spacing:0.04em;
     padding-bottom:9px;
+  }
+  .checkline label{
+    font-weight:400;
+    text-align:left;
+    margin-bottom:0;
   }
   .checkline input{
     width:auto;
@@ -1440,10 +1567,8 @@
   html[data-theme="dark"] .btn.secondary:hover,
   html[data-theme="dark"] .day-head,
   html[data-theme="dark"] .rpt-grandtotal-box,
-  html[data-theme="dark"] .topnav .navbtn.active,
   html[data-theme="dark"] .rd-switch-btn.active,
   html[data-theme="dark"] .backlink:hover{ background:var(--ink-fill); color:#fff; }
-  html[data-theme="dark"] .topnav .navbtn:hover{ background:rgba(255,255,255,0.06); }
   html[data-theme="dark"] .status.paid{ background:rgba(74,222,128,0.18); }
   html[data-theme="dark"] .status.partial{ background:rgba(240,208,120,0.18); }
   html[data-theme="dark"] .status.ooo{ background:rgba(255,255,255,0.12); color:#D1D5DB; }
@@ -1492,14 +1617,6 @@
     cursor:pointer;
     margin-right:8px;
   }
-  .theme-toggle-corner{
-    position:fixed;
-    top:14px;
-    right:14px;
-    z-index:50;
-    margin-right:0;
-    background:var(--paper);
-  }
   .theme-toggle svg{ width:17px; height:17px; }
   .theme-toggle .icon-sun{ display:none; }
   html[data-theme="dark"] .theme-toggle .icon-moon{ display:none; }
@@ -1540,12 +1657,6 @@
      stylesheet so it wins the cascade against the earlier unconditional
      rules for the same selectors (table, .topnav, .grid, etc). */
   @media (max-width:600px){
-    /* Nav: the topnav wraps into an awkward 2x2 block at this width —
-       keep it one swipeable row instead. All 4 destinations stay
-       reachable by horizontal swipe/scroll, nothing is hidden. */
-    .topnav{ flex-wrap:nowrap; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .topnav .navbtn{ flex:0 0 auto; }
-    .topbar-left{ flex-wrap:wrap; }
 
     /* Multi-column forms/info-grids stack to one column — two side-by-side
        fields under a phone keyboard is unusable. (.grid already auto-fits
@@ -1612,38 +1723,55 @@
 
 <div id="appRoot" style="display:none;">
 
-<div class="main">
-  <div class="topnav topnav-upper no-print">
-    <button class="navbtn active" id="topNavDashboard" onclick="showView('dashboard')">Dashboard</button>
-    <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail</button>
-    <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
-    <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
-    <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
-    <button class="navbtn" id="topNavFullAudit" onclick="showView('audit')">Full Audit</button>
-    <button class="navbtn" id="topNavReviewToday" onclick="showView('reviewtoday')">Review Today</button>
-    <button class="navbtn" id="topNavDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</button>
-    <button class="navbtn" id="topNavDeleteEntity" onclick="showView('deleteentity')" style="display:none; color:var(--danger);">⚠ Delete Entity</button>
-  </div>
-  <button class="theme-toggle theme-toggle-corner no-print" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
-    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-    <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"></path></svg>
-  </button>
-  <div class="topbar no-print">
-    <div class="topbar-left">
-      <div id="cloudStatus"></div>
-      <div id="whoami"></div>
+<div class="app-header no-print">
+  <div class="hdr-row1">
+    <div class="hdr-brand">
+      <span class="hdr-brand-name">RIVIERA RESORT</span>
+      <span id="cloudStatus"></span>
     </div>
+    <div class="hdr-search-wrap">
+      <input type="text" id="globalSearchInput" class="hdr-search" placeholder="Search guests, rooms, CNIC, contact..." autocomplete="off" oninput="renderGlobalSearch()" onkeydown="globalSearchKeydown(event)" onfocus="renderGlobalSearch()">
+      <span class="hdr-search-kbd">Ctrl + /</span>
+      <div class="hdr-search-results" id="globalSearchResults"></div>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-date-pill" id="hdrDatePill"></span>
+      <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"></path></svg>
+      </button>
+      <span id="whoami"></span>
+      <div class="hdr-avatar" id="hdrAvatar"></div>
+      <button id="logoutBtn">Sign Out</button>
+    </div>
+  </div>
+  <div class="hdr-row2">
     <div class="topnav">
-      <button class="navbtn" id="topNavEntry" onclick="showView('entry')">Guest Entry</button>
+      <button class="navbtn" id="topNavDashboard" onclick="showView('dashboard')">Dashboard</button>
+      <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail</button>
+      <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
+      <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
+      <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
+      <button class="navbtn" id="topNavFullAudit" onclick="showView('audit')">Full Audit</button>
+      <button class="navbtn" id="topNavReviewToday" onclick="showView('reviewtoday')">Review Today</button>
+      <button class="navbtn" id="topNavDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</button>
+      <button class="navbtn" id="topNavDeleteEntity" onclick="showView('deleteentity')" style="display:none; color:var(--danger); font-weight:700;">⚠ Delete Entity</button>
+    </div>
+  </div>
+  <div class="hdr-row3">
+    <div class="topnav">
+      <button class="navbtn active" id="topNavEntry" onclick="showView('entry')">Guest Entry</button>
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
       <button class="navbtn" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
     </div>
-    <button class="btn secondary" id="logoutBtn" style="min-height:32px; padding:5px 10px;">Sign Out</button>
   </div>
+</div>
 
-  <div class="view active" id="view-dashboard">
+<div class="main">
+
+  <div class="view" id="view-dashboard">
 
     <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
       <div>
@@ -1661,7 +1789,7 @@
         </div>
         <div class="dash-card-val" id="dashArrivals">0</div>
       </div>
-      <div class="dash-card clickable" onclick="showView('roomdetail')">
+      <div class="dash-card clickable" onclick="showView('inhouse')">
         <div class="dash-card-head">
           <span class="dash-card-icon dash-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg></span>
           <span class="dash-card-lbl">Inhouse</span>
@@ -1785,7 +1913,7 @@
 
   </div>
 
-  <div class="view" id="view-entry">
+  <div class="view active" id="view-entry">
 
     <div class="editing-bar no-print" id="editModeBar" style="display:none;">
       <span>✎ EDITING: <b id="editModeName"></b> — saving will update this existing entry, not create a new one.</span>
@@ -1859,7 +1987,7 @@
             <th style="width:36px;">#</th>
             <th style="width:170px;">Room No / Apt No / Miscellaneous</th>
             <th style="width:130px;">Type</th>
-            <th style="width:130px;">Rent Per Day</th>
+            <th style="width:130px;">Rent Per Day / Amount (Other)</th>
             <th style="width:120px;">No of Days</th>
             <th style="width:130px;" class="edit-only">Moved Out</th>
             <th style="width:120px;">Total</th>
@@ -2165,7 +2293,7 @@
             <tr>
               <th>Room No / Apt No</th>
               <th style="width:120px;">Type</th>
-              <th style="width:130px;">Rent Per Day</th>
+              <th style="width:130px;">Rent Per Day / Amount (Other)</th>
               <th style="width:110px;">No of Days</th>
               <th style="width:120px;">Moved Out</th>
               <th style="width:120px;">Total</th>
@@ -2401,6 +2529,32 @@
       <h2 class="no-print">Extra Money Today (not today's rent)</h2>
       <div class="sub no-print" style="margin-top:-6px;">Money received today that did NOT go toward today's room rent above — an advance for a future night, a payment against an older due, a reservation deposit, a misc charge, or money for a guest who isn't in-house today</div>
       <div id="rvTodayBody" style="overflow-x:auto;"><div class="empty-note">No extra payments today.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-inhouse">
+
+    <h1 class="no-print">Inhouse Report</h1>
+    <div class="sub no-print">Everyone in-house right now — room, guest, and headcount, for buffet/restaurant prep</div>
+
+    <div class="print-header">
+      <h1 id="ihPrintTitle">Inhouse Report</h1>
+      <div class="print-header-sub" id="ihPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <div class="actions">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" onclick="exportInhouseExcel()">⬇ Export</button>
+          <button class="btn secondary" onclick="printInhouse()">🖶 Print</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="ihSummary" style="font-size:15px; font-weight:700; margin-bottom:10px;"></div>
+      <div id="ihBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -2749,8 +2903,8 @@ function focusError(el){
   el.focus();
 }
 
-let currentView = 'dashboard';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday'];
+let currentView = 'entry';
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday','inhouse'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -2775,7 +2929,7 @@ function showView(view, fromPopState){
     return;
   }
   currentView = view;
-  ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday'].forEach(v=>{
+  ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday','inhouse'].forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
@@ -2806,6 +2960,7 @@ function showView(view, fromPopState){
   if(view === 'deleteentity') renderDeleteEntityList();
   if(view === 'roomdetail') renderRoomDetail();
   if(view === 'reviewtoday') renderReviewToday();
+  if(view === 'inhouse') renderInhouse();
   if(view === 'dashboard') renderDashboard();
   if(view === 'cico') renderCico();
 
@@ -3850,6 +4005,7 @@ function handleKarachiMidnightRollover(){
   if(currentView === 'roomdetail') renderRoomDetail();
   if(currentView === 'dashboard') renderDashboard();
   if(currentView === 'cico') renderCico();
+  if(currentView === 'inhouse') renderInhouse();
 }
 
 function addPayRow(){
@@ -4843,6 +4999,78 @@ function cancelEditMode(){
     openDetail(currentDetailId); // back to the guest page, nothing changed
   }
 }
+
+// ---- Global header search: lives in the blue top bar, searches across
+// every guest's name/father name/CNIC/contact/room no/extra details plus
+// each of their payments' mode/bank/remarks — the same haystack approach
+// as the dedicated Search page, just surfaced as a live dropdown reachable
+// from anywhere in the app (and via the Ctrl+/ shortcut) instead of its
+// own page.
+function globalSearchMatches(query){
+  const q = query.trim().toLowerCase();
+  if(!q) return [];
+  const qNoDash = stripDashes(q);
+  const all = loadAllEntries();
+  const results = all.filter(entry=>{
+    const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ');
+    const paymentText = (entry.payments || []).map(p=> [p.mode, p.bank, p.remarks].filter(Boolean).join(' ')).join(' ');
+    const haystack = [
+      entry.guestName, entry.fatherName, entry.cnic, roomNos,
+      (entry.extraDetails || []).map(d=> d.value).join(' '),
+      paymentText
+    ].join(' ').toLowerCase();
+    return haystack.includes(q) || stripDashes(haystack).includes(qNoDash);
+  });
+  results.sort((a,b)=> getLatestActivity(b).localeCompare(getLatestActivity(a)));
+  return results.slice(0, 8);
+}
+
+function renderGlobalSearch(){
+  const input = document.getElementById('globalSearchInput');
+  const box = document.getElementById('globalSearchResults');
+  const q = input.value.trim();
+  if(!q){ box.classList.remove('show'); box.innerHTML = ''; return; }
+  const matches = globalSearchMatches(q);
+  box.innerHTML = matches.length === 0
+    ? '<div class="hdr-search-empty">No matches.</div>'
+    : matches.map(entry=>{
+        const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ') || 'N/A';
+        const sub = entry.cnic || getDetailValue(entry, 'Contact No') || '';
+        return `<div class="hdr-search-row" onclick="openGlobalSearchResult('${entry.id}')">
+          <div><b>${entry.guestName || '(no name)'}</b> — Room ${roomNos}</div>
+          <div class="hdr-search-sub">${sub}</div>
+        </div>`;
+      }).join('');
+  box.classList.add('show');
+}
+
+function openGlobalSearchResult(id){
+  document.getElementById('globalSearchResults').classList.remove('show');
+  document.getElementById('globalSearchInput').value = '';
+  openDetail(id);
+}
+
+function globalSearchKeydown(ev){
+  if(ev.key === 'Escape'){
+    ev.target.blur();
+    document.getElementById('globalSearchResults').classList.remove('show');
+  } else if(ev.key === 'Enter'){
+    const matches = globalSearchMatches(ev.target.value);
+    if(matches.length) openGlobalSearchResult(matches[0].id);
+  }
+}
+
+document.addEventListener('click', e=>{
+  const wrap = document.querySelector('.hdr-search-wrap');
+  if(wrap && !wrap.contains(e.target)) document.getElementById('globalSearchResults').classList.remove('show');
+});
+
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey || e.metaKey) && e.key === '/'){
+    e.preventDefault();
+    document.getElementById('globalSearchInput').focus();
+  }
+});
 
 // ---- Search page ----
 let currentDetailId = null;
@@ -6942,6 +7170,96 @@ function printRevenue(){
 }
 
 // =========================================================
+// INHOUSE REPORT — everyone physically staying right now, for the kitchen/
+// restaurant to plan buffet headcount off. Uses the same inclusive
+// occupancy as Dashboard/Room Detail (occupied OR extended) since a guest
+// who hasn't been checked out yet is still eating breakfast regardless of
+// whether their booking technically covers tonight.
+// =========================================================
+function buildInhouseReport(){
+  const today = todayStr();
+  const rows = computeRoomStatuses(today)
+    .filter(rs=> (rs.occupied || rs.extended) && rs.entry)
+    .map(rs=>{
+      const adultsRaw = getDetailValue(rs.entry, 'Adults');
+      const childrenRaw = getDetailValue(rs.entry, 'Children');
+      return {
+        roomNo: rs.roomNo,
+        guest: rs.entry.guestName || '(no name)',
+        guestId: rs.entry.id,
+        adultsDisplay: adultsRaw || 'N/A',
+        childrenDisplay: childrenRaw || 'N/A',
+        pax: (parseInt(adultsRaw) || 0) + (parseInt(childrenRaw) || 0)
+      };
+    })
+    .sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+  const totalAdults = rows.reduce((s,r)=> s + (parseInt(r.adultsDisplay) || 0), 0);
+  const totalChildren = rows.reduce((s,r)=> s + (parseInt(r.childrenDisplay) || 0), 0);
+  const totalPax = rows.reduce((s,r)=> s + r.pax, 0);
+  return { rows, totalAdults, totalChildren, totalPax };
+}
+
+function renderInhouse(){
+  const body = document.getElementById('ihBody');
+  const summary = document.getElementById('ihSummary');
+  if(!initialLoadDone){
+    body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    summary.innerHTML = '';
+    return;
+  }
+
+  document.getElementById('ihPrintHeaderSub').textContent = 'As of ' + formatDate(todayStr()) + '  ·  Generated ' + formatDate(todayStr());
+
+  const data = buildInhouseReport();
+  summary.textContent = data.rows.length + (data.rows.length === 1 ? ' room' : ' rooms') + ' in-house — ' +
+    data.totalPax + (data.totalPax === 1 ? ' guest' : ' guests') + ' (' + data.totalAdults + ' adults, ' + data.totalChildren + ' children)';
+
+  if(data.rows.length === 0){
+    body.innerHTML = '<div class="empty-note">Nobody in-house right now.</div>';
+    return;
+  }
+  body.innerHTML = `
+    <table>
+      <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Adults</th><th style="width:110px;">Children</th><th style="width:110px;">Total Pax</th></tr></thead>
+      <tbody>${data.rows.map(r=> `
+        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+          <td>${r.roomNo}</td>
+          <td>${r.guest}</td>
+          <td>${r.adultsDisplay}</td>
+          <td>${r.childrenDisplay}</td>
+          <td style="font-weight:700;">${r.pax}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="2">Total</td>
+          <td>${data.totalAdults}</td>
+          <td>${data.totalChildren}</td>
+          <td>${data.totalPax}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
+function exportInhouseExcel(){
+  const data = buildInhouseReport();
+  if(data.rows.length === 0){ showNotice('No data to export.'); return; }
+
+  const wb = XLSX.utils.book_new();
+  const rowsData = data.rows.map(r=> ({
+    'Room No': r.roomNo, 'Guest': r.guest, 'Adults': r.adultsDisplay, 'Children': r.childrenDisplay, 'Total Pax': r.pax
+  }));
+  const ws = XLSX.utils.json_to_sheet(rowsData);
+  ws['!cols'] = [{wch:12},{wch:22},{wch:10},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Inhouse');
+  XLSX.writeFile(wb, `inhouse-report-${todayStr()}.xlsx`);
+}
+
+function printInhouse(){
+  window.print();
+}
+
+// =========================================================
 // DAY LOCK — admin-only. Locking a date stops any NEW payment (Add Payment,
 // or a fresh payment row in Guest Entry/Edit) from being dated on it.
 // Payments already saved on that date before the lock are left untouched —
@@ -7275,7 +7593,16 @@ function num(v){
 let lastSyncAt = null;
 let syncProblem = null;
 
+function updateHeaderDate(){
+  const el = document.getElementById('hdrDatePill');
+  if(!el) return;
+  const iso = todayStr();
+  const weekday = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'long' });
+  el.textContent = '📅 ' + weekday + ', ' + formatDate(iso);
+}
+
 function updateCloudIndicator(){
+  updateHeaderDate();
   const el = document.getElementById('cloudStatus');
   if(el){
     const pending = pendingPushIds.size + pendingSoftDeletes.length + pendingEditLogs.length;
@@ -7632,6 +7959,7 @@ function rerenderActiveView(){
   else if(currentView === 'deleteentity'){ renderDeleteEntityList(); }
   else if(currentView === 'dashboard'){ renderDashboard(); }
   else if(currentView === 'cico'){ renderCico(); }
+  else if(currentView === 'inhouse'){ renderInhouse(); }
 }
 
 window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); pushPendingNow(); pullFreshFromCloud(); });
@@ -7765,6 +8093,8 @@ function applyRolePermissions(){
   if(deleteEntityNav) deleteEntityNav.style.display = isAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
+  const avatar = document.getElementById('hdrAvatar');
+  if(avatar) avatar.textContent = currentUser ? currentUser.username.charAt(0).toUpperCase() : '';
 }
 
 // Returns the account's role string on success, false on wrong
