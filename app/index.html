@@ -1795,7 +1795,7 @@
         <span id="cloudStatus"></span>
       </div>
       <div class="hdr-search-wrap">
-        <input type="text" id="globalSearchInput" class="hdr-search" placeholder="Search guests, rooms, CNIC, contact..." autocomplete="off" oninput="renderGlobalSearch()" onkeydown="globalSearchKeydown(event)" onfocus="renderGlobalSearch()">
+        <input type="text" id="globalSearchInput" class="hdr-search" placeholder="Search anything..." autocomplete="off" oninput="renderGlobalSearch()" onkeydown="globalSearchKeydown(event)" onfocus="renderGlobalSearch()">
         <button type="button" class="search-clear-btn hdr-search-clear" onclick="clearSearchField(this)" title="Clear search">✕</button>
         <span class="hdr-search-kbd">Ctrl + /</span>
         <div class="hdr-search-results" id="globalSearchResults"></div>
@@ -5122,28 +5122,34 @@ function cancelEditMode(){
 // own page. It also matches the app's own pages/nav destinations (e.g.
 // typing "inhouse" offers Inhouse Report directly), so the search box
 // doubles as a command palette for jumping around the app.
+// `keywords` covers the section/field headers that actually live on that
+// page (e.g. "Actual Checkout" is a field on Check-in / Check-out, not a
+// page name of its own) — searching any of them should still surface the
+// page that holds it, not just the page's own nav label.
 const GLOBAL_SEARCH_PAGES = [
-  { label: 'Dashboard', view: 'dashboard' },
-  { label: 'Room Detail', view: 'roomdetail' },
-  { label: 'Inhouse Report', view: 'inhouse' },
-  { label: 'Check-in / Check-out', view: 'cico' },
-  { label: 'Reservations', view: 'reservations' },
-  { label: 'Ledgers', view: 'ledgers' },
-  { label: 'Full Audit', view: 'audit' },
-  { label: 'Review Today', view: 'reviewtoday' },
-  { label: 'Day Lock', view: 'daylock' },
-  { label: 'Delete Entity', view: 'deleteentity' },
-  { label: 'Guest Entry / Reservation', view: 'entry' },
-  { label: 'Add Payment', view: 'addpay' },
-  { label: 'Search', view: 'search' },
-  { label: 'Report', view: 'report' },
-  { label: 'Revenue Report', view: 'revenue' }
+  { label: 'Dashboard', view: 'dashboard', keywords: ['arrivals', 'departures', 'checked out', 'today at a glance'] },
+  { label: 'Room Detail', view: 'roomdetail', keywords: ['room status', 'vacant', 'dirty', 'ooo', 'occupied', 'extended'] },
+  { label: 'Inhouse Report', view: 'inhouse', keywords: ['buffet', 'headcount', 'total individuals', 'total pax'] },
+  { label: 'Check-in / Check-out', view: 'cico', keywords: ['check-in', 'checkin', 'check-out', 'checkout', 'actual checkin', 'actual checkout', 'expected checkout', 'check out today'] },
+  { label: 'Reservations', view: 'reservations', keywords: ['advance', 'booking', 'future check-ins'] },
+  { label: 'Ledgers', view: 'ledgers', keywords: ['room-night', 'balance', 'credit', 'debt'] },
+  { label: 'Full Audit', view: 'audit', keywords: ['change history', 'entry created', 'entry edited', 'all changes'] },
+  { label: 'Review Today', view: 'reviewtoday', keywords: ['nights ending', 'extended stays'] },
+  { label: 'Day Lock', view: 'daylock', keywords: ['lock day', 'unlock day', 'locked days'] },
+  { label: 'Delete Entity', view: 'deleteentity', keywords: ['delete', 'remove entry'] },
+  { label: 'Guest Entry / Reservation', view: 'entry', keywords: ['guest name', 'father name', 'cnic', 'room / apartment detail', 'today\'s entries'] },
+  { label: 'Add Payment', view: 'addpay', keywords: ['cash amount', 'account amount', 'this payment'] },
+  { label: 'Search', view: 'search', keywords: ['balance due', 'total due'] },
+  { label: 'Report', view: 'report', keywords: ['payment detail', 'grand total'] },
+  { label: 'Revenue Report', view: 'revenue', keywords: ['payments by date', 'extra money', 'rooms occupied'] }
 ];
 
 function globalSearchPageMatches(query){
   const q = query.trim().toLowerCase();
   if(!q) return [];
-  return GLOBAL_SEARCH_PAGES.filter(p=> p.label.toLowerCase().includes(q));
+  return GLOBAL_SEARCH_PAGES.filter(p=>
+    p.label.toLowerCase().includes(q) || (p.keywords || []).some(k=> k.includes(q))
+  );
 }
 
 function globalSearchMatches(query){
