@@ -2013,16 +2013,6 @@
           <label>Contact No</label>
           <input type="text" id="contactNo" placeholder="03XXXXXXXXX" autocomplete="off" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
-        <div>
-          <label class="lbl-sm">Adults <span class="req">*</span></label>
-          <input type="text" id="numAdults" autocomplete="off" inputmode="numeric" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-          <label class="na-check"><input type="checkbox" id="numAdultsNA" onchange="toggleNA('numAdults')"> N/A</label>
-        </div>
-        <div>
-          <label class="lbl-sm">Children <span class="req">*</span></label>
-          <input type="text" id="numChildren" value="N/A" autocomplete="off" disabled required inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-          <label class="na-check"><input type="checkbox" id="numChildrenNA" onchange="toggleNA('numChildren')" checked> N/A</label>
-        </div>
         <div class="grid" style="grid-column:1 / -1;">
           <div>
             <label>Check-in Date</label>
@@ -2057,6 +2047,8 @@
             <th style="width:170px;">Room No / Apt No / Miscellaneous</th>
             <th style="width:130px;">Type</th>
             <th style="width:130px;">Rent Per Day / Amount (Other)</th>
+            <th style="width:90px;">Adults</th>
+            <th style="width:90px;">Children</th>
             <th style="width:120px;">No of Days</th>
             <th style="width:130px;" class="edit-only">Moved Out</th>
             <th style="width:120px;">Total</th>
@@ -2362,14 +2354,6 @@
           <label>Actual Checkout</label>
           <input type="text" id="dActualCheckout" disabled>
         </div>
-        <div>
-          <label class="lbl-sm">Adults</label>
-          <input type="text" id="dAdults" disabled>
-        </div>
-        <div>
-          <label class="lbl-sm">Children</label>
-          <input type="text" id="dChildren" disabled>
-        </div>
       </div>
       <div class="grid" id="dExtraDetails" style="margin-top:14px;"></div>
     </div>
@@ -2386,6 +2370,8 @@
               <th>Room No / Apt No</th>
               <th style="width:120px;">Type</th>
               <th style="width:130px;">Rent Per Day / Amount (Other)</th>
+              <th style="width:90px;">Adults</th>
+              <th style="width:90px;">Children</th>
               <th style="width:110px;">No of Days</th>
               <th style="width:120px;">Moved Out</th>
               <th style="width:120px;">Total</th>
@@ -2874,6 +2860,19 @@
   </div>
 </div>
 
+<!-- Generic in-app replacement for the browser's native confirm() popup —
+     showConfirmModal(message, opts) fills this in and returns a Promise. -->
+<div class="modal-backdrop" id="confirmDialogBackdrop">
+  <div class="modal" style="width:420px;">
+    <h3 id="confirmDialogTitle">Are you sure?</h3>
+    <div class="sub" style="margin-bottom:14px; white-space:pre-line;" id="confirmDialogMessage"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" id="confirmDialogCancelBtn">Cancel</button>
+      <button class="btn" id="confirmDialogOkBtn">OK</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="roomStatusModalBackdrop">
   <div class="modal" style="width:440px;">
     <h3>Room <span id="rsModalRoomNo"></span></h3>
@@ -3116,6 +3115,38 @@ function confirmExitPrompt(){
   closeExitPromptModal();
   exitPromptAllowNextPop = true;
   history.back();
+}
+
+// In-app stand-in for the browser's native confirm() popup — same
+// question/OK-cancel shape, but styled like the rest of the app instead of
+// an ugly native dialog. Await it exactly like confirm(): `if(!await
+// showConfirmModal('...')) return;`
+let confirmDialogActive = null; // { resolve } while a dialog is open — guards double-resolution
+function showConfirmModal(message, opts){
+  opts = opts || {};
+  const backdrop = document.getElementById('confirmDialogBackdrop');
+  document.getElementById('confirmDialogTitle').textContent = opts.title || 'Are you sure?';
+  document.getElementById('confirmDialogMessage').textContent = message;
+  const okBtn = document.getElementById('confirmDialogOkBtn');
+  const cancelBtn = document.getElementById('confirmDialogCancelBtn');
+  okBtn.textContent = opts.okText || 'OK';
+  cancelBtn.textContent = opts.cancelText || 'Cancel';
+  okBtn.className = 'btn' + (opts.danger ? ' danger-solid' : '');
+  backdrop.classList.add('active');
+  return new Promise(resolve=>{
+    function cleanup(result){
+      backdrop.classList.remove('active');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      confirmDialogActive = null;
+      resolve(result);
+    }
+    function onOk(){ cleanup(true); }
+    function onCancel(){ cleanup(false); }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    confirmDialogActive = { resolve: cleanup };
+  });
 }
 
 window.addEventListener('popstate', e=>{
@@ -3583,6 +3614,8 @@ function addRow(){
       </select>
     </td>
     <td><input type="text" inputmode="decimal" placeholder="0 or Guest" class="rent" oninput="calcRow(this)"></td>
+    <td><input type="text" inputmode="numeric" placeholder="Adults" class="roomAdults" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
+    <td><input type="text" inputmode="numeric" placeholder="Children" class="roomChildren" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
     <td>
       <div class="roomctrl">
         <button onclick="changeRooms(this,-1)">-</button>
@@ -3915,6 +3948,8 @@ function isRowEmpty(tr, kind){
     return !tr.querySelector('.roomNo').value.trim() &&
            !tr.querySelector('.unitType').value &&
            !tr.querySelector('.rent').value.trim() &&
+           !tr.querySelector('.roomAdults').value.trim() &&
+           !tr.querySelector('.roomChildren').value.trim() &&
            !tr.querySelector('.movedOut').value;
   }
   if(kind === 'payment'){
@@ -3952,6 +3987,8 @@ function requestDeleteRow(btn, kind){
         <div><div class="confirm-lbl">Room No / Apt No</div><div class="confirm-val">${tr.querySelector('.roomNo').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">Type</div><div class="confirm-val">${tr.querySelector('.unitType').value || '-'}</div></div>
         <div><div class="confirm-lbl">Rent Per Day</div><div class="confirm-val">${(parseFloat(tr.querySelector('.rent').value) || 0).toLocaleString()}</div></div>
+        <div><div class="confirm-lbl">Adults</div><div class="confirm-val">${tr.querySelector('.roomAdults').value.trim() || '-'}</div></div>
+        <div><div class="confirm-lbl">Children</div><div class="confirm-val">${tr.querySelector('.roomChildren').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${isMiscRoomNo(tr.querySelector('.roomNo').value) ? '-' : (tr.dataset.rooms || 1)}</div></div>
         <div><div class="confirm-lbl">Moved Out</div><div class="confirm-val">${tr.querySelector('.movedOut').value ? formatDate(tr.querySelector('.movedOut').value) : '-'}</div></div>
         <div><div class="confirm-lbl">Total</div><div class="confirm-val">${tr.querySelector('.rowtotal').textContent || 0}</div></div>
@@ -4340,7 +4377,7 @@ function formatCNIC(el){
 let returningPromptedDigits = null; // asked once per CNIC — don't nag on every blur
 let returningPrefillDigits = null;  // accepted → save-time dup dialog is skipped
 
-function offerReturningGuestPrefill(){
+async function offerReturningGuestPrefill(){
   if(editingEntryId) return; // editing an old entry — not a new visit
   const digits = document.getElementById('cnic').value.replace(/[^0-9]/g, '');
   if(digits.length !== 13 || digits === returningPromptedDigits) return;
@@ -4351,11 +4388,12 @@ function offerReturningGuestPrefill(){
   returningPromptedDigits = digits;
   const prev = matches[0];
   const prevDate = prev.savedAt ? ' (last visit ' + formatDate(toKarachiDateStr(prev.savedAt)) + ')' : '';
-  const ok = confirm(
-    'RETURNING GUEST — this CNIC belongs to "' + (prev.guestName || '(no name)') + '"' + prevDate + '.\n\n' +
+  const ok = await showConfirmModal(
+    'This CNIC belongs to "' + (prev.guestName || '(no name)') + '"' + prevDate + '.\n\n' +
     'Click OK to load his saved details (name, father name, + details) into this new entry. ' +
     'You can then add any new detail with "+ Detail". Rooms, payments and dates start fresh for this visit.\n\n' +
-    'Click Cancel to type everything by hand instead.'
+    'Click Cancel to type everything by hand instead.',
+    { title: 'Returning Guest', okText: 'Load Details', cancelText: 'Type By Hand' }
   );
   if(!ok) return;
   returningPrefillDigits = digits;
@@ -4392,7 +4430,7 @@ function toggleNA(fieldId){
 
 let pendingEntryData = null;
 
-function reviewEntry(){
+async function reviewEntry(){
   // ---- Guardrails: the person doing data entry may be rushed or new to
   // the form, so catch the mistakes that would otherwise sit quietly in
   // the saved data (missing name, a room typed twice, a bank left unset). ----
@@ -4450,36 +4488,13 @@ function reviewEntry(){
   const dupGuest = !cnicNA && existingEntries.find(e => e.id !== editingEntryId && (e.cnic || '').replace(/[^0-9]/g,'') === cnicDigits);
   if(dupGuest && returningPrefillDigits !== cnicDigits){
     const prevDate = dupGuest.savedAt ? ' (entered ' + formatDate(toKarachiDateStr(dupGuest.savedAt)) + ')' : '';
-    const proceed = confirm(
+    const proceed = await showConfirmModal(
       'This CNIC already belongs to "' + (dupGuest.guestName || '(no name)') + '"' + prevDate + '.\n\n' +
       'RETURNING GUEST? Click OK — every visit is saved as its OWN new entry, with its own rooms, payments and balance. Do NOT edit the old entry to add a new stay.\n\n' +
-      'Click Cancel only if this is an accidental duplicate of the same stay.'
+      'Click Cancel only if this is an accidental duplicate of the same stay.',
+      { title: 'Duplicate CNIC', okText: 'Returning Guest', cancelText: 'Cancel' }
     );
     if(!proceed) return;
-  }
-
-  const numAdultsEl = document.getElementById('numAdults');
-  const numAdultsNA = document.getElementById('numAdultsNA').checked;
-  const numAdults = numAdultsNA ? 'N/A' : numAdultsEl.value.trim();
-  if(!numAdultsNA){
-    if(!numAdults){
-      showNotice('Please enter the No of Adults before saving (or tick N/A).');
-      focusError(numAdultsEl);
-      return;
-    }
-    if(parseInt(numAdults) <= 0){
-      showNotice('No of Adults must be at least 1.');
-      focusError(numAdultsEl);
-      return;
-    }
-  }
-  const numChildrenEl = document.getElementById('numChildren');
-  const numChildrenNA = document.getElementById('numChildrenNA').checked;
-  const numChildren = numChildrenNA ? 'N/A' : numChildrenEl.value.trim();
-  if(!numChildrenNA && !numChildren){
-    showNotice('Please enter the No of Children before saving (or tick N/A).');
-    focusError(numChildrenEl);
-    return;
   }
 
   // stay dates — reference only, no amount depends on them, but a
@@ -4497,8 +4512,6 @@ function reviewEntry(){
 
   const contactNo = document.getElementById('contactNo').value.trim();
   if(contactNo) extraDetails.unshift({ kind: 'Contact No', value: contactNo });
-  extraDetails.unshift({ kind: 'Children', value: numChildren });
-  extraDetails.unshift({ kind: 'Adults', value: numAdults });
   const actualCheckout = document.getElementById('actualCheckoutDate').value;
   if(actualCheckout) extraDetails.unshift({ kind: 'Actual Checkout', value: actualCheckout });
 
@@ -4536,6 +4549,8 @@ function reviewEntry(){
     const roomObj = {
       roomNo, unitType, rentInput, tr,
       rent: isFreeGuest ? 0 : rentInput.value,
+      adults: tr.querySelector('.roomAdults').value.trim(),
+      children: tr.querySelector('.roomChildren').value.trim(),
       count: tr.dataset.rooms,
       movedOut: tr.querySelector('.movedOut').value || '',
       total: parseFloat(tr.querySelector('.rowtotal').textContent.replace(/,/g,'')) || 0
@@ -4547,14 +4562,23 @@ function reviewEntry(){
     showNotice('Please add at least one room before saving.');
     return;
   }
+  // Same room twice is usually a genuine mistake, but not always — a
+  // mid-stay rate change or splitting one group's headcount across rows
+  // for the same room are both legitimate, so this asks rather than
+  // blocking outright.
   const seenRooms = {};
   for(const r of cleanRooms){
     const key = r.roomNo.toUpperCase();
     if(key === 'N/A' || key === MISC_ROOM_NO.toUpperCase()) continue; // undecided/misc rows may repeat
     if(seenRooms[key]){
-      showNotice('Room ' + r.roomNo + ' is selected in more than one row. Each room can only be booked once per entry — please fix the duplicate before saving.');
-      focusError(r.tr.querySelector('.roomNo'));
-      return;
+      const proceed = await showConfirmModal(
+        'Room ' + r.roomNo + ' is selected in more than one row. Continue anyway? (Only do this on purpose — e.g. a rate change mid-stay, or splitting the headcount across rows for the same room.)',
+        { title: 'Room Used Twice', okText: 'Continue', cancelText: 'Cancel' }
+      );
+      if(!proceed){
+        focusError(r.tr.querySelector('.roomNo'));
+        return;
+      }
     }
     seenRooms[key] = true;
   }
@@ -4623,7 +4647,7 @@ function reviewEntry(){
     checkIn: checkInEl.value || '',
     checkOut: checkOutEl.value || '',
     extraDetails,
-    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, count: r.count, movedOut: r.movedOut, total: r.total })),
+    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, adults: r.adults, children: r.children, count: r.count, movedOut: r.movedOut, total: r.total })),
     payments: cleanPayments
   };
   data.bookingTotal = document.getElementById('sumBookingTotal').textContent;
@@ -4639,7 +4663,7 @@ function openConfirmModal(data){
   const box = document.getElementById('confirmBody');
 
   const roomRowsHtml = data.rooms.map(r=>`
-    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
+    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
@@ -4661,12 +4685,10 @@ function openConfirmModal(data){
       <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${data.checkIn ? formatDate(data.checkIn) : '-'}</div></div>
       <div><div class="confirm-lbl">Expected Checkout</div><div class="confirm-val">${data.checkOut ? formatDate(data.checkOut) : '-'}</div></div>
       <div><div class="confirm-lbl">Actual Checkout</div><div class="confirm-val">${getDetailValue(data, 'Actual Checkout') ? formatDate(getDetailValue(data, 'Actual Checkout')) : '-'}</div></div>
-      <div><div class="confirm-lbl">Adults</div><div class="confirm-val">${getDetailValue(data, 'Adults') || '-'}</div></div>
-      <div><div class="confirm-lbl">Children</div><div class="confirm-val">${getDetailValue(data, 'Children') || '-'}</div></div>
       ${visibleExtraDetails(data).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
     </div>
     <table style="margin-bottom:14px;">
-      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Days</th><th>Moved Out</th><th>Total</th></tr></thead>
+      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Adults</th><th>Children</th><th>Days</th><th>Moved Out</th><th>Total</th></tr></thead>
       <tbody>${roomRowsHtml}</tbody>
     </table>
     <table style="margin-bottom:14px;">
@@ -4825,14 +4847,6 @@ function resetEntryForm(){
   document.getElementById('fatherName').value = 'N/A';
   document.getElementById('fatherName').disabled = true;
   document.getElementById('fatherNameNA').checked = true;
-  document.getElementById('numAdults').value = '';
-  document.getElementById('numAdults').disabled = false;
-  document.getElementById('numAdultsNA').checked = false;
-  // Children defaults to N/A the same way Father Name does — most walk-ins
-  // don't have any, so this saves ticking the box every time.
-  document.getElementById('numChildren').value = 'N/A';
-  document.getElementById('numChildren').disabled = true;
-  document.getElementById('numChildrenNA').checked = true;
   // Check-in defaults to today (Pakistan time) — nearly every walk-in checks in the day
   // they're entered, so this saves re-picking the date on every single guest.
   setStayDate('checkInDate', todayStr());
@@ -5009,19 +5023,6 @@ function startEditEntry(entry){
   document.getElementById('cnicNA').checked = entry.cnic === 'N/A';
   document.getElementById('cnic').disabled = entry.cnic === 'N/A';
   document.getElementById('contactNo').value = getDetailValue(entry, 'Contact No');
-  // a saved entry from before these fields existed has no Adults/Children
-  // value at all — treat that the same as N/A rather than leaving it blank
-  // and forcing every old entry to be fixed just to save an unrelated edit
-  const adultsVal = getDetailValue(entry, 'Adults');
-  const adultsIsNA = !adultsVal || adultsVal === 'N/A';
-  document.getElementById('numAdults').value = adultsIsNA ? 'N/A' : adultsVal;
-  document.getElementById('numAdults').disabled = adultsIsNA;
-  document.getElementById('numAdultsNA').checked = adultsIsNA;
-  const childrenVal = getDetailValue(entry, 'Children');
-  const childrenIsNA = !childrenVal || childrenVal === 'N/A';
-  document.getElementById('numChildren').value = childrenIsNA ? 'N/A' : childrenVal;
-  document.getElementById('numChildren').disabled = childrenIsNA;
-  document.getElementById('numChildrenNA').checked = childrenIsNA;
   setStayDate('checkInDate', entry.checkIn || '');
   setStayDate('checkOutDate', entry.checkOut || '');
   setStayDate('actualCheckoutDate', getDetailValue(entry, 'Actual Checkout'));
@@ -5048,6 +5049,8 @@ function startEditEntry(entry){
     tr.dataset.rooms = days;
     tr.querySelector('.roomCount').textContent = days;
     tr.querySelector('.rent').value = (r.rent === 0 || r.rent === '0') ? 'Guest' : (r.rent || '');
+    tr.querySelector('.roomAdults').value = r.adults || '';
+    tr.querySelector('.roomChildren').value = r.children || '';
     const movedOutInput = tr.querySelector('.movedOut');
     movedOutInput.value = r.movedOut || '';
     updateDateReadout(movedOutInput, tr.querySelector('.movedOutReadout'));
@@ -5751,14 +5754,19 @@ function computeMovement(fromDate, toDate){
     }
 
     // Expected checkout = check-in + the LONGEST room's booked nights (not
-    // the sum across rooms) — same formula as Room Detail/Dashboard/Revenue
-    // Report, instead of the old manually-typed Expected Checkout field.
+    // the sum across DIFFERENT rooms) — same formula as Room Detail/
+    // Dashboard/Revenue Report, instead of the old manually-typed Expected
+    // Checkout field. A room split across more than one row (rate change
+    // mid-stay, headcount split) still counts as one room, so its rows are
+    // summed together before comparing against other rooms.
     let maxNights = 0;
+    const roomNightTotals = {};
     (entry.rooms || []).forEach(r=>{
       if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
       const nights = parseInt(r.count) || 1;
-      if(nights > maxNights) maxNights = nights;
+      roomNightTotals[r.roomNo] = (roomNightTotals[r.roomNo] || 0) + nights;
     });
+    Object.values(roomNightTotals).forEach(n=>{ if(n > maxNights) maxNights = n; });
     if(checkIn && maxNights > 0){
       const computedCheckout = addDaysToDateStr(checkIn, maxNights);
       if(computedCheckout >= fromDate && computedCheckout <= toDate){
@@ -5952,8 +5960,6 @@ function renderDetail(){
   document.getElementById('dCheckOut').value = entry.checkOut ? formatDate(entry.checkOut) : '—';
   const actualCheckout = getDetailValue(entry, 'Actual Checkout');
   document.getElementById('dActualCheckout').value = actualCheckout ? formatDate(actualCheckout) : '—';
-  document.getElementById('dAdults').value = getDetailValue(entry, 'Adults') || '—';
-  document.getElementById('dChildren').value = getDetailValue(entry, 'Children') || '—';
   document.getElementById('dExtraDetails').innerHTML = visibleExtraDetails(entry).map(d=>
     `<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`
   ).join('');
@@ -5964,10 +5970,12 @@ function renderDetail(){
       <td>${r.roomNo || '-'}</td>
       <td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td>
       <td>${Number(r.rent || 0).toLocaleString()}</td>
+      <td>${r.adults || '0'}</td>
+      <td>${r.children || '0'}</td>
       <td>${isMiscRoomNo(r.roomNo) ? '-' : (r.count || 1)}</td>
       <td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td>
       <td class="rowtotal">${(parseFloat(String(r.total || 0).replace(/,/g,'')) || 0).toLocaleString()}</td>
-    </tr>`).join('') || '<tr><td colspan="6" class="empty-note">No rooms.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="8" class="empty-note">No rooms.</td></tr>';
 
   const payBody = document.getElementById('detailPayBody');
   const payments = (entry.payments || []).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''));
@@ -6835,17 +6843,24 @@ function buildLedgersRecords(){
     const guest = entry.guestName || '(no name)';
 
     const nights = [];
+    // A room that's split across more than one row (a rate change mid-stay,
+    // or the headcount broken out separately) chains onto the same room's
+    // previous row instead of restarting at check-in — two rows of 2 nights
+    // + 1 night for the same room is 3 consecutive nights, not two rows
+    // both starting on the same day. Misc rows (Snooker/BBQ/Bonfire) are
+    // one-off facility charges, not nights, so they're excluded from this
+    // chaining and just start on check-in each time.
+    const roomCursor = {};
     (entry.rooms || []).forEach(r=>{
       if(!r.roomNo) return;
-      // Snooker/BBQ/Bonfire are one-off facility charges, not room-nights —
-      // still listed under the guest here (Ledgers shows every charge), but
-      // computeRoomStatuses filters these back out so they never read as an
-      // occupied "room".
       const nightsCount = parseInt(r.count) || 1;
       const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
+      const isMisc = isMiscRoomNo(r.roomNo);
+      const rowStart = isMisc ? startDate : (roomCursor[r.roomNo] || startDate);
       for(let i = 0; i < nightsCount; i++){
-        nights.push({ date: addDaysToDateStr(startDate, i), roomNo: r.roomNo, rent, received: 0, receivedOn: null, guestId: entry.id, guest });
+        nights.push({ date: addDaysToDateStr(rowStart, i), roomNo: r.roomNo, rent, received: 0, receivedOn: null, guestId: entry.id, guest });
       }
+      if(!isMisc) roomCursor[r.roomNo] = addDaysToDateStr(rowStart, nightsCount);
     });
     nights.sort((a,b)=> a.date.localeCompare(b.date));
 
@@ -7051,13 +7066,18 @@ function buildRevenueReport(asOfDate){
     const guestId = entry.id;
 
     const nights = [];
+    // Same room split across more than one row chains onto its own previous
+    // row instead of restarting at check-in — see buildLedgersRecords.
+    const roomCursor = {};
     (entry.rooms || []).forEach(r=>{
       if(!r.roomNo || isMiscRoomNo(r.roomNo)) return; // Snooker/BBQ/Bonfire are facility charges, not room-nights
       const nightsCount = parseInt(r.count) || 1;
       const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
+      const rowStart = roomCursor[r.roomNo] || startDate;
       for(let i = 0; i < nightsCount; i++){
-        nights.push({ date: addDaysToDateStr(startDate, i), roomNo: r.roomNo, rent });
+        nights.push({ date: addDaysToDateStr(rowStart, i), roomNo: r.roomNo, rent });
       }
+      roomCursor[r.roomNo] = addDaysToDateStr(rowStart, nightsCount);
     });
     nights.sort((a,b)=> a.date.localeCompare(b.date));
     nights.forEach(n=>{ if(n.date === asOfDate) tonightRentTotal += n.rent; });
@@ -7224,9 +7244,10 @@ function renderRevenue(){
     };
     roomsBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:110px;">Room No</th><th style="width:160px;">Guest</th><th style="width:110px;">Rent</th>${paymentHeaders}<th style="width:110px;">Due</th></tr></thead>
-        <tbody>${data.roomRows.map(r=> `
+        <thead><tr><th style="width:40px;">#</th><th style="width:110px;">Room No</th><th style="width:160px;">Guest</th><th style="width:110px;">Rent</th>${paymentHeaders}<th style="width:110px;">Due</th></tr></thead>
+        <tbody>${data.roomRows.map((r,i)=> `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+            <td>${i + 1}</td>
             <td>${r.roomNo}</td>
             <td>${r.guest}</td>
             <td>${r.rent.toLocaleString()}</td>
@@ -7236,7 +7257,7 @@ function renderRevenue(){
         </tbody>
         <tfoot>
           <tr class="day-foot-total">
-            <td colspan="2">Total</td>
+            <td colspan="3">Total</td>
             <td>${data.totalRent.toLocaleString()}</td>
             <td class="cash-amt" colspan="${maxChunks}">Collected: ${data.totalCollected.toLocaleString()}</td>
             <td>${data.totalDue.toLocaleString()}</td>
@@ -7371,20 +7392,24 @@ function buildInhouseReport(){
       if(!roomsByEntity[id]) roomsByEntity[id] = { entry: rs.entry, roomNos: [] };
       roomsByEntity[id].roomNos.push(rs.roomNo);
     });
+  // Adults/Children now live per room (not on the guest entry itself), so
+  // a guest's headcount here is the sum across whichever of their rooms
+  // are actually occupied today.
   const rows = Object.values(roomsByEntity).map(({ entry, roomNos })=>{
-    const adultsRaw = getDetailValue(entry, 'Adults');
-    const childrenRaw = getDetailValue(entry, 'Children');
+    const relevantRooms = (entry.rooms || []).filter(r=> roomNos.includes(r.roomNo));
+    const adultsSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
+    const childrenSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
     return {
       roomNo: roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).join(', '),
       guest: entry.guestName || '(no name)',
       guestId: entry.id,
-      adultsDisplay: adultsRaw || 'N/A',
-      childrenDisplay: childrenRaw || 'N/A',
-      pax: (parseInt(adultsRaw) || 0) + (parseInt(childrenRaw) || 0)
+      adultsDisplay: adultsSum,
+      childrenDisplay: childrenSum,
+      pax: adultsSum + childrenSum
     };
   }).sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
-  const totalAdults = rows.reduce((s,r)=> s + (parseInt(r.adultsDisplay) || 0), 0);
-  const totalChildren = rows.reduce((s,r)=> s + (parseInt(r.childrenDisplay) || 0), 0);
+  const totalAdults = rows.reduce((s,r)=> s + r.adultsDisplay, 0);
+  const totalChildren = rows.reduce((s,r)=> s + r.childrenDisplay, 0);
   const totalPax = rows.reduce((s,r)=> s + r.pax, 0);
   return { rows, roomCount, totalAdults, totalChildren, totalPax };
 }
@@ -7866,6 +7891,8 @@ function roomPayload(e, r){
     room_no: isMisc ? `${MISC_ROOM_NO} (${r.unitType})` : (r.roomNo || ''),
     unit_type: isMisc ? '' : (r.unitType || ''),
     rent_per_day: num(r.rent),
+    adults: r.adults || null,
+    children: r.children || null,
     days_count: parseInt(r.count) || 1,
     moved_out_date: r.movedOut || null,
     total: num(r.total)
@@ -8026,7 +8053,7 @@ function applyServerData(gRows, rRows, pRows){
       }
       return {
         id: r.id, roomNo, unitType,
-        rent: num(r.rent_per_day), count: parseInt(r.days_count) || 1,
+        rent: num(r.rent_per_day), adults: r.adults || '', children: r.children || '', count: parseInt(r.days_count) || 1,
         movedOut: r.moved_out_date || '', total: num(r.total)
       };
     }),
@@ -8344,8 +8371,14 @@ function showApp(){
 document.getElementById('loginBtn').addEventListener('click', attemptLogin);
 document.getElementById('loginPassword').addEventListener('keydown', ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); attemptLogin(); } });
 document.getElementById('loginUsername').addEventListener('keydown', ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); document.getElementById('loginPassword').focus(); } });
-document.getElementById('logoutBtn').addEventListener('click', ()=>{
-  if(pendingPushIds.size > 0 && !confirm('Some saves have not reached the cloud database yet. Sign out anyway?')) return;
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+  if(pendingPushIds.size > 0){
+    const proceed = await showConfirmModal(
+      'Some saves have not reached the cloud database yet. Sign out anyway?',
+      { title: 'Unsaved Changes', okText: 'Sign Out Anyway', cancelText: 'Stay', danger: true }
+    );
+    if(!proceed) return;
+  }
   try{ sessionStorage.removeItem(LOGIN_SESSION_KEY); }catch(e){ /* best effort */ }
   location.reload();
 });
