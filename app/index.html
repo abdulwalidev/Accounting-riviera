@@ -7397,7 +7397,7 @@ function renderRevenue(){
     // it's fine for it to wrap to a second line rather than force every
     // column wider to fit the rare long value.
     roomsBody.innerHTML = `
-      <table style="min-width:1400px;">
+      <table style="width:auto;">
         <thead><tr><th style="width:20px;">#</th><th style="width:44px;">Room No</th><th style="width:80px;">Guest</th><th style="width:48px;">Rent</th>${paymentHeaders}<th style="width:44px;">Cash</th><th style="width:40px;">MCB</th><th style="width:88px;">Haji (MCB)</th><th style="width:64px;">Alfalah</th><th style="width:38px;">Due</th></tr></thead>
         <tbody>${data.roomRows.map((r,i)=> `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
