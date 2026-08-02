@@ -668,6 +668,10 @@
     background:#E5E7EB;
     color:#374151;
   }
+  .status.checkoutdue{
+    background:var(--danger-bg);
+    color:var(--danger);
+  }
 
   /* ---- Layout ---- */
   .main{
@@ -1133,15 +1137,13 @@
   .smart-row .sr-status{ font-weight:700; border-right:1px solid #1725540F; padding-right:6px; }
   .smart-row .sr-status.occupied{ color:var(--account); }
   .smart-row .sr-status.vacant{ color:var(--cash); }
-  .smart-row .sr-status.extended{ color:var(--gold-deep); }
+  .smart-row .sr-status.checkoutdue{ color:var(--danger); }
   .smart-row .sr-status.dirty{ color:var(--gold-deep); }
   .smart-row .sr-status.ooo{ color:var(--muted); }
   .smart-row .sr-arrival{ color:var(--muted); font-size:11.5px; text-align:right; white-space:nowrap; border-right:1px solid #1725540F; padding-right:6px; }
   .smart-row .sr-guest{ color:var(--account); font-weight:600; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .smart-row .sr-guest.sr-guest-muted{ color:var(--muted); font-weight:500; font-style:italic; }
-  .smart-row .sr-guest.sr-guest-extended{ color:var(--gold-deep); font-weight:700; }
   .muted-guest{ color:var(--muted); font-style:italic; font-weight:500; }
-  .extended-guest{ color:var(--gold-deep); font-weight:700; }
   .lg-name-primary{ font-weight:600; }
   .lg-connector{ display:inline-block; color:var(--muted); font-weight:700; margin-right:6px; padding-left:6px; opacity:0.6; }
   .lg-name-continued{ color:var(--muted); font-weight:500; }
@@ -1351,6 +1353,34 @@
     justify-content:center;
     z-index:80;
     padding:20px;
+  }
+  /* Idle pause: tab left open unattended stops polling the cloud database
+     to save egress — this covers everything (including any open modal)
+     until the user proves they're back with any click/keypress. */
+  #idlePauseOverlay{
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(10,10,10,0.88);
+    color:#fff;
+    align-items:center;
+    justify-content:center;
+    z-index:200;
+    text-align:center;
+    cursor:pointer;
+  }
+  #idlePauseOverlay.active{ display:flex; }
+  .idle-pause-title{
+    font-family:'Inter',sans-serif;
+    font-size:22px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin-bottom:8px;
+  }
+  .idle-pause-sub{
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    color:rgba(255,255,255,0.75);
   }
   .modal-backdrop.active{ display:flex; }
   .modal{
@@ -1682,6 +1712,16 @@
     margin-right:8px;
   }
   .theme-toggle svg{ width:17px; height:17px; }
+  .hdr-pause-btn{
+    width:auto;
+    padding:0 10px;
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    white-space:nowrap;
+  }
   .theme-toggle .icon-sun{ display:none; }
   html[data-theme="dark"] .theme-toggle .icon-moon{ display:none; }
   html[data-theme="dark"] .theme-toggle .icon-sun{ display:block; }
@@ -1785,6 +1825,13 @@
   </div>
 </div>
 
+<div id="idlePauseOverlay">
+  <div>
+    <div class="idle-pause-title">Paused</div>
+    <div class="idle-pause-sub">Click anywhere to resume</div>
+  </div>
+</div>
+
 <div id="appRoot" style="display:none;">
 
 <div class="app-header no-print">
@@ -1802,6 +1849,7 @@
       </div>
     </div>
     <div class="hdr-right">
+      <button class="theme-toggle hdr-pause-btn" id="pauseSyncBtn" onclick="event.stopPropagation(); pauseAppForIdle();" title="Pause syncing with the cloud until you click to resume">Pause Sync</button>
       <span class="hdr-date-pill" id="hdrDatePill"></span>
       <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
@@ -1834,6 +1882,7 @@
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
       <button class="navbtn" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
+      <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none; margin-left:auto;">Auto Checkout / Extend</button>
     </div>
   </div>
 </div>
@@ -1847,7 +1896,10 @@
         <h1>Dashboard</h1>
         <div class="sub">Today at a glance</div>
       </div>
-      <button class="btn" onclick="openAvailModal()">Check Availability</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn edit-gold" onclick="showView('roomdetail')">Room Detail</button>
+        <button class="btn" onclick="openAvailModal()">Check Availability</button>
+      </div>
     </div>
 
     <div class="dash-grid">
@@ -2668,6 +2720,42 @@
 
   </div>
 
+  <div class="view" id="view-autocheckout">
+
+    <h1>Auto Checkout / Extend</h1>
+    <div class="sub">Guests whose checkout date has arrived — settle up and check them out, one at a time or all at once. "Extend" is just a label here: these are the guests who might be extending their stay — nothing on this page extends anything automatically.</div>
+
+    <div class="panel accent-filters">
+      <h2>As Of Date</h2>
+      <div class="sub" style="margin-top:-6px;">For review only — Checkout/Undo/Run Auto Checkout are only ever available when this is set to today, so nothing can be checked out under the wrong date.</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>Date</label>
+          <input type="date" id="acDate">
+          <div class="date-readout" id="acDateReadout"></div>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn secondary" onclick="setAutoCheckoutToday()">Today</button>
+      </div>
+    </div>
+
+    <div class="panel accent-filters">
+      <h2>Checkout Due <span id="acDueDateLabel"></span></h2>
+      <div class="sub" style="margin-top:-6px;">Last booked night was the day before. Rows in red owe money (or have paid for nights beyond what's booked) — Auto Checkout skips them; check them out here manually once it's sorted.</div>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn" id="acRunBtn" onclick="runAutoCheckout()">▶ Run Auto Checkout</button>
+      </div>
+      <div id="autoCheckoutDueBody" style="overflow-x:auto; margin-top:14px;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2>Checked Out <span id="acLogDateLabel"></span></h2>
+      <div id="autoCheckoutLogBody"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
   <div class="view" id="view-audit">
 
     <h1>Full Audit</h1>
@@ -2891,15 +2979,6 @@
       <button class="btn" onclick="confirmRoomStatusChange()">Set Status</button>
     </div>
 
-    <div id="rsExtendedSection" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
-      <div class="sub" style="margin-bottom:10px;">This room's last booked night was yesterday and nobody's confirmed <b id="rsExtendedGuest"></b> actually left.</div>
-      <button class="btn" style="width:100%;" onclick="openCheckoutConfirmModal()">✓ Confirm Checked Out (marks room Dirty)</button>
-    </div>
-
-    <div id="rsReextendSection" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
-      <div class="sub" style="margin-bottom:10px;"><b id="rsReextendGuest"></b> was just marked checked out today. Done by mistake?</div>
-      <button class="btn secondary" style="width:100%;" onclick="confirmRoomReextend()">↺ Undo — Re-extend This Guest</button>
-    </div>
   </div>
 </div>
 
@@ -3006,7 +3085,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday','inhouse'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday','inhouse','autocheckout'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -3030,8 +3109,13 @@ function showView(view, fromPopState){
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
+  if(view === 'autocheckout' && !isAdmin()){
+    showNotice('Auto Checkout / Extend is only available to admin accounts.');
+    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
+    return;
+  }
   currentView = view;
-  ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday','inhouse'].forEach(v=>{
+  ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday','inhouse','autocheckout'].forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
@@ -3049,6 +3133,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavFullAudit').classList.toggle('active', view === 'audit');
   document.getElementById('topNavDayLock').classList.toggle('active', view === 'daylock');
   document.getElementById('topNavDeleteEntity').classList.toggle('active', view === 'deleteentity');
+  document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -3063,6 +3148,7 @@ function showView(view, fromPopState){
   if(view === 'roomdetail') renderRoomDetail();
   if(view === 'reviewtoday') renderReviewToday();
   if(view === 'inhouse') renderInhouse();
+  if(view === 'autocheckout') renderAutoCheckout();
   if(view === 'dashboard') renderDashboard();
   if(view === 'cico') renderCico();
 
@@ -3283,6 +3369,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   updateLedgersDateReadouts();
   document.getElementById('rvDate').addEventListener('input', renderRevenue);
   document.getElementById('rvDate').value = todayStr();
+  document.getElementById('acDate').addEventListener('input', renderAutoCheckout);
+  document.getElementById('acDate').value = todayStr();
   document.getElementById('dlDate').value = todayStr();
   updateDateReadout(document.getElementById('dlDate'), document.getElementById('dlDateReadout'));
   document.getElementById('dlDate').addEventListener('input', e=>{
@@ -3669,24 +3757,7 @@ function openRoomStatusModal(roomNo){
   pendingRoomStatusRoomNo = roomNo;
   const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNo);
   document.getElementById('rsModalRoomNo').textContent = roomNo;
-
-  const extendedSection = document.getElementById('rsExtendedSection');
-  const reextendSection = document.getElementById('rsReextendSection');
-  const isExtended = !!(rs && rs.extended && rs.entry);
-  // Re-extend only offers to undo a checkout confirmed TODAY — an old,
-  // long-settled departure isn't "just made a mistake" territory.
-  const justCheckedOutToday = !!(rs && !isExtended && rs.entry && getDetailValue(rs.entry, 'Actual Checkout') === todayStr());
-
-  extendedSection.style.display = isExtended ? '' : 'none';
-  if(isExtended) document.getElementById('rsExtendedGuest').textContent = rs.entry.guestName || '(no name)';
-
-  reextendSection.style.display = justCheckedOutToday ? '' : 'none';
-  if(justCheckedOutToday) document.getElementById('rsReextendGuest').textContent = rs.entry.guestName || '(no name)';
-
-  document.getElementById('rsModalSub').textContent = (isExtended || justCheckedOutToday)
-    ? 'Resolve this room\'s status, or set it manually below.'
-    : 'Update this room\'s housekeeping status.';
-
+  document.getElementById('rsModalSub').textContent = 'Update this room\'s housekeeping status.';
   document.getElementById('rsStatusSelect').value = (rs && rs.housekeepingStatus) || 'Ready';
   const input = document.getElementById('rsConfirmInput');
   input.value = '';
@@ -3784,59 +3855,39 @@ async function confirmCheckoutConfirmModal(){
   await confirmRoomCheckout();
 }
 
-// Marks the current guest's Actual Checkout as today — the ONLY moment
-// Actual Checkout ever gets written automatically — and the room Dirty,
-// never straight to Ready. Whoever cleans it marks it Ready themselves via
-// this same modal.
-async function confirmRoomCheckout(){
-  const roomNo = pendingRoomStatusRoomNo;
-  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNo);
-  if(!rs || !rs.entry) return;
-  const entry = loadAllEntries().find(e=> e.id === rs.entry.id);
-  if(!entry) return;
+// Marks a guest's Actual Checkout as today and the room Dirty (never
+// straight to Ready — whoever cleans it marks it Ready themselves via the
+// room-status modal). Shared by the room-status modal's checkout flow, the
+// Auto Checkout / Extend page's bulk run, and its per-guest manual button.
+async function checkOutEntryRoom(entryId, roomNo, logAction){
+  const entry = loadAllEntries().find(e=> e.id === entryId);
+  if(!entry) return false;
   const extraDetails = (entry.extraDetails || []).filter(d=> d.kind !== 'Actual Checkout');
   extraDetails.unshift({ kind: 'Actual Checkout', value: todayStr() });
   entry.extraDetails = extraDetails;
   entry.editedAt = new Date().toISOString();
   entry.editedBy = currentUser ? currentUser.username : '';
-  logGuestAction(entry.id, 'edited');
+  logGuestAction(entry.id, logAction || 'checked_out');
   queueEntryPush(entry.id);
   await upsertRoomStatus(roomNo, 'Dirty');
-  closeRoomStatusModal();
-  renderRoomDetail();
-  showNotice((entry.guestName || 'Guest') + ' checked out — room ' + roomNo + ' marked Dirty.', 'success');
+  return entry;
 }
 
-async function deleteRoomStatus(roomNo){
-  if(!sb) return;
-  try{
-    const { error } = await sb.from('room_status').delete().eq('room_no', roomNo);
-    if(error) throw error;
-  }catch(e){
-    console.error('Clearing room status failed', e);
-  }
-  delete roomStatusMap[roomNo];
-}
-
-// Undoes an accidental "Confirm Checked Out" — clears the Actual Checkout
-// that action set and clears the room's housekeeping row entirely, so the
-// room falls straight back to Extended (default Ready with no timestamp to
-// resolve it) until someone deals with it for real.
-async function confirmRoomReextend(){
+async function confirmRoomCheckout(){
   const roomNo = pendingRoomStatusRoomNo;
   const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNo);
   if(!rs || !rs.entry) return;
-  const entry = loadAllEntries().find(e=> e.id === rs.entry.id);
+  // Last line of defense — never write a checkout for a guest whose
+  // balance isn't settled at exactly 0, no matter what UI path got here.
+  if(computeTotals(rs.entry).due !== 0){
+    showNotice('This guest\'s balance isn\'t settled at exactly 0 — checkout blocked.');
+    return;
+  }
+  const entry = await checkOutEntryRoom(rs.entry.id, roomNo);
   if(!entry) return;
-  entry.extraDetails = (entry.extraDetails || []).filter(d=> d.kind !== 'Actual Checkout');
-  entry.editedAt = new Date().toISOString();
-  entry.editedBy = currentUser ? currentUser.username : '';
-  logGuestAction(entry.id, 'edited');
-  queueEntryPush(entry.id);
-  await deleteRoomStatus(roomNo);
   closeRoomStatusModal();
-  renderRoomDetail();
-  showNotice((entry.guestName || 'Guest') + ' re-extended — room ' + roomNo + ' is Extended again until resolved.', 'success');
+  rerenderActiveView();
+  showNotice((entry.guestName || 'Guest') + ' checked out — room ' + roomNo + ' marked Dirty.', 'success');
 }
 
 function openChangeRoomModal(){
@@ -4117,7 +4168,7 @@ function scheduleKarachiMidnightRollover(){
 function handleKarachiMidnightRollover(){
   const newToday = todayStr();
   if(newToday === lastKnownToday) return;
-  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','rvDate','dlDate','auditEntryDate','auditPageDate'].forEach(id=>{
+  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','rvDate','dlDate','auditEntryDate','auditPageDate','acDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(el && el.value === lastKnownToday) el.value = newToday;
   });
@@ -4136,6 +4187,8 @@ function handleKarachiMidnightRollover(){
   if(rvDateEl) updateDateReadout(rvDateEl, document.getElementById('rvDateReadout'));
   const dlDateEl = document.getElementById('dlDate');
   if(dlDateEl) updateDateReadout(dlDateEl, document.getElementById('dlDateReadout'));
+  const acDateEl = document.getElementById('acDate');
+  if(acDateEl) updateDateReadout(acDateEl, document.getElementById('acDateReadout'));
   const auditEntryDateEl = document.getElementById('auditEntryDate');
   if(auditEntryDateEl) updateDateReadout(auditEntryDateEl, document.getElementById('auditEntryDateReadout'));
   const auditPageDateEl = document.getElementById('auditPageDate');
@@ -4156,7 +4209,9 @@ function handleKarachiMidnightRollover(){
   if(currentView === 'roomdetail') renderRoomDetail();
   if(currentView === 'dashboard') renderDashboard();
   if(currentView === 'cico') renderCico();
+  if(currentView === 'autocheckout') renderAutoCheckout();
   if(currentView === 'inhouse') renderInhouse();
+  if(currentView === 'autocheckout') renderAutoCheckout();
 }
 
 function addPayRow(){
@@ -4581,6 +4636,45 @@ async function reviewEntry(){
       }
     }
     seenRooms[key] = true;
+  }
+
+  // Cross-entry double-booking guard: the same-room-twice check above only
+  // catches a room repeated within THIS entry — it says nothing about a
+  // DIFFERENT guest already holding that room on the same night (a same-
+  // day turnover, or a straight-up scheduling mistake). This asks rather
+  // than blocks, since a genuine same-day turnover (one guest's Actual
+  // Checkout already set, another checking into the freed room the same
+  // night) is a real, intentional case.
+  if(checkInEl.value){
+    const thisEntryNights = [];
+    const roomCursor = {};
+    for(const r of cleanRooms){
+      if(isMiscRoomNo(r.roomNo)) continue;
+      const nightsCount = parseInt(r.count) || 1;
+      const rowStart = roomCursor[r.roomNo] || checkInEl.value;
+      for(let i = 0; i < nightsCount; i++){
+        thisEntryNights.push({ roomNo: r.roomNo, date: addDaysToDateStr(rowStart, i) });
+      }
+      roomCursor[r.roomNo] = addDaysToDateStr(rowStart, nightsCount);
+    }
+    if(thisEntryNights.length > 0){
+      const otherNights = buildLedgersRecords().filter(n=> n.guestId !== editingEntryId);
+      const conflicts = [];
+      thisEntryNights.forEach(n=>{
+        const hit = otherNights.find(x=> x.roomNo.trim().toUpperCase() === n.roomNo.trim().toUpperCase() && x.date === n.date);
+        if(hit) conflicts.push({ roomNo: n.roomNo, date: n.date, guest: hit.guest });
+      });
+      if(conflicts.length > 0){
+        const lines = conflicts.slice(0, 5).map(c=> 'Room ' + c.roomNo + ' on ' + formatDate(c.date) + ' — already booked by ' + c.guest).join('\n');
+        const more = conflicts.length > 5 ? '\n...and ' + (conflicts.length - 5) + ' more' : '';
+        const proceed = await showConfirmModal(
+          'This overlaps with an existing booking for the same room and night:\n\n' + lines + more +
+          '\n\nThis can be intentional for a same-day turnover — otherwise it\'s a scheduling mistake. Continue anyway?',
+          { title: 'Room Already Booked That Night', okText: 'Continue', cancelText: 'Cancel', danger: true }
+        );
+        if(!proceed) return;
+      }
+    }
   }
 
   const payRows = Array.from(document.querySelectorAll('#payBody tr'));
@@ -5594,10 +5688,9 @@ function renderRoomDetail(){
   rooms.forEach(r=> (groups[r.section] = groups[r.section] || []).push(r));
   const sections = ROOM_SECTION_ORDER.filter(section=> groups[section] && groups[section].length);
 
-  // A room with a booked-tonight guest opens that guest's page — everything
-  // else (Extended, or plain Ready/Dirty/OOO) opens the room-status div
-  // instead, since there's no "current guest" to show, or the guest shown
-  // is unconfirmed/stale.
+  // A room with a current or checkout-due guest opens that guest's page —
+  // only a plain vacant Ready/Dirty/OOO room (no guest attached at all)
+  // opens the room-status div instead.
   const STATUS_LABEL = { Ready: 'Vacant', Dirty: 'Dirty', OOO: 'OOO' };
   const STATUS_CLASS = { Ready: 'paid', Dirty: 'partial', OOO: 'ooo' };
 
@@ -5605,18 +5698,19 @@ function renderRoomDetail(){
     const list = groups[section];
     const occ = list.filter(r=> r.occupied || r.extended).length;
     const rows = list.map(r=>{
-      const goesToGuest = r.occupied && !r.extended;
+      const goesToGuest = (r.occupied || r.extended) && !!r.entry;
       const due = r.entry ? computeTotals(r.entry).due : 0;
+      // Checkout day arrived (last booked night was yesterday) but the
+      // balance isn't settled at exactly 0 — owes money, or has paid ahead
+      // for nights that were never booked. Either way, a human needs to
+      // look at it before it can be checked out (Auto Checkout skips these).
+      const isCheckoutPending = r.extended && due !== 0;
       const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '-';
       const guestCell = goesToGuest
         ? (r.entry.guestName || '(no name)')
-        : (r.entry
-          ? (r.extended
-            ? `<span class="extended-guest">${r.entry.guestName || '(no name)'}</span>`
-            : `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>`)
-          : '-');
-      const statusLabel = r.extended ? 'Extended' : (r.occupied ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
-      const statusCls = r.extended ? 'partial' : (r.occupied ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
+        : (r.entry ? `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>` : '-');
+      const statusLabel = isCheckoutPending ? 'Pending' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
+      const statusCls = isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
       return `<tr style="cursor:pointer;" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <td><b>${r.roomNo}</b></td>
@@ -5644,15 +5738,17 @@ function renderRoomDetail(){
   const SR_STATUS_LABEL = { Ready: 'vacant', Dirty: 'dirty', OOO: 'ooo' };
   munchiBody.innerHTML = sections.map(section=>{
     const rows = groups[section].map(r=>{
-      const goesToGuest = r.occupied && !r.extended;
+      const goesToGuest = (r.occupied || r.extended) && !!r.entry;
+      const due = r.entry ? computeTotals(r.entry).due : 0;
+      const isCheckoutPending = r.extended && due !== 0;
       const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '';
       const guestText = goesToGuest
         ? (r.entry.guestName || '')
         : (r.entry ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
-      const statusText = r.extended ? 'extended' : (r.occupied ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
-      const statusCls = r.extended ? 'extended' : (r.occupied ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
+      const statusText = isCheckoutPending ? 'pending' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
+      const statusCls = isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
-      const guestCls = goesToGuest ? '' : (r.entry ? (r.extended ? ' sr-guest-extended' : ' sr-guest-muted') : '');
+      const guestCls = goesToGuest ? '' : (r.entry ? ' sr-guest-muted' : '');
       return `<div class="smart-row clickable" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <span class="sr-room">${r.roomNo}</span>
         <span class="sr-type">${r.type || ''}</span>
@@ -6012,7 +6108,7 @@ function renderDetail(){
 
 // Every recorded action on this entry, newest first: who did what, when.
 // The log is append-only on the server — nothing in the app can rewrite it.
-const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added' };
+const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added', checked_out: 'Checked Out' };
 
 function renderChangeLog(entry){
   const box = document.getElementById('detailChangeLog');
@@ -7620,6 +7716,212 @@ function renderDayLock(){
 }
 
 // =========================================================
+// AUTO CHECKOUT / EXTEND — admin-only. "Checkout due today" is the same
+// signal Room Detail's red Pending badge and gold-then-red Extended flag
+// used: a room's last booked night was yesterday and nobody's confirmed
+// the guest actually left. Auto Checkout only ever processes a guest whose
+// balance is settled at exactly 0 — owing money, or having paid for more
+// nights than are booked, both mean a human needs to look at it first, so
+// those stay listed here for a manual Checkout instead. Nothing on this
+// page is a live/background job — it only runs when the button is clicked.
+// =========================================================
+// Check-in + the longest room's booked nights (not summed across DIFFERENT
+// rooms — same formula used on the Reservations page's Expected Checkout).
+function computeExpectedCheckoutDate(entry){
+  if(!entry.checkIn) return '';
+  const roomNightTotals = {};
+  (entry.rooms || []).forEach(r=>{
+    if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
+    const nights = parseInt(r.count) || 1;
+    roomNightTotals[r.roomNo] = (roomNightTotals[r.roomNo] || 0) + nights;
+  });
+  let maxNights = 0;
+  Object.values(roomNightTotals).forEach(n=>{ if(n > maxNights) maxNights = n; });
+  return maxNights > 0 ? addDaysToDateStr(entry.checkIn, maxNights) : '';
+}
+
+function buildAutoCheckoutRows(asOfDate){
+  const statuses = computeRoomStatuses(asOfDate);
+  // A guest holding more than one room, where at least one of them is
+  // still genuinely booked for that night (rebooked/extended), has NOT
+  // checked out overall — Actual Checkout is stored once per guest entry,
+  // not per room, so checking out "their" ended room while another room is
+  // still active would wrongly mark the whole guest as gone. Never let
+  // Auto Checkout touch them; just show it as "Extended" so they don't
+  // silently vanish from the list with no explanation.
+  const activeGuestIds = new Set(statuses.filter(rs=> rs.occupied && rs.entry).map(rs=> rs.entry.id));
+  const due = statuses
+    .filter(rs=> rs.extended && rs.entry)
+    .map(rs=>{
+      if(activeGuestIds.has(rs.entry.id)){
+        return {
+          roomNo: rs.roomNo, guestId: rs.entry.id, guest: rs.entry.guestName || '(no name)',
+          checkIn: rs.entry.checkIn || '', checkoutDate: rs.actualCheckout || '', due: 0,
+          status: 'extended'
+        };
+      }
+      const d = computeTotals(rs.entry).due;
+      return {
+        roomNo: rs.roomNo, guestId: rs.entry.id, guest: rs.entry.guestName || '(no name)',
+        checkIn: rs.entry.checkIn || '', checkoutDate: rs.actualCheckout || '', due: d,
+        status: d === 0 ? 'ready' : 'pending'
+      };
+    });
+
+  // Checked out on asOfDate via this page (bulk or the per-row button)
+  // stays listed here too, with an Undo, instead of quietly vanishing.
+  const all = loadAllEntries();
+  const dueGuestIds = new Set(due.map(r=> r.guestId));
+  const seen = new Set();
+  const checkedOut = editLogs
+    .filter(l=> l.action === 'checked_out' && l.at && toKarachiDateStr(l.at) === asOfDate && !dueGuestIds.has(l.guest_id))
+    .sort((a,b)=> (b.at || '').localeCompare(a.at || ''))
+    .map(l=>{
+      if(seen.has(l.guest_id)) return null; // keep only the latest checkout per guest that day
+      seen.add(l.guest_id);
+      const entry = all.find(e=> e.id === l.guest_id);
+      if(!entry) return null;
+      const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ');
+      return {
+        roomNo: roomNos || '-', guestId: entry.id, guest: entry.guestName || '(no name)',
+        checkIn: entry.checkIn || '', checkoutDate: computeExpectedCheckoutDate(entry),
+        due: computeTotals(entry).due, status: 'checked_out'
+      };
+    })
+    .filter(Boolean);
+
+  return due.concat(checkedOut).sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+function renderAutoCheckout(){
+  const dateEl = document.getElementById('acDate');
+  const dueBody = document.getElementById('autoCheckoutDueBody');
+  const logBody = document.getElementById('autoCheckoutLogBody');
+  if(!dueBody || !logBody || !dateEl) return;
+  if(!initialLoadDone){
+    dueBody.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    logBody.innerHTML = '';
+    return;
+  }
+
+  const asOfDate = dateEl.value || todayStr();
+  updateDateReadout(dateEl, document.getElementById('acDateReadout'));
+  const isToday = asOfDate === todayStr();
+  const dayWord = isToday ? 'Today' : 'on ' + formatDate(asOfDate);
+  document.getElementById('acDueDateLabel').textContent = dayWord;
+  document.getElementById('acLogDateLabel').textContent = dayWord;
+  // Checkout/Undo/Run Auto Checkout only ever act on today — a past or
+  // future date here is for review only, so nothing can be checked out
+  // under the wrong date.
+  document.getElementById('acRunBtn').style.display = isToday ? '' : 'none';
+
+  const rows = buildAutoCheckoutRows(asOfDate);
+  const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'] };
+  if(rows.length === 0){
+    dueBody.innerHTML = '<div class="empty-note">Nobody\'s checkout was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
+  } else {
+    dueBody.innerHTML = `
+      <table>
+        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Check-in</th><th style="width:110px;">Checkout</th><th style="width:110px;">Due</th><th style="width:110px;">Status</th><th style="width:110px;"></th></tr></thead>
+        <tbody>${rows.map(r=>{
+          const [cls, label] = STATUS_BADGE[r.status];
+          const action = !isToday ? ''
+            : r.status === 'checked_out' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoAutoCheckout('${r.guestId}')">Undo</button>`
+            : r.status === 'extended' ? ''
+            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout('${r.roomNo}', ${r.due})">Checkout</button>`;
+          return `
+          <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+            <td>${r.roomNo}</td>
+            <td>${r.guest}</td>
+            <td>${r.checkIn ? formatDate(r.checkIn) : '-'}</td>
+            <td>${r.checkoutDate ? formatDate(r.checkoutDate) : '-'}</td>
+            <td style="${r.due !== 0 ? 'color:var(--danger); font-weight:700;' : ''}">${r.due.toLocaleString()}</td>
+            <td><span class="status ${cls}">${label}</span></td>
+            <td>${action}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  }
+
+  // Pure append-only history of every checkout run through this page on
+  // asOfDate (separate from the table above, which only ever shows the
+  // LATEST checkout per guest — this shows every individual action,
+  // undos included).
+  const all = loadAllEntries();
+  const dayCheckouts = editLogs
+    .filter(l=> l.action === 'checked_out' && l.at && toKarachiDateStr(l.at) === asOfDate)
+    .sort((a,b)=> (b.at || '').localeCompare(a.at || ''));
+  if(dayCheckouts.length === 0){
+    logBody.innerHTML = '<div class="empty-note">Nobody was checked out ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
+  } else {
+    logBody.innerHTML = `
+      <table>
+        <thead><tr><th style="width:170px;">When</th><th>Guest</th><th style="width:160px;">By</th></tr></thead>
+        <tbody>${dayCheckouts.map(l=>{
+          const entry = all.find(e=> e.id === l.guest_id);
+          return `<tr style="cursor:pointer;" onclick="openDetail('${l.guest_id}')" title="Open this guest">
+            <td>${new Date(l.at).toLocaleString()}</td>
+            <td>${entry ? (entry.guestName || '(no name)') : '(deleted)'}</td>
+            <td>${l.username || '-'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  }
+}
+
+function setAutoCheckoutToday(){
+  document.getElementById('acDate').value = todayStr();
+  renderAutoCheckout();
+}
+
+// The per-row manual button — never opens the checkout-confirm modal for a
+// guest whose balance isn't settled at exactly 0. This is the same rule
+// Run Auto Checkout applies in bulk; there is no manual override.
+function startManualCheckout(roomNo, due){
+  if(due !== 0){
+    showNotice('This guest\'s balance isn\'t settled at exactly 0 (owed money, or paid ahead of what\'s booked) — Auto Checkout / Extend never checks out a guest like this, even manually. Settle the balance first.');
+    return;
+  }
+  pendingRoomStatusRoomNo = roomNo;
+  openCheckoutConfirmModal();
+}
+
+async function undoAutoCheckout(guestId){
+  const entry = loadAllEntries().find(e=> e.id === guestId);
+  if(!entry) return;
+  const ok = await showConfirmModal(
+    'Undo ' + (entry.guestName || 'this guest') + '\'s checkout? This clears their Actual Checkout date. Their room stays Dirty — reset it yourself via the room-status modal if it needs to go back to Vacant.',
+    { title: 'Undo Checkout', okText: 'Undo', danger: true }
+  );
+  if(!ok) return;
+  entry.extraDetails = (entry.extraDetails || []).filter(d=> d.kind !== 'Actual Checkout');
+  entry.editedAt = new Date().toISOString();
+  entry.editedBy = currentUser ? currentUser.username : '';
+  logGuestAction(entry.id, 'edited');
+  queueEntryPush(entry.id);
+  renderAutoCheckout();
+  showNotice((entry.guestName || 'Guest') + '\'s checkout was undone.', 'success');
+}
+
+async function runAutoCheckout(){
+  const eligible = buildAutoCheckoutRows(todayStr()).filter(r=> r.status === 'ready');
+  if(eligible.length === 0){
+    showNotice('Nobody is eligible for Auto Checkout right now — everyone whose checkout is due today either has a balance due, has paid ahead, or is already checked out.');
+    return;
+  }
+  const ok = await showConfirmModal(
+    'This will check out ' + eligible.length + ' guest' + (eligible.length === 1 ? '' : 's') + ' whose stay ended and balance is fully settled — Actual Checkout gets set to today and each room is marked Dirty. Continue?',
+    { title: 'Run Auto Checkout', okText: 'Run', danger: true }
+  );
+  if(!ok) return;
+  for(const r of eligible){
+    await checkOutEntryRoom(r.guestId, r.roomNo, 'checked_out');
+  }
+  renderAutoCheckout();
+  showNotice(eligible.length + ' guest' + (eligible.length === 1 ? '' : 's') + ' auto-checked-out.', 'success');
+}
+
+// =========================================================
 // DELETE ENTITY — admin-only. Soft-deletes a whole guest entry (rooms and
 // payments go with it, since they're nested under the guest client-side and
 // disappear once the guest itself drops out of guests_active). Nothing is
@@ -8177,11 +8479,55 @@ function rerenderActiveView(){
   else if(currentView === 'dashboard'){ renderDashboard(); }
   else if(currentView === 'cico'){ renderCico(); }
   else if(currentView === 'inhouse'){ renderInhouse(); }
+  else if(currentView === 'autocheckout'){ renderAutoCheckout(); }
 }
 
-window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); pushPendingNow(); pullFreshFromCloud(); });
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && appStarted){ pushPendingNow(); pullFreshFromCloud(); } });
-setInterval(()=>{ if(appStarted){ pushPendingNow(); pullFreshFromCloud(); } }, 5000);
+window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); resumeAppFromIdle(); });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && appStarted) resumeAppFromIdle(); });
+// This periodic tick is just the background safety-net poll (catching
+// changes made on OTHER devices) — it's slow on purpose to save egress on
+// a tab left open. Your OWN edits never wait on it: queueEntryPush() calls
+// pushPendingNow() immediately when you save anything, and a successful
+// push already triggers its own background pull right after, so your own
+// changes round-trip instantly regardless of this interval.
+setInterval(()=>{ if(appStarted){ pushPendingNow(); if(!appPaused) pullFreshFromCloud(); } }, 60000);
+
+// ---- Idle pause: 5 minutes with no activity stops the poll and covers the
+// screen. Once paused, only an actual click proves the user is back —
+// mousemove/scroll/keypress alone (a cat on the keyboard, momentum
+// scrolling, a stray key) do NOT dismiss it, they only ever prevent the
+// pause from triggering in the first place while still active. ----
+const IDLE_PAUSE_MS = 5 * 60 * 1000;
+let idleTimer = null;
+let appPaused = false;
+
+function pauseAppForIdle(){
+  if(appPaused) return;
+  appPaused = true;
+  document.getElementById('idlePauseOverlay').classList.add('active');
+}
+
+function armIdleTimer(){
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(pauseAppForIdle, IDLE_PAUSE_MS);
+}
+
+function resumeAppFromIdle(){
+  armIdleTimer();
+  const wasPaused = appPaused;
+  appPaused = false;
+  document.getElementById('idlePauseOverlay').classList.remove('active');
+  if(wasPaused && appStarted){ pushPendingNow(); pullFreshFromCloud(); }
+}
+
+// Broad activity only resets the countdown — never dismisses an already-
+// paused overlay.
+['mousemove','keydown','touchstart','wheel'].forEach(evt=>{
+  document.addEventListener(evt, ()=>{ if(!appPaused) armIdleTimer(); }, { passive: true });
+});
+// A real click is the only thing that dismisses the pause overlay.
+document.addEventListener('click', resumeAppFromIdle);
+armIdleTimer();
 
 // Realtime (instant cross-device updates): if Realtime is enabled for these
 // tables (migration/new_system_schema.sql does it), any change made on
@@ -8308,6 +8654,8 @@ function applyRolePermissions(){
   if(dayLockNav) dayLockNav.style.display = isAdmin() ? '' : 'none';
   const deleteEntityNav = document.getElementById('topNavDeleteEntity');
   if(deleteEntityNav) deleteEntityNav.style.display = isAdmin() ? '' : 'none';
+  const autoCheckoutNav = document.getElementById('topNavAutoCheckout');
+  if(autoCheckoutNav) autoCheckoutNav.style.display = isAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
   const avatar = document.getElementById('hdrAvatar');
