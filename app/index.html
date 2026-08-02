@@ -1894,7 +1894,6 @@
       <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
-      <button class="navbtn" id="topNavDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</button>
       <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="margin-left:auto; font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
     </div>
   </div>
@@ -2802,6 +2801,7 @@
       <div class="sub" style="margin-top:-6px;">Moved here to keep the main nav short</div>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
         <button class="btn secondary" onclick="showView('audit')">Full Audit</button>
+        <button class="btn secondary" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">Day Lock</button>
         <button class="btn danger-solid" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</button>
       </div>
     </div>
@@ -3172,9 +3172,8 @@ function showView(view, fromPopState){
   document.getElementById('topNavReport').classList.toggle('active', view === 'report' || view === 'graphs');
   document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
-  document.getElementById('topNavDayLock').classList.toggle('active', view === 'daylock');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
-  document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity');
+  document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock');
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -4059,6 +4058,11 @@ function isRowEmpty(tr, kind){
 function requestDeleteRow(btn, kind){
   const tr = btn.closest(kind === 'detail' ? '.extra-detail-row' : 'tr');
 
+  if(kind === 'payment' && tr.dataset.payId && isDateLocked(tr.dataset.origDate || tr.querySelector('.payDate').value)){
+    showNotice(formatDate(tr.dataset.origDate || tr.querySelector('.payDate').value) + ' is locked — this payment can\'t be removed. Unlock the day first if this really needs to change.');
+    return;
+  }
+
   if(isRowEmpty(tr, kind)){
     if(kind === 'room') deleteRow(tr);
     else if(kind === 'payment') deletePayRow(tr);
@@ -4747,10 +4751,23 @@ async function reviewEntry(){
       focusError(bankSel);
       return;
     }
-    // A pre-existing row (already has a payId) is just being re-saved, not
-    // newly added — the lock only blocks genuinely new payments landing on
-    // a locked day.
-    if(!tr.dataset.payId && isDateLocked(dateInput.value)){
+    // A pre-existing row is only exempt from the lock if nothing about it
+    // actually changed (just being re-saved along with the rest of the
+    // entry) — editing or moving a locked-day payment is blocked exactly
+    // like adding a new one to that day would be.
+    if(tr.dataset.payId){
+      const origDate = tr.dataset.origDate || '';
+      const changed = dateInput.value !== origDate
+        || cash !== (parseFloat(tr.dataset.origCash) || 0)
+        || account !== (parseFloat(tr.dataset.origAccount) || 0)
+        || mode !== (tr.dataset.origMode || 'Cash')
+        || bank !== (tr.dataset.origBank || '');
+      if(changed && (isDateLocked(origDate) || isDateLocked(dateInput.value))){
+        showNotice(formatDate(isDateLocked(origDate) ? origDate : dateInput.value) + ' is locked — this payment can\'t be edited or moved. Unlock the day first if this really needs to change.');
+        focusError(dateInput);
+        return;
+      }
+    } else if(isDateLocked(dateInput.value)){
       showNotice(formatDate(dateInput.value) + ' is locked — no new payment can be dated on this day.');
       focusError(dateInput);
       return;
@@ -4918,6 +4935,14 @@ function confirmSaveEntry(){
       if(r.id && !keptRoomIds.has(r.id)) queueSoftDelete('room', r.id);
     });
     const keptPayIds = new Set(data.payments.map(p=> p.id).filter(Boolean));
+    // Last line of defense: the row-level checks above already block this
+    // in the UI, but if a removed payment's own date is locked, refuse the
+    // whole save rather than let it slip through some other path.
+    const removedLockedPay = (baseline.payments || []).find(p=> p.id && !keptPayIds.has(p.id) && isDateLocked(p.date));
+    if(removedLockedPay){
+      showNotice(formatDate(removedLockedPay.date) + ' is locked — a payment dated that day can\'t be removed. Unlock the day first if this really needs to change.');
+      return;
+    }
     (baseline.payments || []).forEach(p=>{
       if(p.id && !keptPayIds.has(p.id)) queueSoftDelete('payment', p.id);
     });
@@ -5207,7 +5232,17 @@ function startEditEntry(entry){
     addPayRow();
     if(!p) return;
     const tr = document.querySelector('#payBody tr:last-child');
-    if(p.id) tr.dataset.payId = p.id;
+    if(p.id){
+      tr.dataset.payId = p.id;
+      // snapshot so the save/delete checks can tell "unchanged, just being
+      // re-saved" apart from "actually edited" — Day Lock only needs to
+      // block the latter
+      tr.dataset.origDate = p.date || '';
+      tr.dataset.origCash = String(p.cash || 0);
+      tr.dataset.origAccount = String(p.account || 0);
+      tr.dataset.origMode = p.mode || 'Cash';
+      tr.dataset.origBank = p.bank || '';
+    }
     tr.querySelector('.payDate').value = p.date || todayStr();
     updateDateReadout(tr.querySelector('.payDate'), tr.querySelector('.payDateReadout'));
     const typeSel = tr.querySelector('.payType');
@@ -7241,11 +7276,21 @@ function buildRevenueReport(asOfDate){
         });
       const rent = roomData.rent;
       const collected = roomData.received;
+      // Per-room split by where the money actually landed — same three
+      // fixed banks as the Report page's Grand Total table.
+      let cashTotal = 0, mcbTotal = 0, alfalahTotal = 0, hajiTotal = 0;
+      chunks.forEach(c=>{
+        cashTotal += c.cash;
+        mcbTotal += c.banks['MCB'] || 0;
+        alfalahTotal += c.banks['Alfalah'] || 0;
+        hajiTotal += c.banks['Haji (MCB)'] || 0;
+      });
       return {
         roomNo: rs.roomNo,
         guest: rs.entry.guestName || '(no name)',
         guestId: rs.entry.id,
         rent, collected, chunks,
+        cashTotal, mcbTotal, alfalahTotal, hajiTotal,
         due: Math.max(rent - collected, 0)
       };
     })
@@ -7254,6 +7299,10 @@ function buildRevenueReport(asOfDate){
   const totalRent = roomRows.reduce((s,r)=> s + r.rent, 0);
   const totalCollected = roomRows.reduce((s,r)=> s + r.collected, 0);
   const totalDue = roomRows.reduce((s,r)=> s + r.due, 0);
+  const totalCash = roomRows.reduce((s,r)=> s + r.cashTotal, 0);
+  const totalMCB = roomRows.reduce((s,r)=> s + r.mcbTotal, 0);
+  const totalAlfalah = roomRows.reduce((s,r)=> s + r.alfalahTotal, 0);
+  const totalHaji = roomRows.reduce((s,r)=> s + r.hajiTotal, 0);
 
   // Table 1.5 — same money as Table 1's per-room chunks, just re-sliced by
   // date instead of by room: "how much of tonight's rent (across every
@@ -7283,6 +7332,7 @@ function buildRevenueReport(asOfDate){
 
   return {
     roomRows, totalRent, totalCollected, totalDue,
+    totalCash, totalMCB, totalAlfalah, totalHaji,
     tonightRentTotal,
     paymentsByDate, paymentsByDateCashTotal, paymentsByDateAccountTotal, paymentsByDateGrandTotal,
     unlinkedPayments, unlinkedTotal
@@ -7343,8 +7393,8 @@ function renderRevenue(){
       return formatDate(c.date) + '<br>' + lines.join('<br>');
     };
     roomsBody.innerHTML = `
-      <table>
-        <thead><tr><th style="width:40px;">#</th><th style="width:110px;">Room No</th><th style="width:160px;">Guest</th><th style="width:110px;">Rent</th>${paymentHeaders}<th style="width:110px;">Due</th></tr></thead>
+      <table style="min-width:1400px;">
+        <thead><tr><th style="width:40px;">#</th><th style="width:110px;">Room No</th><th style="width:160px;">Guest</th><th style="width:110px;">Rent</th>${paymentHeaders}<th style="width:100px;">Cash</th><th style="width:100px;">MCB</th><th style="width:110px;">Haji (MCB)</th><th style="width:100px;">Alfalah</th><th style="width:110px;">Due</th></tr></thead>
         <tbody>${data.roomRows.map((r,i)=> `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${i + 1}</td>
@@ -7352,6 +7402,10 @@ function renderRevenue(){
             <td>${r.guest}</td>
             <td>${r.rent.toLocaleString()}</td>
             ${Array.from({length: maxChunks}, (_,i)=> `<td>${paymentCell(r.chunks[i])}</td>`).join('')}
+            <td class="cash-amt">${r.cashTotal ? r.cashTotal.toLocaleString() : '-'}</td>
+            <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
+            <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
+            <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
             <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
           </tr>`).join('')}
         </tbody>
@@ -7360,6 +7414,10 @@ function renderRevenue(){
             <td colspan="3">Total</td>
             <td>${data.totalRent.toLocaleString()}</td>
             <td class="cash-amt" colspan="${maxChunks}">Collected: ${data.totalCollected.toLocaleString()}</td>
+            <td class="cash-amt">${data.totalCash.toLocaleString()}</td>
+            <td class="account-amt">${data.totalMCB.toLocaleString()}</td>
+            <td class="account-amt">${data.totalHaji.toLocaleString()}</td>
+            <td class="account-amt">${data.totalAlfalah.toLocaleString()}</td>
             <td>${data.totalDue.toLocaleString()}</td>
           </tr>
         </tfoot>
@@ -7447,10 +7505,11 @@ function exportRevenueExcel(){
   const roomsData = data.roomRows.map(r=> ({
     'Room No': r.roomNo, 'Guest': r.guest, 'Room Rent': r.rent,
     'Payments': chunkText(r),
+    'Cash': r.cashTotal, 'MCB': r.mcbTotal, 'Haji (MCB)': r.hajiTotal, 'Alfalah': r.alfalahTotal,
     'Collected Total': r.collected, 'Due': r.due
   }));
   const ws1 = XLSX.utils.json_to_sheet(roomsData);
-  ws1['!cols'] = [{wch:12},{wch:20},{wch:14},{wch:50},{wch:14},{wch:14}];
+  ws1['!cols'] = [{wch:12},{wch:20},{wch:14},{wch:50},{wch:12},{wch:12},{wch:14},{wch:12},{wch:14},{wch:14}];
   XLSX.utils.book_append_sheet(wb, ws1, 'Occupied Rooms');
 
   const byDateData = data.paymentsByDate.map(r=> ({
@@ -7581,13 +7640,16 @@ function printInhouse(){
 }
 
 // =========================================================
-// DAY LOCK — admin-only. Locking a date stops any NEW payment (Add Payment,
-// or a fresh payment row in Guest Entry/Edit) from being dated on it.
-// Payments already saved on that date before the lock are left untouched —
-// this only guards against new ones landing there after the books are meant
-// to be closed for the day. `lockedDays` is the cloud mirror kept fresh by
-// pullFreshFromCloud(); a date counts as locked while it has a row with no
-// unlocked_at.
+// DAY LOCK — admin-only. Locking a date stops any payment dated on it from
+// being added, edited, moved, or removed — a NEW payment (Add Payment, or
+// a fresh row in Guest Entry/Edit), and an EXISTING payment already saved
+// there before the lock, are both blocked equally (see the payId/orig*
+// dataset checks in the Guest Entry save loop, requestDeleteRow(), and the
+// removed-payment backstop in confirmSaveEntry()). Saving the rest of an
+// entry unchanged is still fine — only an actual change to a locked-day
+// payment gets refused. `lockedDays` is the cloud mirror kept fresh by
+// pullFreshFromCloud() and fetchLockedDaysOnly(); a date counts as locked
+// while it has a row with no unlocked_at.
 // =========================================================
 function isDateLocked(dateStr){
   if(!dateStr) return false;
@@ -8771,13 +8833,15 @@ function isAdmin(){
 function renderSettings(){
   const deleteEntityBtn = document.getElementById('settingsDeleteEntityBtn');
   if(deleteEntityBtn) deleteEntityBtn.style.display = isAdmin() ? '' : 'none';
+  const dayLockBtn = document.getElementById('settingsDayLockBtn');
+  if(dayLockBtn) dayLockBtn.style.display = isAdmin() ? '' : 'none';
 }
 
 function applyRolePermissions(){
   const editBtn = document.getElementById('editEntryBtn');
   if(editBtn) editBtn.style.display = isAdmin() ? '' : 'none';
-  const dayLockNav = document.getElementById('topNavDayLock');
-  if(dayLockNav) dayLockNav.style.display = isAdmin() ? '' : 'none';
+  const dayLockBtn = document.getElementById('settingsDayLockBtn');
+  if(dayLockBtn) dayLockBtn.style.display = isAdmin() ? '' : 'none';
   const deleteEntityBtn = document.getElementById('settingsDeleteEntityBtn');
   if(deleteEntityBtn) deleteEntityBtn.style.display = isAdmin() ? '' : 'none';
   const autoCheckoutNav = document.getElementById('topNavAutoCheckout');
