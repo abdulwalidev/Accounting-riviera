@@ -92,10 +92,10 @@
   /* ---- Revenue Report: Payments By Date boxes, left to right, wrapping ---- */
   .date-box-row{ display:flex; flex-wrap:wrap; gap:12px; }
   .date-box{
-    border:1px solid var(--line);
+    border:2px solid #000;
     border-radius:6px;
     padding:10px 12px;
-    background:#F7F9FC;
+    background:var(--paper);
     min-width:160px;
   }
   .date-box-head{
@@ -107,7 +107,11 @@
     margin-bottom:6px;
   }
   .date-box-total{ font-size:13px; font-weight:700; margin-top:2px; }
-  .date-box-grand{ background:var(--paper); border:2px solid #000; }
+  .date-box-grand{ background:var(--ink-fill); }
+  .date-box-grand .date-box-head,
+  .date-box-grand .date-box-total,
+  .date-box-grand .cash-amt,
+  .date-box-grand .account-amt{ color:#fff !important; }
   tr.mode-cash td{ background:#E9F6EF; }
   tr.mode-bank td{ background:#EAF1FC; }
   tbody tr.mode-cash:nth-child(even) td{ background:#DDF0E5; }
@@ -1424,7 +1428,8 @@
   html[data-theme="dark"] .panel.accent-payments,
   html[data-theme="dark"] .rpt-day-group,
   html[data-theme="dark"] .total-due-box,
-  html[data-theme="dark"] .rpt-grandtotal-box{ border-color:#fff; }
+  html[data-theme="dark"] .rpt-grandtotal-box,
+  html[data-theme="dark"] .date-box{ border-color:#fff; }
   html[data-theme="dark"] .roomctrl button,
   html[data-theme="dark"] .roomno-list,
   html[data-theme="dark"] .rd-switch-btn{ background:#1A1A1A; }
