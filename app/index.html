@@ -728,34 +728,28 @@
     background:var(--ink-fill);
     color:#fff;
     box-shadow:0 4px 14px rgba(0,0,0,0.14);
-    text-align:center;
+    text-align:left;
+  }
+  .rpt-grandtotal-head{
+    display:flex;
+    align-items:baseline;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:10px;
   }
   .rpt-grandtotal-label{
     font-family:'Inter',sans-serif;
-    font-size:13px;
+    font-size:15px;
     font-weight:700;
     text-transform:uppercase;
     letter-spacing:0.08em;
-    opacity:0.85;
   }
   .rpt-grandtotal-range{
     font-family:'Inter',sans-serif;
-    font-size:13px;
-    opacity:0.85;
-    margin-top:2px;
+    font-size:14px;
   }
-  .rpt-grandtotal-breakdown{
-    font-family:'Inter',sans-serif;
-    font-size:13px;
-    font-weight:600;
-    margin-top:8px;
-    opacity:0.95;
-  }
-  .rpt-grandtotal-amount{
-    font-size:26px;
-    font-weight:800;
-    margin-top:6px;
-  }
+  .rpt-grandtotal-box .cash-amt,
+  .rpt-grandtotal-box .account-amt{ color:#fff !important; }
   .rpt-day-head{
     display:flex;
     width:fit-content;
@@ -6195,12 +6189,25 @@ function renderReport(){
     const overallAccount = overallMCB + overallAlfalah + overallHaji;
     html = `
       <div class="rpt-grandtotal-box">
-        <div class="rpt-grandtotal-label">Grand Total</div>
-        <div class="rpt-grandtotal-range">${formatDate(oldestDate)} to ${formatDate(newestDate)}</div>
-        <div class="rpt-grandtotal-breakdown">
-          Cash: Rs. ${overallCash.toLocaleString()} &nbsp;|&nbsp; Account: Rs. ${overallAccount.toLocaleString()} (MCB: ${overallMCB.toLocaleString()}, Alfalah: ${overallAlfalah.toLocaleString()}, Haji (MCB): ${overallHaji.toLocaleString()})
+        <div class="rpt-grandtotal-head">
+          <div class="rpt-grandtotal-label">Grand Total</div>
+          <div class="rpt-grandtotal-range">${formatDate(oldestDate)} to ${formatDate(newestDate)}</div>
         </div>
-        <div class="rpt-grandtotal-amount">Rs. ${overallTotal.toLocaleString()}</div>
+        <table>
+          <thead>
+            <tr><th style="width:100px;">Cash</th><th style="width:100px;">MCB</th><th style="width:100px;">Alfalah</th><th style="width:100px;">Haji (MCB)</th><th style="width:110px;">Account Total</th><th style="width:100px;">Grand</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="cash-amt">Rs. ${overallCash.toLocaleString()}</td>
+              <td class="account-amt">Rs. ${overallMCB.toLocaleString()}</td>
+              <td class="account-amt">Rs. ${overallAlfalah.toLocaleString()}</td>
+              <td class="account-amt">Rs. ${overallHaji.toLocaleString()}</td>
+              <td class="account-amt">Rs. ${overallAccount.toLocaleString()}</td>
+              <td style="font-weight:700;">Rs. ${overallTotal.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>` + html;
   }
 
