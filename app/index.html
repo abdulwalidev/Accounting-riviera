@@ -89,6 +89,31 @@
   /* ---- Payment mode colour-coding ---- */
   .cash-amt{ color:var(--cash) !important; font-weight:700; }
   .account-amt{ color:var(--account) !important; font-weight:700; }
+  /* ---- Revenue Report: one card per date money came in against a room's
+     rent, so "how much of tonight's rent landed on which day" reads at a
+     glance instead of being buried in fixed Payment 1/2/3 columns. ---- */
+  .pay-chunks{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(120px,1fr));
+    gap:6px;
+  }
+  .pay-chunk{
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:6px 8px;
+    background:#F7F9FC;
+  }
+  .pay-chunk-date{
+    font-family:'Inter',sans-serif;
+    font-size:10px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    color:var(--muted);
+    margin-bottom:3px;
+  }
+  .pay-chunk-line{ font-size:12px; }
+  .pay-chunk-total{ font-size:12px; font-weight:700; }
   tr.mode-cash td{ background:#E9F6EF; }
   tr.mode-bank td{ background:#EAF1FC; }
   tbody tr.mode-cash:nth-child(even) td{ background:#DDF0E5; }
@@ -6620,7 +6645,7 @@ function printLedgers(){
 function buildRevenueReport(asOfDate){
   const all = loadAllEntries();
   const nightsByEntryRoom = {};
-  const chunksByEntryRoom = {}; // entryId -> roomNo -> { paymentDate: amount }, asOfDate's night only
+  const chunksByEntryRoom = {}; // entryId -> roomNo -> { paymentDate: {cash, account} }, asOfDate's night only
 
   let tonightRentTotal = 0;
   const unlinkedPayments = []; // money received ON asOfDate that isn't asOfDate's room rent
@@ -6665,7 +6690,9 @@ function buildRevenueReport(asOfDate){
           nightsByEntryRoom[guestId][night.roomNo].received += applied;
           if(!chunksByEntryRoom[guestId]) chunksByEntryRoom[guestId] = {};
           if(!chunksByEntryRoom[guestId][night.roomNo]) chunksByEntryRoom[guestId][night.roomNo] = {};
-          chunksByEntryRoom[guestId][night.roomNo][pay.date] = (chunksByEntryRoom[guestId][night.roomNo][pay.date] || 0) + applied;
+          if(!chunksByEntryRoom[guestId][night.roomNo][pay.date]) chunksByEntryRoom[guestId][night.roomNo][pay.date] = { cash: 0, account: 0 };
+          const bucket = pay.mode === 'Cash' ? 'cash' : 'account';
+          chunksByEntryRoom[guestId][night.roomNo][pay.date][bucket] += applied;
           pay.towardAsOfNight += applied;
         }
         pay.remaining -= applied;
@@ -6700,7 +6727,11 @@ function buildRevenueReport(asOfDate){
       const chunkMap = (chunksByEntryRoom[rs.entry.id] || {})[rs.roomNo] || {};
       const chunks = Object.keys(chunkMap)
         .sort((a,b)=> a.localeCompare(b))
-        .map(date=> ({ date, amount: Math.round(chunkMap[date] * 100) / 100 }));
+        .map(date=>{
+          const cash = Math.round(chunkMap[date].cash * 100) / 100;
+          const account = Math.round(chunkMap[date].account * 100) / 100;
+          return { date, cash, account, total: Math.round((cash + account) * 100) / 100 };
+        });
       const rent = roomData.rent;
       const collected = roomData.received;
       return {
@@ -6760,27 +6791,29 @@ function renderRevenue(){
   if(data.roomRows.length === 0){
     roomsBody.innerHTML = '<div class="empty-note">No rooms occupied ' + asOfLabel + '.</div>';
   } else {
-    // Up to 3 dated payment chunks get their own column each — a room paid
-    // in more than 3 instalments (rare) folds the rest into the 3rd column
-    // instead of silently dropping them.
-    const chunkCell = (r, idx)=>{
-      if(idx === 2 && r.chunks.length > 3){
-        return r.chunks.slice(2).map(c=> formatDate(c.date) + ': Rs. ' + c.amount.toLocaleString()).join(' + ');
-      }
-      const c = r.chunks[idx];
-      return c ? formatDate(c.date) + ': Rs. ' + c.amount.toLocaleString() : '-';
+    // One card per date money landed against this room's rent — one card if
+    // it all came in at once, more (4 to a row) if it was paid in instalments
+    // on different days. Each card breaks its date's amount into Cash /
+    // Account so the source is visible too, not just the date and total.
+    const chunkCards = (r)=>{
+      if(r.chunks.length === 0) return '-';
+      return `<div class="pay-chunks">${r.chunks.map(c=> `
+        <div class="pay-chunk">
+          <div class="pay-chunk-date">${formatDate(c.date)}</div>
+          <div class="pay-chunk-line cash-amt">Cash: ${c.cash > 0 ? 'Rs. ' + c.cash.toLocaleString() : '-'}</div>
+          <div class="pay-chunk-line account-amt">Account: ${c.account > 0 ? 'Rs. ' + c.account.toLocaleString() : '-'}</div>
+          <div class="pay-chunk-total">Total: Rs. ${c.total.toLocaleString()}</div>
+        </div>`).join('')}</div>`;
     };
     roomsBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Rent</th><th style="width:150px;">Payment 1</th><th style="width:150px;">Payment 2</th><th style="width:150px;">Payment 3</th><th style="width:110px;">Due</th></tr></thead>
+        <thead><tr><th style="width:110px;">Room No</th><th style="width:160px;">Guest</th><th style="width:110px;">Rent</th><th>Payments</th><th style="width:110px;">Due</th></tr></thead>
         <tbody>${data.roomRows.map(r=> `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${r.roomNo}</td>
             <td>${r.guest}</td>
             <td>${r.rent.toLocaleString()}</td>
-            <td class="cash-amt">${chunkCell(r, 0)}</td>
-            <td class="cash-amt">${chunkCell(r, 1)}</td>
-            <td class="cash-amt">${chunkCell(r, 2)}</td>
+            <td>${chunkCards(r)}</td>
             <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
           </tr>`).join('')}
         </tbody>
@@ -6788,7 +6821,7 @@ function renderRevenue(){
           <tr class="day-foot-total">
             <td colspan="2">Total</td>
             <td>${data.totalRent.toLocaleString()}</td>
-            <td class="cash-amt" colspan="3">Collected: ${data.totalCollected.toLocaleString()}</td>
+            <td class="cash-amt">Collected: ${data.totalCollected.toLocaleString()}</td>
             <td>${data.totalDue.toLocaleString()}</td>
           </tr>
         </tfoot>
@@ -6833,18 +6866,14 @@ function exportRevenueExcel(){
 
   const wb = XLSX.utils.book_new();
 
-  const chunkText = (r, idx)=>{
-    if(idx === 2 && r.chunks.length > 3) return r.chunks.slice(2).map(c=> formatDate(c.date) + ': ' + c.amount).join(' + ');
-    const c = r.chunks[idx];
-    return c ? formatDate(c.date) + ': ' + c.amount : '';
-  };
+  const chunkText = (r)=> r.chunks.map(c=> formatDate(c.date) + ' — Cash: ' + c.cash + ', Account: ' + c.account + ', Total: ' + c.total).join(' | ');
   const roomsData = data.roomRows.map(r=> ({
     'Room No': r.roomNo, 'Guest': r.guest, 'Room Rent': r.rent,
-    'Payment 1': chunkText(r, 0), 'Payment 2': chunkText(r, 1), 'Payment 3': chunkText(r, 2),
+    'Payments': chunkText(r),
     'Collected Total': r.collected, 'Due': r.due
   }));
   const ws1 = XLSX.utils.json_to_sheet(roomsData);
-  ws1['!cols'] = [{wch:12},{wch:20},{wch:14},{wch:20},{wch:20},{wch:20},{wch:14},{wch:14}];
+  ws1['!cols'] = [{wch:12},{wch:20},{wch:14},{wch:50},{wch:14},{wch:14}];
   XLSX.utils.book_append_sheet(wb, ws1, 'Occupied Rooms');
 
   const unlinkedData = data.unlinkedPayments.map(r=> ({
