@@ -7379,7 +7379,8 @@ function renderRevenue(){
     // shot, more only if some room actually needed it. Each cell is just
     // the date it landed plus whichever of Cash/Account it came in as.
     const maxChunks = Math.max(1, ...data.roomRows.map(r=> r.chunks.length));
-    const paymentHeaders = Array.from({length: maxChunks}, (_,i)=> `<th style="width:84px;">Payment ${i + 1}</th>`).join('');
+    const PAYMENT_COL_W = 112;
+    const paymentHeaders = Array.from({length: maxChunks}, (_,i)=> `<th style="width:${PAYMENT_COL_W}px; white-space:nowrap;">Payment ${i + 1}</th>`).join('');
     const paymentCell = (c)=>{
       if(!c) return '-';
       const lines = [];
@@ -7395,10 +7396,16 @@ function renderRevenue(){
     // These columns are sized to just fit their header text on one line —
     // the floor, not a target. If a row's actual value is wider than that,
     // it's fine for it to wrap to a second line rather than force every
-    // column wider to fit the rare long value.
+    // column wider to fit the rare long value. table-layout:fixed + an
+    // explicit total width is required here: plain width:auto still let
+    // the browser's auto layout algorithm distribute the panel's leftover
+    // space across the columns instead of respecting the narrow hints.
+    const HASH_W = 30, ROOMNO_W = 44, GUEST_W = 80, RENT_W = 60,
+      CASH_W = 60, MCB_W = 52, HAJI_W = 122, ALFALAH_W = 92, DUE_W = 52;
+    const totalW = HASH_W + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W;
     roomsBody.innerHTML = `
-      <table style="width:auto;">
-        <thead><tr><th style="width:20px;">#</th><th style="width:44px;">Room No</th><th style="width:80px;">Guest</th><th style="width:48px;">Rent</th>${paymentHeaders}<th style="width:44px;">Cash</th><th style="width:40px;">MCB</th><th style="width:88px;">Haji (MCB)</th><th style="width:64px;">Alfalah</th><th style="width:38px;">Due</th></tr></thead>
+      <table style="table-layout:fixed; width:${totalW}px;">
+        <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th><th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th></tr></thead>
         <tbody>${data.roomRows.map((r,i)=> `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${i + 1}</td>
