@@ -19,7 +19,7 @@
     --muted:#5B6B84;      /* slate — labels, secondary text */
     --cash:#166534;       /* green — cash amounts */
     --account:#1D4ED8;    /* blue — bank/account amounts */
-    --line:#0284C726;
+    --line:rgba(0,0,0,0.55); /* solid-reading black border — panels/cards need to visibly separate from the white page */
     --amber:#E7C55A;      /* gold accent — table headers, highlights */
     --gold-deep:#A16207;  /* darker gold for text/borders on light bg */
     --danger:#B91C1C;
@@ -386,64 +386,98 @@
     font-weight:700;
     color:var(--ink);
   }
-  .dash-tiles{
+  .dash-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-    gap:12px;
-    margin-top:14px;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+    margin-top:16px;
   }
-  .dash-tile{
+  @media (max-width: 900px){
+    .dash-grid{ grid-template-columns:repeat(2,1fr); }
+  }
+  @media (max-width: 560px){
+    .dash-grid{ grid-template-columns:1fr; }
+  }
+  .dash-card{
     background:var(--paper);
     border:1px solid var(--line);
-    border-radius:8px;
-    padding:16px 14px;
-    cursor:pointer;
+    border-radius:10px;
+    padding:16px;
     transition:border-color 0.15s, transform 0.15s;
   }
-  .dash-tile:hover{
+  .dash-card.clickable{ cursor:pointer; }
+  .dash-card.clickable:hover{
     border-color:var(--ink);
     transform:translateY(-1px);
   }
-  .dash-tile-val{
+  .dash-card-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .dash-card-icon{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .dash-card-icon svg{ width:17px; height:17px; }
+  .dash-icon-blue{ background:color-mix(in srgb, var(--account) 15%, transparent); color:var(--account); }
+  .dash-icon-green{ background:color-mix(in srgb, var(--cash) 15%, transparent); color:var(--cash); }
+  .dash-icon-gold{ background:color-mix(in srgb, var(--gold-deep) 18%, transparent); color:var(--gold-deep); }
+  .dash-icon-muted{ background:color-mix(in srgb, var(--muted) 16%, transparent); color:var(--muted); }
+  .dash-card-lbl{
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    font-weight:700;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    text-align:right;
+  }
+  .dash-card-val{
     font-family:'Inter',sans-serif;
     font-size:28px;
     font-weight:700;
     color:var(--ink);
     line-height:1.1;
-  }
-  .dash-tile-lbl{
-    font-family:'Inter',sans-serif;
-    font-size:11px;
-    color:var(--muted);
-    text-transform:uppercase;
-    letter-spacing:0.06em;
-    margin-top:4px;
-  }
-  .dash-actions{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-    gap:12px;
     margin-top:16px;
   }
-  .dash-action-card{
-    background:var(--ink-fill);
-    color:#fff;
-    border-radius:8px;
-    padding:18px 16px;
-    cursor:pointer;
-    transition:opacity 0.15s;
-  }
-  .dash-action-card:hover{ opacity:0.88; }
-  .dash-action-title{
+  .dash-card-sub{
     font-family:'Inter',sans-serif;
-    font-size:15px;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-top:16px;
+  }
+  .dash-subtiles{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+  }
+  .dash-subtile{
+    flex:1;
+    background:color-mix(in srgb, var(--ink) 4%, var(--paper));
+    border-radius:6px;
+    padding:8px 4px;
+    text-align:center;
+  }
+  .dash-subtile-val{
+    font-family:'Inter',sans-serif;
+    font-size:17px;
     font-weight:700;
+    color:var(--ink);
   }
-  .dash-action-sub{
+  .dash-subtile-lbl{
     font-family:'Inter',sans-serif;
-    font-size:12px;
-    opacity:0.75;
-    margin-top:3px;
+    font-size:9.5px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    margin-top:2px;
   }
   .cico-grid{
     display:grid;
@@ -451,8 +485,12 @@
     gap:16px;
     margin-top:16px;
   }
+  .cico-left{ grid-column:1; grid-row:1 / 3; }
+  .cico-right-top{ grid-column:2; grid-row:1; }
+  .cico-right-bottom{ grid-column:2; grid-row:2; }
   @media (max-width:900px){
     .cico-grid{ grid-template-columns:1fr; }
+    .cico-left, .cico-right-top, .cico-right-bottom{ grid-column:auto; grid-row:auto; }
   }
   .cico-grid table{ font-size:12.5px; }
   .graphs-grid{
@@ -532,7 +570,7 @@
     color:var(--ink);
   }
   .chart-hrow-track{
-    background:var(--line);
+    background:#0284C71F;
     border-radius:4px;
     height:20px;
     overflow:hidden;
@@ -566,78 +604,12 @@
     background:#F7EBC5;
     color:var(--gold-deep);
   }
+  .status.ooo{
+    background:#E5E7EB;
+    color:#374151;
+  }
 
-  /* ---- Layout / Sidebar (off-canvas, matches Riviera tracker) ---- */
-  .sidebar-toggle{
-    position:fixed; top:14px; left:14px; z-index:60;
-    width:38px; height:38px;
-    border:1px solid var(--ink-fill);
-    border-radius:6px;
-    background:var(--ink-fill);
-    color:var(--paper);
-    font-size:17px;
-    cursor:pointer;
-  }
-  .sidebar-backdrop{
-    display:none;
-    position:fixed; inset:0;
-    background:rgba(0,0,0,0.25);
-    z-index:39;
-  }
-  .sidebar-backdrop.show{ display:block; }
-  .sidebar{
-    position:fixed;
-    left:0; top:0; bottom:0;
-    width:210px;
-    background:#fff;
-    border-right:2px solid var(--ink);
-    padding:64px 12px 20px; /* top padding clears the fixed ☰ toggle */
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    overflow-y:auto;
-    z-index:40;
-    transform:translateX(-100%);
-    transition:transform 0.2s ease;
-    box-shadow:3px 0 14px rgba(0,0,0,0.18);
-  }
-  .sidebar.open{ transform:translateX(0); }
-  .sidebar-inner{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-  }
-  .brand{
-    font-family:'Inter',sans-serif;
-    font-size:11px;
-    letter-spacing:0.18em;
-    text-transform:uppercase;
-    color:var(--muted);
-    margin:0 6px 10px;
-    padding-left:34px;
-  }
-  .navitem{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    font-family:'Inter',sans-serif;
-    font-size:12px;
-    letter-spacing:0.06em;
-    text-transform:uppercase;
-    text-align:left;
-    border:1px solid transparent;
-    border-radius:4px;
-    padding:10px 12px;
-    color:var(--ink);
-    cursor:pointer;
-    min-height:40px;
-  }
-  .navitem:hover{ border-color:var(--ink); }
-  .navitem.active{
-    background:var(--ink-fill);
-    color:var(--paper);
-    font-weight:600;
-  }
+  /* ---- Layout ---- */
   .main{
     flex:1;
     min-width:0;
@@ -645,13 +617,16 @@
     margin:0 auto;
     padding:28px 20px 60px;
   }
+  .topnav-upper{
+    margin-top:20px;
+    margin-bottom:12px;
+  }
   .topbar{
     display:flex;
     justify-content:space-between;
     align-items:center;
     gap:12px;
     flex-wrap:wrap;
-    margin-top:44px;
     margin-bottom:18px;
     border-bottom:2px solid var(--ink);
     padding-bottom:16px;
@@ -781,51 +756,6 @@
     font-size:11px;
     letter-spacing:0.04em;
     color:var(--muted);
-  }
-  .rpt-total-account-box{
-    position:relative;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    box-sizing:border-box;
-    margin-top:3px;
-    margin-left:auto;
-    margin-right:150px;
-    width:200px;
-    padding:6.65px 16px;
-    border-top:2px solid var(--ink);
-    border-left:1px solid #00000018;
-    border-right:1px solid #00000018;
-    border-bottom:1px solid #00000018;
-    background:#F7F8FA;
-  }
-  .rpt-total-account-box::before,
-  .rpt-total-account-box::after{
-    content:"";
-    position:absolute;
-    top:-5px;
-    width:2px;
-    height:5px;
-    background:var(--ink);
-  }
-  .rpt-total-account-box::before{ left:-1px; }
-  .rpt-total-account-box::after{ right:-1px; }
-  .rpt-total-account-label{
-    font-family:'Inter',sans-serif;
-    font-size:10.23px;
-    font-weight:700;
-    color:var(--muted);
-    text-transform:uppercase;
-    letter-spacing:0.04em;
-    padding-right:10px;
-    border-right:1px solid #00000018;
-  }
-  .rpt-total-account-amount{
-    font-family:'Inter',sans-serif;
-    font-size:12.09px;
-    font-weight:700;
-    color:var(--account);
-    padding-left:10px;
   }
   .rpd-guest-block{
     margin-bottom:10px;
@@ -980,6 +910,19 @@
     padding:0 20px 24px;
     box-sizing:border-box;
   }
+  /* Same idea as .full-bleed but pulled in 10% from each edge — wide enough
+     for the Report table's extra columns without running edge-to-edge. */
+  .full-bleed-85{
+    width:65vw;
+    position:relative;
+    left:50%;
+    right:50%;
+    margin-left:-32.5vw;
+    margin-right:-32.5vw;
+    margin-top:18px;
+    padding:0 20px 24px;
+    box-sizing:border-box;
+  }
   .smart-panel{
     background:#fff;
     border:1px solid var(--line);
@@ -1016,10 +959,15 @@
   .smart-row .sr-status{ font-weight:700; border-right:1px solid #1725540F; padding-right:6px; }
   .smart-row .sr-status.occupied{ color:var(--account); }
   .smart-row .sr-status.vacant{ color:var(--cash); }
+  .smart-row .sr-status.extended{ color:var(--gold-deep); }
+  .smart-row .sr-status.dirty{ color:var(--gold-deep); }
+  .smart-row .sr-status.ooo{ color:var(--muted); }
   .smart-row .sr-arrival{ color:var(--muted); font-size:11.5px; text-align:right; white-space:nowrap; border-right:1px solid #1725540F; padding-right:6px; }
   .smart-row .sr-guest{ color:var(--account); font-weight:600; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .smart-row .sr-guest.sr-guest-muted{ color:var(--muted); font-weight:500; font-style:italic; }
+  .smart-row .sr-guest.sr-guest-extended{ color:var(--gold-deep); font-weight:700; }
   .muted-guest{ color:var(--muted); font-style:italic; font-weight:500; }
+  .extended-guest{ color:var(--gold-deep); font-weight:700; }
   .lg-name-primary{ font-weight:600; }
   .lg-connector{ display:inline-block; color:var(--muted); font-weight:700; margin-right:6px; padding-left:6px; opacity:0.6; }
   .lg-name-continued{ color:var(--muted); font-weight:500; }
@@ -1209,7 +1157,6 @@
     align-items:end;
   }
   @media (max-width: 900px){
-    .sidebar{ width:78vw; max-width:260px; }
     .smart-grid{ grid-template-columns:repeat(2,1fr); }
   }
   @media (max-width: 520px){
@@ -1488,9 +1435,6 @@
   html[data-theme="dark"] .btn,
   html[data-theme="dark"] .roomctrl button:hover,
   html[data-theme="dark"] .btn.secondary:hover,
-  html[data-theme="dark"] .dash-action-card,
-  html[data-theme="dark"] .sidebar-toggle,
-  html[data-theme="dark"] .navitem.active,
   html[data-theme="dark"] .day-head,
   html[data-theme="dark"] .rpt-grandtotal-box,
   html[data-theme="dark"] .topnav .navbtn.active,
@@ -1499,22 +1443,16 @@
   html[data-theme="dark"] .topnav .navbtn:hover{ background:rgba(255,255,255,0.06); }
   html[data-theme="dark"] .status.paid{ background:rgba(74,222,128,0.18); }
   html[data-theme="dark"] .status.partial{ background:rgba(240,208,120,0.18); }
+  html[data-theme="dark"] .status.ooo{ background:rgba(255,255,255,0.12); color:#D1D5DB; }
   html[data-theme="dark"] tr.mode-cash td{ background:rgba(74,222,128,0.08); }
   html[data-theme="dark"] tr.mode-bank td{ background:rgba(96,165,250,0.08); }
   html[data-theme="dark"] tbody tr.mode-cash:nth-child(even) td{ background:rgba(74,222,128,0.14); }
   html[data-theme="dark"] tbody tr.mode-bank:nth-child(even) td{ background:rgba(96,165,250,0.14); }
   html[data-theme="dark"] .mode-badge.cash{ background:rgba(74,222,128,0.22); }
   html[data-theme="dark"] .mode-badge.bank{ background:rgba(96,165,250,0.22); }
-  html[data-theme="dark"] .sidebar{ background:#0A0A0A; box-shadow:3px 0 14px rgba(0,0,0,0.6); }
   html[data-theme="dark"] .rpt-day-group,
   html[data-theme="dark"] .total-due-box{ box-shadow:0 4px 14px rgba(0,0,0,0.5); }
   html[data-theme="dark"] tr.day-foot-total td{ background:rgba(255,255,255,0.04); }
-  html[data-theme="dark"] .rpt-total-account-box{
-    border-left-color:rgba(255,255,255,0.1);
-    border-right-color:rgba(255,255,255,0.1);
-    border-bottom-color:rgba(255,255,255,0.1);
-    background:rgba(255,255,255,0.04);
-  }
   html[data-theme="dark"] .rpt-total-account-label{ border-right-color:rgba(255,255,255,0.1); }
   html[data-theme="dark"] .rpd-guest-head{ background:#1A1A1A; }
   html[data-theme="dark"] .rpd-guest-head:hover{ background:#242424; }
@@ -1550,6 +1488,14 @@
     cursor:pointer;
     margin-right:8px;
   }
+  .theme-toggle-corner{
+    position:fixed;
+    top:14px;
+    right:14px;
+    z-index:50;
+    margin-right:0;
+    background:var(--paper);
+  }
   .theme-toggle svg{ width:17px; height:17px; }
   .theme-toggle .icon-sun{ display:none; }
   html[data-theme="dark"] .theme-toggle .icon-moon{ display:none; }
@@ -1568,7 +1514,7 @@
       --muted:#5B6B84;
       --cash:#166534;
       --account:#1D4ED8;
-      --line:#0284C726;
+      --line:rgba(0,0,0,0.55);
       --amber:#E7C55A;
       --gold-deep:#A16207;
       --danger:#B91C1C;
@@ -1662,47 +1608,38 @@
 
 <div id="appRoot" style="display:none;">
 
-<button class="sidebar-toggle no-print" id="sidebarToggle" onclick="toggleSidebar()" title="Menu" aria-label="Open menu">☰</button>
-<div class="sidebar-backdrop no-print" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
-<div class="sidebar no-print" id="sidebar">
-  <div class="sidebar-inner">
-    <div class="navitem" id="navDashboard" onclick="showView('dashboard')">Dashboard</div>
-    <div class="navitem" id="navCico" onclick="showView('cico')">Check-in / Check-out</div>
-    <div class="navitem" id="navRoomDetail" onclick="showView('roomdetail')">Room Detail</div>
-    <div class="navitem active" id="navEntry" onclick="showView('entry')">Guest Entry</div>
-    <div class="navitem" id="navReservations" onclick="showView('reservations')">Reservations</div>
-    <div class="navitem" id="navAddPay" onclick="showView('addpay')">Add Payment</div>
-    <div class="navitem" id="navSearch" onclick="showView('search')">Search</div>
-    <div class="navitem" id="navReport" onclick="showView('report')">Report</div>
-    <div class="navitem" id="navLedgers" onclick="showView('ledgers')">Ledgers</div>
-    <div class="navitem" id="navFullAudit" onclick="showView('audit')">Full Audit</div>
-    <div class="navitem" id="navDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</div>
-  </div>
-  <div class="sidebar-inner" style="margin-top:auto;">
-    <div class="navitem" id="navDeleteEntity" onclick="showView('deleteentity')" style="display:none;"><span style="color:var(--danger);">⚠</span> Delete Entity</div>
-  </div>
-</div>
-
 <div class="main">
+  <div class="topnav topnav-upper no-print">
+    <button class="navbtn active" id="topNavDashboard" onclick="showView('dashboard')">Dashboard</button>
+    <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail</button>
+    <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
+    <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
+    <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
+    <button class="navbtn" id="topNavFullAudit" onclick="showView('audit')">Full Audit</button>
+    <button class="navbtn" id="topNavReviewToday" onclick="showView('reviewtoday')">Review Today</button>
+    <button class="navbtn" id="topNavDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</button>
+    <button class="navbtn" id="topNavDeleteEntity" onclick="showView('deleteentity')" style="display:none; color:var(--danger);">⚠ Delete Entity</button>
+  </div>
+  <button class="theme-toggle theme-toggle-corner no-print" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+    <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"></path></svg>
+  </button>
   <div class="topbar no-print">
     <div class="topbar-left">
       <div id="cloudStatus"></div>
       <div id="whoami"></div>
     </div>
     <div class="topnav">
-      <button class="navbtn active" id="topNavEntry" onclick="showView('entry')">Guest Entry</button>
+      <button class="navbtn" id="topNavEntry" onclick="showView('entry')">Guest Entry</button>
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
+      <button class="navbtn" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
     </div>
-    <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
-      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-      <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"></path></svg>
-    </button>
     <button class="btn secondary" id="logoutBtn" style="min-height:32px; padding:5px 10px;">Sign Out</button>
   </div>
 
-  <div class="view" id="view-dashboard">
+  <div class="view active" id="view-dashboard">
 
     <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
       <div>
@@ -1712,56 +1649,93 @@
       <button class="btn" onclick="openAvailModal()">Check Availability</button>
     </div>
 
-    <div class="dash-tiles">
-      <div class="dash-tile" onclick="showView('roomdetail')">
-        <div class="dash-tile-val" id="dashArrivals">0</div>
-        <div class="dash-tile-lbl">Arrivals</div>
+    <div class="dash-grid">
+      <div class="dash-card clickable" onclick="showView('roomdetail')">
+        <div class="dash-card-head">
+          <span class="dash-card-icon dash-icon-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span>
+          <span class="dash-card-lbl">Arrivals</span>
+        </div>
+        <div class="dash-card-val" id="dashArrivals">0</div>
       </div>
-      <div class="dash-tile" onclick="showView('roomdetail')">
-        <div class="dash-tile-val" id="dashInhouse">0</div>
-        <div class="dash-tile-lbl">Inhouse</div>
+      <div class="dash-card clickable" onclick="showView('roomdetail')">
+        <div class="dash-card-head">
+          <span class="dash-card-icon dash-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg></span>
+          <span class="dash-card-lbl">Inhouse</span>
+        </div>
+        <div class="dash-card-val" id="dashInhouse">0</div>
       </div>
-      <div class="dash-tile" onclick="showView('cico')">
-        <div class="dash-tile-val" id="dashDepartures">0</div>
-        <div class="dash-tile-lbl">Departures</div>
+      <div class="dash-card clickable" onclick="showView('cico')">
+        <div class="dash-card-head">
+          <span class="dash-card-icon dash-icon-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+          <span class="dash-card-lbl">Departures</span>
+        </div>
+        <div class="dash-card-val" id="dashDepartures">0</div>
       </div>
-      <div class="dash-tile" onclick="showView('cico')">
-        <div class="dash-tile-val" id="dashCheckedOut">0</div>
-        <div class="dash-tile-lbl">Checked out</div>
+      <div class="dash-card clickable" onclick="showView('cico')">
+        <div class="dash-card-head">
+          <span class="dash-card-icon dash-icon-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8 12 11 15 16 9"/></svg></span>
+          <span class="dash-card-lbl">Checked Out</span>
+        </div>
+        <div class="dash-card-val" id="dashCheckedOut">0</div>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <span class="dash-card-icon dash-icon-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="14" cy="12" r="0.8" fill="currentColor" stroke="none"/></svg></span>
+          <span class="dash-card-lbl">Room Status</span>
+        </div>
+        <div class="dash-subtiles">
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashOcc">0</div><div class="dash-subtile-lbl">Occ</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashReady">0</div><div class="dash-subtile-lbl">Vacant</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashDirty">0</div><div class="dash-subtile-lbl">Dirty</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashOOO">0</div><div class="dash-subtile-lbl">OOO</div></div>
+        </div>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-card-head">
+          <span class="dash-card-icon dash-icon-blue"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"></path></svg></span>
+          <span class="dash-card-lbl">Night Summary</span>
+        </div>
+        <div class="dash-subtiles">
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashNightOcc">0</div><div class="dash-subtile-lbl">Occupied</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashNightAvail">0</div><div class="dash-subtile-lbl">Available</div></div>
+        </div>
+      </div>
+
+      <div class="dash-card clickable" onclick="showView('entry')">
+        <div class="dash-card-head">
+          <span class="dash-card-icon dash-icon-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="19"/><line x1="9.5" y1="16.5" x2="14.5" y2="16.5"/></svg></span>
+          <span class="dash-card-lbl">New Reservation</span>
+        </div>
+        <div class="dash-card-sub">Click to create</div>
+      </div>
+      <div class="dash-card clickable" onclick="showView('addpay')">
+        <div class="dash-card-head">
+          <span class="dash-card-icon dash-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="currentColor" stroke="none"/></svg></span>
+          <span class="dash-card-lbl">Add Payment</span>
+        </div>
+        <div class="dash-card-sub">Record cash or bank</div>
+      </div>
+      <div class="dash-card clickable" onclick="showView('entry')">
+        <div class="dash-card-head">
+          <span class="dash-card-icon dash-icon-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg></span>
+          <span class="dash-card-lbl">New Check-in</span>
+        </div>
+        <div class="dash-card-sub">Walk-in or booked</div>
       </div>
     </div>
 
-    <div class="panel">
-      <h2>Room status</h2>
-      <div class="dash-tiles">
-        <div class="dash-tile"><div class="dash-tile-val" id="dashOcc">0</div><div class="dash-tile-lbl">Occ</div></div>
-        <div class="dash-tile"><div class="dash-tile-val" id="dashReady">0</div><div class="dash-tile-lbl">Ready</div></div>
-        <div class="dash-tile"><div class="dash-tile-val" id="dashDirty">0</div><div class="dash-tile-lbl">Dirty</div></div>
-        <div class="dash-tile"><div class="dash-tile-val" id="dashOOO">0</div><div class="dash-tile-lbl">OOO</div></div>
-      </div>
-    </div>
+  </div>
 
-    <div class="panel">
-      <h2>Night summary</h2>
-      <div class="dash-tiles">
-        <div class="dash-tile"><div class="dash-tile-val" id="dashNightOcc">0</div><div class="dash-tile-lbl">Occupied</div></div>
-        <div class="dash-tile"><div class="dash-tile-val" id="dashNightAvail">0</div><div class="dash-tile-lbl">Available</div></div>
-      </div>
-    </div>
+  <div class="view" id="view-reviewtoday">
+    <h1>Review Today</h1>
+    <div class="sub">Guests who were in-house yesterday — check each one in person for an extension nobody logged</div>
 
-    <div class="dash-actions">
-      <div class="dash-action-card" onclick="showView('entry')">
-        <div class="dash-action-title">New reservation</div>
-        <div class="dash-action-sub">Click to create</div>
-      </div>
-      <div class="dash-action-card" onclick="showView('addpay')">
-        <div class="dash-action-title">Add Payment</div>
-        <div class="dash-action-sub">Record cash or bank</div>
-      </div>
-      <div class="dash-action-card" onclick="showView('entry')">
-        <div class="dash-action-title">New check-in</div>
-        <div class="dash-action-sub">Walk-in or booked</div>
-      </div>
+    <div class="panel accent-report">
+      <h2>Yesterday's In-House Guests</h2>
+      <div class="sub" style="margin-top:-6px;">Anyone on this list could have extended without telling the front desk — confirm they checked out, or update their booked nights now</div>
+      <div id="reviewPrevInhouseBody"><div class="empty-note">Nothing to review.</div></div>
     </div>
 
   </div>
@@ -1791,27 +1765,23 @@
     </div>
 
     <div class="cico-grid">
-      <div class="panel">
-        <h2>Expected Checkins</h2>
-        <div id="cicoExpectedCheckins"></div>
-      </div>
-      <div class="panel">
-        <h2>Expected Checkouts</h2>
-        <div id="cicoExpectedCheckouts"></div>
-      </div>
-      <div class="panel">
-        <h2>Actual Checkins</h2>
+      <div class="panel cico-left">
+        <h2>Actual Checkins / Reservation</h2>
         <div id="cicoActualCheckins"></div>
       </div>
-      <div class="panel">
+      <div class="panel cico-right-top">
         <h2>Actual Checkouts</h2>
         <div id="cicoActualCheckouts"></div>
+      </div>
+      <div class="panel cico-right-bottom">
+        <h2>Expected Checkouts</h2>
+        <div id="cicoExpectedCheckouts"></div>
       </div>
     </div>
 
   </div>
 
-  <div class="view active" id="view-entry">
+  <div class="view" id="view-entry">
 
     <div class="editing-bar no-print" id="editModeBar" style="display:none;">
       <span>✎ EDITING: <b id="editModeName"></b> — saving will update this existing entry, not create a new one.</span>
@@ -1823,7 +1793,7 @@
 
     <div class="panel accent-guest">
       <h2>Customer Detail</h2>
-      <div class="grid">
+      <div class="grid" style="grid-template-columns:minmax(160px,2.2fr) minmax(160px,2.2fr) minmax(160px,2.2fr) minmax(140px,2.2fr) minmax(60px,0.7fr) minmax(60px,0.7fr);">
         <div>
           <label>Guest Name <span class="req">*</span></label>
           <input type="text" id="guestName" placeholder="Full name" autocomplete="off" required>
@@ -1841,6 +1811,16 @@
         <div>
           <label>Contact No</label>
           <input type="text" id="contactNo" placeholder="03XXXXXXXXX" autocomplete="off" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        </div>
+        <div>
+          <label>Adults <span class="req">*</span></label>
+          <input type="text" id="numAdults" autocomplete="off" inputmode="numeric" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          <label class="na-check"><input type="checkbox" id="numAdultsNA" onchange="toggleNA('numAdults')"> N/A</label>
+        </div>
+        <div>
+          <label>Children <span class="req">*</span></label>
+          <input type="text" id="numChildren" value="N/A" autocomplete="off" disabled required inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          <label class="na-check"><input type="checkbox" id="numChildrenNA" onchange="toggleNA('numChildren')" checked> N/A</label>
         </div>
         <div class="grid" style="grid-column:1 / -1;">
           <div>
@@ -1868,11 +1848,12 @@
 
     <div class="panel accent-rooms">
       <h2>Room / Apartment Detail</h2>
+      <div class="sub" style="margin-top:-6px;">Pick "Miscellaneous" as the Room No to bill Snooker, BBQ, or Bonfire alongside the rooms</div>
       <table>
         <thead>
           <tr>
             <th style="width:36px;">#</th>
-            <th style="width:170px;">Room No / Apt No</th>
+            <th style="width:170px;">Room No / Apt No / Miscellaneous</th>
             <th style="width:130px;">Type</th>
             <th style="width:130px;">Rent Per Day</th>
             <th style="width:120px;">No of Days</th>
@@ -2157,6 +2138,14 @@
           <label>Actual Checkout</label>
           <input type="text" id="dActualCheckout" disabled>
         </div>
+        <div>
+          <label>Adults</label>
+          <input type="text" id="dAdults" disabled>
+        </div>
+        <div>
+          <label>Children</label>
+          <input type="text" id="dChildren" disabled>
+        </div>
       </div>
       <div class="grid" id="dExtraDetails" style="margin-top:14px;"></div>
     </div>
@@ -2270,8 +2259,8 @@
       </div>
     </div>
 
-    <div class="panel accent-report">
-      <div id="reportBody"><div class="empty-note">No payments saved yet.</div></div>
+    <div class="panel accent-report full-bleed-85">
+      <div id="reportBody" style="overflow-x:auto;"><div class="empty-note">No payments saved yet.</div></div>
     </div>
 
   </div>
@@ -2358,11 +2347,50 @@
 
     <div class="panel accent-report">
       <div id="ledgersBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
-      <div class="report-grandbar" id="ledgersGrandbar" style="display:none;">
-        <span>Total Debt: Rs. <b id="lgDebt">0</b></span>
-        <span>Total Credit: Rs. <b id="lgCredit" class="cash-amt">0</b></span>
-        <span>Total Balance: Rs. <b id="lgBalance">0</b></span>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-revenue">
+
+    <h1 class="no-print">Revenue Report</h1>
+    <div class="sub no-print">Every occupied room, its rent, what's been collected against it, and where any extra money on hand is coming from</div>
+
+    <div class="print-header">
+      <h1 id="rvPrintTitle">Revenue Report</h1>
+      <div class="print-header-sub" id="rvPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <h2>As Of</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>As Of Date</label>
+          <input type="date" id="rvDate">
+          <div class="date-readout" id="rvDateReadout"></div>
+        </div>
       </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="setRevenueToday()">Today</button>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" onclick="exportRevenueExcel()">⬇ Export</button>
+          <button class="btn secondary" onclick="printRevenue()">🖶 Print</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2 class="no-print">Rooms — <span id="rvNightlyDateLabel"></span></h2>
+      <div id="rvNightlySummary" style="font-size:15px; font-weight:700; margin:10px 0;"></div>
+      <div id="rvRoomsBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2 class="no-print">Extra Money Today (not today's rent)</h2>
+      <div class="sub no-print" style="margin-top:-6px;">Money received today that did NOT go toward today's room rent above — an advance for a future night, a payment against an older due, a reservation deposit, a misc charge, or money for a guest who isn't in-house today</div>
+      <div id="rvTodayBody" style="overflow-x:auto;"><div class="empty-note">No extra payments today.</div></div>
     </div>
 
   </div>
@@ -2568,6 +2596,61 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="exitPromptModalBackdrop">
+  <div class="modal" style="width:340px;">
+    <h3>Exit the App?</h3>
+    <div class="sub" style="margin-bottom:14px;">Are you sure you want to leave?</div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="cancelExitPrompt()">Stay</button>
+      <button class="btn danger-solid" onclick="confirmExitPrompt()">Exit</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="roomStatusModalBackdrop">
+  <div class="modal" style="width:440px;">
+    <h3>Room <span id="rsModalRoomNo"></span></h3>
+    <div class="sub" style="margin-bottom:14px;" id="rsModalSub"></div>
+
+    <label>Set room status</label>
+    <select id="rsStatusSelect">
+      <option value="Ready">Vacant (clean, available)</option>
+      <option value="Dirty">Dirty (needs cleaning)</option>
+      <option value="OOO">OOO (out of order)</option>
+    </select>
+    <label style="margin-top:12px;">Type CONFIRM to apply</label>
+    <input type="text" id="rsConfirmInput" placeholder="CONFIRM" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeRoomStatusModal()">Cancel</button>
+      <button class="btn" onclick="confirmRoomStatusChange()">Set Status</button>
+    </div>
+
+    <div id="rsExtendedSection" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
+      <div class="sub" style="margin-bottom:10px;">This room's last booked night was yesterday and nobody's confirmed <b id="rsExtendedGuest"></b> actually left.</div>
+      <button class="btn" style="width:100%;" onclick="openCheckoutConfirmModal()">✓ Confirm Checked Out (marks room Dirty)</button>
+    </div>
+
+    <div id="rsReextendSection" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
+      <div class="sub" style="margin-bottom:10px;"><b id="rsReextendGuest"></b> was just marked checked out today. Done by mistake?</div>
+      <button class="btn secondary" style="width:100%;" onclick="confirmRoomReextend()">↺ Undo — Re-extend This Guest</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="checkoutConfirmModalBackdrop">
+  <div class="modal" style="width:460px;">
+    <h3>Confirm Checkout</h3>
+    <div class="sub" style="margin-bottom:14px;">Check this is the right guest before confirming — this sets today as their Actual Checkout and marks the room Dirty.</div>
+    <div class="grid" id="ccModalBody" style="margin-bottom:16px;"></div>
+    <label>Type CHECKOUT to confirm</label>
+    <input type="text" id="ccConfirmInput" placeholder="CHECKOUT" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeCheckoutConfirmModal()">Cancel</button>
+      <button class="btn" onclick="confirmCheckoutConfirmModal()">✓ Confirm Checked Out</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="changeRoomModalBackdrop">
   <div class="modal">
     <h3>Change Room</h3>
@@ -2656,45 +2739,50 @@ function focusError(el){
   el.focus();
 }
 
-function toggleSidebar(){
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebarBackdrop').classList.toggle('show');
-}
+let currentView = 'dashboard';
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday'];
 
-let currentView = 'entry';
+// In-app back/forward: this is one static HTML file with no server routes
+// to deep-link to, so the address bar never changes — history.state just
+// carries which view was on screen, purely so the browser's own Back/
+// Forward buttons can move between views the way they would on a
+// multi-page site. Every call to showView() already represents a genuine
+// navigation (never a same-page filter refresh — those call their render
+// function directly, not showView), so the state push lives inside
+// showView() itself rather than needing a separate navigate() wrapper at
+// every one of its call sites throughout the page.
+let currentRouteState = null; // { view } — mirrors what's currently on screen
 
-function showView(view){
+function showView(view, fromPopState){
   if(view === 'daylock' && !isAdmin()){
     showNotice('Day Lock is only available to admin accounts.');
+    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
   if(view === 'deleteentity' && !isAdmin()){
     showNotice('Delete Entity is only available to admin accounts.');
+    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
   currentView = view;
-  ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','audit','daylock','deleteentity','roomdetail'].forEach(v=>{
+  ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','reviewtoday'].forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
   });
-  document.getElementById('navDashboard').classList.toggle('active', view === 'dashboard');
-  document.getElementById('navCico').classList.toggle('active', view === 'cico');
-  document.getElementById('navRoomDetail').classList.toggle('active', view === 'roomdetail');
-  document.getElementById('navEntry').classList.toggle('active', view === 'entry');
-  document.getElementById('navReservations').classList.toggle('active', view === 'reservations');
-  document.getElementById('navAddPay').classList.toggle('active', view === 'addpay');
-  document.getElementById('navSearch').classList.toggle('active', view === 'search' || view === 'detail');
-  document.getElementById('navReport').classList.toggle('active', view === 'report' || view === 'graphs');
-  document.getElementById('navLedgers').classList.toggle('active', view === 'ledgers');
-  document.getElementById('navFullAudit').classList.toggle('active', view === 'audit');
-  document.getElementById('navDayLock').classList.toggle('active', view === 'daylock');
-  document.getElementById('navDeleteEntity').classList.toggle('active', view === 'deleteentity');
+  document.getElementById('topNavDashboard').classList.toggle('active', view === 'dashboard');
+  document.getElementById('topNavCico').classList.toggle('active', view === 'cico');
+  document.getElementById('topNavRoomDetail').classList.toggle('active', view === 'roomdetail');
   document.getElementById('topNavEntry').classList.toggle('active', view === 'entry');
+  document.getElementById('topNavReservations').classList.toggle('active', view === 'reservations');
   document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('topNavReport').classList.toggle('active', view === 'report' || view === 'graphs');
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebarBackdrop').classList.remove('show');
+  document.getElementById('topNavReviewToday').classList.toggle('active', view === 'reviewtoday');
+  document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
+  document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
+  document.getElementById('topNavFullAudit').classList.toggle('active', view === 'audit');
+  document.getElementById('topNavDayLock').classList.toggle('active', view === 'daylock');
+  document.getElementById('topNavDeleteEntity').classList.toggle('active', view === 'deleteentity');
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -2702,12 +2790,85 @@ function showView(view){
   if(view === 'entry') renderTodayEntries();
   if(view === 'addpay') renderApList();
   if(view === 'ledgers') renderLedgers();
+  if(view === 'revenue') renderRevenue();
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
   if(view === 'deleteentity') renderDeleteEntityList();
   if(view === 'roomdetail') renderRoomDetail();
+  if(view === 'reviewtoday') renderReviewToday();
   if(view === 'dashboard') renderDashboard();
   if(view === 'cico') renderCico();
+
+  // A popstate-triggered call must NOT push a new entry — that would fight
+  // the browser's own history stack it's currently traversing. Every other
+  // call (nav click, openDetail(), cancelEditMode(), etc.) does, but only
+  // when the view actually changed — clicking the tab you're already on
+  // shouldn't pile up duplicate Back stops.
+  if(!fromPopState){
+    if(!sameRoute(currentRouteState, { view })){
+      currentRouteState = { view };
+      history.pushState(currentRouteState, '', location.pathname + location.search);
+    }
+  } else {
+    currentRouteState = { view };
+  }
+}
+
+function sameRoute(a, b){
+  return !!a && !!b && a.view === b.view;
+}
+
+// Exit guard: there's no native browser API for "the user pressed Back
+// inside this SPA and I want to intercept it before they leave the page" —
+// beforeunload only fires on a real document unload, not an in-page Back
+// press that stays on the same document. The trick is to keep a spare,
+// duplicate history entry sitting one step behind wherever the user
+// currently is; stepping "back" onto it is detectable (its state is
+// identical to currentRouteState) rather than actually leaving, so that
+// pop gets turned into a confirm prompt instead of a real navigation.
+let exitPromptAllowNextPop = false;
+
+function armExitGuard(){
+  try{ history.pushState(currentRouteState, '', location.pathname + location.search); }catch(e){ /* ignore */ }
+}
+
+function openExitPromptModal(){
+  document.getElementById('exitPromptModalBackdrop').classList.add('active');
+}
+function closeExitPromptModal(){
+  document.getElementById('exitPromptModalBackdrop').classList.remove('active');
+}
+
+function cancelExitPrompt(){
+  closeExitPromptModal();
+  armExitGuard(); // re-arm the trip wire for next time
+}
+
+function confirmExitPrompt(){
+  closeExitPromptModal();
+  exitPromptAllowNextPop = true;
+  history.back();
+}
+
+window.addEventListener('popstate', e=>{
+  const state = (e.state && ROUTABLE_VIEWS.includes(e.state.view)) ? e.state : null;
+  if(state && sameRoute(state, currentRouteState)){
+    if(exitPromptAllowNextPop){ exitPromptAllowNextPop = false; return; }
+    openExitPromptModal();
+    return;
+  }
+  const view = state ? state.view : 'dashboard';
+  showView(view, true);
+});
+
+function initRouter(){
+  currentRouteState = { view: currentView };
+  history.replaceState(currentRouteState, '', location.pathname + location.search);
+  armExitGuard();
+  // deliberately does not render anything — the initial view is already
+  // painted by the static HTML's default .active classes, and the real
+  // data-driven render happens later once login + the first cloud pull
+  // finish, same as every other page's first paint.
 }
 
 // ---- Stay & Status date pickers (Check-in / Expected Checkout / Actual
@@ -2742,6 +2903,19 @@ function setStayDate(id, isoValue){
   if(fp) fp.setDate(isoValue || null, false);
 }
 
+// Native <input type="date"> only pops its calendar when you hit the tiny
+// icon on the right — clicking anywhere else in the box just plants a text
+// cursor. showPicker() opens it from a click anywhere in the field instead,
+// for every date input on the page (including ones added later, like a
+// fresh room/payment row's date field).
+document.addEventListener('click', e=>{
+  const el = e.target.closest('input[type="date"]');
+  if(!el || el.disabled) return;
+  if(typeof el.showPicker === 'function'){
+    try { el.showPicker(); } catch(err) { /* no active document focus, etc. — ignore */ }
+  }
+});
+
 function updateFilterDateReadouts(){
   const fromVal = document.getElementById('filterFrom').value;
   const toVal = document.getElementById('filterTo').value;
@@ -2768,6 +2942,7 @@ function setFiltersToday(){
 
 
 document.addEventListener('DOMContentLoaded', ()=>{
+  initRouter();
   initStayDatePickers();
   setFiltersToday();
   setStayDate('checkInDate', todayStr());
@@ -2807,6 +2982,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('lgFrom').value = todayStr();
   document.getElementById('lgTo').value = todayStr();
   updateLedgersDateReadouts();
+  document.getElementById('rvDate').addEventListener('input', renderRevenue);
+  document.getElementById('rvDate').value = todayStr();
   document.getElementById('dlDate').value = todayStr();
   updateDateReadout(document.getElementById('dlDate'), document.getElementById('dlDateReadout'));
   document.getElementById('dlDate').addEventListener('input', e=>{
@@ -2862,6 +3039,14 @@ function autoFillExpectedCheckout(){
   updateDateReadout(document.getElementById('checkOutDate'), document.getElementById('checkOutDateReadout'));
 }
 
+// Actual Checkout is never auto-filled — it's a genuine confirmation
+// ("staff actually dealt with this departure"), not a prediction. It's only
+// ever set explicitly: the Check Out Today action (guest detail or the
+// Extended room-status modal), or by hand for an early/late departure.
+// computeRoomStatuses' Extended flag relies on this staying a real signal —
+// silently pre-filling it would make every stay look "resolved" the moment
+// it's saved.
+
 // ---------- Unit lists (from the property's existing room/apartment map) ----------
 const ROOM_NUMBERS = [
   "201","202","203","204","205","206","207",
@@ -2878,10 +3063,23 @@ const APARTMENT_NUMBERS = [
   "D-101","D-102","D-201","D-202","D-301","D-302","D-401","D-402"
 ];
 const ALL_UNITS = [
+  { value:'Miscellaneous', label:'Other (Miscellaneous)', group:'' },
   { value:'N/A', group:'Not decided' },
   ...ROOM_NUMBERS.map(n=>({ value:n, group:'Room' })),
   ...APARTMENT_NUMBERS.map(n=>({ value:n, group:'Apartment' }))
 ];
+
+// Snooker, BBQ, Bonfire — facilities the hotel bills for on top of room
+// rent. A row for one of these lives in the same Room/Apartment Detail
+// table (its charge folds into Grand Total the same way a room's does),
+// but it is not a room: buildLedgersRecords/buildRevenueReport skip any
+// row whose Room No is "Miscellaneous" so it never shows up as an
+// occupied room in Ledgers, Revenue Report, Room Detail, or the Dashboard.
+const MISC_ROOM_NO = 'Miscellaneous';
+const MISC_TYPES = ['BBQ', 'Bonfire', 'Snooker'];
+function isMiscRoomNo(roomNo){
+  return (roomNo || '').trim().toUpperCase() === MISC_ROOM_NO.toUpperCase();
+}
 
 function detectUnitType(roomNo){
   const v = (roomNo || '').trim().toUpperCase();
@@ -2893,15 +3091,48 @@ function detectUnitType(roomNo){
 // Auto-fills the Type column from the picked unit; when the unit is N/A
 // (or hand-typed and unknown) the dropdown unlocks so the user must say
 // whether it's a Room or an Apartment.
+const ROOM_TYPE_OPTIONS_HTML = '<option value="">—</option><option value="Room">Room</option><option value="Apartment">Apartment</option>';
+const MISC_TYPE_OPTIONS_HTML = '<option value="">—</option>' + MISC_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
+
 function updateUnitType(tr){
   const v = tr.querySelector('.roomNo').value.trim().toUpperCase();
   const typeSel = tr.querySelector('.unitType');
+  typeSel.classList.remove('auto-detected');
+
+  // Miscellaneous rows are a one-off charge, not a stay of N nights — lock
+  // "No of Days" at 1 and show a plain "-" instead of the +/- stepper.
+  const isMisc = v === MISC_ROOM_NO.toUpperCase();
+  tr.querySelector('.roomctrl').style.display = isMisc ? 'none' : '';
+  tr.querySelector('.roomCountMisc').style.display = isMisc ? '' : 'none';
+  if(isMisc){
+    tr.dataset.rooms = 1;
+    tr.querySelector('.roomCount').textContent = '1';
+    calcRow(tr.querySelector('.rent'));
+  }
+
+  // Miscellaneous rows pick a facility (BBQ/Bonfire/Snooker) instead of
+  // Room/Apartment — swap the option list itself rather than just toggling
+  // which options are enabled.
+  if(v === MISC_ROOM_NO.toUpperCase()){
+    if(typeSel.dataset.mode !== 'misc'){
+      typeSel.innerHTML = MISC_TYPE_OPTIONS_HTML;
+      typeSel.dataset.mode = 'misc';
+    }
+    typeSel.disabled = false;
+    typeSel.querySelector('option[value=""]').textContent = 'SELECT THIS';
+    typeSel.classList.toggle('needs-pick', !typeSel.value);
+    return;
+  }
+  if(typeSel.dataset.mode === 'misc'){
+    typeSel.innerHTML = ROOM_TYPE_OPTIONS_HTML;
+    delete typeSel.dataset.mode;
+  }
+
   const placeholder = typeSel.querySelector('option[value=""]');
   const roomOpt = typeSel.querySelector('option[value="Room"]');
   const aptOpt = typeSel.querySelector('option[value="Apartment"]');
   roomOpt.textContent = 'Room';
   aptOpt.textContent = 'Apartment';
-  typeSel.classList.remove('auto-detected');
   if(!v){
     typeSel.value = ''; typeSel.disabled = true;
     placeholder.textContent = '—';
@@ -2929,14 +3160,14 @@ function getUsedRoomNumbers(excludeTr){
     Array.from(document.querySelectorAll('#roomBody .roomNo'))
       .filter(inp => inp.closest('tr') !== excludeTr)
       .map(inp => inp.value.trim().toUpperCase())
-      .filter(v => v && v !== 'N/A')
+      .filter(v => v && v !== 'N/A' && v !== MISC_ROOM_NO.toUpperCase())
   );
 }
 
 function renderRoomNoList(listEl, filter, currentTr){
   const f = (filter || '').trim().toLowerCase();
   const usedElsewhere = getUsedRoomNumbers(currentTr);
-  const rawMatches = ALL_UNITS.filter(u=> !f || u.value.toLowerCase().includes(f));
+  const rawMatches = ALL_UNITS.filter(u=> !f || u.value.toLowerCase().includes(f) || (u.label && u.label.toLowerCase().includes(f)));
   const matches = rawMatches.filter(u=> !usedElsewhere.has(u.value.toUpperCase()));
   if(matches.length === 0){
     listEl.innerHTML = rawMatches.length > 0
@@ -2945,7 +3176,7 @@ function renderRoomNoList(listEl, filter, currentTr){
     return;
   }
   listEl.innerHTML = matches.map(u=>
-    `<div class="roomno-item" data-value="${u.value}">${u.value}<span class="grp">${u.group}</span></div>`
+    `<div class="roomno-item" data-value="${u.value}">${u.label || u.value}<span class="grp">${u.group}</span></div>`
   ).join('');
 }
 
@@ -2957,7 +3188,7 @@ function refreshDuplicateRoomHighlights(){
   const counts = {};
   inputs.forEach(inp=>{
     const v = inp.value.trim().toUpperCase();
-    if(!v || v === 'N/A') return; // several undecided rooms are allowed
+    if(!v || v === 'N/A' || v === MISC_ROOM_NO.toUpperCase()) return; // several undecided/misc rows are allowed
     counts[v] = (counts[v] || 0) + 1;
   });
   inputs.forEach(inp=>{
@@ -3090,6 +3321,7 @@ function addRow(){
         <span class="roomCount">1</span>
         <button onclick="changeRooms(this,1)">+</button>
       </div>
+      <span class="roomCountMisc" style="display:none;">-</span>
     </td>
     <td class="edit-only"><input type="date" class="movedOut" title="Date the guest left THIS room (leave blank while still here)"><div class="date-readout movedOutReadout"></div></td>
     <td class="rowtotal">0</td>
@@ -3124,6 +3356,186 @@ function confirmCheckoutToday(){
   updateDateReadout(document.getElementById('actualCheckoutDate'), document.getElementById('actualCheckoutDateReadout'));
   closeCheckoutModal();
   showNotice('Actual Checkout set to today — click Save Entry to save it.', 'success');
+}
+
+// ---- Room Detail: clicking a non-occupied room opens this instead of a
+// guest page. Extended rooms get a one-click "actually checked out"
+// resolution right here — no need to open the guest and edit them — plus
+// the same housekeeping (Ready/Dirty/OOO) control every other room gets.
+let pendingRoomStatusRoomNo = null;
+
+function openRoomStatusModal(roomNo){
+  pendingRoomStatusRoomNo = roomNo;
+  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNo);
+  document.getElementById('rsModalRoomNo').textContent = roomNo;
+
+  const extendedSection = document.getElementById('rsExtendedSection');
+  const reextendSection = document.getElementById('rsReextendSection');
+  const isExtended = !!(rs && rs.extended && rs.entry);
+  // Re-extend only offers to undo a checkout confirmed TODAY — an old,
+  // long-settled departure isn't "just made a mistake" territory.
+  const justCheckedOutToday = !!(rs && !isExtended && rs.entry && getDetailValue(rs.entry, 'Actual Checkout') === todayStr());
+
+  extendedSection.style.display = isExtended ? '' : 'none';
+  if(isExtended) document.getElementById('rsExtendedGuest').textContent = rs.entry.guestName || '(no name)';
+
+  reextendSection.style.display = justCheckedOutToday ? '' : 'none';
+  if(justCheckedOutToday) document.getElementById('rsReextendGuest').textContent = rs.entry.guestName || '(no name)';
+
+  document.getElementById('rsModalSub').textContent = (isExtended || justCheckedOutToday)
+    ? 'Resolve this room\'s status, or set it manually below.'
+    : 'Update this room\'s housekeeping status.';
+
+  document.getElementById('rsStatusSelect').value = (rs && rs.housekeepingStatus) || 'Ready';
+  const input = document.getElementById('rsConfirmInput');
+  input.value = '';
+  input.classList.remove('duplicate');
+  document.getElementById('roomStatusModalBackdrop').classList.add('active');
+}
+
+function closeRoomStatusModal(){
+  document.getElementById('roomStatusModalBackdrop').classList.remove('active');
+  pendingRoomStatusRoomNo = null;
+}
+
+async function upsertRoomStatus(roomNo, status){
+  if(!sb){ showNotice('Not connected to the cloud database — try again once it reconnects.'); return false; }
+  try{
+    const nowIso = new Date().toISOString();
+    const username = currentUser ? currentUser.username : '';
+    const { error } = await sb.from('room_status').upsert({
+      room_no: roomNo,
+      status,
+      updated_by: username,
+      updated_at: nowIso
+    }, { onConflict: 'room_no' });
+    if(error) throw error;
+    roomStatusMap[roomNo] = { room_no: roomNo, status, updated_by: username, updated_at: nowIso };
+    return true;
+  }catch(e){
+    console.error('Setting room status failed', e);
+    showNotice(e && e.message && e.message.includes('room_status')
+      ? 'The Room Status table doesn\'t exist yet — run migration/room_status.sql in the Supabase SQL Editor first.'
+      : 'Couldn\'t update room status — check the internet connection and try again.');
+    return false;
+  }
+}
+
+async function confirmRoomStatusChange(){
+  const input = document.getElementById('rsConfirmInput');
+  if(input.value.trim().toUpperCase() !== 'CONFIRM'){
+    input.classList.add('duplicate');
+    showNotice('Please type CONFIRM to apply this room status change.');
+    input.focus();
+    return;
+  }
+  const status = document.getElementById('rsStatusSelect').value;
+  const roomNo = pendingRoomStatusRoomNo;
+  const ok = await upsertRoomStatus(roomNo, status);
+  if(!ok) return;
+  closeRoomStatusModal();
+  renderRoomDetail();
+  showNotice('Room ' + roomNo + ' set to ' + status + '.', 'success');
+}
+
+// A second, detail-bearing confirmation before the actual checkout runs —
+// staff sees exactly who they're about to check out (name, CNIC, room,
+// nights, money) and has to type CHECKOUT, so a stray click on the room
+// list can't silently check someone out.
+function openCheckoutConfirmModal(){
+  const roomNo = pendingRoomStatusRoomNo;
+  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNo);
+  if(!rs || !rs.entry) return;
+  const entry = loadAllEntries().find(e=> e.id === rs.entry.id);
+  if(!entry) return;
+  const t = computeTotals(entry);
+  const roomRow = (entry.rooms || []).find(r=> (r.roomNo || '').trim().toUpperCase() === roomNo.trim().toUpperCase());
+  const nights = roomRow ? (parseInt(roomRow.count) || 1) : '-';
+  document.getElementById('ccModalBody').innerHTML = `
+    <div><div class="confirm-lbl">Guest Name</div><div class="confirm-val">${entry.guestName || '(no name)'}</div></div>
+    <div><div class="confirm-lbl">CNIC</div><div class="confirm-val">${entry.cnic || '-'}</div></div>
+    <div><div class="confirm-lbl">Room No</div><div class="confirm-val">${roomNo}</div></div>
+    <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${entry.checkIn ? formatDate(entry.checkIn) : '-'}</div></div>
+    <div><div class="confirm-lbl">Nights Booked</div><div class="confirm-val">${nights}</div></div>
+    <div><div class="confirm-lbl">Booking Total</div><div class="confirm-val">${t.bookingTotal.toLocaleString()}</div></div>
+    <div><div class="confirm-lbl">Paid</div><div class="confirm-val">${t.paid.toLocaleString()}</div></div>
+    <div><div class="confirm-lbl">Due</div><div class="confirm-val" style="${t.due > 0 ? 'color:var(--danger); font-weight:700;' : ''}">${t.due.toLocaleString()}</div></div>
+  `;
+  const input = document.getElementById('ccConfirmInput');
+  input.value = '';
+  input.classList.remove('duplicate');
+  document.getElementById('checkoutConfirmModalBackdrop').classList.add('active');
+}
+
+function closeCheckoutConfirmModal(){
+  document.getElementById('checkoutConfirmModalBackdrop').classList.remove('active');
+}
+
+async function confirmCheckoutConfirmModal(){
+  const input = document.getElementById('ccConfirmInput');
+  if(input.value.trim().toUpperCase() !== 'CHECKOUT'){
+    input.classList.add('duplicate');
+    showNotice('Please type CHECKOUT to confirm.');
+    input.focus();
+    return;
+  }
+  closeCheckoutConfirmModal();
+  await confirmRoomCheckout();
+}
+
+// Marks the current guest's Actual Checkout as today — the ONLY moment
+// Actual Checkout ever gets written automatically — and the room Dirty,
+// never straight to Ready. Whoever cleans it marks it Ready themselves via
+// this same modal.
+async function confirmRoomCheckout(){
+  const roomNo = pendingRoomStatusRoomNo;
+  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNo);
+  if(!rs || !rs.entry) return;
+  const entry = loadAllEntries().find(e=> e.id === rs.entry.id);
+  if(!entry) return;
+  const extraDetails = (entry.extraDetails || []).filter(d=> d.kind !== 'Actual Checkout');
+  extraDetails.unshift({ kind: 'Actual Checkout', value: todayStr() });
+  entry.extraDetails = extraDetails;
+  entry.editedAt = new Date().toISOString();
+  entry.editedBy = currentUser ? currentUser.username : '';
+  logGuestAction(entry.id, 'edited');
+  queueEntryPush(entry.id);
+  await upsertRoomStatus(roomNo, 'Dirty');
+  closeRoomStatusModal();
+  renderRoomDetail();
+  showNotice((entry.guestName || 'Guest') + ' checked out — room ' + roomNo + ' marked Dirty.', 'success');
+}
+
+async function deleteRoomStatus(roomNo){
+  if(!sb) return;
+  try{
+    const { error } = await sb.from('room_status').delete().eq('room_no', roomNo);
+    if(error) throw error;
+  }catch(e){
+    console.error('Clearing room status failed', e);
+  }
+  delete roomStatusMap[roomNo];
+}
+
+// Undoes an accidental "Confirm Checked Out" — clears the Actual Checkout
+// that action set and clears the room's housekeeping row entirely, so the
+// room falls straight back to Extended (default Ready with no timestamp to
+// resolve it) until someone deals with it for real.
+async function confirmRoomReextend(){
+  const roomNo = pendingRoomStatusRoomNo;
+  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNo);
+  if(!rs || !rs.entry) return;
+  const entry = loadAllEntries().find(e=> e.id === rs.entry.id);
+  if(!entry) return;
+  entry.extraDetails = (entry.extraDetails || []).filter(d=> d.kind !== 'Actual Checkout');
+  entry.editedAt = new Date().toISOString();
+  entry.editedBy = currentUser ? currentUser.username : '';
+  logGuestAction(entry.id, 'edited');
+  queueEntryPush(entry.id);
+  await deleteRoomStatus(roomNo);
+  closeRoomStatusModal();
+  renderRoomDetail();
+  showNotice((entry.guestName || 'Guest') + ' re-extended — room ' + roomNo + ' is Extended again until resolved.', 'success');
 }
 
 function openChangeRoomModal(){
@@ -3200,6 +3612,7 @@ document.getElementById('crToRoomList').addEventListener('mousedown', e=>{
 
 function changeRooms(btn, delta){
   const tr = btn.closest('tr');
+  if(isMiscRoomNo(tr.querySelector('.roomNo').value)) return; // Miscellaneous is always 1, no stepping
   let rooms = parseInt(tr.dataset.rooms) + delta;
   if(rooms < 1) rooms = 1;
   tr.dataset.rooms = rooms;
@@ -3271,7 +3684,7 @@ function requestDeleteRow(btn, kind){
         <div><div class="confirm-lbl">Room No / Apt No</div><div class="confirm-val">${tr.querySelector('.roomNo').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">Type</div><div class="confirm-val">${tr.querySelector('.unitType').value || '-'}</div></div>
         <div><div class="confirm-lbl">Rent Per Day</div><div class="confirm-val">${(parseFloat(tr.querySelector('.rent').value) || 0).toLocaleString()}</div></div>
-        <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${tr.dataset.rooms || 1}</div></div>
+        <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${isMiscRoomNo(tr.querySelector('.roomNo').value) ? '-' : (tr.dataset.rooms || 1)}</div></div>
         <div><div class="confirm-lbl">Moved Out</div><div class="confirm-val">${tr.querySelector('.movedOut').value ? formatDate(tr.querySelector('.movedOut').value) : '-'}</div></div>
         <div><div class="confirm-lbl">Total</div><div class="confirm-val">${tr.querySelector('.rowtotal').textContent || 0}</div></div>
       </div>`;
@@ -3388,7 +3801,7 @@ function scheduleKarachiMidnightRollover(){
 function handleKarachiMidnightRollover(){
   const newToday = todayStr();
   if(newToday === lastKnownToday) return;
-  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','dlDate','auditEntryDate','auditPageDate'].forEach(id=>{
+  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','rvDate','dlDate','auditEntryDate','auditPageDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(el && el.value === lastKnownToday) el.value = newToday;
   });
@@ -3403,6 +3816,8 @@ function handleKarachiMidnightRollover(){
   if(checkInDateEl) updateDateReadout(checkInDateEl, document.getElementById('checkInDateReadout'));
   const rdDateEl = document.getElementById('rdDate');
   if(rdDateEl) updateDateReadout(rdDateEl, document.getElementById('rdDateReadout'));
+  const rvDateEl = document.getElementById('rvDate');
+  if(rvDateEl) updateDateReadout(rvDateEl, document.getElementById('rvDateReadout'));
   const dlDateEl = document.getElementById('dlDate');
   if(dlDateEl) updateDateReadout(dlDateEl, document.getElementById('dlDateReadout'));
   const auditEntryDateEl = document.getElementById('auditEntryDate');
@@ -3419,6 +3834,7 @@ function handleKarachiMidnightRollover(){
   if(currentView === 'graphs') renderGraphs();
   if(currentView === 'search') renderSearch();
   if(currentView === 'ledgers') renderLedgers();
+  if(currentView === 'revenue') renderRevenue();
   if(currentView === 'audit') renderAuditPage();
   if(currentView === 'daylock') renderDayLock();
   if(currentView === 'roomdetail') renderRoomDetail();
@@ -3538,7 +3954,8 @@ function calcSummary(){
 // ---- Optional extra details (+ Detail button) ----
 const EXTRA_DETAIL_KINDS = [
   'Address', 'Nationality', 'Company Name', 'Profession',
-  'Emergency No', 'Car No', 'Date of Arrival', 'Date of Departure', 'Extra Remarks'
+  'Emergency No', 'Car No', 'Date of Arrival', 'Date of Departure', 'Extra Remarks',
+  'Owner\'s Guest'
 ];
 
 function addExtraDetailRow(kind, value){
@@ -3616,7 +4033,7 @@ function formatExtraDetail(d){
 // the cloud table already has a JSON column for that array, so this needs
 // no schema change. These helpers move them between the fixed fields and
 // that array, and keep them out of the generic "+ Detail" list/dropdown.
-const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout'];
+const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Adults', 'Children'];
 function getDetailValue(entry, kind){
   const d = (entry.extraDetails || []).find(d=> d.kind === kind);
   return d ? d.value : '';
@@ -3761,6 +4178,30 @@ function reviewEntry(){
     if(!proceed) return;
   }
 
+  const numAdultsEl = document.getElementById('numAdults');
+  const numAdultsNA = document.getElementById('numAdultsNA').checked;
+  const numAdults = numAdultsNA ? 'N/A' : numAdultsEl.value.trim();
+  if(!numAdultsNA){
+    if(!numAdults){
+      showNotice('Please enter the No of Adults before saving (or tick N/A).');
+      focusError(numAdultsEl);
+      return;
+    }
+    if(parseInt(numAdults) <= 0){
+      showNotice('No of Adults must be at least 1.');
+      focusError(numAdultsEl);
+      return;
+    }
+  }
+  const numChildrenEl = document.getElementById('numChildren');
+  const numChildrenNA = document.getElementById('numChildrenNA').checked;
+  const numChildren = numChildrenNA ? 'N/A' : numChildrenEl.value.trim();
+  if(!numChildrenNA && !numChildren){
+    showNotice('Please enter the No of Children before saving (or tick N/A).');
+    focusError(numChildrenEl);
+    return;
+  }
+
   // stay dates — reference only, no amount depends on them, but a
   // checkout before the check-in is always a typo
   const checkInEl = document.getElementById('checkInDate');
@@ -3776,6 +4217,8 @@ function reviewEntry(){
 
   const contactNo = document.getElementById('contactNo').value.trim();
   if(contactNo) extraDetails.unshift({ kind: 'Contact No', value: contactNo });
+  extraDetails.unshift({ kind: 'Children', value: numChildren });
+  extraDetails.unshift({ kind: 'Adults', value: numAdults });
   const actualCheckout = document.getElementById('actualCheckoutDate').value;
   if(actualCheckout) extraDetails.unshift({ kind: 'Actual Checkout', value: actualCheckout });
 
@@ -3797,14 +4240,16 @@ function reviewEntry(){
       return;
     }
     if(!isFreeGuest && rent <= 0){
-      showNotice('Room ' + roomNo + ' has no Rent Per Day entered. Please enter a rent amount greater than 0 (or type "Guest" for a free owner\'s-guest stay).');
+      showNotice((isMiscRoomNo(roomNo) ? 'Miscellaneous' : 'Room ' + roomNo) + ' has no Rent Per Day entered. Please enter an amount greater than 0 (or type "Guest" for a free owner\'s-guest stay).');
       focusError(rentInput);
       return;
     }
     const typeSel = tr.querySelector('.unitType');
     const unitType = typeSel.value;
     if(!unitType){
-      showNotice('Please select whether "' + roomNo + '" is a Room or an Apartment in the Type column.');
+      showNotice(isMiscRoomNo(roomNo)
+        ? 'Please select which facility this Miscellaneous row is for — BBQ, Bonfire, or Snooker.'
+        : 'Please select whether "' + roomNo + '" is a Room or an Apartment in the Type column.');
       focusError(typeSel);
       return;
     }
@@ -3825,7 +4270,7 @@ function reviewEntry(){
   const seenRooms = {};
   for(const r of cleanRooms){
     const key = r.roomNo.toUpperCase();
-    if(key === 'N/A') continue; // undecided rooms may repeat
+    if(key === 'N/A' || key === MISC_ROOM_NO.toUpperCase()) continue; // undecided/misc rows may repeat
     if(seenRooms[key]){
       showNotice('Room ' + r.roomNo + ' is selected in more than one row. Each room can only be booked once per entry — please fix the duplicate before saving.');
       focusError(r.tr.querySelector('.roomNo'));
@@ -3914,7 +4359,7 @@ function openConfirmModal(data){
   const box = document.getElementById('confirmBody');
 
   const roomRowsHtml = data.rooms.map(r=>`
-    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
+    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
@@ -3936,6 +4381,8 @@ function openConfirmModal(data){
       <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${data.checkIn ? formatDate(data.checkIn) : '-'}</div></div>
       <div><div class="confirm-lbl">Expected Checkout</div><div class="confirm-val">${data.checkOut ? formatDate(data.checkOut) : '-'}</div></div>
       <div><div class="confirm-lbl">Actual Checkout</div><div class="confirm-val">${getDetailValue(data, 'Actual Checkout') ? formatDate(getDetailValue(data, 'Actual Checkout')) : '-'}</div></div>
+      <div><div class="confirm-lbl">Adults</div><div class="confirm-val">${getDetailValue(data, 'Adults') || '-'}</div></div>
+      <div><div class="confirm-lbl">Children</div><div class="confirm-val">${getDetailValue(data, 'Children') || '-'}</div></div>
       ${visibleExtraDetails(data).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
     </div>
     <table style="margin-bottom:14px;">
@@ -4098,6 +4545,14 @@ function resetEntryForm(){
   document.getElementById('fatherName').value = 'N/A';
   document.getElementById('fatherName').disabled = true;
   document.getElementById('fatherNameNA').checked = true;
+  document.getElementById('numAdults').value = '';
+  document.getElementById('numAdults').disabled = false;
+  document.getElementById('numAdultsNA').checked = false;
+  // Children defaults to N/A the same way Father Name does — most walk-ins
+  // don't have any, so this saves ticking the box every time.
+  document.getElementById('numChildren').value = 'N/A';
+  document.getElementById('numChildren').disabled = true;
+  document.getElementById('numChildrenNA').checked = true;
   // Check-in defaults to today (Pakistan time) — nearly every walk-in checks in the day
   // they're entered, so this saves re-picking the date on every single guest.
   setStayDate('checkInDate', todayStr());
@@ -4274,6 +4729,19 @@ function startEditEntry(entry){
   document.getElementById('cnicNA').checked = entry.cnic === 'N/A';
   document.getElementById('cnic').disabled = entry.cnic === 'N/A';
   document.getElementById('contactNo').value = getDetailValue(entry, 'Contact No');
+  // a saved entry from before these fields existed has no Adults/Children
+  // value at all — treat that the same as N/A rather than leaving it blank
+  // and forcing every old entry to be fixed just to save an unrelated edit
+  const adultsVal = getDetailValue(entry, 'Adults');
+  const adultsIsNA = !adultsVal || adultsVal === 'N/A';
+  document.getElementById('numAdults').value = adultsIsNA ? 'N/A' : adultsVal;
+  document.getElementById('numAdults').disabled = adultsIsNA;
+  document.getElementById('numAdultsNA').checked = adultsIsNA;
+  const childrenVal = getDetailValue(entry, 'Children');
+  const childrenIsNA = !childrenVal || childrenVal === 'N/A';
+  document.getElementById('numChildren').value = childrenIsNA ? 'N/A' : childrenVal;
+  document.getElementById('numChildren').disabled = childrenIsNA;
+  document.getElementById('numChildrenNA').checked = childrenIsNA;
   setStayDate('checkInDate', entry.checkIn || '');
   setStayDate('checkOutDate', entry.checkOut || '');
   setStayDate('actualCheckoutDate', getDetailValue(entry, 'Actual Checkout'));
@@ -4445,8 +4913,8 @@ function renderSearch(){
     <table>
       <thead>
         <tr>
-          <th>Guest</th>
           <th style="width:120px;">Room</th>
+          <th>Guest</th>
           <th style="width:140px;">CNIC</th>
           <th style="width:100px;">Entry Date</th>
           <th style="width:100px;">Check-in</th>
@@ -4463,8 +4931,8 @@ function renderSearch(){
           const statusClass = t.status.toLowerCase();
           const actualCheckout = getDetailValue(entry, 'Actual Checkout');
           return `<tr style="cursor:pointer;" onclick="openDetail('${entry.id}')" title="Open this guest">
-            <td>${entry.guestName || '(no name)'}</td>
             <td>${roomNos || '-'}</td>
+            <td>${entry.guestName || '(no name)'}</td>
             <td>${entry.cnic || '-'}</td>
             <td>${entry.savedAt ? formatDate(toKarachiDateStr(entry.savedAt)) : '-'}</td>
             <td>${entry.checkIn ? formatDate(entry.checkIn) : '-'}</td>
@@ -4593,38 +5061,70 @@ const ROOM_SECTION_ORDER = ['2ND FLOOR','3RD FLOOR','4TH FLOOR','BLOCK A','BLOCK
 function computeRoomStatuses(asOfDate){
   const refDate = asOfDate || todayStr();
   const all = loadAllEntries();
-  const byRoom = {};
-  all.forEach(entry=>{
-    const rows = entry.rooms || [];
-    const entryCheckIn = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
-    const entryCheckout = getDetailValue(entry, 'Actual Checkout');
-    rows.forEach((r, i)=>{
-      if(!r.roomNo) return;
-      const key = r.roomNo.trim().toUpperCase();
-      const prev = rows[i - 1];
-      const from = (prev && prev.movedOut) ? prev.movedOut : entryCheckIn;
-      const to = r.movedOut || entryCheckout || '';
-      (byRoom[key] = byRoom[key] || []).push({ entry, room: r, from, to });
-    });
+  // Occupancy is read straight off the same room-nights Ledgers bills by
+  // (checkIn + each room row's own booked-nights count) — no checkIn/
+  // checkout date-window math of its own, no "Actual Checkout" field, no
+  // movedOut chaining. A room is occupied on refDate purely because a
+  // booked night lands on that exact date; nothing else decides it.
+  const nights = buildLedgersRecords();
+  const nightsByRoom = {};
+  nights.forEach(n=>{
+    if(isMiscRoomNo(n.roomNo)) return; // Snooker/BBQ/Bonfire aren't a room — never occupancy
+    const key = n.roomNo.trim().toUpperCase();
+    (nightsByRoom[key] = nightsByRoom[key] || []).push(n);
   });
 
   const masterKeys = [...ROOM_NUMBERS, ...APARTMENT_NUMBERS];
-  const extraKeys = Object.keys(byRoom)
+  const extraKeys = Object.keys(nightsByRoom)
     .filter(k=> !masterKeys.includes(k))
     .sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
   return masterKeys.concat(extraKeys).map(roomNo=>{
-    const bookings = (byRoom[roomNo] || []).slice().sort((a,b)=> (b.from || '').localeCompare(a.from || ''));
-    const current = bookings.find(b=> !b.from || b.from <= refDate) || null;
-    const occupied = !!current && (!current.to || current.to > refDate);
+    const roomNights = nightsByRoom[roomNo] || [];
+    const todayNight = roomNights.find(n=> n.date === refDate);
+    let current = null;
+    let lastNightDate = '';
+    if(todayNight){
+      current = all.find(e=> e.id === todayNight.guestId) || null;
+    } else if(roomNights.length){
+      // Vacant: surface whoever's booked nights most recently ended, purely
+      // as context in the UI — this never feeds back into the occupied flag.
+      const lastNight = roomNights.slice().sort((a,b)=> b.date.localeCompare(a.date))[0];
+      current = all.find(e=> e.id === lastNight.guestId) || null;
+      lastNightDate = lastNight.date;
+    }
+    // Housekeeping (Ready/Dirty/OOO) is tracked separately from booking —
+    // it only counts as "someone dealt with this room" if it was touched on
+    // or after the guest's last night. A Ready/Dirty status left over from
+    // two guests ago must NOT silently suppress today's Extended flag.
+    const housekeeping = roomStatusMap[roomNo];
+    const resolvedByHousekeeping = !!(housekeeping && lastNightDate && housekeeping.updated_at &&
+      toKarachiDateStr(housekeeping.updated_at) >= lastNightDate);
+    const housekeepingStatus = housekeeping ? housekeeping.status : 'Ready';
+
+    // Nobody's confirmed this room actually emptied out — its last booked
+    // night was yesterday and nothing's been booked since. Treat it as
+    // still inhouse (gold "Extended") rather than silently reading Vacant,
+    // until someone either books it fresh or marks the room Dirty/OOO/Ready
+    // via Check Out Today or the room-status modal — same forcing function
+    // as "Review Today"'s Nights Ending list.
+    const extended = !todayNight && lastNightDate === addDaysToDateStr(refDate, -1) && !resolvedByHousekeeping;
     return {
       roomNo,
       section: getRoomSection(roomNo),
       type: getRoomType(roomNo),
-      entry: current ? current.entry : null,
-      occupied,
-      actualCheckout: current ? current.to : '',
-      bookingCount: bookings.length
+      entry: current,
+      // Strictly "booked for this exact night" — Extended is NOT folded in
+      // here. Dashboard and Room Detail are the only two places that treat
+      // an Extended room as occupied (they explicitly check `occupied ||
+      // extended`); every other consumer (Revenue Report, Review Today,
+      // Reservations) only counts a room once its booking actually covers
+      // this night — an unconfirmed departure isn't real rent yet.
+      occupied: !!todayNight,
+      extended,
+      housekeepingStatus,
+      actualCheckout: lastNightDate ? addDaysToDateStr(lastNightDate, 1) : '',
+      bookingCount: new Set(roomNights.map(n=> n.guestId)).size
     };
   });
 }
@@ -4662,7 +5162,9 @@ function renderRoomDetail(){
 
   let rooms = computeRoomStatuses(asOfDate);
   const totalRooms = rooms.length;
-  const occupiedCount = rooms.filter(r=> r.occupied).length;
+  // Room Detail is one of only two places (the other being Dashboard) that
+  // still counts Extended rooms as occupied.
+  const occupiedCount = rooms.filter(r=> r.occupied || r.extended).length;
 
   if(searchVal){
     const searchValNoDash = stripDashes(searchVal);
@@ -4672,7 +5174,7 @@ function renderRoomDetail(){
     });
   }
   if(occupiedOnly){
-    rooms = rooms.filter(r=> r.occupied);
+    rooms = rooms.filter(r=> r.occupied || r.extended);
   }
 
   summaryEl.innerHTML = `
@@ -4690,22 +5192,36 @@ function renderRoomDetail(){
   rooms.forEach(r=> (groups[r.section] = groups[r.section] || []).push(r));
   const sections = ROOM_SECTION_ORDER.filter(section=> groups[section] && groups[section].length);
 
+  // A room with a booked-tonight guest opens that guest's page — everything
+  // else (Extended, or plain Ready/Dirty/OOO) opens the room-status div
+  // instead, since there's no "current guest" to show, or the guest shown
+  // is unconfirmed/stale.
+  const STATUS_LABEL = { Ready: 'Vacant', Dirty: 'Dirty', OOO: 'OOO' };
+  const STATUS_CLASS = { Ready: 'paid', Dirty: 'partial', OOO: 'ooo' };
+
   smartBody.innerHTML = sections.map(section=>{
     const list = groups[section];
-    const occ = list.filter(r=> r.occupied).length;
+    const occ = list.filter(r=> r.occupied || r.extended).length;
     const rows = list.map(r=>{
+      const goesToGuest = r.occupied && !r.extended;
       const due = r.entry ? computeTotals(r.entry).due : 0;
-      const clickable = !!r.entry;
       const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '-';
-      const guestCell = r.occupied
+      const guestCell = goesToGuest
         ? (r.entry.guestName || '(no name)')
-        : (r.entry ? `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>` : '-');
-      return `<tr ${clickable ? `style="cursor:pointer;" onclick="openDetail('${r.entry.id}')" title="Open this guest"` : ''}>
+        : (r.entry
+          ? (r.extended
+            ? `<span class="extended-guest">${r.entry.guestName || '(no name)'}</span>`
+            : `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>`)
+          : '-');
+      const statusLabel = r.extended ? 'Extended' : (r.occupied ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
+      const statusCls = r.extended ? 'partial' : (r.occupied ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
+      const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
+      return `<tr style="cursor:pointer;" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <td><b>${r.roomNo}</b></td>
         <td>${r.type || '-'}</td>
         <td>${arrival}</td>
-        <td>${clickable ? due.toLocaleString() : '-'}</td>
-        <td><span class="status ${r.occupied ? 'pending' : 'paid'}">${r.occupied ? 'Occupied' : 'Vacant'}</span></td>
+        <td>${goesToGuest ? due.toLocaleString() : '-'}</td>
+        <td><span class="status ${statusCls}">${statusLabel}</span></td>
         <td>${guestCell}</td>
       </tr>`;
     }).join('');
@@ -4722,19 +5238,25 @@ function renderRoomDetail(){
       </div>`;
   }).join('');
 
+  const SR_STATUS_CLASS = { Ready: 'vacant', Dirty: 'dirty', OOO: 'ooo' };
+  const SR_STATUS_LABEL = { Ready: 'vacant', Dirty: 'dirty', OOO: 'ooo' };
   munchiBody.innerHTML = sections.map(section=>{
     const rows = groups[section].map(r=>{
-      const clickable = !!r.entry;
+      const goesToGuest = r.occupied && !r.extended;
       const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '';
-      const guestText = r.occupied
+      const guestText = goesToGuest
         ? (r.entry.guestName || '')
         : (r.entry ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
-      return `<div class="smart-row${clickable ? ' clickable' : ''}" ${clickable ? `onclick="openDetail('${r.entry.id}')" title="Open this guest"` : ''}>
+      const statusText = r.extended ? 'extended' : (r.occupied ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
+      const statusCls = r.extended ? 'extended' : (r.occupied ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
+      const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
+      const guestCls = goesToGuest ? '' : (r.entry ? (r.extended ? ' sr-guest-extended' : ' sr-guest-muted') : '');
+      return `<div class="smart-row clickable" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <span class="sr-room">${r.roomNo}</span>
         <span class="sr-type">${r.type || ''}</span>
-        <span class="sr-status ${r.occupied ? 'occupied' : 'vacant'}">${r.occupied ? 'occupied' : 'vacant'}</span>
+        <span class="sr-status ${statusCls}">${statusText}</span>
         <span class="sr-arrival">${arrival}</span>
-        <span class="sr-guest${r.occupied ? '' : (r.entry ? ' sr-guest-muted' : '')}">${guestText}</span>
+        <span class="sr-guest${guestCls}">${guestText}</span>
       </div>`;
     }).join('');
     return `
@@ -4813,31 +5335,44 @@ function buildMovementItem(entry){
 
 function computeMovement(fromDate, toDate){
   const all = loadAllEntries();
-  const expectedCheckins = [];
-  const actualCheckins = [];
+  const checkins = [];
   const expectedCheckouts = [];
   const actualCheckouts = [];
 
   all.forEach(entry=>{
     const checkIn = entry.checkIn || '';
-    const checkOut = entry.checkOut || '';
     const actualCheckout = getDetailValue(entry, 'Actual Checkout') || '';
-    const savedDate = entry.savedAt ? toKarachiDateStr(entry.savedAt) : '';
     const item = buildMovementItem(entry);
 
+    // Reservation and actual arrival are the same list now — a check-in
+    // date is a check-in date whether the entry was saved ahead of time or
+    // walked in on the day.
     if(checkIn && checkIn >= fromDate && checkIn <= toDate){
-      if(savedDate && savedDate < checkIn) expectedCheckins.push(item);
-      else actualCheckins.push(item);
+      checkins.push(item);
     }
-    if(checkOut && checkOut >= fromDate && checkOut <= toDate){
-      expectedCheckouts.push(item);
+
+    // Expected checkout = check-in + the LONGEST room's booked nights (not
+    // the sum across rooms) — same formula as Room Detail/Dashboard/Revenue
+    // Report, instead of the old manually-typed Expected Checkout field.
+    let maxNights = 0;
+    (entry.rooms || []).forEach(r=>{
+      if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
+      const nights = parseInt(r.count) || 1;
+      if(nights > maxNights) maxNights = nights;
+    });
+    if(checkIn && maxNights > 0){
+      const computedCheckout = addDaysToDateStr(checkIn, maxNights);
+      if(computedCheckout >= fromDate && computedCheckout <= toDate){
+        expectedCheckouts.push(item);
+      }
     }
+
     if(actualCheckout && actualCheckout >= fromDate && actualCheckout <= toDate){
       actualCheckouts.push(item);
     }
   });
 
-  return { expectedCheckins, actualCheckins, expectedCheckouts, actualCheckouts };
+  return { checkins, expectedCheckouts, actualCheckouts };
 }
 
 function renderMovementList(containerId, items){
@@ -4873,20 +5408,82 @@ function renderDashboard(){
   const today = todayStr();
   const rooms = computeRoomStatuses(today);
   const totalRooms = rooms.length;
-  const occupiedCount = rooms.filter(r=> r.occupied).length;
+  // Dashboard is one of only two places (the other being Room Detail) that
+  // still counts Extended rooms as occupied — everywhere else (Revenue
+  // Report, Review Today) an Extended room is NOT counted as occupied,
+  // since nobody's confirmed it's actually still generating rent.
+  const occupiedCount = rooms.filter(r=> r.occupied || r.extended).length;
   const vacantCount = totalRooms - occupiedCount;
+  const vacantRooms = rooms.filter(r=> !r.occupied && !r.extended);
+  const dirtyCount = vacantRooms.filter(r=> r.housekeepingStatus === 'Dirty').length;
+  const oooCount = vacantRooms.filter(r=> r.housekeepingStatus === 'OOO').length;
+  const readyCount = vacantRooms.length - dirtyCount - oooCount;
   const move = computeMovement(today, today);
 
-  document.getElementById('dashArrivals').textContent = move.expectedCheckins.length + move.actualCheckins.length;
+  document.getElementById('dashArrivals').textContent = move.checkins.length;
   document.getElementById('dashInhouse').textContent = occupiedCount;
   document.getElementById('dashDepartures').textContent = move.expectedCheckouts.length;
   document.getElementById('dashCheckedOut').textContent = move.actualCheckouts.length;
   document.getElementById('dashOcc').textContent = occupiedCount;
-  document.getElementById('dashReady').textContent = vacantCount;
-  document.getElementById('dashDirty').textContent = 0;
-  document.getElementById('dashOOO').textContent = 0;
+  document.getElementById('dashReady').textContent = readyCount;
+  document.getElementById('dashDirty').textContent = dirtyCount;
+  document.getElementById('dashOOO').textContent = oooCount;
   document.getElementById('dashNightOcc').textContent = occupiedCount;
   document.getElementById('dashNightAvail').textContent = vacantCount;
+}
+
+// ---- Review Today: catches guests who extend their stay without telling
+// the front desk. Occupancy and billing both run purely off each room's
+// booked-nights count (see computeRoomStatuses/buildLedgersRecords) — an
+// extension nobody logs into that count never surfaces on its own. Anyone
+// who was in-house *yesterday* is a candidate for having quietly extended,
+// so that's the whole list: run it once after the daily checkout cutoff and
+// check each name in person.
+function buildReviewToday(){
+  const yesterday = addDaysToDateStr(todayStr(), -1);
+  const nights = buildLedgersRecords();
+
+  const totalRentByEntry = {};
+  nights.forEach(n=>{ totalRentByEntry[n.guestId] = (totalRentByEntry[n.guestId] || 0) + n.rent; });
+
+  const prevInhouse = computeRoomStatuses(yesterday)
+    .filter(rs=> rs.occupied && rs.entry)
+    .map(rs=>{
+      const entry = rs.entry;
+      const paid = (entry.payments || []).reduce((s,p)=> s + (parseFloat(p.total) || 0), 0);
+      const rentOwed = totalRentByEntry[entry.id] || 0;
+      return { roomNo: rs.roomNo, guestId: entry.id, guest: entry.guestName || '(no name)', paid, rentOwed, extra: Math.round((paid - rentOwed) * 100) / 100 };
+    })
+    .sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+
+  return { prevInhouse };
+}
+
+function renderReviewToday(){
+  const body = document.getElementById('reviewPrevInhouseBody');
+  if(!initialLoadDone){
+    body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const { prevInhouse } = buildReviewToday();
+
+  if(prevInhouse.length === 0){
+    body.innerHTML = '<div class="empty-note">Nothing to review — no rooms were occupied yesterday.</div>';
+  } else {
+    body.innerHTML = `
+      <table>
+        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:120px;">Paid</th><th style="width:140px;">Booked Rent</th><th style="width:120px;">Extra Paid</th></tr></thead>
+        <tbody>${prevInhouse.map(r=> `
+          <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+            <td>${r.roomNo}</td>
+            <td>${r.guest}</td>
+            <td>${r.paid.toLocaleString()}</td>
+            <td>${r.rentOwed.toLocaleString()}</td>
+            <td style="font-weight:700; ${r.extra > 0.5 ? 'color:var(--danger);' : ''}">${r.extra > 0.5 ? r.extra.toLocaleString() : '-'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
 }
 
 // ---- Check-in / Check-out ----
@@ -4912,16 +5509,15 @@ function renderCico(){
   updateDateReadout(toEl, document.getElementById('cicoToReadout'));
 
   if(!initialLoadDone){
-    ['cicoExpectedCheckins','cicoExpectedCheckouts','cicoActualCheckins','cicoActualCheckouts'].forEach(id=>{
+    ['cicoExpectedCheckouts','cicoActualCheckins','cicoActualCheckouts'].forEach(id=>{
       document.getElementById(id).innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     });
     return;
   }
 
   const move = computeMovement(fromDate, toDate);
-  renderMovementList('cicoExpectedCheckins', move.expectedCheckins);
   renderMovementList('cicoExpectedCheckouts', move.expectedCheckouts);
-  renderMovementList('cicoActualCheckins', move.actualCheckins);
+  renderMovementList('cicoActualCheckins', move.checkins);
   renderMovementList('cicoActualCheckouts', move.actualCheckouts);
 }
 
@@ -4957,6 +5553,8 @@ function renderDetail(){
   document.getElementById('dCheckOut').value = entry.checkOut ? formatDate(entry.checkOut) : '—';
   const actualCheckout = getDetailValue(entry, 'Actual Checkout');
   document.getElementById('dActualCheckout').value = actualCheckout ? formatDate(actualCheckout) : '—';
+  document.getElementById('dAdults').value = getDetailValue(entry, 'Adults') || '—';
+  document.getElementById('dChildren').value = getDetailValue(entry, 'Children') || '—';
   document.getElementById('dExtraDetails').innerHTML = visibleExtraDetails(entry).map(d=>
     `<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`
   ).join('');
@@ -4967,7 +5565,7 @@ function renderDetail(){
       <td>${r.roomNo || '-'}</td>
       <td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td>
       <td>${Number(r.rent || 0).toLocaleString()}</td>
-      <td>${r.count || 1}</td>
+      <td>${isMiscRoomNo(r.roomNo) ? '-' : (r.count || 1)}</td>
       <td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td>
       <td class="rowtotal">${(parseFloat(String(r.total || 0).replace(/,/g,'')) || 0).toLocaleString()}</td>
     </tr>`).join('') || '<tr><td colspan="6" class="empty-note">No rooms.</td></tr>';
@@ -5504,7 +6102,7 @@ function renderReport(){
     const dayRows = groups[date];
     let dayTotal = 0, dayCash = 0, dayMCB = 0, dayAlfalah = 0, dayHaji = 0;
     let bodyRows = '';
-    dayRows.forEach(r=>{
+    dayRows.forEach((r, idx)=>{
       dayTotal += r.total;
       dayCash += r.cash;
       if(r.bank === 'MCB') dayMCB += r.account;
@@ -5515,15 +6113,17 @@ function renderReport(){
       const modeLabel = isCash ? modeShort : `${modeShort}${r.bank ? ' (' + r.bank + ')' : ''}`;
       bodyRows += `
         <tr class="${isCash ? 'mode-cash' : 'mode-bank'}" style="cursor:pointer;" onclick="openDetail('${r.id}')" title="Open this guest">
+          <td>${idx + 1}</td>
+          <td>${r.roomNos || '-'}</td>
           <td>${r.guest}</td>
           <td>${r.type}</td>
           <td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${modeLabel}</span></td>
           <td>${r.remarks || '-'}</td>
-          <td>${r.roomNos || '-'}</td>
           <td class="cash-amt">${r.cash ? r.cash.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.bank === 'MCB' && r.account ? r.account.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.bank === 'Alfalah' && r.account ? r.account.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.bank === 'Haji (MCB)' && r.account ? r.account.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.account ? r.account.toLocaleString() : '-'}</td>
           <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${r.total.toLocaleString()}</td>
         </tr>`;
     });
@@ -5537,34 +6137,33 @@ function renderReport(){
         <table>
           <thead>
             <tr>
+              <th style="width:50px;">Sr</th>
+              <th style="width:120px;">Room No</th>
               <th>Guest</th>
               <th style="width:100px;">Type</th>
               <th style="width:90px;">Mode</th>
               <th style="width:140px;">Remarks</th>
-              <th style="width:120px;">Room No</th>
               <th style="width:100px;">Cash</th>
               <th style="width:100px;">MCB</th>
               <th style="width:100px;">Alfalah</th>
               <th style="width:100px;">Haji (MCB)</th>
-              <th style="width:100px;">Total</th>
+              <th style="width:110px;">Account Total</th>
+              <th style="width:100px;">Grand</th>
             </tr>
           </thead>
           <tbody>${bodyRows}</tbody>
           <tfoot>
             <tr class="day-foot-total">
-              <td colspan="5">Total</td>
+              <td colspan="6">Total</td>
               <td class="cash-amt">${dayCash.toLocaleString()}</td>
               <td class="account-amt">${dayMCB.toLocaleString()}</td>
               <td class="account-amt">${dayAlfalah.toLocaleString()}</td>
               <td class="account-amt">${dayHaji.toLocaleString()}</td>
+              <td class="account-amt">${dayAccountTotal.toLocaleString()}</td>
               <td>${dayTotal.toLocaleString()}</td>
             </tr>
           </tfoot>
         </table>
-        <div class="rpt-total-account-box">
-          <span class="rpt-total-account-label">Total Account</span>
-          <span class="rpt-total-account-amount">${dayAccountTotal.toLocaleString()}</span>
-        </div>
       </div>`;
     overallTotal += dayTotal;
     overallCash += dayCash;
@@ -5818,10 +6417,14 @@ function buildLedgersRecords(){
     const nights = [];
     (entry.rooms || []).forEach(r=>{
       if(!r.roomNo) return;
+      // Snooker/BBQ/Bonfire are one-off facility charges, not room-nights —
+      // still listed under the guest here (Ledgers shows every charge), but
+      // computeRoomStatuses filters these back out so they never read as an
+      // occupied "room".
       const nightsCount = parseInt(r.count) || 1;
       const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
       for(let i = 0; i < nightsCount; i++){
-        nights.push({ date: addDaysToDateStr(startDate, i), roomNo: r.roomNo, rent, received: 0, guestId: entry.id, guest });
+        nights.push({ date: addDaysToDateStr(startDate, i), roomNo: r.roomNo, rent, received: 0, receivedOn: null, guestId: entry.id, guest });
       }
     });
     nights.sort((a,b)=> a.date.localeCompare(b.date));
@@ -5829,7 +6432,7 @@ function buildLedgersRecords(){
     const payments = (entry.payments || [])
       .slice()
       .sort((a,b)=> (a.date || '').localeCompare(b.date || ''))
-      .map(p=> ({ remaining: parseFloat(p.total) || 0 }));
+      .map(p=> ({ remaining: parseFloat(p.total) || 0, date: p.date || '' }));
 
     let payIdx = 0;
     nights.forEach(night=>{
@@ -5839,6 +6442,11 @@ function buildLedgersRecords(){
         if(pay.remaining <= 0){ payIdx++; continue; }
         const applied = Math.min(owed, pay.remaining);
         night.received += applied;
+        // Nights are settled oldest-payment-first, so the last payment to
+        // touch a given night (in chronological payment order) is the one
+        // whose date answers "when did this night's rent actually come in" —
+        // which is often later than the night itself for a late payment.
+        if(applied > 0) night.receivedOn = pay.date || night.receivedOn;
         pay.remaining -= applied;
         owed -= applied;
         if(pay.remaining <= 0) payIdx++;
@@ -5901,10 +6509,8 @@ function getFilteredLedgersRecords(){
 
 function renderLedgers(){
   const container = document.getElementById('ledgersBody');
-  const barEl = document.getElementById('ledgersGrandbar');
   if(!initialLoadDone){
     container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
-    barEl.style.display = 'none';
     return;
   }
   populateLedgersPersonSelect();
@@ -5920,7 +6526,6 @@ function renderLedgers(){
 
   if(rows.length === 0){
     container.innerHTML = '<div class="empty-note">No room-nights match these filters.</div>';
-    barEl.style.display = 'none';
     return;
   }
 
@@ -5957,12 +6562,15 @@ function renderLedgers(){
         <tr><th style="width:100px;">Date</th><th>Name</th><th style="width:110px;">Room No</th><th style="width:110px;">Credit</th><th style="width:110px;">Debt</th><th style="width:110px;">Balance</th></tr>
       </thead>
       <tbody>${bodyRows}</tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="3">Total</td>
+          <td class="cash-amt">${totalCredit.toLocaleString()}</td>
+          <td>${totalDebt.toLocaleString()}</td>
+          <td style="font-weight:700; color:${totalBalance > 0 ? 'var(--danger)' : 'inherit'};">${totalBalance.toLocaleString()}</td>
+        </tr>
+      </tfoot>
     </table>`;
-
-  barEl.style.display = 'flex';
-  document.getElementById('lgDebt').textContent = totalDebt.toLocaleString();
-  document.getElementById('lgCredit').textContent = totalCredit.toLocaleString();
-  document.getElementById('lgBalance').textContent = totalBalance.toLocaleString();
 }
 
 function exportLedgersExcel(){
@@ -5986,6 +6594,270 @@ function exportLedgersExcel(){
 function printLedgers(){
   const { rows } = getFilteredLedgersRecords();
   if(rows.length === 0){ showNotice('No room-nights match the current filters.'); return; }
+  window.print();
+}
+
+// =========================================================
+// REVENUE REPORT — this is the function behind the "why did I get 5 lac
+// when only 20 rooms are occupied (2 lac worth)" question. It answers that
+// with two tables, both scoped strictly to asOfDate (one specific night):
+//   Table 1 (roomRows) — every room occupied ON asOfDate, with THAT NIGHT's
+//      rent only (not the guest's full-stay rent), how much of that specific
+//      night's rent has been collected and paid (dated chunks — so an
+//      advance paid days before check-in still shows up as "when it was
+//      collected"), and what's still owed for that one night.
+//   Table 2 (unlinkedPayments) — every payment actually received on
+//      asOfDate that did NOT go toward that night's rent: an advance for a
+//      future night, money that cleared an older night's due, a standalone
+//      misc charge (Snooker/BBQ/Bonfire), a reservation deposit, or a
+//      payment from a guest who isn't in Table 1 at all. That's "the extra
+//      money of today, except today's rent."
+// FIFO payments are still walked across a guest's ENTIRE stay in date order
+// (oldest night/payment first) so the split between "toward tonight" and
+// "extra" is correct even when tonight's rent was partly paid off before an
+// older due — only what lands on asOfDate ever gets recorded.
+// =========================================================
+function buildRevenueReport(asOfDate){
+  const all = loadAllEntries();
+  const nightsByEntryRoom = {};
+  const chunksByEntryRoom = {}; // entryId -> roomNo -> { paymentDate: amount }, asOfDate's night only
+
+  let tonightRentTotal = 0;
+  const unlinkedPayments = []; // money received ON asOfDate that isn't asOfDate's room rent
+
+  all.forEach(entry=>{
+    const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
+    if(!startDate) return;
+    const guestId = entry.id;
+
+    const nights = [];
+    (entry.rooms || []).forEach(r=>{
+      if(!r.roomNo || isMiscRoomNo(r.roomNo)) return; // Snooker/BBQ/Bonfire are facility charges, not room-nights
+      const nightsCount = parseInt(r.count) || 1;
+      const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
+      for(let i = 0; i < nightsCount; i++){
+        nights.push({ date: addDaysToDateStr(startDate, i), roomNo: r.roomNo, rent });
+      }
+    });
+    nights.sort((a,b)=> a.date.localeCompare(b.date));
+    nights.forEach(n=>{ if(n.date === asOfDate) tonightRentTotal += n.rent; });
+
+    const payQueue = (entry.payments || [])
+      .slice()
+      .sort((a,b)=> (a.date || '').localeCompare(b.date || ''))
+      .map(p=> ({ remaining: parseFloat(p.total) || 0, total: parseFloat(p.total) || 0, date: p.date || '', mode: p.mode, bank: p.bank, towardAsOfNight: 0 }));
+
+    let payIdx = 0;
+    nights.forEach(night=>{
+      let owed = night.rent;
+      const isAsOfNight = night.date === asOfDate;
+      if(isAsOfNight){
+        if(!nightsByEntryRoom[guestId]) nightsByEntryRoom[guestId] = {};
+        if(!nightsByEntryRoom[guestId][night.roomNo]) nightsByEntryRoom[guestId][night.roomNo] = { rent: 0, received: 0 };
+        nightsByEntryRoom[guestId][night.roomNo].rent += night.rent;
+      }
+
+      while(owed > 0 && payIdx < payQueue.length){
+        const pay = payQueue[payIdx];
+        if(pay.remaining <= 0){ payIdx++; continue; }
+        const applied = Math.min(owed, pay.remaining);
+        if(applied > 0 && isAsOfNight){
+          nightsByEntryRoom[guestId][night.roomNo].received += applied;
+          if(!chunksByEntryRoom[guestId]) chunksByEntryRoom[guestId] = {};
+          if(!chunksByEntryRoom[guestId][night.roomNo]) chunksByEntryRoom[guestId][night.roomNo] = {};
+          chunksByEntryRoom[guestId][night.roomNo][pay.date] = (chunksByEntryRoom[guestId][night.roomNo][pay.date] || 0) + applied;
+          pay.towardAsOfNight += applied;
+        }
+        pay.remaining -= applied;
+        owed -= applied;
+        if(pay.remaining <= 0) payIdx++;
+      }
+    });
+
+    // Whatever a payment dated asOfDate didn't put toward asOfDate's own
+    // room rent is "extra" — an advance for a later night, a top-up on an
+    // older due, or (for a guest with no room occupied on asOfDate at all)
+    // the whole amount.
+    payQueue.forEach(pay=>{
+      if(pay.date !== asOfDate) return;
+      const extra = Math.round((pay.total - pay.towardAsOfNight) * 100) / 100;
+      if(extra <= 0) return;
+      const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ') || 'N/A';
+      const source = pay.mode === 'Cash' ? 'Cash' : (pay.bank || pay.mode || '-');
+      unlinkedPayments.push({ guestId, guest: entry.guestName || '(no name)', roomNo: roomNos, amount: extra, source, date: pay.date });
+    });
+  });
+
+  // Same occupancy source as Room Detail and the Dashboard: checkIn (or a
+  // mid-stay room move) plus this room's own booked nights, trusting
+  // "Actual Checkout" only when it was actually filled in. Keeps "which
+  // rooms are occupied" consistent everywhere in the app instead of each
+  // page guessing it a different way.
+  const roomRows = computeRoomStatuses(asOfDate)
+    .filter(rs=> rs.occupied && rs.entry)
+    .map(rs=>{
+      const roomData = (nightsByEntryRoom[rs.entry.id] || {})[rs.roomNo] || { rent: 0, received: 0 };
+      const chunkMap = (chunksByEntryRoom[rs.entry.id] || {})[rs.roomNo] || {};
+      const chunks = Object.keys(chunkMap)
+        .sort((a,b)=> a.localeCompare(b))
+        .map(date=> ({ date, amount: Math.round(chunkMap[date] * 100) / 100 }));
+      const rent = roomData.rent;
+      const collected = roomData.received;
+      return {
+        roomNo: rs.roomNo,
+        guest: rs.entry.guestName || '(no name)',
+        guestId: rs.entry.id,
+        rent, collected, chunks,
+        due: Math.max(rent - collected, 0)
+      };
+    })
+    .sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+
+  const totalRent = roomRows.reduce((s,r)=> s + r.rent, 0);
+  const totalCollected = roomRows.reduce((s,r)=> s + r.collected, 0);
+  const totalDue = roomRows.reduce((s,r)=> s + r.due, 0);
+
+  unlinkedPayments.sort((a,b)=> b.amount - a.amount);
+  const unlinkedTotal = unlinkedPayments.reduce((s,r)=> s + r.amount, 0);
+
+  return {
+    roomRows, totalRent, totalCollected, totalDue,
+    tonightRentTotal,
+    unlinkedPayments, unlinkedTotal
+  };
+}
+
+function setRevenueToday(){
+  document.getElementById('rvDate').value = todayStr();
+  updateDateReadout(document.getElementById('rvDate'), document.getElementById('rvDateReadout'));
+  renderRevenue();
+}
+
+function renderRevenue(){
+  const roomsBody = document.getElementById('rvRoomsBody');
+  const nightlySummary = document.getElementById('rvNightlySummary');
+  const todayBody = document.getElementById('rvTodayBody');
+  if(!initialLoadDone){
+    roomsBody.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    nightlySummary.innerHTML = '';
+    todayBody.innerHTML = '';
+    return;
+  }
+
+  const dateEl = document.getElementById('rvDate');
+  const asOfDate = dateEl.value || todayStr();
+  updateDateReadout(dateEl, document.getElementById('rvDateReadout'));
+  const asOfLabel = asOfDate === todayStr() ? 'today' : 'as of ' + formatDate(asOfDate);
+  const dayWord = asOfDate === todayStr() ? 'today' : 'on ' + formatDate(asOfDate);
+  document.getElementById('rvPrintHeaderSub').textContent = 'Occupied rooms ' + asOfLabel + '  ·  Generated ' + formatDate(todayStr());
+  document.getElementById('rvNightlyDateLabel').textContent = formatDate(asOfDate) + (asOfDate === todayStr() ? ' (tonight)' : '');
+
+  const data = buildRevenueReport(asOfDate);
+
+  // ---- Rooms: how many occupied tonight + full-stay rent/collected/due ----
+  nightlySummary.textContent = data.roomRows.length + (data.roomRows.length === 1 ? ' room' : ' rooms') + ' occupied ' + dayWord + ' — Rs. ' + data.tonightRentTotal.toLocaleString() + ' rent for ' + dayWord;
+
+  if(data.roomRows.length === 0){
+    roomsBody.innerHTML = '<div class="empty-note">No rooms occupied ' + asOfLabel + '.</div>';
+  } else {
+    // Up to 3 dated payment chunks get their own column each — a room paid
+    // in more than 3 instalments (rare) folds the rest into the 3rd column
+    // instead of silently dropping them.
+    const chunkCell = (r, idx)=>{
+      if(idx === 2 && r.chunks.length > 3){
+        return r.chunks.slice(2).map(c=> formatDate(c.date) + ': Rs. ' + c.amount.toLocaleString()).join(' + ');
+      }
+      const c = r.chunks[idx];
+      return c ? formatDate(c.date) + ': Rs. ' + c.amount.toLocaleString() : '-';
+    };
+    roomsBody.innerHTML = `
+      <table>
+        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Rent</th><th style="width:150px;">Payment 1</th><th style="width:150px;">Payment 2</th><th style="width:150px;">Payment 3</th><th style="width:110px;">Due</th></tr></thead>
+        <tbody>${data.roomRows.map(r=> `
+          <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+            <td>${r.roomNo}</td>
+            <td>${r.guest}</td>
+            <td>${r.rent.toLocaleString()}</td>
+            <td class="cash-amt">${chunkCell(r, 0)}</td>
+            <td class="cash-amt">${chunkCell(r, 1)}</td>
+            <td class="cash-amt">${chunkCell(r, 2)}</td>
+            <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot>
+          <tr class="day-foot-total">
+            <td colspan="2">Total</td>
+            <td>${data.totalRent.toLocaleString()}</td>
+            <td class="cash-amt" colspan="3">Collected: ${data.totalCollected.toLocaleString()}</td>
+            <td>${data.totalDue.toLocaleString()}</td>
+          </tr>
+        </tfoot>
+      </table>`;
+  }
+
+  // ---- Extra Money Today: payments received on asOfDate that didn't go
+  // toward asOfDate's own room rent — an advance for a future night, a
+  // top-up on an older due, a reservation deposit, a misc charge on its
+  // own, or a payment for a guest who isn't in-house today at all.
+  if(data.unlinkedPayments.length === 0){
+    todayBody.innerHTML = '<div class="empty-note">No extra payments recorded ' + dayWord + '.</div>';
+  } else {
+    todayBody.innerHTML = `
+      <table>
+        <thead><tr><th>Guest</th><th style="width:110px;">Room No</th><th style="width:110px;">Amount</th><th style="width:120px;">Source</th><th style="width:110px;">Date</th></tr></thead>
+        <tbody>${data.unlinkedPayments.map(r=> `
+          <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+            <td>${r.guest}</td>
+            <td>${r.roomNo}</td>
+            <td style="font-weight:700;">${r.amount.toLocaleString()}</td>
+            <td>${r.source}</td>
+            <td>${formatDate(r.date)}</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot>
+          <tr class="day-foot-total">
+            <td colspan="2">Total</td>
+            <td>${data.unlinkedTotal.toLocaleString()}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>`;
+  }
+}
+
+function exportRevenueExcel(){
+  const dateEl = document.getElementById('rvDate');
+  const asOfDate = dateEl.value || todayStr();
+  const data = buildRevenueReport(asOfDate);
+  if(data.roomRows.length === 0 && data.unlinkedPayments.length === 0){ showNotice('No data to export.'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  const chunkText = (r, idx)=>{
+    if(idx === 2 && r.chunks.length > 3) return r.chunks.slice(2).map(c=> formatDate(c.date) + ': ' + c.amount).join(' + ');
+    const c = r.chunks[idx];
+    return c ? formatDate(c.date) + ': ' + c.amount : '';
+  };
+  const roomsData = data.roomRows.map(r=> ({
+    'Room No': r.roomNo, 'Guest': r.guest, 'Room Rent': r.rent,
+    'Payment 1': chunkText(r, 0), 'Payment 2': chunkText(r, 1), 'Payment 3': chunkText(r, 2),
+    'Collected Total': r.collected, 'Due': r.due
+  }));
+  const ws1 = XLSX.utils.json_to_sheet(roomsData);
+  ws1['!cols'] = [{wch:12},{wch:20},{wch:14},{wch:20},{wch:20},{wch:20},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Occupied Rooms');
+
+  const unlinkedData = data.unlinkedPayments.map(r=> ({
+    'Guest': r.guest, 'Room No': r.roomNo, 'Amount': r.amount, 'Source': r.source, 'Date': formatDate(r.date)
+  }));
+  const ws2 = XLSX.utils.json_to_sheet(unlinkedData.length ? unlinkedData : [{ 'Guest': 'No unlinked payments today', 'Room No': '', 'Amount': '', 'Source': '', 'Date': '' }]);
+  ws2['!cols'] = [{wch:20},{wch:14},{wch:14},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Advance-Unlinked');
+
+  XLSX.writeFile(wb, `revenue-report-${asOfDate}.xlsx`);
+}
+
+function printRevenue(){
   window.print();
 }
 
@@ -6301,6 +7173,7 @@ const sb = (typeof window.supabase !== "undefined" && SUPABASE_URL && SUPABASE_A
 
 let entries = [];               // the cloud mirror every page reads from
 let lockedDays = [];            // cloud mirror of locked_days — { lock_date, locked_by, locked_at, unlocked_by, unlocked_at }
+let roomStatusMap = {};         // cloud mirror of room_status, keyed by room_no — { status, updated_by, updated_at }
 let initialLoadDone = false;    // nothing renders as "no data" until the first successful pull
 let appStarted = false;
 
@@ -6383,12 +7256,18 @@ function guestPayload(e){
     check_out: e.checkOut || null
   };
 }
+// Miscellaneous rows (Snooker/BBQ/Bonfire) fold their facility name into
+// room_no ("Miscellaneous (BBQ)") and send unit_type blank, rather than
+// writing "BBQ" into unit_type — that column's live schema wasn't written
+// with facility charges in mind, so this stays inside the room_no free-text
+// field it's always safely accepted. applyServerData() parses it back out.
 function roomPayload(e, r){
+  const isMisc = isMiscRoomNo(r.roomNo) && MISC_TYPES.includes(r.unitType);
   return {
     id: r.id,
     guest_id: e.id,
-    room_no: r.roomNo || '',
-    unit_type: r.unitType || '',
+    room_no: isMisc ? `${MISC_ROOM_NO} (${r.unitType})` : (r.roomNo || ''),
+    unit_type: isMisc ? '' : (r.unitType || ''),
     rent_per_day: num(r.rent),
     days_count: parseInt(r.count) || 1,
     moved_out_date: r.movedOut || null,
@@ -6540,11 +7419,20 @@ function applyServerData(gRows, rRows, pRows){
     extraDetails: Array.isArray(g.extra_details) ? g.extra_details : [],
     savedAt: g.saved_at,
     editedAt: g.edited_at || undefined,
-    rooms: (roomsByGuest[g.id] || []).map(r=> ({
-      id: r.id, roomNo: r.room_no || '', unitType: r.unit_type || '',
-      rent: num(r.rent_per_day), count: parseInt(r.days_count) || 1,
-      movedOut: r.moved_out_date || '', total: num(r.total)
-    })),
+    rooms: (roomsByGuest[g.id] || []).map(r=>{
+      let roomNo = r.room_no || '';
+      let unitType = r.unit_type || '';
+      const miscMatch = /^Miscellaneous \(([^)]+)\)$/.exec(roomNo);
+      if(miscMatch && MISC_TYPES.includes(miscMatch[1])){
+        roomNo = MISC_ROOM_NO;
+        unitType = miscMatch[1];
+      }
+      return {
+        id: r.id, roomNo, unitType,
+        rent: num(r.rent_per_day), count: parseInt(r.days_count) || 1,
+        movedOut: r.moved_out_date || '', total: num(r.total)
+      };
+    }),
     savedBy: g.saved_by || '',
     editedBy: g.edited_by || '',
     checkIn: g.check_in || '',
@@ -6574,12 +7462,13 @@ async function pullFreshFromCloud(){
   pullInFlight = (async ()=>{
     const stampAtStart = mutationStamp;
     try{
-      const [gRes, rRes, pRes, lRes, lkRes] = await Promise.all([
+      const [gRes, rRes, pRes, lRes, lkRes, rsRes] = await Promise.all([
         sb.from('guests_active').select('*'),
         sb.from('booking_rooms_active').select('*'),
         sb.from('guest_payments_active').select('*'),
         sb.from('guest_edits').select('*'),
-        sb.from('locked_days').select('*') // optional table — see catch below, not fatal if the migration hasn't been run yet
+        sb.from('locked_days').select('*'), // optional table — see catch below, not fatal if the migration hasn't been run yet
+        sb.from('room_status').select('*')  // optional table — see catch below, not fatal if the migration hasn't been run yet
       ]);
       if(gRes.error) throw gRes.error;
       if(rRes.error) throw rRes.error;
@@ -6596,13 +7485,18 @@ async function pullFreshFromCloud(){
       // queued, the warning stays up until the push itself succeeds
       if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0) syncProblem = null;
 
-      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data, lRes.data, lkRes.data]);
+      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data, lRes.data, lkRes.data, rsRes.data]);
       const changed = hash !== lastServerHash;
       lastServerHash = hash;
       if(changed || firstLoad){
         applyServerData(gRes.data || [], rRes.data || [], pRes.data || []);
         editLogs = lRes.data || [];
         if(!lkRes.error) lockedDays = lkRes.data || [];
+        if(!rsRes.error){
+          const nextRoomStatus = {};
+          (rsRes.data || []).forEach(r=> { nextRoomStatus[r.room_no] = r; });
+          roomStatusMap = nextRoomStatus;
+        }
         rerenderActiveView();
       }
       if(firstLoad) setLoadingOverlay(false);
@@ -6653,6 +7547,7 @@ function rerenderActiveView(){
   }
   else if(currentView === 'roomdetail'){ renderRoomDetail(); }
   else if(currentView === 'ledgers'){ renderLedgers(); }
+  else if(currentView === 'revenue'){ renderRevenue(); }
   else if(currentView === 'daylock'){ renderDayLock(); }
   else if(currentView === 'deleteentity'){ renderDeleteEntityList(); }
   else if(currentView === 'dashboard'){ renderDashboard(); }
@@ -6784,9 +7679,9 @@ function isAdmin(){
 function applyRolePermissions(){
   const editBtn = document.getElementById('editEntryBtn');
   if(editBtn) editBtn.style.display = isAdmin() ? '' : 'none';
-  const dayLockNav = document.getElementById('navDayLock');
+  const dayLockNav = document.getElementById('topNavDayLock');
   if(dayLockNav) dayLockNav.style.display = isAdmin() ? '' : 'none';
-  const deleteEntityNav = document.getElementById('navDeleteEntity');
+  const deleteEntityNav = document.getElementById('topNavDeleteEntity');
   if(deleteEntityNav) deleteEntityNav.style.display = isAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
