@@ -173,6 +173,38 @@
     min-height:34px;
   }
   input::placeholder{ color:var(--muted); }
+  /* Search fields: a pulsing ✕ appears once something is typed (pure CSS,
+     via :placeholder-shown) so a leftover filter is never invisible/easy
+     to forget about. Clicking it clears the field and re-fires whatever
+     that input's own oninput/addEventListener handler already does. */
+  .search-clear-wrap{ position:relative; }
+  .search-clear-wrap input{ padding-right:32px; }
+  .search-clear-btn{
+    display:none;
+    position:absolute;
+    right:8px;
+    top:50%;
+    transform:translateY(-50%);
+    background:var(--danger);
+    color:#fff;
+    border:none;
+    border-radius:50%;
+    width:20px;
+    height:20px;
+    font-size:12px;
+    line-height:1;
+    cursor:pointer;
+    padding:0;
+    min-height:0;
+    align-items:center;
+    justify-content:center;
+    animation:searchClearPulse 1.4s ease-in-out infinite;
+  }
+  .search-clear-wrap input:not(:placeholder-shown) + .search-clear-btn{ display:flex; }
+  @keyframes searchClearPulse{
+    0%, 100%{ transform:translateY(-50%) scale(1); }
+    50%{ transform:translateY(-50%) scale(1.3); }
+  }
   .date-readout{
     display:block;
     width:100%;
@@ -688,7 +720,7 @@
   }
   .hdr-search-wrap{
     position:relative;
-    width:320px;
+    width:375px;
     flex:0 0 auto;
   }
   .hdr-search{
@@ -713,6 +745,8 @@
     font-size:11px;
     pointer-events:none;
   }
+  .hdr-search-wrap input:not(:placeholder-shown) ~ .hdr-search-kbd{ display:none; }
+  .hdr-search-clear{ right:10px; }
   .hdr-search-results{
     display:none;
     position:absolute;
@@ -779,18 +813,20 @@
     flex:0 0 auto;
   }
   #logoutBtn{
-    font-family:'Inter',sans-serif;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:26px;
+    height:26px;
     background:transparent;
     border:none;
     color:rgba(255,255,255,0.85);
-    font-size:11px;
-    text-transform:uppercase;
-    letter-spacing:0.04em;
     cursor:pointer;
     padding:0;
     min-height:0;
   }
-  #logoutBtn:hover{ color:#fff; text-decoration:underline; }
+  #logoutBtn svg{ width:16px; height:16px; }
+  #logoutBtn:hover{ color:#fff; }
   .hdr-row2{
     background:#fff;
     border-bottom:1px solid #e0e0e0;
@@ -848,7 +884,7 @@
     font-weight:700;
     color:var(--danger);
     width:fit-content;
-    margin:0 0 14px auto;
+    margin:5px 0 14px auto;
   }
   .total-due-box:empty{ display:none; }
   .rpt-grandtotal-box{
@@ -1199,6 +1235,11 @@
     font-size:12px;
     color:var(--muted);
     letter-spacing:0.04em;
+  }
+  .collapse-head-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
   }
   .locked-note{
     float:right;
@@ -1755,6 +1796,7 @@
       </div>
       <div class="hdr-search-wrap">
         <input type="text" id="globalSearchInput" class="hdr-search" placeholder="Search guests, rooms, CNIC, contact..." autocomplete="off" oninput="renderGlobalSearch()" onkeydown="globalSearchKeydown(event)" onfocus="renderGlobalSearch()">
+        <button type="button" class="search-clear-btn hdr-search-clear" onclick="clearSearchField(this)" title="Clear search">✕</button>
         <span class="hdr-search-kbd">Ctrl + /</span>
         <div class="hdr-search-results" id="globalSearchResults"></div>
       </div>
@@ -1767,7 +1809,9 @@
       </button>
       <span id="whoami"></span>
       <div class="hdr-avatar" id="hdrAvatar"></div>
-      <button id="logoutBtn">Sign Out</button>
+      <button id="logoutBtn" title="Sign Out" aria-label="Sign Out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
     </div>
   </div>
   <div class="hdr-row2">
@@ -1780,7 +1824,7 @@
       <button class="navbtn" id="topNavFullAudit" onclick="showView('audit')">Full Audit</button>
       <button class="navbtn" id="topNavReviewToday" onclick="showView('reviewtoday')">Review Today</button>
       <button class="navbtn" id="topNavDayLock" onclick="showView('daylock')" style="display:none;">Day Lock</button>
-      <button class="navbtn" id="topNavDeleteEntity" onclick="showView('deleteentity')" style="display:none; color:var(--danger); font-weight:700;">⚠ Delete Entity</button>
+      <button class="navbtn" id="topNavDeleteEntity" onclick="showView('deleteentity')" style="display:none; color:var(--danger); font-weight:700; margin-left:auto;">⚠ Delete Entity</button>
     </div>
   </div>
   <div class="hdr-row3">
@@ -2081,16 +2125,26 @@
     <div id="todayEntriesBody"><div class="empty-note">No entries saved today yet.</div></div>
 
     <div class="section-divider"></div>
-    <h2 class="standalone-heading">Full Audit — All Changes <span class="locked-note">Recorded automatically — cannot be edited</span></h2>
-    <div class="sub">Every entry created, entry edited, and payment added, for the day picked below.</div>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); margin-bottom:12px;">
-      <div>
-        <label>Date</label>
-        <input type="date" id="auditEntryDate">
-        <div class="date-readout" id="auditEntryDateReadout"></div>
+    <div class="panel" style="padding:0;">
+      <div class="collapse-head" onclick="toggleAuditEntrySection()">
+        <span>ALL CHANGES (Full Audit)</span>
+        <span class="collapse-head-right">
+          <span class="locked-note">Recorded automatically — cannot be edited</span>
+          <span id="auditEntryChev" class="collapse-chev">▸ Show</span>
+        </span>
+      </div>
+      <div id="auditEntryCollapse" style="display:none; padding:0 18px 18px;">
+        <div class="sub">Every entry created, entry edited, and payment added, for the day picked below.</div>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); margin-bottom:12px;">
+          <div>
+            <label>Date</label>
+            <input type="date" id="auditEntryDate">
+            <div class="date-readout" id="auditEntryDateReadout"></div>
+          </div>
+        </div>
+        <div id="auditEntryBody"><div class="empty-note">No data yet.</div></div>
       </div>
     </div>
-    <div id="auditEntryBody"><div class="empty-note">No data yet.</div></div>
 
   </div>
 
@@ -2108,7 +2162,10 @@
       <div class="search-row">
         <div class="grow">
           <label>Search (name, father name, CNIC, room no)</label>
-          <input type="text" id="resvSearchInput" placeholder="Type to search..." autocomplete="off">
+          <div class="search-clear-wrap">
+            <input type="text" id="resvSearchInput" placeholder="Type to search..." autocomplete="off">
+            <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2129,7 +2186,10 @@
       <div class="search-row">
         <div class="grow">
           <label>Search (name, father name, CNIC, room no)</label>
-          <input type="text" id="apSearchInput" placeholder="Type to search..." autocomplete="off">
+          <div class="search-clear-wrap">
+            <input type="text" id="apSearchInput" placeholder="Type to search..." autocomplete="off">
+            <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
+          </div>
         </div>
         <div class="checkline">
           <input type="checkbox" id="apDueOnly" checked>
@@ -2220,15 +2280,22 @@
 
   <div class="view" id="view-search">
 
-    <h1>Search Guests</h1>
-    <div class="sub">Find any guest and check balance due, or open to add a payment</div>
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1>Search Guests</h1>
+        <div class="sub">Find any guest and check balance due, or open to add a payment</div>
+      </div>
+      <div id="gsearchTotalDue" class="total-due-box"></div>
+    </div>
 
     <div class="panel accent-guest">
-      <div id="gsearchTotalDue" class="total-due-box"></div>
       <div class="search-row">
         <div class="grow">
           <label>Search (name, father name, CNIC, room no)</label>
-          <input type="text" id="gsearchInput" placeholder="Type to search..." autocomplete="off">
+          <div class="search-clear-wrap">
+            <input type="text" id="gsearchInput" placeholder="Type to search..." autocomplete="off">
+            <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
+          </div>
         </div>
         <div>
           <label>System Entry Date</label>
@@ -2400,7 +2467,10 @@
         </div>
         <div style="grid-column:span 2;">
           <label>Search (name, father name, CNIC, room no, type, mode)</label>
-          <input type="text" id="filterSearch" placeholder="Type to search..." autocomplete="off">
+          <div class="search-clear-wrap">
+            <input type="text" id="filterSearch" placeholder="Type to search..." autocomplete="off">
+            <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
+          </div>
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
@@ -2649,7 +2719,10 @@
       <div class="search-row">
         <div class="grow">
           <label>Search (name, father name, CNIC, room no)</label>
-          <input type="text" id="delSearchInput" placeholder="Type to search..." autocomplete="off">
+          <div class="search-clear-wrap">
+            <input type="text" id="delSearchInput" placeholder="Type to search..." autocomplete="off">
+            <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
+          </div>
         </div>
       </div>
       <div class="glist" id="delGuestList"></div>
@@ -2666,7 +2739,10 @@
       <div class="search-row">
         <div class="grow">
           <label>Search (room no or guest name)</label>
-          <input type="text" id="rdSearchInput" placeholder="Type to search..." autocomplete="off">
+          <div class="search-clear-wrap">
+            <input type="text" id="rdSearchInput" placeholder="Type to search..." autocomplete="off">
+            <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
+          </div>
         </div>
         <div>
           <label>Occupancy as of</label>
@@ -3968,6 +4044,17 @@ function stripDashes(s){
   return String(s == null ? '' : s).replace(/-/g, '');
 }
 
+// The ✕ next to a search field: empty it and re-fire its own input
+// handler (whatever that page already wired up), so clearing behaves
+// exactly like the user deleted the text themselves.
+function clearSearchField(btn){
+  const input = btn.parentElement.querySelector('input');
+  if(!input) return;
+  input.value = '';
+  input.dispatchEvent(new Event('input', { bubbles:true }));
+  input.focus();
+}
+
 // A tab left open across midnight would otherwise keep showing yesterday
 // until something forces a re-render. This times a single refresh for the
 // exact moment it turns midnight in Pakistan (no polling/interval drift),
@@ -5032,7 +5119,33 @@ function cancelEditMode(){
 // each of their payments' mode/bank/remarks — the same haystack approach
 // as the dedicated Search page, just surfaced as a live dropdown reachable
 // from anywhere in the app (and via the Ctrl+/ shortcut) instead of its
-// own page.
+// own page. It also matches the app's own pages/nav destinations (e.g.
+// typing "inhouse" offers Inhouse Report directly), so the search box
+// doubles as a command palette for jumping around the app.
+const GLOBAL_SEARCH_PAGES = [
+  { label: 'Dashboard', view: 'dashboard' },
+  { label: 'Room Detail', view: 'roomdetail' },
+  { label: 'Inhouse Report', view: 'inhouse' },
+  { label: 'Check-in / Check-out', view: 'cico' },
+  { label: 'Reservations', view: 'reservations' },
+  { label: 'Ledgers', view: 'ledgers' },
+  { label: 'Full Audit', view: 'audit' },
+  { label: 'Review Today', view: 'reviewtoday' },
+  { label: 'Day Lock', view: 'daylock' },
+  { label: 'Delete Entity', view: 'deleteentity' },
+  { label: 'Guest Entry / Reservation', view: 'entry' },
+  { label: 'Add Payment', view: 'addpay' },
+  { label: 'Search', view: 'search' },
+  { label: 'Report', view: 'report' },
+  { label: 'Revenue Report', view: 'revenue' }
+];
+
+function globalSearchPageMatches(query){
+  const q = query.trim().toLowerCase();
+  if(!q) return [];
+  return GLOBAL_SEARCH_PAGES.filter(p=> p.label.toLowerCase().includes(q));
+}
+
 function globalSearchMatches(query){
   const q = query.trim().toLowerCase();
   if(!q) return [];
@@ -5057,17 +5170,24 @@ function renderGlobalSearch(){
   const box = document.getElementById('globalSearchResults');
   const q = input.value.trim();
   if(!q){ box.classList.remove('show'); box.innerHTML = ''; return; }
-  const matches = globalSearchMatches(q);
-  box.innerHTML = matches.length === 0
-    ? '<div class="hdr-search-empty">No matches.</div>'
-    : matches.map(entry=>{
-        const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ') || 'N/A';
-        const sub = entry.cnic || getDetailValue(entry, 'Contact No') || '';
-        return `<div class="hdr-search-row" onclick="openGlobalSearchResult('${entry.id}')">
+  const pageMatches = globalSearchPageMatches(q);
+  const guestMatches = globalSearchMatches(q);
+  if(pageMatches.length === 0 && guestMatches.length === 0){
+    box.innerHTML = '<div class="hdr-search-empty">No matches.</div>';
+  } else {
+    const pageRows = pageMatches.map(p=> `<div class="hdr-search-row" onclick="openGlobalSearchPage('${p.view}')">
+        <div>📄 <b>${p.label}</b></div>
+      </div>`).join('');
+    const guestRows = guestMatches.map(entry=>{
+      const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ') || 'N/A';
+      const sub = entry.cnic || getDetailValue(entry, 'Contact No') || '';
+      return `<div class="hdr-search-row" onclick="openGlobalSearchResult('${entry.id}')">
           <div><b>${entry.guestName || '(no name)'}</b> — Room ${roomNos}</div>
           <div class="hdr-search-sub">${sub}</div>
         </div>`;
-      }).join('');
+    }).join('');
+    box.innerHTML = pageRows + guestRows;
+  }
   box.classList.add('show');
 }
 
@@ -5077,11 +5197,19 @@ function openGlobalSearchResult(id){
   openDetail(id);
 }
 
+function openGlobalSearchPage(view){
+  document.getElementById('globalSearchResults').classList.remove('show');
+  document.getElementById('globalSearchInput').value = '';
+  showView(view);
+}
+
 function globalSearchKeydown(ev){
   if(ev.key === 'Escape'){
     ev.target.blur();
     document.getElementById('globalSearchResults').classList.remove('show');
   } else if(ev.key === 'Enter'){
+    const pageMatches = globalSearchPageMatches(ev.target.value);
+    if(pageMatches.length){ openGlobalSearchPage(pageMatches[0].view); return; }
     const matches = globalSearchMatches(ev.target.value);
     if(matches.length) openGlobalSearchResult(matches[0].id);
   }
@@ -5982,6 +6110,14 @@ function renderAuditPage(){
 function toggleRoomDetail(){
   const box = document.getElementById('roomDetailCollapse');
   const chev = document.getElementById('roomCollapseChev');
+  const isOpen = box.style.display !== 'none';
+  box.style.display = isOpen ? 'none' : 'block';
+  chev.textContent = isOpen ? '▸ Show' : '▾ Hide';
+}
+
+function toggleAuditEntrySection(){
+  const box = document.getElementById('auditEntryCollapse');
+  const chev = document.getElementById('auditEntryChev');
   const isOpen = box.style.display !== 'none';
   box.style.display = isOpen ? 'none' : 'block';
   chev.textContent = isOpen ? '▸ Show' : '▾ Hide';
@@ -7257,7 +7393,7 @@ function renderInhouse(){
   }
   body.innerHTML = `
     <table>
-      <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Adults</th><th style="width:110px;">Children</th><th style="width:110px;">Total Pax</th></tr></thead>
+      <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Adults</th><th style="width:110px;">Children</th><th style="width:130px;">Total Individuals</th></tr></thead>
       <tbody>${data.rows.map(r=> `
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${r.roomNo}</td>
@@ -7284,7 +7420,7 @@ function exportInhouseExcel(){
 
   const wb = XLSX.utils.book_new();
   const rowsData = data.rows.map(r=> ({
-    'Room No': r.roomNo, 'Guest': r.guest, 'Adults': r.adultsDisplay, 'Children': r.childrenDisplay, 'Total Pax': r.pax
+    'Room No': r.roomNo, 'Guest': r.guest, 'Adults': r.adultsDisplay, 'Children': r.childrenDisplay, 'Total Individuals': r.pax
   }));
   const ws = XLSX.utils.json_to_sheet(rowsData);
   ws['!cols'] = [{wch:12},{wch:22},{wch:10},{wch:10},{wch:12}];
