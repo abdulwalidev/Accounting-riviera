@@ -241,6 +241,16 @@
     background:var(--ink-fill);
     border:1px solid #026591;
   }
+  /* Breakfast Report: breakfast columns get their own header color so they
+     read as a distinct group from the plain headcount columns next to them. */
+  th.th-green{
+    background:#16A34A;
+    border-color:#15803D;
+  }
+  th.th-purple{
+    background:#7C3AED;
+    border-color:#6D28D9;
+  }
   td{
     padding:6px 8px;
     border:1px solid #00000018;
@@ -1936,6 +1946,7 @@
       <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail</button>
       <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
+      <button class="navbtn" id="topNavBreakfast" onclick="showView('breakfast')">Breakfast Report</button>
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
       <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="margin-left:auto; font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
     </div>
@@ -2154,6 +2165,8 @@
             <th style="width:130px;">Rent Per Day / Amount (Other)</th>
             <th style="width:90px;">Adults</th>
             <th style="width:90px;">Children</th>
+            <th style="width:110px;">Breakfast Adults</th>
+            <th style="width:110px;">Breakfast Children</th>
             <th style="width:120px;">No of Days</th>
             <th style="width:130px;" class="edit-only">Moved Out</th>
             <th style="width:120px;">Total</th>
@@ -2477,6 +2490,8 @@
               <th style="width:130px;">Rent Per Day / Amount (Other)</th>
               <th style="width:90px;">Adults</th>
               <th style="width:90px;">Children</th>
+              <th style="width:110px;">Breakfast Adults</th>
+              <th style="width:110px;">Breakfast Children</th>
               <th style="width:110px;">No of Days</th>
               <th style="width:120px;">Moved Out</th>
               <th style="width:120px;">Total</th>
@@ -2736,6 +2751,7 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportInhouseExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printInhouse()">🖶 Print</button>
+          <button class="btn secondary" onclick="showView('breakfast')">🥐 Breakfast Report</button>
         </div>
       </div>
     </div>
@@ -2743,6 +2759,32 @@
     <div class="panel accent-report">
       <div id="ihSummary" style="font-size:15px; font-weight:700; margin-bottom:10px;"></div>
       <div id="ihBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-breakfast">
+
+    <h1 class="no-print">Breakfast Report</h1>
+    <div class="sub no-print">Who's in-house and how many of them are actually having breakfast — split out from the Inhouse headcount</div>
+
+    <div class="print-header">
+      <h1 id="bfPrintTitle">Breakfast Report</h1>
+      <div class="print-header-sub" id="bfPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <div class="actions">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" onclick="exportBreakfastExcel()">⬇ Export</button>
+          <button class="btn secondary" onclick="printBreakfastReport()">🖶 Print</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="bfSummary" style="font-size:15px; font-weight:700; margin-bottom:10px;"></div>
+      <div id="bfBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -3171,7 +3213,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','inhouse','autocheckout','settings'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -3214,6 +3256,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavRoomDetail').classList.toggle('active', view === 'roomdetail');
   document.getElementById('topNavEntry').classList.toggle('active', view === 'entry');
   document.getElementById('topNavReservations').classList.toggle('active', view === 'reservations');
+  document.getElementById('topNavBreakfast').classList.toggle('active', view === 'breakfast');
   document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('topNavReport').classList.toggle('active', view === 'report' || view === 'graphs');
@@ -3234,6 +3277,7 @@ function showView(view, fromPopState){
   if(view === 'deleteentity') renderDeleteEntityList();
   if(view === 'roomdetail') renderRoomDetail();
   if(view === 'inhouse') renderInhouse();
+  if(view === 'breakfast') renderBreakfastReport();
   if(view === 'autocheckout') renderAutoCheckout();
   if(view === 'dashboard') renderDashboard();
   if(view === 'cico') renderCico();
@@ -3817,6 +3861,8 @@ function addRow(){
     <td><input type="text" inputmode="decimal" placeholder="0 or Guest" class="rent" oninput="calcRow(this)"></td>
     <td><input type="text" inputmode="numeric" placeholder="Adults" class="roomAdults" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
     <td><input type="text" inputmode="numeric" placeholder="Children" class="roomChildren" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
+    <td><input type="text" inputmode="numeric" placeholder="Breakfast Adults" class="roomBreakfastAdults" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
+    <td><input type="text" inputmode="numeric" placeholder="Breakfast Children" class="roomBreakfastChildren" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
     <td>
       <div class="roomctrl">
         <button onclick="changeRooms(this,-1)">-</button>
@@ -4114,6 +4160,8 @@ function isRowEmpty(tr, kind){
            !tr.querySelector('.rent').value.trim() &&
            !tr.querySelector('.roomAdults').value.trim() &&
            !tr.querySelector('.roomChildren').value.trim() &&
+           !tr.querySelector('.roomBreakfastAdults').value.trim() &&
+           !tr.querySelector('.roomBreakfastChildren').value.trim() &&
            !tr.querySelector('.movedOut').value;
   }
   if(kind === 'payment'){
@@ -4158,6 +4206,8 @@ function requestDeleteRow(btn, kind){
         <div><div class="confirm-lbl">Rent Per Day</div><div class="confirm-val">${(parseFloat(tr.querySelector('.rent').value) || 0).toLocaleString()}</div></div>
         <div><div class="confirm-lbl">Adults</div><div class="confirm-val">${tr.querySelector('.roomAdults').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">Children</div><div class="confirm-val">${tr.querySelector('.roomChildren').value.trim() || '-'}</div></div>
+        <div><div class="confirm-lbl">Breakfast Adults</div><div class="confirm-val">${tr.querySelector('.roomBreakfastAdults').value.trim() || '-'}</div></div>
+        <div><div class="confirm-lbl">Breakfast Children</div><div class="confirm-val">${tr.querySelector('.roomBreakfastChildren').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${isMiscRoomNo(tr.querySelector('.roomNo').value) ? '-' : (tr.dataset.rooms || 1)}</div></div>
         <div><div class="confirm-lbl">Moved Out</div><div class="confirm-val">${tr.querySelector('.movedOut').value ? formatDate(tr.querySelector('.movedOut').value) : '-'}</div></div>
         <div><div class="confirm-lbl">Total</div><div class="confirm-val">${tr.querySelector('.rowtotal').textContent || 0}</div></div>
@@ -4719,11 +4769,41 @@ async function reviewEntry(){
       focusError(typeSel);
       return;
     }
+    // Breakfast Adults/Children are mandatory per room (except the
+    // Miscellaneous facility rows — BBQ/Bonfire/Snooker aren't a stay
+    // anyone eats breakfast as part of), and can never exceed that same
+    // room's own Adults/Children — a room can't send more people to
+    // breakfast than are actually staying in it.
+    const breakfastAdultsInput = tr.querySelector('.roomBreakfastAdults');
+    const breakfastChildrenInput = tr.querySelector('.roomBreakfastChildren');
+    const breakfastAdultsVal = breakfastAdultsInput.value.trim();
+    const breakfastChildrenVal = breakfastChildrenInput.value.trim();
+    if(!isMiscRoomNo(roomNo)){
+      if(!breakfastAdultsVal || !breakfastChildrenVal){
+        showNotice('Please enter Breakfast Adults and Breakfast Children for Room ' + roomNo + ' (type 0 if nobody from that room is having breakfast).');
+        focusError(!breakfastAdultsVal ? breakfastAdultsInput : breakfastChildrenInput);
+        return;
+      }
+      const roomAdultsNum = parseInt(tr.querySelector('.roomAdults').value) || 0;
+      const roomChildrenNum = parseInt(tr.querySelector('.roomChildren').value) || 0;
+      if(parseInt(breakfastAdultsVal) > roomAdultsNum){
+        showNotice('Breakfast Adults for Room ' + roomNo + ' (' + breakfastAdultsVal + ') can\'t be more than that room\'s Adults (' + roomAdultsNum + ').');
+        focusError(breakfastAdultsInput);
+        return;
+      }
+      if(parseInt(breakfastChildrenVal) > roomChildrenNum){
+        showNotice('Breakfast Children for Room ' + roomNo + ' (' + breakfastChildrenVal + ') can\'t be more than that room\'s Children (' + roomChildrenNum + ').');
+        focusError(breakfastChildrenInput);
+        return;
+      }
+    }
     const roomObj = {
       roomNo, unitType, rentInput, tr,
       rent: isFreeGuest ? 0 : rentInput.value,
       adults: tr.querySelector('.roomAdults').value.trim(),
       children: tr.querySelector('.roomChildren').value.trim(),
+      breakfastAdults: isMiscRoomNo(roomNo) ? '' : breakfastAdultsVal,
+      breakfastChildren: isMiscRoomNo(roomNo) ? '' : breakfastChildrenVal,
       count: tr.dataset.rooms,
       movedOut: tr.querySelector('.movedOut').value || '',
       total: parseFloat(tr.querySelector('.rowtotal').textContent.replace(/,/g,'')) || 0
@@ -4872,7 +4952,7 @@ async function reviewEntry(){
     checkIn: checkInEl.value || '',
     checkOut: checkOutEl.value || '',
     extraDetails,
-    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, adults: r.adults, children: r.children, count: r.count, movedOut: r.movedOut, total: r.total })),
+    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, adults: r.adults, children: r.children, breakfastAdults: r.breakfastAdults, breakfastChildren: r.breakfastChildren, count: r.count, movedOut: r.movedOut, total: r.total })),
     payments: cleanPayments
   };
   data.bookingTotal = document.getElementById('sumBookingTotal').textContent;
@@ -4888,7 +4968,7 @@ function openConfirmModal(data){
   const box = document.getElementById('confirmBody');
 
   const roomRowsHtml = data.rooms.map(r=>`
-    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
+    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${r.breakfastAdults || '-'}</td><td>${r.breakfastChildren || '-'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
@@ -4913,7 +4993,7 @@ function openConfirmModal(data){
       ${visibleExtraDetails(data).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
     </div>
     <table style="margin-bottom:14px;">
-      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Adults</th><th>Children</th><th>Days</th><th>Moved Out</th><th>Total</th></tr></thead>
+      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Adults</th><th>Children</th><th>Breakfast Adults</th><th>Breakfast Children</th><th>Days</th><th>Moved Out</th><th>Total</th></tr></thead>
       <tbody>${roomRowsHtml}</tbody>
     </table>
     <table style="margin-bottom:14px;">
@@ -5284,6 +5364,8 @@ function startEditEntry(entry){
     tr.querySelector('.rent').value = (r.rent === 0 || r.rent === '0') ? 'Guest' : (r.rent || '');
     tr.querySelector('.roomAdults').value = r.adults || '';
     tr.querySelector('.roomChildren').value = r.children || '';
+    tr.querySelector('.roomBreakfastAdults').value = r.breakfastAdults || '';
+    tr.querySelector('.roomBreakfastChildren').value = r.breakfastChildren || '';
     const movedOutInput = tr.querySelector('.movedOut');
     movedOutInput.value = r.movedOut || '';
     updateDateReadout(movedOutInput, tr.querySelector('.movedOutReadout'));
@@ -5376,6 +5458,7 @@ const GLOBAL_SEARCH_PAGES = [
   { label: 'Dashboard', view: 'dashboard', keywords: ['arrivals', 'departures', 'checked out', 'today at a glance'] },
   { label: 'Room Detail', view: 'roomdetail', keywords: ['room status', 'vacant', 'dirty', 'ooo', 'occupied', 'extended'] },
   { label: 'Inhouse Report', view: 'inhouse', keywords: ['buffet', 'headcount', 'total individuals', 'total pax'] },
+  { label: 'Breakfast Report', view: 'breakfast', keywords: ['breakfast', 'buffet', 'headcount', 'without breakfast'] },
   { label: 'Check-in / Check-out', view: 'cico', keywords: ['check-in', 'checkin', 'check-out', 'checkout', 'actual checkin', 'actual checkout', 'expected checkout', 'check out today'] },
   { label: 'Reservations', view: 'reservations', keywords: ['advance', 'booking', 'future check-ins'] },
   { label: 'Ledgers', view: 'ledgers', keywords: ['room-night', 'balance', 'credit', 'debt'] },
@@ -6170,10 +6253,12 @@ function renderDetail(){
       <td>${Number(r.rent || 0).toLocaleString()}</td>
       <td>${r.adults || '0'}</td>
       <td>${r.children || '0'}</td>
+      <td>${r.breakfastAdults || '-'}</td>
+      <td>${r.breakfastChildren || '-'}</td>
       <td>${isMiscRoomNo(r.roomNo) ? '-' : (r.count || 1)}</td>
       <td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td>
       <td class="rowtotal">${(parseFloat(String(r.total || 0).replace(/,/g,'')) || 0).toLocaleString()}</td>
-    </tr>`).join('') || '<tr><td colspan="8" class="empty-note">No rooms.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="10" class="empty-note">No rooms.</td></tr>';
 
   const payBody = document.getElementById('detailPayBody');
   const payments = (entry.payments || []).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''));
@@ -7730,6 +7815,138 @@ function printInhouse(){
 }
 
 // =========================================================
+// BREAKFAST REPORT — same in-house grouping as Inhouse Report, plus the
+// per-room Breakfast Adults/Children entered on Guest Entry, so kitchen
+// staff can see who's actually eating breakfast vs. just occupying a room.
+// Kept as its own page (not extra columns on Inhouse) so Inhouse stays a
+// quick headcount check and this stays the detailed breakfast breakdown.
+// =========================================================
+function buildBreakfastReport(){
+  const today = todayStr();
+  const roomsByEntity = {};
+  let roomCount = 0;
+  computeRoomStatuses(today)
+    .filter(rs=> (rs.occupied || rs.extended) && rs.entry)
+    .forEach(rs=>{
+      roomCount++;
+      const id = rs.entry.id;
+      if(!roomsByEntity[id]) roomsByEntity[id] = { entry: rs.entry, roomNos: [] };
+      roomsByEntity[id].roomNos.push(rs.roomNo);
+    });
+  const rows = Object.values(roomsByEntity).map(({ entry, roomNos })=>{
+    const relevantRooms = (entry.rooms || []).filter(r=> roomNos.includes(r.roomNo));
+    const adultsSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
+    const childrenSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
+    const breakfastAdultsSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.breakfastAdults) || 0), 0);
+    const breakfastChildrenSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.breakfastChildren) || 0), 0);
+    const pax = adultsSum + childrenSum;
+    const breakfastTotal = breakfastAdultsSum + breakfastChildrenSum;
+    return {
+      roomNo: roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).join(', '),
+      guest: entry.guestName || '(no name)',
+      guestId: entry.id,
+      adultsDisplay: adultsSum,
+      childrenDisplay: childrenSum,
+      pax,
+      breakfastAdults: breakfastAdultsSum,
+      breakfastChildren: breakfastChildrenSum,
+      breakfastTotal,
+      withoutBreakfast: pax - breakfastTotal
+    };
+  }).sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+  const totals = rows.reduce((acc,r)=>{
+    acc.adults += r.adultsDisplay;
+    acc.children += r.childrenDisplay;
+    acc.pax += r.pax;
+    acc.breakfastAdults += r.breakfastAdults;
+    acc.breakfastChildren += r.breakfastChildren;
+    acc.breakfastTotal += r.breakfastTotal;
+    acc.withoutBreakfast += r.withoutBreakfast;
+    return acc;
+  }, { adults:0, children:0, pax:0, breakfastAdults:0, breakfastChildren:0, breakfastTotal:0, withoutBreakfast:0 });
+  return { rows, roomCount, totals };
+}
+
+function renderBreakfastReport(){
+  const body = document.getElementById('bfBody');
+  const summary = document.getElementById('bfSummary');
+  if(!initialLoadDone){
+    body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    summary.innerHTML = '';
+    return;
+  }
+
+  document.getElementById('bfPrintHeaderSub').textContent = 'As of ' + formatDate(todayStr()) + '  ·  Generated ' + formatDate(todayStr());
+
+  const data = buildBreakfastReport();
+  summary.textContent = data.roomCount + (data.roomCount === 1 ? ' room' : ' rooms') + ' in-house — ' +
+    data.totals.breakfastTotal + ' having breakfast, ' + data.totals.withoutBreakfast + ' without';
+
+  if(data.rows.length === 0){
+    body.innerHTML = '<div class="empty-note">Nobody in-house right now.</div>';
+    return;
+  }
+  body.innerHTML = `
+    <table>
+      <thead><tr>
+        <th style="width:110px;">Room No</th>
+        <th>Guest</th>
+        <th style="width:90px;">Adults</th>
+        <th style="width:90px;">Children</th>
+        <th style="width:130px;">Total Individuals</th>
+        <th class="th-green" style="width:120px;">Breakfast Adults</th>
+        <th class="th-green" style="width:120px;">Breakfast Children</th>
+        <th class="th-green" style="width:120px;">Breakfast Total</th>
+        <th class="th-purple" style="width:130px;">Without Breakfast</th>
+      </tr></thead>
+      <tbody>${data.rows.map(r=> `
+        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+          <td>${r.roomNo}</td>
+          <td>${r.guest}</td>
+          <td>${r.adultsDisplay}</td>
+          <td>${r.childrenDisplay}</td>
+          <td style="font-weight:700;">${r.pax}</td>
+          <td>${r.breakfastAdults}</td>
+          <td>${r.breakfastChildren}</td>
+          <td style="font-weight:700;">${r.breakfastTotal}</td>
+          <td style="font-weight:700;">${r.withoutBreakfast}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="2">Total</td>
+          <td>${data.totals.adults}</td>
+          <td>${data.totals.children}</td>
+          <td>${data.totals.pax}</td>
+          <td>${data.totals.breakfastAdults}</td>
+          <td>${data.totals.breakfastChildren}</td>
+          <td>${data.totals.breakfastTotal}</td>
+          <td>${data.totals.withoutBreakfast}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
+function exportBreakfastExcel(){
+  const data = buildBreakfastReport();
+  if(data.rows.length === 0){ showNotice('No data to export.'); return; }
+
+  const wb = XLSX.utils.book_new();
+  const rowsData = data.rows.map(r=> ({
+    'Room No': r.roomNo, 'Guest': r.guest, 'Adults': r.adultsDisplay, 'Children': r.childrenDisplay, 'Total Individuals': r.pax,
+    'Breakfast Adults': r.breakfastAdults, 'Breakfast Children': r.breakfastChildren, 'Breakfast Total': r.breakfastTotal, 'Without Breakfast': r.withoutBreakfast
+  }));
+  const ws = XLSX.utils.json_to_sheet(rowsData);
+  ws['!cols'] = [{wch:12},{wch:22},{wch:10},{wch:10},{wch:12},{wch:14},{wch:14},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Breakfast');
+  XLSX.writeFile(wb, `breakfast-report-${todayStr()}.xlsx`);
+}
+
+function printBreakfastReport(){
+  window.print();
+}
+
+// =========================================================
 // DAY LOCK — admin-only. Locking a date stops any payment dated on it from
 // being added, edited, moved, or removed — a NEW payment (Add Payment, or
 // a fresh row in Guest Entry/Edit), and an EXISTING payment already saved
@@ -8336,6 +8553,8 @@ function roomPayload(e, r){
     rent_per_day: num(r.rent),
     adults: r.adults || null,
     children: r.children || null,
+    breakfast_adults: r.breakfastAdults || null,
+    breakfast_children: r.breakfastChildren || null,
     days_count: parseInt(r.count) || 1,
     moved_out_date: r.movedOut || null,
     total: num(r.total)
@@ -8487,7 +8706,8 @@ function mapServerRoom(r){
   }
   return {
     id: r.id, roomNo, unitType,
-    rent: num(r.rent_per_day), adults: r.adults || '', children: r.children || '', count: parseInt(r.days_count) || 1,
+    rent: num(r.rent_per_day), adults: r.adults || '', children: r.children || '',
+    breakfastAdults: r.breakfast_adults || '', breakfastChildren: r.breakfast_children || '', count: parseInt(r.days_count) || 1,
     movedOut: r.moved_out_date || '', total: num(r.total)
   };
 }
@@ -8736,6 +8956,7 @@ function rerenderActiveView(){
   else if(currentView === 'dashboard'){ renderDashboard(); }
   else if(currentView === 'cico'){ renderCico(); }
   else if(currentView === 'inhouse'){ renderInhouse(); }
+  else if(currentView === 'breakfast'){ renderBreakfastReport(); }
   else if(currentView === 'autocheckout'){ renderAutoCheckout(); }
 }
 
