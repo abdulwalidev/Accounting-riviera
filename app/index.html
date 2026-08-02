@@ -89,31 +89,6 @@
   /* ---- Payment mode colour-coding ---- */
   .cash-amt{ color:var(--cash) !important; font-weight:700; }
   .account-amt{ color:var(--account) !important; font-weight:700; }
-  /* ---- Revenue Report: one card per date money came in against a room's
-     rent, so "how much of tonight's rent landed on which day" reads at a
-     glance instead of being buried in fixed Payment 1/2/3 columns. ---- */
-  .pay-chunks{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(120px,1fr));
-    gap:6px;
-  }
-  .pay-chunk{
-    border:1px solid var(--line);
-    border-radius:4px;
-    padding:6px 8px;
-    background:#F7F9FC;
-  }
-  .pay-chunk-date{
-    font-family:'Inter',sans-serif;
-    font-size:10px;
-    font-weight:700;
-    text-transform:uppercase;
-    letter-spacing:0.03em;
-    color:var(--muted);
-    margin-bottom:3px;
-  }
-  .pay-chunk-line{ font-size:12px; }
-  .pay-chunk-total{ font-size:12px; font-weight:700; }
   tr.mode-cash td{ background:#E9F6EF; }
   tr.mode-bank td{ background:#EAF1FC; }
   tbody tr.mode-cash:nth-child(even) td{ background:#DDF0E5; }
@@ -2413,6 +2388,12 @@
       <h2 class="no-print">Rooms — <span id="rvNightlyDateLabel"></span></h2>
       <div id="rvNightlySummary" style="font-size:15px; font-weight:700; margin:10px 0;"></div>
       <div id="rvRoomsBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2 class="no-print">Payments By Date</h2>
+      <div class="sub no-print" style="margin-top:-6px;">The Rooms total above, re-sliced by the day the money actually came in — cash vs account, across every room</div>
+      <div id="rvByDateBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
     <div class="panel accent-report full-bleed-85">
@@ -6751,12 +6732,33 @@ function buildRevenueReport(asOfDate){
   const totalCollected = roomRows.reduce((s,r)=> s + r.collected, 0);
   const totalDue = roomRows.reduce((s,r)=> s + r.due, 0);
 
+  // Table 1.5 — same money as Table 1's per-room chunks, just re-sliced by
+  // date instead of by room: "how much of tonight's rent (across every
+  // room) actually landed on this specific day, cash vs account."
+  const byDate = {};
+  roomRows.forEach(r=> r.chunks.forEach(c=>{
+    if(!byDate[c.date]) byDate[c.date] = { cash: 0, account: 0 };
+    byDate[c.date].cash += c.cash;
+    byDate[c.date].account += c.account;
+  }));
+  const paymentsByDate = Object.keys(byDate)
+    .sort((a,b)=> a.localeCompare(b))
+    .map(date=>{
+      const cash = Math.round(byDate[date].cash * 100) / 100;
+      const account = Math.round(byDate[date].account * 100) / 100;
+      return { date, cash, account, total: Math.round((cash + account) * 100) / 100 };
+    });
+  const paymentsByDateCashTotal = paymentsByDate.reduce((s,r)=> s + r.cash, 0);
+  const paymentsByDateAccountTotal = paymentsByDate.reduce((s,r)=> s + r.account, 0);
+  const paymentsByDateGrandTotal = paymentsByDateCashTotal + paymentsByDateAccountTotal;
+
   unlinkedPayments.sort((a,b)=> b.amount - a.amount);
   const unlinkedTotal = unlinkedPayments.reduce((s,r)=> s + r.amount, 0);
 
   return {
     roomRows, totalRent, totalCollected, totalDue,
     tonightRentTotal,
+    paymentsByDate, paymentsByDateCashTotal, paymentsByDateAccountTotal, paymentsByDateGrandTotal,
     unlinkedPayments, unlinkedTotal
   };
 }
@@ -6770,10 +6772,12 @@ function setRevenueToday(){
 function renderRevenue(){
   const roomsBody = document.getElementById('rvRoomsBody');
   const nightlySummary = document.getElementById('rvNightlySummary');
+  const byDateBody = document.getElementById('rvByDateBody');
   const todayBody = document.getElementById('rvTodayBody');
   if(!initialLoadDone){
     roomsBody.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     nightlySummary.innerHTML = '';
+    byDateBody.innerHTML = '';
     todayBody.innerHTML = '';
     return;
   }
@@ -6794,29 +6798,28 @@ function renderRevenue(){
   if(data.roomRows.length === 0){
     roomsBody.innerHTML = '<div class="empty-note">No rooms occupied ' + asOfLabel + '.</div>';
   } else {
-    // One card per date money landed against this room's rent — one card if
-    // it all came in at once, more (4 to a row) if it was paid in instalments
-    // on different days. Each card breaks its date's amount into Cash /
-    // Account so the source is visible too, not just the date and total.
-    const chunkCards = (r)=>{
-      if(r.chunks.length === 0) return '-';
-      return `<div class="pay-chunks">${r.chunks.map(c=> `
-        <div class="pay-chunk">
-          <div class="pay-chunk-date">${formatDate(c.date)}</div>
-          <div class="pay-chunk-line cash-amt">Cash: ${c.cash > 0 ? 'Rs. ' + c.cash.toLocaleString() : '-'}</div>
-          <div class="pay-chunk-line account-amt">Account: ${c.account > 0 ? 'Rs. ' + c.account.toLocaleString() : '-'}</div>
-          <div class="pay-chunk-total">Total: Rs. ${c.total.toLocaleString()}</div>
-        </div>`).join('')}</div>`;
+    // As many "Payment N" columns as the room with the most instalments
+    // needs — one column for everyone if every room was paid in a single
+    // shot, more only if some room actually needed it. Each cell is just
+    // the date it landed plus whichever of Cash/Account it came in as.
+    const maxChunks = Math.max(1, ...data.roomRows.map(r=> r.chunks.length));
+    const paymentHeaders = Array.from({length: maxChunks}, (_,i)=> `<th style="width:150px;">Payment ${i + 1}</th>`).join('');
+    const paymentCell = (c)=>{
+      if(!c) return '-';
+      const lines = [];
+      if(c.cash > 0) lines.push(`<span class="cash-amt">Cash: Rs. ${c.cash.toLocaleString()}</span>`);
+      if(c.account > 0) lines.push(`<span class="account-amt">Account: Rs. ${c.account.toLocaleString()}</span>`);
+      return formatDate(c.date) + '<br>' + lines.join('<br>');
     };
     roomsBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:110px;">Room No</th><th style="width:160px;">Guest</th><th style="width:110px;">Rent</th><th>Payments</th><th style="width:110px;">Due</th></tr></thead>
+        <thead><tr><th style="width:110px;">Room No</th><th style="width:160px;">Guest</th><th style="width:110px;">Rent</th>${paymentHeaders}<th style="width:110px;">Due</th></tr></thead>
         <tbody>${data.roomRows.map(r=> `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${r.roomNo}</td>
             <td>${r.guest}</td>
             <td>${r.rent.toLocaleString()}</td>
-            <td>${chunkCards(r)}</td>
+            ${Array.from({length: maxChunks}, (_,i)=> `<td>${paymentCell(r.chunks[i])}</td>`).join('')}
             <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
           </tr>`).join('')}
         </tbody>
@@ -6824,8 +6827,35 @@ function renderRevenue(){
           <tr class="day-foot-total">
             <td colspan="2">Total</td>
             <td>${data.totalRent.toLocaleString()}</td>
-            <td class="cash-amt">Collected: ${data.totalCollected.toLocaleString()}</td>
+            <td class="cash-amt" colspan="${maxChunks}">Collected: ${data.totalCollected.toLocaleString()}</td>
             <td>${data.totalDue.toLocaleString()}</td>
+          </tr>
+        </tfoot>
+      </table>`;
+  }
+
+  // ---- Payments By Date: the same money as the Rooms total above, just
+  // re-summed by the day it actually came in instead of by room.
+  if(data.paymentsByDate.length === 0){
+    byDateBody.innerHTML = '<div class="empty-note">No payments recorded toward ' + dayWord + '\'s rent.</div>';
+  } else {
+    byDateBody.innerHTML = `
+      <table>
+        <thead><tr><th style="width:140px;">Date</th><th style="width:150px;">Cash</th><th style="width:150px;">Account</th><th style="width:150px;">Total</th></tr></thead>
+        <tbody>${data.paymentsByDate.map(r=> `
+          <tr>
+            <td>${formatDate(r.date)}</td>
+            <td class="cash-amt">${r.cash > 0 ? r.cash.toLocaleString() : '-'}</td>
+            <td class="account-amt">${r.account > 0 ? r.account.toLocaleString() : '-'}</td>
+            <td style="font-weight:700;">${r.total.toLocaleString()}</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot>
+          <tr class="day-foot-total">
+            <td>Grand Total</td>
+            <td class="cash-amt">${data.paymentsByDateCashTotal.toLocaleString()}</td>
+            <td class="account-amt">${data.paymentsByDateAccountTotal.toLocaleString()}</td>
+            <td>${data.paymentsByDateGrandTotal.toLocaleString()}</td>
           </tr>
         </tfoot>
       </table>`;
@@ -6878,6 +6908,14 @@ function exportRevenueExcel(){
   const ws1 = XLSX.utils.json_to_sheet(roomsData);
   ws1['!cols'] = [{wch:12},{wch:20},{wch:14},{wch:50},{wch:14},{wch:14}];
   XLSX.utils.book_append_sheet(wb, ws1, 'Occupied Rooms');
+
+  const byDateData = data.paymentsByDate.map(r=> ({
+    'Date': formatDate(r.date), 'Cash': r.cash, 'Account': r.account, 'Total': r.total
+  }));
+  byDateData.push({ 'Date': 'Grand Total', 'Cash': data.paymentsByDateCashTotal, 'Account': data.paymentsByDateAccountTotal, 'Total': data.paymentsByDateGrandTotal });
+  const ws3 = XLSX.utils.json_to_sheet(byDateData);
+  ws3['!cols'] = [{wch:14},{wch:14},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Payments By Date');
 
   const unlinkedData = data.unlinkedPayments.map(r=> ({
     'Guest': r.guest, 'Room No': r.roomNo, 'Amount': r.amount, 'Source': r.source, 'Date': formatDate(r.date)
