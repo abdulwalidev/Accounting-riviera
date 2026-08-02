@@ -929,22 +929,6 @@
     padding:0 20px 24px;
     box-sizing:border-box;
   }
-  /* Same idea as .full-bleed but pulled in from each edge instead of running
-     edge-to-edge — wide enough for the Report table's extra columns. Sized
-     as .main's own width plus a fixed extra (not vw): vw tracks the raw
-     browser viewport, which shrinks in CSS-pixel terms as page zoom goes
-     up, so a vw-based width could end up NARROWER than .main once zoomed
-     in. Anchoring to 100% of the parent (.main) instead means it resizes
-     exactly the way every other panel on the page already does — it just
-     stays a constant amount wider, at any zoom or window size. */
-  .full-bleed-85{
-    width:calc(100% + 300px);
-    margin-left:-150px;
-    margin-right:-150px;
-    margin-top:18px;
-    padding:0 20px 24px;
-    box-sizing:border-box;
-  }
   .smart-panel{
     background:#fff;
     border:1px solid var(--line);
@@ -2281,7 +2265,7 @@
       </div>
     </div>
 
-    <div class="panel accent-report full-bleed-85">
+    <div class="panel accent-report">
       <div id="reportBody" style="overflow-x:auto;"><div class="empty-note">No payments saved yet.</div></div>
     </div>
 
@@ -2403,7 +2387,7 @@
       </div>
     </div>
 
-    <div class="panel accent-report full-bleed-85">
+    <div class="panel accent-report">
       <h2 class="no-print">Rooms — <span id="rvNightlyDateLabel"></span></h2>
       <div id="rvNightlySummary" style="font-size:15px; font-weight:700; margin:10px 0;"></div>
       <div id="rvRoomsBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
@@ -2415,7 +2399,7 @@
       <div id="rvByDateBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
-    <div class="panel accent-report full-bleed-85">
+    <div class="panel accent-report">
       <h2 class="no-print">Extra Money Today (not today's rent)</h2>
       <div class="sub no-print" style="margin-top:-6px;">Money received today that did NOT go toward today's room rent above — an advance for a future night, a payment against an older due, a reservation deposit, a misc charge, or money for a guest who isn't in-house today</div>
       <div id="rvTodayBody" style="overflow-x:auto;"><div class="empty-note">No extra payments today.</div></div>
@@ -6576,8 +6560,8 @@ function renderLedgers(){
     return `
       <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
         <td>${formatDate(r.date)}</td>
-        <td>${nameCell}</td>
         <td>${r.roomNo}</td>
+        <td>${nameCell}</td>
         <td class="cash-amt">${r.received ? r.received.toLocaleString() : '-'}</td>
         <td>${r.rent.toLocaleString()}</td>
         <td style="font-weight:700; color:${balance > 0 ? 'var(--danger)' : 'inherit'};">${balance.toLocaleString()}</td>
@@ -6587,7 +6571,7 @@ function renderLedgers(){
   container.innerHTML = `
     <table>
       <thead>
-        <tr><th style="width:100px;">Date</th><th>Name</th><th style="width:110px;">Room No</th><th style="width:110px;">Credit</th><th style="width:110px;">Debt</th><th style="width:110px;">Balance</th></tr>
+        <tr><th style="width:100px;">Date</th><th style="width:110px;">Room No</th><th>Name</th><th style="width:110px;">Credit</th><th style="width:110px;">Debt</th><th style="width:110px;">Balance</th></tr>
       </thead>
       <tbody>${bodyRows}</tbody>
       <tfoot>
