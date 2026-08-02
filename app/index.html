@@ -1566,6 +1566,45 @@
   }
   .login-card .sub{ margin-bottom:8px; }
   .login-card label{ margin-top:8px; }
+  .loading-card{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:16px;
+    padding:32px 36px;
+    width:340px;
+    max-width:90vw;
+  }
+  .loading-card h2{
+    font-family:'Inter',sans-serif;
+    font-size:17px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.07em;
+    margin:0;
+  }
+  .loading-card .sub{ margin:0; text-align:center; }
+  .loading-spinner{
+    width:48px;
+    height:48px;
+    animation:loading-spinner-rotate 0.9s linear infinite;
+  }
+  .loading-spinner-track{
+    fill:none;
+    stroke:var(--line);
+    stroke-width:5;
+    opacity:0.25;
+  }
+  .loading-spinner-arc{
+    fill:none;
+    stroke:var(--ink);
+    stroke-width:5;
+    stroke-linecap:round;
+    stroke-dasharray:40 100;
+  }
+  @keyframes loading-spinner-rotate{
+    to{ transform:rotate(360deg); }
+  }
   .login-error{
     font-family:'Inter',sans-serif;
     font-size:12px;
@@ -1844,9 +1883,13 @@
 </div>
 
 <div id="loadingOverlay" class="hidden">
-  <div class="login-card" style="text-align:center;">
+  <div class="loading-card">
+    <svg class="loading-spinner" viewBox="0 0 50 50" aria-hidden="true">
+      <circle class="loading-spinner-track" cx="25" cy="25" r="20"></circle>
+      <circle class="loading-spinner-arc" cx="25" cy="25" r="20"></circle>
+    </svg>
     <h2>One moment…</h2>
-    <div class="sub" id="loadingOverlayText" style="margin-bottom:0;">Fetching the latest data from the cloud database…</div>
+    <div class="sub" id="loadingOverlayText">Fetching the latest data from the cloud database…</div>
   </div>
 </div>
 
@@ -3158,6 +3201,10 @@ function showView(view, fromPopState){
     return;
   }
   currentView = view;
+  try{
+    localStorage.setItem('lastView', view);
+    if(view === 'detail' && currentDetailId) localStorage.setItem('lastDetailId', currentDetailId);
+  }catch(e){ /* best effort — refresh just won't restore the exact view */ }
   ROUTABLE_VIEWS.forEach(v=>{
     const el = document.getElementById('view-' + v);
     if(el) el.classList.toggle('active', v === view);
@@ -3294,6 +3341,30 @@ function initRouter(){
   // painted by the static HTML's default .active classes, and the real
   // data-driven render happens later once login + the first cloud pull
   // finish, same as every other page's first paint.
+}
+
+// A hard refresh (Ctrl+R) reloads the document fresh, so the URL alone
+// can't carry the view (this app never puts the route in the URL/hash) —
+// localStorage is the only thing that survives that. Called from
+// showApp(), after currentUser is known, so the admin-only gate inside
+// showView() sees the real role instead of the pre-login "logged out"
+// default. Uses fromPopState=true so this counts as a restore rather than
+// a fresh navigation — no extra Back-button stop for a view the user
+// never actually clicked into this session.
+function restoreLastView(){
+  let saved = null;
+  try{ saved = localStorage.getItem('lastView'); }catch(e){ return; }
+  if(!saved || saved === currentView || !ROUTABLE_VIEWS.includes(saved)) return;
+  if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout') && !isAdmin()) return;
+  if(saved === 'detail'){
+    let savedId = null;
+    try{ savedId = localStorage.getItem('lastDetailId'); }catch(e){ /* ignore */ }
+    if(savedId) currentDetailId = savedId;
+  }
+  showView(saved, true);
+  currentRouteState = { view: saved };
+  try{ history.replaceState(currentRouteState, '', location.pathname + location.search); }catch(e){ /* ignore */ }
+  armExitGuard();
 }
 
 // ---- Stay & Status date pickers (Check-in / Expected Checkout / Actual
@@ -6060,6 +6131,14 @@ function getCurrentEntry(){
 }
 
 function renderDetail(){
+  // Refresh can restore straight onto this view (see restoreLastView())
+  // before the cloud pull has populated `entries` — without this guard
+  // the guest-not-found branch below would fire on every restore and
+  // bounce back to Search before the real data even arrives. The view
+  // sits behind the loading overlay at that point anyway, so a no-op
+  // return is invisible; rerenderActiveView() calls this again once the
+  // pull finishes.
+  if(!initialLoadDone) return;
   const entry = getCurrentEntry();
   if(!entry){
     showView('search');
@@ -7404,7 +7483,7 @@ function renderRevenue(){
       CASH_W = 60, MCB_W = 52, HAJI_W = 122, ALFALAH_W = 92, DUE_W = 52;
     const totalW = HASH_W + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W;
     roomsBody.innerHTML = `
-      <table style="table-layout:fixed; width:${totalW}px;">
+      <table style="table-layout:fixed; width:100%; min-width:${totalW}px;">
         <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th><th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th></tr></thead>
         <tbody>${data.roomRows.map((r,i)=> `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
@@ -8912,6 +8991,7 @@ async function startApp(){
 
 function showApp(){
   applyRolePermissions();
+  restoreLastView();
   document.getElementById('loginOverlay').classList.add('hidden');
   document.getElementById('appRoot').style.display = '';
   startApp();
