@@ -7357,25 +7357,36 @@ function printRevenue(){
 // =========================================================
 function buildInhouseReport(){
   const today = todayStr();
-  const rows = computeRoomStatuses(today)
+  // Group by guest, not by room — a guest with more than one room booked
+  // (e.g. an apartment plus an overflow room) is one person/party, not one
+  // per room. Rooming them separately double-counted their own adults/
+  // children against every room they held.
+  const roomsByEntity = {};
+  let roomCount = 0;
+  computeRoomStatuses(today)
     .filter(rs=> (rs.occupied || rs.extended) && rs.entry)
-    .map(rs=>{
-      const adultsRaw = getDetailValue(rs.entry, 'Adults');
-      const childrenRaw = getDetailValue(rs.entry, 'Children');
-      return {
-        roomNo: rs.roomNo,
-        guest: rs.entry.guestName || '(no name)',
-        guestId: rs.entry.id,
-        adultsDisplay: adultsRaw || 'N/A',
-        childrenDisplay: childrenRaw || 'N/A',
-        pax: (parseInt(adultsRaw) || 0) + (parseInt(childrenRaw) || 0)
-      };
-    })
-    .sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+    .forEach(rs=>{
+      roomCount++;
+      const id = rs.entry.id;
+      if(!roomsByEntity[id]) roomsByEntity[id] = { entry: rs.entry, roomNos: [] };
+      roomsByEntity[id].roomNos.push(rs.roomNo);
+    });
+  const rows = Object.values(roomsByEntity).map(({ entry, roomNos })=>{
+    const adultsRaw = getDetailValue(entry, 'Adults');
+    const childrenRaw = getDetailValue(entry, 'Children');
+    return {
+      roomNo: roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).join(', '),
+      guest: entry.guestName || '(no name)',
+      guestId: entry.id,
+      adultsDisplay: adultsRaw || 'N/A',
+      childrenDisplay: childrenRaw || 'N/A',
+      pax: (parseInt(adultsRaw) || 0) + (parseInt(childrenRaw) || 0)
+    };
+  }).sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
   const totalAdults = rows.reduce((s,r)=> s + (parseInt(r.adultsDisplay) || 0), 0);
   const totalChildren = rows.reduce((s,r)=> s + (parseInt(r.childrenDisplay) || 0), 0);
   const totalPax = rows.reduce((s,r)=> s + r.pax, 0);
-  return { rows, totalAdults, totalChildren, totalPax };
+  return { rows, roomCount, totalAdults, totalChildren, totalPax };
 }
 
 function renderInhouse(){
@@ -7390,7 +7401,7 @@ function renderInhouse(){
   document.getElementById('ihPrintHeaderSub').textContent = 'As of ' + formatDate(todayStr()) + '  ·  Generated ' + formatDate(todayStr());
 
   const data = buildInhouseReport();
-  summary.textContent = data.rows.length + (data.rows.length === 1 ? ' room' : ' rooms') + ' in-house — ' +
+  summary.textContent = data.roomCount + (data.roomCount === 1 ? ' room' : ' rooms') + ' in-house — ' +
     data.totalPax + (data.totalPax === 1 ? ' guest' : ' guests') + ' (' + data.totalAdults + ' adults, ' + data.totalChildren + ' children)';
 
   if(data.rows.length === 0){
