@@ -935,15 +935,18 @@
     padding:0 20px 24px;
     box-sizing:border-box;
   }
-  /* Same idea as .full-bleed but pulled in 10% from each edge — wide enough
-     for the Report table's extra columns without running edge-to-edge. */
+  /* Same idea as .full-bleed but pulled in from each edge instead of running
+     edge-to-edge — wide enough for the Report table's extra columns. Sized
+     as .main's own width plus a fixed extra (not vw): vw tracks the raw
+     browser viewport, which shrinks in CSS-pixel terms as page zoom goes
+     up, so a vw-based width could end up NARROWER than .main once zoomed
+     in. Anchoring to 100% of the parent (.main) instead means it resizes
+     exactly the way every other panel on the page already does — it just
+     stays a constant amount wider, at any zoom or window size. */
   .full-bleed-85{
-    width:65vw;
-    position:relative;
-    left:50%;
-    right:50%;
-    margin-left:-32.5vw;
-    margin-right:-32.5vw;
+    width:calc(100% + 300px);
+    margin-left:-150px;
+    margin-right:-150px;
     margin-top:18px;
     padding:0 20px 24px;
     box-sizing:border-box;
