@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Guest Entry Form</title>
+<title>Riviera Resort</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <!-- self-hosted: Edge/Brave Tracking Prevention silently blocks some CDN
      copies (this is why supabase.js is served locally too) -->
@@ -217,6 +217,27 @@
     margin-top:4px;
   }
   .date-readout:empty{ display:none; }
+  /* Change Room: flags the vacated row and its continuation row so the
+     pair reads as one stay, not two unrelated rooms — see
+     refreshRoomChangeLinks(). */
+  .room-chain-arrow{
+    color:var(--gold-deep);
+    font-weight:700;
+    margin-right:2px;
+  }
+  .room-change-tag{
+    margin-top:4px;
+    text-align:center;
+    font-size:9.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    color:#fff;
+    background:var(--gold-deep);
+    border-radius:3px;
+    padding:2px 5px;
+    white-space:nowrap;
+  }
   input:focus, select:focus{
     outline:2px solid var(--account);
     outline-offset:0;
@@ -1295,7 +1316,7 @@
     top:16px;
     left:50%;
     transform:translateX(-50%);
-    z-index:200;
+    z-index:320;
     display:flex;
     flex-direction:column;
     gap:8px;
@@ -1541,13 +1562,158 @@
     color:var(--ink);
   }
   /* ---- Cloud sync: login, loading overlay, offline banner ---- */
+  /* Login gets its own branded look (hex-pattern background, dedicated
+     palette) instead of the app's own theme — but still follows the same
+     light/dark toggle via html[data-theme], so switching here or in the
+     app after signing in stays in sync either way. Everything below is
+     scoped under #loginOverlay / login- prefixed classes so it can't leak
+     into (or be overridden by) the app's own generic tag/class styles. */
   #loginOverlay{
     position:fixed; inset:0;
-    background:var(--paper);
-    display:flex; align-items:center; justify-content:center;
+    overflow-y:auto;
     z-index:300;
+    font-family:Arial, Helvetica, sans-serif;
+    --login-bg:#f3f4f6;
+    --login-card-bg:#ffffff;
+    --login-text:#16181d;
+    --login-muted:#5f6b76;
+    --login-accent:#1a73f0;
+    --login-border:#e2e5e9;
+    --login-input-bg:#ffffff;
+    --login-hex-1:rgba(41,182,246,0.35);
+    --login-hex-2:rgba(41,182,246,0.35);
+    background:var(--login-bg);
+    color:var(--login-text);
+    background-image:
+      linear-gradient(30deg, var(--login-hex-1) 12%, transparent 12.5%, transparent 87%, var(--login-hex-1) 87.5%, var(--login-hex-1)),
+      linear-gradient(150deg, var(--login-hex-1) 12%, transparent 12.5%, transparent 87%, var(--login-hex-1) 87.5%, var(--login-hex-1)),
+      linear-gradient(30deg, var(--login-hex-1) 12%, transparent 12.5%, transparent 87%, var(--login-hex-1) 87.5%, var(--login-hex-1)),
+      linear-gradient(150deg, var(--login-hex-1) 12%, transparent 12.5%, transparent 87%, var(--login-hex-1) 87.5%, var(--login-hex-1)),
+      linear-gradient(60deg, var(--login-hex-2) 25%, transparent 25.5%, transparent 75%, var(--login-hex-2) 75%, var(--login-hex-2)),
+      linear-gradient(60deg, var(--login-hex-2) 25%, transparent 25.5%, transparent 75%, var(--login-hex-2) 75%, var(--login-hex-2));
+    background-size: 56px 98px;
+    background-position: 0 0, 0 0, 28px 49px, 28px 49px, 0 0, 28px 49px;
+    background-attachment: fixed;
   }
   #loginOverlay.hidden{ display:none; }
+  html[data-theme="dark"] #loginOverlay{
+    --login-bg:#0d1117;
+    --login-card-bg:#12161c;
+    --login-text:#e6edf3;
+    --login-muted:#8b98a5;
+    --login-accent:#29b6f6;
+    --login-border:#232b33;
+    --login-input-bg:#1a1f26;
+    --login-hex-1:rgba(200,205,212,0.10);
+    --login-hex-2:rgba(41,182,246,0.04);
+  }
+  .login-topbar{
+    background:#1462d6;
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 24px;
+  }
+  .login-topbar-left{
+    font-size:20px;
+    font-weight:bold;
+  }
+  .login-topbar-right{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    font-size:14px;
+  }
+  .login-topbar .theme-toggle{
+    border-color:rgba(255,255,255,0.7);
+    color:#fff;
+    margin-right:0;
+  }
+  .login-topbar .theme-toggle:hover{ background:rgba(255,255,255,0.2); color:#fff; }
+  .login-container{
+    max-width:420px;
+    margin:60px auto 40px;
+    padding:0 16px;
+    text-align:center;
+  }
+  .login-icon-circle{
+    background:rgba(41,182,246,0.15);
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0 auto 25px;
+    font-size:32px;
+  }
+  .login-hero-title{
+    color:var(--login-accent);
+    font-size:38px;
+    font-weight:700;
+    margin:0;
+  }
+  .login-card{
+    background:var(--login-card-bg);
+    border:1px solid var(--login-border);
+    border-radius:10px;
+    padding:30px;
+    text-align:left;
+    margin-top:40px;
+  }
+  .login-card-heading{
+    text-align:center;
+    font-weight:normal;
+    font-size:20px;
+    margin:0 0 24px;
+    color:var(--login-text);
+  }
+  .login-label{
+    display:block;
+    font-size:14px;
+    color:var(--login-muted);
+  }
+  .login-input{
+    width:100%;
+    padding:10px;
+    margin-top:6px;
+    margin-bottom:20px;
+    border:1px solid var(--login-border);
+    border-radius:6px;
+    font-size:14px;
+    background:var(--login-input-bg);
+    color:var(--login-text);
+  }
+  .login-signin-btn{
+    width:100%;
+    background:var(--login-accent);
+    color:#fff;
+    border:none;
+    padding:12px;
+    border-radius:6px;
+    font-size:15px;
+    font-weight:bold;
+    cursor:pointer;
+  }
+  .login-forgot{
+    display:block;
+    text-align:center;
+    margin-top:14px;
+    color:var(--login-accent);
+    text-decoration:none;
+    font-size:14px;
+    cursor:pointer;
+    background:none;
+    border:none;
+    width:100%;
+  }
+  .login-footer{
+    text-align:center;
+    font-size:12px;
+    color:var(--login-muted);
+    margin-top:20px;
+  }
   #loadingOverlay{
     position:fixed; inset:0;
     background:var(--paper);
@@ -1555,27 +1721,6 @@
     z-index:250;
   }
   #loadingOverlay.hidden{ display:none; }
-  .login-card{
-    background:#fff;
-    border:1px solid var(--ink);
-    border-radius:8px;
-    padding:32px 36px;
-    width:340px;
-    max-width:90vw;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-  }
-  .login-card h2{
-    font-family:'Inter',sans-serif;
-    font-size:17px;
-    font-weight:700;
-    text-transform:uppercase;
-    letter-spacing:0.07em;
-    margin:0 0 2px;
-  }
-  .login-card .sub{ margin-bottom:8px; }
-  .login-card label{ margin-top:8px; }
   .loading-card{
     display:flex;
     flex-direction:column;
@@ -1696,8 +1841,7 @@
   html[data-theme="dark"] .smart-panel,
   html[data-theme="dark"] .rpt-day-group,
   html[data-theme="dark"] .total-due-box,
-  html[data-theme="dark"] .rpt-grandtotal-box,
-  html[data-theme="dark"] .login-card{ background:var(--paper); }
+  html[data-theme="dark"] .rpt-grandtotal-box{ background:var(--paper); }
   html[data-theme="dark"] .panel.accent-guest,
   html[data-theme="dark"] .panel.accent-rooms,
   html[data-theme="dark"] .panel.accent-payments,
@@ -1880,15 +2024,33 @@
 <body>
 
 <div id="loginOverlay">
-  <div class="login-card">
-    <h2>Guest Entry System</h2>
-    <div class="sub">Sign in to open the guest register</div>
-    <label for="loginUsername">Username</label>
-    <input type="text" id="loginUsername" autocomplete="username" placeholder="accountant@riviera">
-    <label for="loginPassword">Password</label>
-    <input type="password" id="loginPassword" autocomplete="current-password">
-    <div class="login-error" id="loginError"></div>
-    <button class="btn" id="loginBtn" style="width:100%; margin-top:6px;">Sign In</button>
+  <div class="login-topbar">
+    <div class="login-topbar-left">Riviera Resort</div>
+    <div class="login-topbar-right">
+      <button class="theme-toggle" id="loginThemeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"></path></svg>
+      </button>
+      <span>Sign in</span>
+    </div>
+  </div>
+
+  <div class="login-container">
+    <div class="login-icon-circle">🏨</div>
+    <h1 class="login-hero-title">Riviera Resort</h1>
+
+    <div class="login-card">
+      <h2 class="login-card-heading">Sign in</h2>
+      <label for="loginUsername" class="login-label">Username</label>
+      <input type="text" id="loginUsername" class="login-input" autocomplete="username" placeholder="accountant@riviera">
+      <label for="loginPassword" class="login-label">Password</label>
+      <input type="password" id="loginPassword" class="login-input" autocomplete="current-password">
+      <div class="login-error" id="loginError"></div>
+      <button class="login-signin-btn" id="loginBtn">Sign In</button>
+      <button type="button" class="login-forgot" onclick="showNotice('Contact your admin to reset your password.')">Forgot password?</button>
+    </div>
+
+    <div class="login-footer">Riviera Resort &middot; Guest Register</div>
   </div>
 </div>
 
@@ -3625,6 +3787,35 @@ function isMiscRoomNo(roomNo){
   return (roomNo || '').trim().toUpperCase() === MISC_ROOM_NO.toUpperCase();
 }
 
+// Wherever a guest's rooms are shown as one string, a genuine Change Room
+// (guest moved from X into Y mid-stay) should read as "X → Y", not the
+// same plain "X, Y" a real two-simultaneous-rooms booking gets — otherwise
+// the two look identical and nobody can tell a move happened. No extra
+// data is needed for this: Change Room always leaves its trace as a Moved
+// Out date on the vacated row followed immediately by a different room's
+// row (see confirmChangeRoom()), so that shape alone is enough to detect
+// it straight off the rooms array's own order.
+function formatRoomChain(rooms){
+  const list = (rooms || []).filter(r=> r && r.roomNo);
+  if(list.length === 0) return '';
+  const parts = [];
+  let chain = [list[0].roomNo];
+  for(let i = 1; i < list.length; i++){
+    const prev = list[i-1];
+    const cur = list[i];
+    const chained = !!prev.movedOut && !isMiscRoomNo(prev.roomNo) && !isMiscRoomNo(cur.roomNo) &&
+      cur.roomNo.trim().toUpperCase() !== prev.roomNo.trim().toUpperCase();
+    if(chained){
+      chain.push(cur.roomNo);
+    } else {
+      parts.push(chain.join(' → '));
+      chain = [cur.roomNo];
+    }
+  }
+  parts.push(chain.join(' → '));
+  return parts.join(', ');
+}
+
 function detectUnitType(roomNo){
   const v = (roomNo || '').trim().toUpperCase();
   if(ROOM_NUMBERS.includes(v)) return 'Room';
@@ -3741,6 +3932,41 @@ function refreshDuplicateRoomHighlights(){
   });
 }
 
+// Change Room leaves its trace as a Moved Out date on the vacated row
+// immediately followed by a different room's row (see confirmChangeRoom())
+// — the exact shape formatRoomChain() looks for in reports. This is the
+// live-editing mirror of that same check: flag the pair right in the
+// table so it's obvious at a glance that row 2 is a continuation of row 1,
+// not an unrelated second room.
+function refreshRoomChangeLinks(){
+  const rows = Array.from(document.querySelectorAll('#roomBody tr'));
+  rows.forEach(tr=>{
+    const arrowEl = tr.querySelector('.room-chain-arrow');
+    const tagEl = tr.querySelector('.room-change-tag');
+    if(arrowEl){ arrowEl.textContent = ''; arrowEl.title = ''; }
+    if(tagEl){ tagEl.style.display = 'none'; tagEl.textContent = ''; }
+  });
+  rows.forEach((tr,i)=>{
+    const roomNo = tr.querySelector('.roomNo').value.trim();
+    const movedOut = tr.querySelector('.movedOut').value;
+    if(!movedOut || !roomNo || isMiscRoomNo(roomNo)) return;
+    const nextTr = rows[i+1];
+    if(!nextTr) return;
+    const nextRoomNo = nextTr.querySelector('.roomNo').value.trim();
+    if(!nextRoomNo || isMiscRoomNo(nextRoomNo) || nextRoomNo.toUpperCase() === roomNo.toUpperCase()) return;
+    const tagEl = tr.querySelector('.room-change-tag');
+    if(tagEl){
+      tagEl.textContent = '→ Moved to Room ' + nextRoomNo;
+      tagEl.style.display = 'block';
+    }
+    const arrowEl = nextTr.querySelector('.room-chain-arrow');
+    if(arrowEl){
+      arrowEl.textContent = '→ ';
+      arrowEl.title = 'Continued from Room ' + roomNo;
+    }
+  });
+}
+
 // Event delegation so this works for every room row, including ones added later
 const roomBodyEl = document.getElementById('roomBody');
 
@@ -3752,6 +3978,7 @@ roomBodyEl.addEventListener('input', e=>{
   renderRoomNoList(list, e.target.value, tr);
   list.classList.add('show');
   refreshDuplicateRoomHighlights();
+  refreshRoomChangeLinks();
   updateUnitType(tr);
 });
 
@@ -3773,6 +4000,7 @@ roomBodyEl.addEventListener('change', e=>{
   roomBodyEl.addEventListener(evt, e=>{
     if(!e.target.classList.contains('movedOut')) return;
     updateDateReadout(e.target, e.target.closest('tr').querySelector('.movedOutReadout'));
+    refreshRoomChangeLinks();
   });
 });
 
@@ -3799,6 +4027,7 @@ roomBodyEl.addEventListener('mousedown', e=>{
   wrap.querySelector('.roomNo').value = item.dataset.value;
   wrap.querySelector('.roomno-list').classList.remove('show');
   refreshDuplicateRoomHighlights();
+  refreshRoomChangeLinks();
   updateUnitType(wrap.closest('tr'));
 });
 
@@ -3819,6 +4048,7 @@ roomBodyEl.addEventListener('keydown', e=>{
       e.target.value = firstItem.dataset.value;
       list.classList.remove('show');
       refreshDuplicateRoomHighlights();
+      refreshRoomChangeLinks();
       updateUnitType(tr);
     }
     tr.querySelector('.rent').focus();
@@ -3844,7 +4074,7 @@ function addRow(){
   const tr = document.createElement('tr');
   tr.dataset.rooms = 1;
   tr.innerHTML = `
-    <td class="rmno">${rowCount}</td>
+    <td class="rmno"><span class="room-chain-arrow"></span><span class="rmno-num">${rowCount}</span></td>
     <td>
       <div class="roomno-wrap">
         <input type="text" placeholder="Search room / apt no" class="roomNo" autocomplete="off">
@@ -3871,7 +4101,7 @@ function addRow(){
       </div>
       <span class="roomCountMisc" style="display:none;">-</span>
     </td>
-    <td class="edit-only"><input type="date" class="movedOut" title="Date the guest left THIS room (leave blank while still here)"><div class="date-readout movedOutReadout"></div></td>
+    <td class="edit-only"><input type="date" class="movedOut" title="Date the guest left THIS room (leave blank while still here)"><div class="date-readout movedOutReadout"></div><div class="room-change-tag" style="display:none;"></div></td>
     <td class="rowtotal">0</td>
     <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'room')">✕</button></td>
   `;
@@ -4095,6 +4325,7 @@ function confirmChangeRoom(){
   newRow.querySelector('.roomNo').value = toRoomNo;
   updateUnitType(newRow);
   refreshDuplicateRoomHighlights();
+  refreshRoomChangeLinks();
   closeChangeRoomModal();
   newRow.querySelector('.rent').focus();
 }
@@ -4261,9 +4492,10 @@ function confirmDeleteRow(){
 
 function renumber(){
   document.querySelectorAll('#roomBody tr').forEach((tr,i)=>{
-    tr.querySelector('.rmno').textContent = i+1;
+    tr.querySelector('.rmno-num').textContent = i+1;
   });
   rowCount = document.querySelectorAll('#roomBody tr').length;
+  refreshRoomChangeLinks();
 }
 
 function calcGrandTotal(){
@@ -5213,7 +5445,7 @@ function renderTodayEntries(){
       <tbody>
         ${todays.map(e=>{
           const tt = computeTotals(e);
-          const roomNos = (e.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+          const roomNos = formatRoomChain(e.rooms);
           const time = e.savedAt ? new Date(e.savedAt).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Karachi' }) : '-';
           return `<tr style="cursor:pointer;" onclick="openDetail('${e.id}')" title="Open this guest">
             <td>${time}</td>
@@ -5279,7 +5511,7 @@ function openEditModal(){
   const entry = getCurrentEntry();
   if(!entry) return;
   const t = computeTotals(entry);
-  const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+  const roomNos = formatRoomChain(entry.rooms);
   document.getElementById('editBody').innerHTML = `
     <div class="grid" style="margin-bottom:14px;">
       <div><div class="confirm-lbl">Guest Name</div><div class="confirm-val">${entry.guestName || '-'}</div></div>
@@ -5378,6 +5610,7 @@ function startEditEntry(entry){
     calcRow(tr.querySelector('.rent'));
   });
   refreshDuplicateRoomHighlights();
+  refreshRoomChangeLinks();
 
   document.getElementById('payBody').innerHTML = '';
   payCount = 0;
@@ -5487,7 +5720,7 @@ function globalSearchMatches(query){
   const qNoDash = stripDashes(q);
   const all = loadAllEntries();
   const results = all.filter(entry=>{
-    const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ');
+    const roomNos = formatRoomChain(entry.rooms);
     const paymentText = (entry.payments || []).map(p=> [p.mode, p.bank, p.remarks].filter(Boolean).join(' ')).join(' ');
     const haystack = [
       entry.guestName, entry.fatherName, entry.cnic, roomNos,
@@ -5514,7 +5747,7 @@ function renderGlobalSearch(){
         <div>📄 <b>${p.label}</b></div>
       </div>`).join('');
     const guestRows = guestMatches.map(entry=>{
-      const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ') || 'N/A';
+      const roomNos = formatRoomChain(entry.rooms) || 'N/A';
       const sub = entry.cnic || getDetailValue(entry, 'Contact No') || '';
       return `<div class="hdr-search-row" onclick="openGlobalSearchResult('${entry.id}')">
           <div><b>${entry.guestName || '(no name)'}</b> — Room ${roomNos}</div>
@@ -5584,7 +5817,7 @@ function renderSearch(){
 
   let items = all.map(entry=>{
     const t = computeTotals(entry);
-    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+    const roomNos = formatRoomChain(entry.rooms);
     return { entry, t, roomNos };
   });
 
@@ -5691,7 +5924,7 @@ function renderReservations(){
     .filter(entry=> entry.checkIn && entry.checkIn > today)
     .map(entry=>{
       const t = computeTotals(entry);
-      const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ');
+      const roomNos = formatRoomChain(entry.rooms);
       return { entry, t, roomNos };
     });
 
@@ -6059,7 +6292,7 @@ function selectAvailDay(iso){
 // Checkouts have real separate fields (expected "Check-out" vs the actual
 // checkout date), so those two are exact, not heuristic.
 function buildMovementItem(entry){
-  return { entry, t: computeTotals(entry), roomNos: (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ') };
+  return { entry, t: computeTotals(entry), roomNos: formatRoomChain(entry.rooms) };
 }
 
 function computeMovement(fromDate, toDate){
@@ -6246,9 +6479,22 @@ function renderDetail(){
   ).join('');
 
   const roomBody = document.getElementById('detailRoomBody');
-  roomBody.innerHTML = (entry.rooms || []).map(r=>`
+  // Same Change Room detection as formatRoomChain()/refreshRoomChangeLinks() —
+  // a Moved Out date immediately followed by a different room's row — but
+  // rendered inline here since this table has no room-cursor to reuse.
+  roomBody.innerHTML = (entry.rooms || []).map((r,i,arr)=>{
+    const prev = arr[i-1];
+    const next = arr[i+1];
+    const isContinuation = !!(prev && prev.movedOut && !isMiscRoomNo(prev.roomNo) && !isMiscRoomNo(r.roomNo) &&
+      (r.roomNo || '').trim().toUpperCase() !== (prev.roomNo || '').trim().toUpperCase());
+    const leadsToNext = !!(r.movedOut && !isMiscRoomNo(r.roomNo) && next && !isMiscRoomNo(next.roomNo) &&
+      (next.roomNo || '').trim().toUpperCase() !== (r.roomNo || '').trim().toUpperCase());
+    const roomNoCell = (isContinuation ? `<span class="room-chain-arrow" title="Continued from Room ${prev.roomNo}">→</span> ` : '') + (r.roomNo || '-');
+    const movedOutCell = (r.movedOut ? formatDate(r.movedOut) : '-') +
+      (leadsToNext ? `<div class="room-change-tag" style="display:block;">→ Moved to Room ${next.roomNo}</div>` : '');
+    return `
     <tr>
-      <td>${r.roomNo || '-'}</td>
+      <td>${roomNoCell}</td>
       <td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td>
       <td>${Number(r.rent || 0).toLocaleString()}</td>
       <td>${r.adults || '0'}</td>
@@ -6256,9 +6502,10 @@ function renderDetail(){
       <td>${r.breakfastAdults || '-'}</td>
       <td>${r.breakfastChildren || '-'}</td>
       <td>${isMiscRoomNo(r.roomNo) ? '-' : (r.count || 1)}</td>
-      <td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td>
+      <td>${movedOutCell}</td>
       <td class="rowtotal">${(parseFloat(String(r.total || 0).replace(/,/g,'')) || 0).toLocaleString()}</td>
-    </tr>`).join('') || '<tr><td colspan="10" class="empty-note">No rooms.</td></tr>';
+    </tr>`;
+  }).join('') || '<tr><td colspan="10" class="empty-note">No rooms.</td></tr>';
 
   const payBody = document.getElementById('detailPayBody');
   const payments = (entry.payments || []).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''));
@@ -6448,7 +6695,7 @@ function renderApList(){
 
   let items = loadAllEntries().map(entry=>{
     const t = computeTotals(entry);
-    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+    const roomNos = formatRoomChain(entry.rooms);
     return { entry, t, roomNos };
   });
 
@@ -6521,7 +6768,7 @@ function renderApGuestStrip(){
   const entry = getCurrentEntry();
   if(!entry) return;
   const t = computeTotals(entry);
-  const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+  const roomNos = formatRoomChain(entry.rooms);
   document.getElementById('apGuestStrip').innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
       <div>
@@ -6714,7 +6961,7 @@ function getFilteredReportRows(){
   // flatten payments with guest + booking info attached, for filtering by "anything"
   let rows = [];
   all.forEach(entry=>{
-    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+    const roomNos = formatRoomChain(entry.rooms);
     (entry.payments || []).forEach(p=>{
       if(!p.date) return;
       rows.push({
@@ -7413,7 +7660,7 @@ function buildRevenueReport(asOfDate){
       if(pay.date !== asOfDate) return;
       const extra = Math.round((pay.total - pay.towardAsOfNight) * 100) / 100;
       if(extra <= 0) return;
-      const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ') || 'N/A';
+      const roomNos = formatRoomChain(entry.rooms) || 'N/A';
       const source = pay.mode === 'Cash' ? 'Cash' : (pay.bank || pay.mode || '-');
       unlinkedPayments.push({ guestId, guest: entry.guestName || '(no name)', roomNo: roomNos, amount: extra, source, date: pay.date });
     });
@@ -7740,7 +7987,7 @@ function buildInhouseReport(){
     const adultsSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
     const childrenSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
     return {
-      roomNo: roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).join(', '),
+      roomNo: formatRoomChain(relevantRooms),
       guest: entry.guestName || '(no name)',
       guestId: entry.id,
       adultsDisplay: adultsSum,
@@ -7842,7 +8089,7 @@ function buildBreakfastReport(){
     const pax = adultsSum + childrenSum;
     const breakfastTotal = breakfastAdultsSum + breakfastChildrenSum;
     return {
-      roomNo: roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })).join(', '),
+      roomNo: formatRoomChain(relevantRooms),
       guest: entry.guestName || '(no name)',
       guestId: entry.id,
       adultsDisplay: adultsSum,
@@ -8159,7 +8406,7 @@ function buildAutoCheckoutRows(asOfDate){
       seen.add(l.guest_id);
       const entry = all.find(e=> e.id === l.guest_id);
       if(!entry) return null;
-      const roomNos = (entry.rooms || []).map(r=> r.roomNo).filter(Boolean).join(', ');
+      const roomNos = formatRoomChain(entry.rooms);
       return {
         roomNo: roomNos || '-', guestId: entry.id, guest: entry.guestName || '(no name)',
         checkIn: entry.checkIn || '', checkoutDate: computeExpectedCheckoutDate(entry),
@@ -8309,7 +8556,7 @@ function renderDeleteEntityList(){
 
   let items = loadAllEntries().map(entry=>{
     const t = computeTotals(entry);
-    const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+    const roomNos = formatRoomChain(entry.rooms);
     return { entry, t, roomNos };
   });
   const searchValNoDash = stripDashes(searchVal);
@@ -8362,7 +8609,7 @@ function openDeleteEntityModal(id){
   }
   pendingDeleteEntityId = id;
   const t = computeTotals(entry);
-  const roomNos = (entry.rooms || []).map(r=>r.roomNo).filter(Boolean).join(', ');
+  const roomNos = formatRoomChain(entry.rooms);
   document.getElementById('deleteEntityBody').innerHTML = `
     <div class="grid" style="margin-bottom:14px;">
       <div><div class="confirm-lbl">Guest</div><div class="confirm-val">${entry.guestName || '(no name)'}</div></div>
@@ -9233,7 +9480,10 @@ document.getElementById('logoutBtn').addEventListener('click', async ()=>{
   location.reload();
 });
 
-document.getElementById('themeToggle').addEventListener('click', ()=>{
+// Shared by the in-app header toggle and the login page's own toggle (the
+// login screen renders before #appRoot is even shown) so both stay on the
+// exact same light/dark state via the one html[data-theme] attribute.
+function toggleTheme(){
   var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   if(isDark){
     document.documentElement.removeAttribute('data-theme');
@@ -9242,7 +9492,9 @@ document.getElementById('themeToggle').addEventListener('click', ()=>{
     document.documentElement.setAttribute('data-theme', 'dark');
     localStorage.setItem('theme', 'dark');
   }
-});
+}
+document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+document.getElementById('loginThemeToggle').addEventListener('click', toggleTheme);
 
 // start with 1 room row and 1 payment row
 addRow();
