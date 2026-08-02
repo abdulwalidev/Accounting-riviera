@@ -90,28 +90,30 @@
   .cash-amt{ color:var(--cash) !important; font-weight:700; }
   .account-amt{ color:var(--account) !important; font-weight:700; }
   /* ---- Revenue Report: Payments By Date boxes, left to right, wrapping ---- */
-  .date-box-row{ display:flex; flex-wrap:wrap; gap:12px; }
+  .date-box-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
   .date-box{
     border:2px solid #000;
-    border-radius:6px;
-    padding:10px 12px;
+    border-radius:8px;
+    padding:16px 18px;
     background:var(--paper);
-    min-width:160px;
   }
   .date-box-head{
     font-family:'Inter',sans-serif;
-    font-size:12px;
+    font-size:14px;
     font-weight:700;
     text-transform:uppercase;
     letter-spacing:0.03em;
-    margin-bottom:6px;
+    margin-bottom:10px;
   }
-  .date-box-total{ font-size:13px; font-weight:700; margin-top:2px; }
-  .date-box-grand{ background:var(--ink-fill); }
-  .date-box-grand .date-box-head,
-  .date-box-grand .date-box-total,
-  .date-box-grand .cash-amt,
-  .date-box-grand .account-amt{ color:#fff !important; }
+  .date-box-total{ font-size:16px; font-weight:700; margin-top:6px; }
+  .rev-grandtotal-box{
+    border:2px solid #000;
+    border-radius:8px;
+    padding:16px 18px;
+    margin-top:16px;
+    background:var(--paper);
+  }
+  .section-divider{ border-top:2px solid #000; margin:24px 0; }
   tr.mode-cash td{ background:#E9F6EF; }
   tr.mode-bank td{ background:#EAF1FC; }
   tbody tr.mode-cash:nth-child(even) td{ background:#DDF0E5; }
@@ -138,9 +140,10 @@
     letter-spacing:0.04em;
     text-transform:uppercase;
     text-align:center;
-    color:var(--muted);
+    color:#000;
     margin-bottom:5px;
   }
+  .lbl-sm{ font-size:10.4px; }
   .req{
     color:var(--danger);
   }
@@ -161,7 +164,7 @@
   input, select{
     width:100%;
     background:#fff;
-    border:1px solid var(--ink);
+    border:2px solid #000;
     border-radius:4px;
     color:#111;
     padding:8px 10px;
@@ -1555,15 +1558,28 @@
   html[data-theme="dark"] .rpt-day-group,
   html[data-theme="dark"] .total-due-box,
   html[data-theme="dark"] .rpt-grandtotal-box,
-  html[data-theme="dark"] .date-box{ border-color:#fff; }
+  html[data-theme="dark"] .date-box,
+  html[data-theme="dark"] .rev-grandtotal-box{ border-color:#fff; }
+  html[data-theme="dark"] .section-divider{ border-top-color:#fff; }
   html[data-theme="dark"] .roomctrl button,
   html[data-theme="dark"] .roomno-list,
   html[data-theme="dark"] .rd-switch-btn{ background:#1A1A1A; }
   html[data-theme="dark"] .roomno-list{ box-shadow:0 6px 18px rgba(0,0,0,0.6); }
+  html[data-theme="dark"] label{ color:#fff; }
+  /* Header rows 2 & 3 (nav tabs) follow the app's own light/dark toggle;
+     row 1 (the blue brand bar) intentionally does not. */
+  html[data-theme="dark"] .hdr-row2{ background:var(--paper); border-color:rgba(255,255,255,0.15); }
+  html[data-theme="dark"] .hdr-row3{ background:#1A1A1A; border-color:rgba(255,255,255,0.15); }
+  html[data-theme="dark"] .hdr-row2 .navbtn,
+  html[data-theme="dark"] .hdr-row3 .navbtn{ color:rgba(255,255,255,0.7); }
+  html[data-theme="dark"] .hdr-row2 .navbtn:hover,
+  html[data-theme="dark"] .hdr-row3 .navbtn:hover{ color:var(--ink-fill); }
+  html[data-theme="dark"] .hdr-row2 .navbtn.active,
+  html[data-theme="dark"] .hdr-row3 .navbtn.active{ color:var(--ink-fill); border-bottom-color:var(--ink-fill); }
   /* typed/selected content (inputs, dates) stays on a light field so the
      text itself can be plain black, instead of following the dark chrome */
   html[data-theme="dark"] input,
-  html[data-theme="dark"] select{ background:#fff; color:#111; }
+  html[data-theme="dark"] select{ background:#fff; color:#111; border-color:#fff; }
   html[data-theme="dark"] input::placeholder{ color:#8A8A8A; }
   html[data-theme="dark"] th{ border-color:rgba(255,255,255,0.15); }
   html[data-theme="dark"] td{ border-color:rgba(255,255,255,0.08); }
@@ -1954,12 +1970,12 @@
           <input type="text" id="contactNo" placeholder="03XXXXXXXXX" autocomplete="off" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
         <div>
-          <label>Adults <span class="req">*</span></label>
+          <label class="lbl-sm">Adults <span class="req">*</span></label>
           <input type="text" id="numAdults" autocomplete="off" inputmode="numeric" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
           <label class="na-check"><input type="checkbox" id="numAdultsNA" onchange="toggleNA('numAdults')"> N/A</label>
         </div>
         <div>
-          <label>Children <span class="req">*</span></label>
+          <label class="lbl-sm">Children <span class="req">*</span></label>
           <input type="text" id="numChildren" value="N/A" autocomplete="off" disabled required inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
           <label class="na-check"><input type="checkbox" id="numChildrenNA" onchange="toggleNA('numChildren')" checked> N/A</label>
         </div>
@@ -2280,11 +2296,11 @@
           <input type="text" id="dActualCheckout" disabled>
         </div>
         <div>
-          <label>Adults</label>
+          <label class="lbl-sm">Adults</label>
           <input type="text" id="dAdults" disabled>
         </div>
         <div>
-          <label>Children</label>
+          <label class="lbl-sm">Children</label>
           <input type="text" id="dChildren" disabled>
         </div>
       </div>
@@ -2533,6 +2549,8 @@
       <div class="sub no-print" style="margin-top:-6px;">The Rooms total above, re-sliced by the day the money actually came in — cash vs account, across every room</div>
       <div id="rvByDateBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
+
+    <div class="section-divider no-print"></div>
 
     <div class="panel accent-report">
       <h2 class="no-print">Extra Money Today (not today's rent)</h2>
@@ -7092,19 +7110,29 @@ function renderRevenue(){
   if(data.paymentsByDate.length === 0){
     byDateBody.innerHTML = '<div class="empty-note">No payments recorded toward ' + dayWord + '\'s rent.</div>';
   } else {
-    const dateBox = (label, cash, account, total, grand)=> `
-      <div class="date-box${grand ? ' date-box-grand' : ''}">
+    const dateBox = (label, cash, account, total)=> `
+      <div class="date-box">
         <div class="date-box-head">${label}</div>
-        <div class="cash-amt">Cash: ${cash > 0 ? cash.toLocaleString() : '-'}</div>
-        <div class="account-amt">Account: ${account > 0 ? account.toLocaleString() : '-'}</div>
+        ${cash > 0 ? `<div class="cash-amt">Cash: ${cash.toLocaleString()}</div>` : ''}
+        ${account > 0 ? `<div class="account-amt">Account: ${account.toLocaleString()}</div>` : ''}
         <div class="date-box-total">Total: ${total.toLocaleString()}</div>
       </div>`;
     byDateBody.innerHTML = `
       <div class="date-box-row">
-        ${data.paymentsByDate.map(r=> dateBox(formatDate(r.date), r.cash, r.account, r.total, false)).join('')}
+        ${data.paymentsByDate.map(r=> dateBox(formatDate(r.date), r.cash, r.account, r.total)).join('')}
       </div>
-      <div class="date-box-row" style="margin-top:12px;">
-        ${dateBox('Grand Total', data.paymentsByDateCashTotal, data.paymentsByDateAccountTotal, data.paymentsByDateGrandTotal, true)}
+      <div class="rev-grandtotal-box">
+        <div class="date-box-head">Revenue Grand Total</div>
+        <table>
+          <thead><tr><th>Cash</th><th>Account</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr class="day-foot-total">
+              <td class="cash-amt">${data.paymentsByDateCashTotal.toLocaleString()}</td>
+              <td class="account-amt">${data.paymentsByDateAccountTotal.toLocaleString()}</td>
+              <td>${data.paymentsByDateGrandTotal.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>`;
   }
 
@@ -7626,7 +7654,7 @@ function updateCloudIndicator(){
       el.style.color = 'var(--gold-deep)';
     } else if(lastSyncAt){
       el.textContent = '☁ Live — synced ' + lastSyncAt.toLocaleTimeString();
-      el.style.color = 'var(--cash)';
+      el.style.color = '#4ADE80';
     } else {
       el.textContent = '☁ Connecting…';
       el.style.color = 'var(--muted)';
