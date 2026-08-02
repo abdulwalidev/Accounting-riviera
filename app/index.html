@@ -725,8 +725,7 @@
     border-radius:8px;
     padding:16px 20px;
     margin-bottom:20px;
-    background:var(--ink-fill);
-    color:#fff;
+    background:#fff;
     box-shadow:0 4px 14px rgba(0,0,0,0.14);
     text-align:left;
   }
@@ -748,8 +747,6 @@
     font-family:'Inter',sans-serif;
     font-size:14px;
   }
-  .rpt-grandtotal-box .cash-amt,
-  .rpt-grandtotal-box .account-amt{ color:#fff !important; }
   .rpt-day-head{
     display:flex;
     width:fit-content;
@@ -1416,6 +1413,7 @@
   html[data-theme="dark"] .smart-panel,
   html[data-theme="dark"] .rpt-day-group,
   html[data-theme="dark"] .total-due-box,
+  html[data-theme="dark"] .rpt-grandtotal-box,
   html[data-theme="dark"] .login-card{ background:var(--paper); }
   html[data-theme="dark"] .panel.accent-guest,
   html[data-theme="dark"] .panel.accent-rooms,
@@ -1456,7 +1454,8 @@
   html[data-theme="dark"] .mode-badge.cash{ background:rgba(74,222,128,0.22); }
   html[data-theme="dark"] .mode-badge.bank{ background:rgba(96,165,250,0.22); }
   html[data-theme="dark"] .rpt-day-group,
-  html[data-theme="dark"] .total-due-box{ box-shadow:0 4px 14px rgba(0,0,0,0.5); }
+  html[data-theme="dark"] .total-due-box,
+  html[data-theme="dark"] .rpt-grandtotal-box{ box-shadow:0 4px 14px rgba(0,0,0,0.5); }
   html[data-theme="dark"] tr.day-foot-total td{ background:rgba(255,255,255,0.04); }
   html[data-theme="dark"] .rpt-total-account-label{ border-right-color:rgba(255,255,255,0.1); }
   html[data-theme="dark"] .rpd-guest-head{ background:#1A1A1A; }
