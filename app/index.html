@@ -89,6 +89,23 @@
   /* ---- Payment mode colour-coding ---- */
   .cash-amt{ color:var(--cash) !important; font-weight:700; }
   .account-amt{ color:var(--account) !important; font-weight:700; }
+  /* ---- Revenue Report: one box per date in the Payments By Date table ---- */
+  .date-box{
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:10px 12px;
+    background:#F7F9FC;
+  }
+  .date-box-head{
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    margin-bottom:6px;
+  }
+  .date-box-total{ font-size:13px; font-weight:700; margin-top:2px; }
+  .date-box-grand{ background:var(--paper); border:2px solid #000; }
   tr.mode-cash td{ background:#E9F6EF; }
   tr.mode-bank td{ background:#EAF1FC; }
   tbody tr.mode-cash:nth-child(even) td{ background:#DDF0E5; }
@@ -6835,30 +6852,23 @@ function renderRevenue(){
   }
 
   // ---- Payments By Date: the same money as the Rooms total above, just
-  // re-summed by the day it actually came in instead of by room.
+  // re-summed by the day it actually came in instead of by room. One box
+  // per date plus a Grand Total box, rather than a table.
   if(data.paymentsByDate.length === 0){
     byDateBody.innerHTML = '<div class="empty-note">No payments recorded toward ' + dayWord + '\'s rent.</div>';
   } else {
+    const dateBox = (label, cash, account, total, grand)=> `
+      <div class="date-box${grand ? ' date-box-grand' : ''}">
+        <div class="date-box-head">${label}</div>
+        <div class="cash-amt">Cash: ${cash > 0 ? cash.toLocaleString() : '-'}</div>
+        <div class="account-amt">Account: ${account > 0 ? account.toLocaleString() : '-'}</div>
+        <div class="date-box-total">Total: ${total.toLocaleString()}</div>
+      </div>`;
     byDateBody.innerHTML = `
-      <table>
-        <thead><tr><th style="width:140px;">Date</th><th style="width:150px;">Cash</th><th style="width:150px;">Account</th><th style="width:150px;">Total</th></tr></thead>
-        <tbody>${data.paymentsByDate.map(r=> `
-          <tr>
-            <td>${formatDate(r.date)}</td>
-            <td class="cash-amt">${r.cash > 0 ? r.cash.toLocaleString() : '-'}</td>
-            <td class="account-amt">${r.account > 0 ? r.account.toLocaleString() : '-'}</td>
-            <td style="font-weight:700;">${r.total.toLocaleString()}</td>
-          </tr>`).join('')}
-        </tbody>
-        <tfoot>
-          <tr class="day-foot-total">
-            <td>Grand Total</td>
-            <td class="cash-amt">${data.paymentsByDateCashTotal.toLocaleString()}</td>
-            <td class="account-amt">${data.paymentsByDateAccountTotal.toLocaleString()}</td>
-            <td>${data.paymentsByDateGrandTotal.toLocaleString()}</td>
-          </tr>
-        </tfoot>
-      </table>`;
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        ${data.paymentsByDate.map(r=> dateBox(formatDate(r.date), r.cash, r.account, r.total, false)).join('')}
+        ${dateBox('Grand Total', data.paymentsByDateCashTotal, data.paymentsByDateAccountTotal, data.paymentsByDateGrandTotal, true)}
+      </div>`;
   }
 
   // ---- Extra Money Today: payments received on asOfDate that didn't go
