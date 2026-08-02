@@ -2377,9 +2377,9 @@
     <div class="panel accent-rooms" style="padding:0;">
       <div class="collapse-head" onclick="toggleRoomDetail()">
         <span>Room / Apartment Detail</span>
-        <span id="roomCollapseChev" class="collapse-chev">▸ Show</span>
+        <span id="roomCollapseChev" class="collapse-chev">▾ Hide</span>
       </div>
-      <div id="roomDetailCollapse" style="display:none; padding:0 18px 18px;">
+      <div id="roomDetailCollapse" style="display:block; padding:0 18px 18px;">
         <table>
           <thead>
             <tr>
@@ -5997,9 +5997,9 @@ function renderDetail(){
   statusEl.className = 'status ' + t.status.toLowerCase();
   statusEl.textContent = t.status;
 
-  // room detail starts collapsed every time the page opens
-  document.getElementById('roomDetailCollapse').style.display = 'none';
-  document.getElementById('roomCollapseChev').textContent = '▸ Show';
+  // room detail starts expanded every time the page opens
+  document.getElementById('roomDetailCollapse').style.display = 'block';
+  document.getElementById('roomCollapseChev').textContent = '▾ Hide';
 }
 
 // Every recorded action on this entry, newest first: who did what, when.
