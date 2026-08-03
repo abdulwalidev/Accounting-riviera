@@ -1580,20 +1580,8 @@
     --login-accent:#1a73f0;
     --login-border:#e2e5e9;
     --login-input-bg:#ffffff;
-    --login-hex-1:rgba(41,182,246,0.35);
-    --login-hex-2:rgba(41,182,246,0.35);
     background:var(--login-bg);
     color:var(--login-text);
-    background-image:
-      linear-gradient(30deg, var(--login-hex-1) 12%, transparent 12.5%, transparent 87%, var(--login-hex-1) 87.5%, var(--login-hex-1)),
-      linear-gradient(150deg, var(--login-hex-1) 12%, transparent 12.5%, transparent 87%, var(--login-hex-1) 87.5%, var(--login-hex-1)),
-      linear-gradient(30deg, var(--login-hex-1) 12%, transparent 12.5%, transparent 87%, var(--login-hex-1) 87.5%, var(--login-hex-1)),
-      linear-gradient(150deg, var(--login-hex-1) 12%, transparent 12.5%, transparent 87%, var(--login-hex-1) 87.5%, var(--login-hex-1)),
-      linear-gradient(60deg, var(--login-hex-2) 25%, transparent 25.5%, transparent 75%, var(--login-hex-2) 75%, var(--login-hex-2)),
-      linear-gradient(60deg, var(--login-hex-2) 25%, transparent 25.5%, transparent 75%, var(--login-hex-2) 75%, var(--login-hex-2));
-    background-size: 56px 98px;
-    background-position: 0 0, 0 0, 28px 49px, 28px 49px, 0 0, 28px 49px;
-    background-attachment: fixed;
   }
   #loginOverlay.hidden{ display:none; }
   html[data-theme="dark"] #loginOverlay{
@@ -1604,8 +1592,6 @@
     --login-accent:#29b6f6;
     --login-border:#232b33;
     --login-input-bg:#1a1f26;
-    --login-hex-1:rgba(200,205,212,0.10);
-    --login-hex-2:rgba(41,182,246,0.04);
   }
   .login-topbar{
     background:#1462d6;
@@ -2327,8 +2313,7 @@
             <th style="width:130px;">Rent Per Day / Amount (Other)</th>
             <th style="width:90px;">Adults</th>
             <th style="width:90px;">Children</th>
-            <th style="width:110px;">Breakfast Adults</th>
-            <th style="width:110px;">Breakfast Children</th>
+            <th style="width:100px;">Inc. Breakfast</th>
             <th style="width:120px;">No of Days</th>
             <th style="width:130px;" class="edit-only">Moved Out</th>
             <th style="width:120px;">Total</th>
@@ -2740,6 +2725,10 @@
             <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
           </div>
         </div>
+      </div>
+      <div class="checkline">
+        <input type="checkbox" id="filterExcludeExtras">
+        <label for="filterExcludeExtras" style="margin:0;">Exclude Extras — only payments from guests who were in-house that night (for comparing against Revenue Report / Ledgers)</label>
       </div>
       <div class="actions" style="margin-top:12px;">
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -3630,6 +3619,7 @@ function clearFilters(){
   document.getElementById('filterTo').value = '';
   document.getElementById('filterSearch').value = '';
   document.getElementById('filterCashSearch').value = '';
+  document.getElementById('filterExcludeExtras').checked = false;
   updateFilterDateReadouts();
   renderReport();
 }
@@ -3656,6 +3646,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   ['filterFrom','filterTo','filterSearch','filterCashSearch'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderReport);
   });
+  document.getElementById('filterExcludeExtras').addEventListener('change', renderReport);
   document.getElementById('gsearchInput').addEventListener('input', renderSearch);
   document.getElementById('resvSearchInput').addEventListener('input', renderReservations);
   document.getElementById('gsearchDueOnly').addEventListener('change', renderSearch);
@@ -4091,8 +4082,7 @@ function addRow(){
     <td><input type="text" inputmode="decimal" placeholder="0 or Guest" class="rent" oninput="calcRow(this)"></td>
     <td><input type="text" inputmode="numeric" placeholder="Adults" class="roomAdults" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
     <td><input type="text" inputmode="numeric" placeholder="Children" class="roomChildren" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
-    <td><input type="text" inputmode="numeric" placeholder="Breakfast Adults" class="roomBreakfastAdults" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
-    <td><input type="text" inputmode="numeric" placeholder="Breakfast Children" class="roomBreakfastChildren" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
+    <td style="text-align:center;"><input type="checkbox" class="roomIncBreakfast" title="Whole room's Adults+Children are having breakfast"></td>
     <td>
       <div class="roomctrl">
         <button onclick="changeRooms(this,-1)">-</button>
@@ -4391,8 +4381,7 @@ function isRowEmpty(tr, kind){
            !tr.querySelector('.rent').value.trim() &&
            !tr.querySelector('.roomAdults').value.trim() &&
            !tr.querySelector('.roomChildren').value.trim() &&
-           !tr.querySelector('.roomBreakfastAdults').value.trim() &&
-           !tr.querySelector('.roomBreakfastChildren').value.trim() &&
+           !tr.querySelector('.roomIncBreakfast').checked &&
            !tr.querySelector('.movedOut').value;
   }
   if(kind === 'payment'){
@@ -4437,8 +4426,7 @@ function requestDeleteRow(btn, kind){
         <div><div class="confirm-lbl">Rent Per Day</div><div class="confirm-val">${(parseFloat(tr.querySelector('.rent').value) || 0).toLocaleString()}</div></div>
         <div><div class="confirm-lbl">Adults</div><div class="confirm-val">${tr.querySelector('.roomAdults').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">Children</div><div class="confirm-val">${tr.querySelector('.roomChildren').value.trim() || '-'}</div></div>
-        <div><div class="confirm-lbl">Breakfast Adults</div><div class="confirm-val">${tr.querySelector('.roomBreakfastAdults').value.trim() || '-'}</div></div>
-        <div><div class="confirm-lbl">Breakfast Children</div><div class="confirm-val">${tr.querySelector('.roomBreakfastChildren').value.trim() || '-'}</div></div>
+        <div><div class="confirm-lbl">Inc. Breakfast</div><div class="confirm-val">${tr.querySelector('.roomIncBreakfast').checked ? 'Yes' : 'No'}</div></div>
         <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${isMiscRoomNo(tr.querySelector('.roomNo').value) ? '-' : (tr.dataset.rooms || 1)}</div></div>
         <div><div class="confirm-lbl">Moved Out</div><div class="confirm-val">${tr.querySelector('.movedOut').value ? formatDate(tr.querySelector('.movedOut').value) : '-'}</div></div>
         <div><div class="confirm-lbl">Total</div><div class="confirm-val">${tr.querySelector('.rowtotal').textContent || 0}</div></div>
@@ -5001,34 +4989,16 @@ async function reviewEntry(){
       focusError(typeSel);
       return;
     }
-    // Breakfast Adults/Children are mandatory per room (except the
-    // Miscellaneous facility rows — BBQ/Bonfire/Snooker aren't a stay
-    // anyone eats breakfast as part of), and can never exceed that same
-    // room's own Adults/Children — a room can't send more people to
-    // breakfast than are actually staying in it.
-    const breakfastAdultsInput = tr.querySelector('.roomBreakfastAdults');
-    const breakfastChildrenInput = tr.querySelector('.roomBreakfastChildren');
-    const breakfastAdultsVal = breakfastAdultsInput.value.trim();
-    const breakfastChildrenVal = breakfastChildrenInput.value.trim();
-    if(!isMiscRoomNo(roomNo)){
-      if(!breakfastAdultsVal || !breakfastChildrenVal){
-        showNotice('Please enter Breakfast Adults and Breakfast Children for Room ' + roomNo + ' (type 0 if nobody from that room is having breakfast).');
-        focusError(!breakfastAdultsVal ? breakfastAdultsInput : breakfastChildrenInput);
-        return;
-      }
-      const roomAdultsNum = parseInt(tr.querySelector('.roomAdults').value) || 0;
-      const roomChildrenNum = parseInt(tr.querySelector('.roomChildren').value) || 0;
-      if(parseInt(breakfastAdultsVal) > roomAdultsNum){
-        showNotice('Breakfast Adults for Room ' + roomNo + ' (' + breakfastAdultsVal + ') can\'t be more than that room\'s Adults (' + roomAdultsNum + ').');
-        focusError(breakfastAdultsInput);
-        return;
-      }
-      if(parseInt(breakfastChildrenVal) > roomChildrenNum){
-        showNotice('Breakfast Children for Room ' + roomNo + ' (' + breakfastChildrenVal + ') can\'t be more than that room\'s Children (' + roomChildrenNum + ').');
-        focusError(breakfastChildrenInput);
-        return;
-      }
-    }
+    // Inc. Breakfast is a whole-room switch (except the Miscellaneous
+    // facility rows — BBQ/Bonfire/Snooker aren't a stay anyone eats
+    // breakfast as part of): it's never half the room eating and half not,
+    // so ticking it just sends that room's own Adults/Children counts
+    // straight through as the breakfast counts.
+    const roomAdultsNum = parseInt(tr.querySelector('.roomAdults').value) || 0;
+    const roomChildrenNum = parseInt(tr.querySelector('.roomChildren').value) || 0;
+    const incBreakfast = !isMiscRoomNo(roomNo) && tr.querySelector('.roomIncBreakfast').checked;
+    const breakfastAdultsVal = incBreakfast ? String(roomAdultsNum) : '0';
+    const breakfastChildrenVal = incBreakfast ? String(roomChildrenNum) : '0';
     const roomObj = {
       roomNo, unitType, rentInput, tr,
       rent: isFreeGuest ? 0 : rentInput.value,
@@ -5200,7 +5170,7 @@ function openConfirmModal(data){
   const box = document.getElementById('confirmBody');
 
   const roomRowsHtml = data.rooms.map(r=>`
-    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${r.breakfastAdults || '-'}</td><td>${r.breakfastChildren || '-'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
+    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : ((parseInt(r.breakfastAdults) || parseInt(r.breakfastChildren)) ? 'Yes' : 'No')}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
@@ -5225,7 +5195,7 @@ function openConfirmModal(data){
       ${visibleExtraDetails(data).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
     </div>
     <table style="margin-bottom:14px;">
-      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Adults</th><th>Children</th><th>Breakfast Adults</th><th>Breakfast Children</th><th>Days</th><th>Moved Out</th><th>Total</th></tr></thead>
+      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Adults</th><th>Children</th><th>Inc. Breakfast</th><th>Days</th><th>Moved Out</th><th>Total</th></tr></thead>
       <tbody>${roomRowsHtml}</tbody>
     </table>
     <table style="margin-bottom:14px;">
@@ -5596,8 +5566,7 @@ function startEditEntry(entry){
     tr.querySelector('.rent').value = (r.rent === 0 || r.rent === '0') ? 'Guest' : (r.rent || '');
     tr.querySelector('.roomAdults').value = r.adults || '';
     tr.querySelector('.roomChildren').value = r.children || '';
-    tr.querySelector('.roomBreakfastAdults').value = r.breakfastAdults || '';
-    tr.querySelector('.roomBreakfastChildren').value = r.breakfastChildren || '';
+    tr.querySelector('.roomIncBreakfast').checked = !!((parseInt(r.breakfastAdults) || 0) || (parseInt(r.breakfastChildren) || 0));
     const movedOutInput = tr.querySelector('.movedOut');
     movedOutInput.value = r.movedOut || '';
     updateDateReadout(movedOutInput, tr.querySelector('.movedOutReadout'));
@@ -6989,6 +6958,21 @@ function getFilteredReportRows(){
   }
   if(toVal){
     rows = rows.filter(r => r.date <= toVal);
+  }
+
+  // Exclude Extras: drop payments from guests who weren't actually
+  // occupying a real room (not Misc/Snooker/BBQ/Bonfire) on the payment's
+  // own date — advances, deposits, and dues paid before/after the stay.
+  // What's left lines up with a given night's room revenue, so it can be
+  // checked against Revenue Report / Ledgers for that same day.
+  const excludeExtras = document.getElementById('filterExcludeExtras').checked;
+  if(excludeExtras){
+    const inhouseNights = new Set(
+      buildLedgersRecords()
+        .filter(n=> !isMiscRoomNo(n.roomNo))
+        .map(n=> n.date + '|' + n.guestId)
+    );
+    rows = rows.filter(r=> inhouseNights.has(r.date + '|' + r.id));
   }
 
   // search across everything
