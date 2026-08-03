@@ -1812,11 +1812,17 @@
   @media print{
     @page{
       size: A4 portrait;
-      margin: 16mm 14mm;
+      margin: 8mm;
     }
     .no-print{ display:none !important; }
     body{ background:#fff; }
-    .main{ max-width:100%; margin:0; padding:0; }
+    /* @page{ margin } above is a hint, not a guarantee — plenty of
+       browser/printer-driver combinations ignore or shrink it, especially
+       once a user's own print-dialog margin setting gets involved. Real
+       padding on the content itself is the only margin that reliably
+       survives every printer, so this is the actual margin, not a backup
+       for @page. */
+    .main{ max-width:100%; margin:0; padding:14mm 12mm; }
     .view{ display:none !important; }
     .view.active{ display:block !important; }
     .print-header{ display:block; }
@@ -3160,10 +3166,15 @@
 
   <div class="view" id="view-autocheckout">
 
-    <h1>Auto Checkout / Extend</h1>
-    <div class="sub">Guests whose checkout date has arrived — settle up and check them out one at a time. "Extend" is just a label here: these are the guests who might be extending their stay — nothing on this page extends anything automatically.</div>
+    <h1 class="no-print">Auto Checkout / Extend</h1>
+    <div class="sub no-print">Guests whose checkout date has arrived — settle up and check them out one at a time. "Extend" is just a label here: these are the guests who might be extending their stay — nothing on this page extends anything automatically.</div>
 
-    <div class="panel accent-filters">
+    <div class="print-header">
+      <h1 id="acPrintTitle">Checkout Due</h1>
+      <div class="print-header-sub" id="acPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
       <h2>As Of Date</h2>
       <div class="sub" style="margin-top:-6px;">For review only — Checkout/Undo are only ever available when this is set to today, so nothing can be checked out under the wrong date.</div>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
@@ -3174,17 +3185,22 @@
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
-        <button class="btn secondary" onclick="setAutoCheckoutToday()">Today</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="setAutoCheckoutToday()">Today</button>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="printAutoCheckout()">🖶 Print Checkout List</button>
+        </div>
       </div>
     </div>
 
     <div class="panel accent-filters">
-      <h2>Checkout Due <span id="acDueDateLabel"></span></h2>
-      <div class="sub" style="margin-top:-6px;">Last booked night was the day before. Rows in red owe money (or have paid for nights beyond what's booked) — check them out here manually once it's sorted.</div>
+      <h2 class="no-print">Checkout Due <span id="acDueDateLabel"></span></h2>
+      <div class="sub no-print" style="margin-top:-6px;">Last booked night was the day before. Rows in red owe money (or have paid for nights beyond what's booked) — check them out here manually once it's sorted.</div>
       <div id="autoCheckoutDueBody" style="overflow-x:auto; margin-top:14px;"><div class="empty-note">No data yet.</div></div>
     </div>
 
-    <div class="panel accent-report">
+    <div class="panel accent-report no-print">
       <h2>Checked Out <span id="acLogDateLabel"></span></h2>
       <div id="autoCheckoutLogBody"><div class="empty-note">No data yet.</div></div>
     </div>
@@ -8909,6 +8925,10 @@ function printBreakfastReport(){
   window.print();
 }
 
+function printAutoCheckout(){
+  window.print();
+}
+
 // =========================================================
 // DAY LOCK — admin-only. Locking a date stops any payment dated on it from
 // being added, edited, moved, or removed — a NEW payment (Add Payment, or
@@ -9148,6 +9168,8 @@ function renderAutoCheckout(){
   const dayWord = isToday ? 'Today' : 'on ' + formatDate(asOfDate);
   document.getElementById('acDueDateLabel').textContent = dayWord;
   document.getElementById('acLogDateLabel').textContent = dayWord;
+  document.getElementById('acPrintTitle').textContent = 'Checkout Due ' + formatDate(asOfDate);
+  document.getElementById('acPrintHeaderSub').textContent = 'Last booked night was the day before  ·  Generated ' + formatDate(todayStr());
   // Checkout/Undo only ever act on today — a past or future date here is
   // for review only, so nothing can be checked out under the wrong date.
 
@@ -9158,7 +9180,7 @@ function renderAutoCheckout(){
   } else {
     dueBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Check-in</th><th style="width:110px;">Checkout</th><th style="width:110px;">Due</th><th style="width:110px;">Status</th><th style="width:110px;"></th></tr></thead>
+        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Check-in</th><th style="width:110px;">Checkout</th><th style="width:110px;">Due</th><th style="width:110px;">Status</th><th class="no-print" style="width:110px;"></th></tr></thead>
         <tbody>${rows.map(r=>{
           const [cls, label] = STATUS_BADGE[r.status];
           const action = !isToday ? ''
@@ -9173,7 +9195,7 @@ function renderAutoCheckout(){
             <td>${r.checkoutDate ? formatDate(r.checkoutDate) : '-'}</td>
             <td style="${r.due !== 0 ? 'color:var(--danger); font-weight:700;' : ''}">${r.due.toLocaleString()}</td>
             <td><span class="status ${cls}">${label}</span></td>
-            <td>${action}</td>
+            <td class="no-print">${action}</td>
           </tr>`;
         }).join('')}</tbody>
       </table>`;
