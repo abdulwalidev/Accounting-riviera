@@ -2850,7 +2850,7 @@
         <input type="checkbox" id="filterExcludeAdvance">
         <label for="filterExcludeAdvance" style="margin:0;">Exclude Advance Received — pull out payments that actually prepaid a night from after To Date</label>
       </div>
-      <div class="sub no-print" style="margin-top:2px;">Turn both on and pick the same dates on Revenue Report to make the two totals match — that's what they're for.</div>
+      <div class="sub no-print" style="margin-top:2px;">Only ever splits out payments dated in this range — never pulls in money received before From Date or after To Date, even if it happens to cover a night in this range. So this can come in lower than Revenue Report's Collected total for the same range; see the note at the bottom of the report for why.</div>
       <div class="actions" style="margin-top:12px;">
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn secondary" onclick="clearFilters()">Clear Filters</button>
@@ -7361,28 +7361,31 @@ function renderReport(){
 
   // Both toggles off = exactly the original report: every payment DATED in
   // range, one merged day-by-day breakdown — no classification work runs.
-  // Either toggle on switches to a NIGHT-anchored view instead: which room-
-  // night a payment's money actually paid for, regardless of when that
-  // payment itself was made. A lump-sum payment routinely covers several
-  // nights at once, so a payment made before/after this range can still
-  // contribute part of its money to an in-range night (an old advance
-  // finally drawn down, a late settlement catching up) — that portion
-  // belongs in Main, not Prev Pending/Advance, and it's the reason Main's
-  // total equals Revenue Report's Collected total exactly once either
-  // toggle is on: both are now "money applied to an in-range night,"
-  // computed the same way, full stop, regardless of payment date.
+  // Either toggle on still only ever looks at payments DATED in range — you
+  // aren't accountable for money that arrived before your From Date, full
+  // stop, even if it happens to cover a night inside your range (an old
+  // advance drawn down later doesn't retroactively become "this period's"
+  // cash just because the stay landed here). What it DOES do is split each
+  // in-range-dated payment by which night it actually paid for: the piece
+  // that settled a night before From Date moves to Prev Pending, the piece
+  // that prepaid a night after To Date moves to Advance, and only the piece
+  // that paid for an in-range night stays in Main. A single payment can
+  // straddle more than one of those, so this is a fractional split, not a
+  // whole-row pick — same FIFO classifyPaymentsByNightRange always used,
+  // just filtered back down to payments dated in range before splitting.
   let mainRows = [], prevPendingRows = [], advanceRows = [];
   let totalExtra = 0; // money never applied to any known night at all (Snooker/BBQ/Misc, etc.) — shown nowhere in these three, same as Revenue Report's own Extra Money table
   if(!excludePrevPending && !excludeAdvance){
     mainRows = rows;
   } else {
     const { beforeRows, withinRows, afterRows, totalExtra: extra } = classifyPaymentsByNightRange(fromVal, toVal);
+    const dateInRange = r => (!fromVal || r.date >= fromVal) && (!toVal || r.date <= toVal);
     totalExtra = extra;
-    mainRows = filterRowsBySearch(withinRows, searchVal, cashSearchVal);
-    if(excludePrevPending) prevPendingRows = filterRowsBySearch(beforeRows, searchVal, cashSearchVal);
-    else mainRows = mainRows.concat(filterRowsBySearch(beforeRows, searchVal, cashSearchVal));
-    if(excludeAdvance) advanceRows = filterRowsBySearch(afterRows, searchVal, cashSearchVal);
-    else mainRows = mainRows.concat(filterRowsBySearch(afterRows, searchVal, cashSearchVal));
+    mainRows = filterRowsBySearch(withinRows.filter(dateInRange), searchVal, cashSearchVal);
+    if(excludePrevPending) prevPendingRows = filterRowsBySearch(beforeRows.filter(dateInRange), searchVal, cashSearchVal);
+    else mainRows = mainRows.concat(filterRowsBySearch(beforeRows.filter(dateInRange), searchVal, cashSearchVal));
+    if(excludeAdvance) advanceRows = filterRowsBySearch(afterRows.filter(dateInRange), searchVal, cashSearchVal);
+    else mainRows = mainRows.concat(filterRowsBySearch(afterRows.filter(dateInRange), searchVal, cashSearchVal));
   }
 
   if(mainRows.length === 0 && prevPendingRows.length === 0 && advanceRows.length === 0){
@@ -7448,41 +7451,41 @@ function renderReport(){
   }
 
   // ---- Prev Pending Received: only shown when its checkbox is on — the
-  // portion of any payment (made whenever) that actually settled a room-
-  // night from before fromVal — an old due finally cleared, not this
-  // range's own revenue. Not restricted to payments dated in range: a
-  // payment made during this range can still be catching up an older due,
-  // and a payment made before this range can also land here. ----
+  // portion of a payment RECEIVED in this range that actually settled a
+  // room-night from before fromVal — an old due finally cleared, still
+  // money you took in during this window, just not this window's own rent.
+  // Never includes a payment dated before fromVal itself — you're not
+  // accountable for cash that arrived before your own range started. ----
   if(excludePrevPending){
     html += `
       <div class="section-divider no-print"></div>
       <h2 class="no-print">Prev Pending Received</h2>
-      <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">The portion of any payment (made whenever) that actually settled a room-night from before ${fromVal ? formatDate(fromVal) : 'the start'} — an old due finally cleared, not this range's own revenue</div>
+      <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">The portion of a payment received in this range that actually settled a room-night from before ${fromVal ? formatDate(fromVal) : 'the start'} — an old due finally cleared, not this range's own revenue</div>
       <div class="rpt-day-group">${prevPendingRows.length ? prevPending.html : '<div class="empty-note">No payments settled a room-night before this range.</div>'}</div>`;
   }
 
   // ---- Advance Received: only shown when its checkbox is on — the portion
-  // of any payment (made whenever) that actually prepaid a room-night from
-  // after toVal — a future stay, not this range's own revenue. ----
+  // of a payment RECEIVED in this range that actually prepaid a room-night
+  // from after toVal — a future stay, not this range's own revenue. ----
   if(excludeAdvance){
     html += `
       <div class="section-divider no-print"></div>
       <h2 class="no-print">Advance Received</h2>
-      <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">The portion of any payment (made whenever) that actually prepaid a room-night from after ${toVal ? formatDate(toVal) : 'now'} — an advance for a future stay, not this range's own revenue</div>
+      <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">The portion of a payment received in this range that actually prepaid a room-night from after ${toVal ? formatDate(toVal) : 'now'} — an advance for a future stay, not this range's own revenue</div>
       <div class="rpt-day-group">${advanceRows.length ? advance.html : '<div class="empty-note">No payments prepaid a room-night after this range.</div>'}</div>`;
   }
 
-  // ---- Validation: only shown when either toggle is on — the point where
-  // Main stops being "payments dated in range" and becomes "money applied
-  // to an in-range night," which is the exact same definition Revenue
-  // Report's Collected uses. So with either toggle on, Payment Detail Total
-  // equals Revenue Report's Collected total EXACTLY (not approximately) —
-  // both are computed by the identical FIFO walk over the identical nights,
-  // just entered from two different report pages. The only money this
-  // deliberately leaves out of all three sections is genuinely unlinked
-  // money (Snooker/BBQ/Misc — never generates a room-night to begin with),
-  // called out by name below since Revenue Report excludes it the same way
-  // (into its own Extra Money table).
+  // ---- Validation: only shown when either toggle is on. Informational,
+  // not pass/fail — Main here only ever counts payments DATED in range
+  // (you're never made accountable for money that arrived before your own
+  // From Date, even if it happens to cover a night inside your range), so
+  // it answers "how much of what we actually took in during this window is
+  // this window's own rent." Revenue Report's Collected answers a
+  // different question — how much rent has been collected for these
+  // NIGHTS regardless of when the money arrived — so a gap here is normal,
+  // not a bug: it's exactly the money that paid for an in-range night but
+  // was received outside this range (see Revenue Report's own "Extra
+  // Money" table, or ask to see it broken out, for where it went).
   if(excludePrevPending || excludeAdvance){
     const rvData = buildRevenueReport(fromVal, toVal);
     const revenueCollected = Math.round(rvData.totalCollected * 100) / 100;
@@ -7496,11 +7499,11 @@ function renderReport(){
       <div class="panel accent-report no-print" style="margin-top:0;">
         <h2>Validation</h2>
         <div>
-          <span style="font-weight:700; color:${match ? 'var(--cash)' : 'var(--danger)'};">${match ? '✓' : '✗'}</span>
+          <span style="font-weight:700; color:${match ? 'var(--cash)' : 'var(--muted)'};">${match ? '✓' : 'ℹ'}</span>
           Payment Detail Total: Rs. ${mainRounded.toLocaleString()}  vs  Revenue Report Collected Total: Rs. ${revenueCollected.toLocaleString()}${match ? '' : '  — difference: Rs. ' + revDiff.toLocaleString()}
         </div>
         ${extraRounded > 0 ? `<div style="color:var(--muted); margin-top:6px;">Rs. ${extraRounded.toLocaleString()} received in this range isn't tied to any room (Snooker/BBQ/Misc) — left out of all three sections above, same as Revenue Report's own Extra Money table.</div>` : ''}
-        ${excludePrevPending && excludeAdvance ? '' : '<div style="color:var(--muted); margin-top:6px;">Turn on both toggles for the exact match — with only one on, the excluded side\'s share still sits inside Payment Detail Total.</div>'}
+        ${match ? '' : '<div style="color:var(--muted); margin-top:6px;">Expected: this counts only payments dated in this range. Revenue Report also counts money dated outside this range that paid for a night inside it — which this deliberately does not, since you\'re not accountable for cash received before your own From Date.</div>'}
       </div>`;
   }
 
