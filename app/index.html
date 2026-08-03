@@ -7021,10 +7021,24 @@ function updateAddPayPreview(){
 function classifyPaymentsByNightRange(fromDate, toDate){
   const all = loadAllEntries();
   const classification = {}; // paymentId -> { before, within, after, extra } amounts
+  // Rows for payments dated OUTSIDE [fromDate, toDate] whose money still
+  // landed (via FIFO) on a night INSIDE it — an old advance/reservation
+  // deposit finally being drawn down by an in-range stay, or a late
+  // settlement payment catching up in-range nights after checkout. These
+  // are invisible to the normal date-filtered `rows` (Payment Detail only
+  // ever looks at payments dated in range) but Revenue Report's Collected
+  // total counts them anyway (it only cares about the night's date) — so
+  // without surfacing them explicitly, Payment Detail Total structurally
+  // can never match Revenue Report Collected for any range that isn't
+  // "today" or "all days".
+  const carriedInRows = [];
 
   all.forEach(entry=>{
     const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     if(!startDate) return;
+    const guestId = entry.id;
+    const guest = entry.guestName || '(no name)';
+    const roomNos = formatRoomChain(entry.rooms);
 
     const nights = [];
     const roomCursor = {};
@@ -7043,7 +7057,9 @@ function classifyPaymentsByNightRange(fromDate, toDate){
     const payQueue = (entry.payments || [])
       .slice()
       .sort((a,b)=> (a.date || '').localeCompare(b.date || ''))
-      .map(p=> ({ id: p.id, remaining: parseFloat(p.total) || 0, total: parseFloat(p.total) || 0,
+      .map(p=> ({ id: p.id, date: p.date || '', mode: p.mode, bank: p.bank || '', remarks: p.remarks || '', type: p.type,
+        cash: p.cash || 0, account: p.account || 0,
+        remaining: parseFloat(p.total) || 0, total: parseFloat(p.total) || 0,
         towardBefore: 0, towardWithin: 0, towardAfter: 0 }));
 
     let payIdx = 0;
@@ -7075,10 +7091,23 @@ function classifyPaymentsByNightRange(fromDate, toDate){
       // check needs to subtract it back out to compare like for like.
       const extra = Math.max(pay.total - pay.towardBefore - pay.towardWithin - pay.towardAfter, 0);
       classification[pay.id] = { before: pay.towardBefore, within: pay.towardWithin + extra, after: pay.towardAfter, extra };
+
+      const dateInRange = (!fromDate || pay.date >= fromDate) && (!toDate || pay.date <= toDate);
+      if(!dateInRange && pay.towardWithin > 0.005){
+        const amount = Math.round(pay.towardWithin * 100) / 100;
+        const fraction = pay.total > 0 ? amount / pay.total : 0;
+        const cash = Math.round(pay.cash * fraction * 100) / 100;
+        const account = Math.round((amount - cash) * 100) / 100;
+        carriedInRows.push({
+          id: guestId, paymentId: pay.id, date: pay.date, guest, roomNos,
+          type: pay.type, mode: pay.mode, bank: pay.bank, remarks: pay.remarks,
+          cash, account, total: amount
+        });
+      }
     });
   });
 
-  return classification;
+  return { classification, carriedInRows };
 }
 
 // Carves a fractional amount out of a Report-page payment row, scaling
@@ -7162,7 +7191,8 @@ function getFilteredReportRows(){
 // Shared payment-rows-to-table renderer — used for both a single day-group
 // in the main breakdown and for the flat (not day-grouped) Prev Pending /
 // Advance sections, so all three read as the exact same table shape.
-function reportRowsToTableHtml(sectionRows){
+function reportRowsToTableHtml(sectionRows, opts){
+  const showDate = !!(opts && opts.showDate);
   let subtotal = 0, cash = 0, mcb = 0, alfalah = 0, haji = 0;
   const bodyRows = sectionRows.map((r, idx)=>{
     subtotal += r.total;
@@ -7176,6 +7206,7 @@ function reportRowsToTableHtml(sectionRows){
     return `
       <tr class="${isCash ? 'mode-cash' : 'mode-bank'}" style="cursor:pointer;" onclick="openDetail('${r.id}')" title="Open this guest">
         <td>${idx + 1}</td>
+        ${showDate ? `<td>${formatDate(r.date)}</td>` : ''}
         <td>${r.roomNos || '-'}</td>
         <td>${r.guest}</td>
         <td>${r.type}</td>
@@ -7197,6 +7228,7 @@ function reportRowsToTableHtml(sectionRows){
         <thead>
           <tr>
             <th style="width:50px;">Sr</th>
+            ${showDate ? '<th style="width:100px;">Date</th>' : ''}
             <th style="width:120px;">Room No</th>
             <th>Guest</th>
             <th style="width:100px;">Type</th>
@@ -7213,7 +7245,7 @@ function reportRowsToTableHtml(sectionRows){
         <tbody>${bodyRows}</tbody>
         <tfoot>
           <tr class="day-foot-total">
-            <td colspan="6">Total</td>
+            <td colspan="${showDate ? 7 : 6}">Total</td>
             <td class="cash-amt">${cash.toLocaleString()}</td>
             <td class="account-amt">${mcb.toLocaleString()}</td>
             <td class="account-amt">${alfalah.toLocaleString()}</td>
@@ -7262,10 +7294,17 @@ function renderReport(){
   // Report's own Collected total never counted it, so it has to come back
   // out for the reconciliation check below to compare like for like.
   let totalExtra = 0;
+  // Money from payments dated OUTSIDE this range that still paid for a
+  // night INSIDE it — invisible to `rows` (date-filtered), but counted by
+  // Revenue Report's Collected regardless of when the payment landed. Has
+  // to come back IN for the two totals to ever match on a range that isn't
+  // "today" or "all days".
+  let carriedInRows = [];
   if(!excludePrevPending && !excludeAdvance){
     mainRows.push(...rows);
   } else {
-    const classification = classifyPaymentsByNightRange(fromVal, toVal);
+    const { classification, carriedInRows: ci } = classifyPaymentsByNightRange(fromVal, toVal);
+    carriedInRows = ci;
     const EPS = 0.005; // ignore sub-cent rounding noise, not real money
     rows.forEach(r=>{
       const c = classification[r.paymentId];
@@ -7281,6 +7320,7 @@ function renderReport(){
   }
   const prevPending = reportRowsToTableHtml(prevPendingRows);
   const advance = reportRowsToTableHtml(advanceRows);
+  const carriedIn = reportRowsToTableHtml(carriedInRows, { showDate: true });
 
   let html = '';
 
@@ -7355,7 +7395,12 @@ function renderReport(){
       <div class="section-divider no-print"></div>
       <h2 class="no-print">Advance Received</h2>
       <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">Payments received in this range that actually prepaid a room-night from after ${toVal ? formatDate(toVal) : 'now'} — an advance for a future stay, not this range's own revenue</div>
-      <div class="rpt-day-group">${advanceRows.length ? advance.html : '<div class="empty-note">No advance payments received in this range.</div>'}</div>`;
+      <div class="rpt-day-group">${advanceRows.length ? advance.html : '<div class="empty-note">No advance payments received in this range.</div>'}</div>
+
+      <div class="section-divider no-print"></div>
+      <h2 class="no-print">Carried In From Outside This Range</h2>
+      <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">Payments dated outside ${fromVal ? formatDate(fromVal) : 'the start'}–${toVal ? formatDate(toVal) : 'now'} that still paid for a room-night inside it — an old deposit finally drawn down by an in-range stay, or a late settlement catching up an in-range night after the fact. Revenue Report's Collected total counts this money (it only looks at the night's date); it's added back in here so the two totals reconcile.</div>
+      <div class="rpt-day-group">${carriedInRows.length ? carriedIn.html : '<div class="empty-note">No money carried in from outside this range.</div>'}</div>`;
   }
 
   // ---- Validation: only shown with BOTH toggles on — that's the one
@@ -7364,13 +7409,15 @@ function renderReport(){
   // Detail Total against Revenue Report's own Collected total for this same
   // range — the two are computed by entirely different logic (payment-
   // centric here, night-centric there), so agreement is a real
-  // reconciliation signal, not a tautology. Money never tied to any real
-  // room-night (Snooker/BBQ/Misc charges — those never generate a "night"
-  // at all) still shows as a normal row up in the main table, but has to
-  // come back OUT of the comparison here: Revenue Report's Collected never
-  // counted it either (it puts that same money in its own Extra Money
-  // table instead), so leaving it in would make an otherwise-exact match
-  // look like a false mismatch.
+  // reconciliation signal, not a tautology. Two adjustments bridge the two
+  // definitions: money never tied to any real room-night (Snooker/BBQ/Misc
+  // — those never generate a "night" at all) still shows as a normal row
+  // up in the main table but has to come back OUT (Revenue Report's
+  // Collected never counted it either — it's in Revenue Report's own Extra
+  // Money table instead); money from OUTSIDE this range that still landed
+  // on an in-range night (Carried In, above) has to come back IN (Revenue
+  // Report counts it, but it's invisible to the date-filtered main table).
+  // With both applied, the two totals are exactly equal — not approximately.
   if(excludePrevPending && excludeAdvance){
     const totalReceivedInRange = Math.round(rows.reduce((s,r)=> s + r.total, 0) * 100) / 100;
     const splitSum = Math.round((mainGrandTotal + prevPending.subtotal + advance.subtotal) * 100) / 100;
@@ -7380,9 +7427,15 @@ function renderReport(){
     const revenueCollected = Math.round(rvData.totalCollected * 100) / 100;
     const mainRounded = Math.round(mainGrandTotal * 100) / 100;
     const extraRounded = Math.round(totalExtra * 100) / 100;
-    const comparableTotal = Math.round((mainGrandTotal - totalExtra) * 100) / 100;
+    const carriedInRounded = Math.round(carriedIn.subtotal * 100) / 100;
+    const comparableTotal = Math.round((mainGrandTotal - totalExtra + carriedIn.subtotal) * 100) / 100;
     const revDiff = Math.round((comparableTotal - revenueCollected) * 100) / 100;
     const revMatch = Math.abs(revDiff) < 1;
+
+    const adjustmentParts = [];
+    if(extraRounded > 0) adjustmentParts.push('− Not Tied to Any Room, e.g. Snooker/BBQ/Misc (Rs. ' + extraRounded.toLocaleString() + ')');
+    if(carriedInRounded > 0) adjustmentParts.push('+ Carried In From Outside This Range (Rs. ' + carriedInRounded.toLocaleString() + ')');
+    const adjustmentText = adjustmentParts.length ? ' ' + adjustmentParts.join(' ') + ' = Rs. ' + comparableTotal.toLocaleString() : '';
 
     html += `
       <div class="section-divider no-print"></div>
@@ -7394,7 +7447,7 @@ function renderReport(){
         </div>
         <div style="${revMatch ? '' : 'color:var(--danger); font-weight:700;'}">
           <span style="font-weight:700; color:${revMatch ? 'var(--cash)' : 'var(--danger)'};">${revMatch ? '✓' : '✗'}</span>
-          Payment Detail Total (Rs. ${mainRounded.toLocaleString()})${extraRounded > 0 ? ' − Not Tied to Any Room, e.g. Snooker/BBQ/Misc (Rs. ' + extraRounded.toLocaleString() + ') = Rs. ' + comparableTotal.toLocaleString() : ''}  vs  Revenue Report Collected Total: Rs. ${revenueCollected.toLocaleString()}${revMatch ? '' : '  — difference: Rs. ' + revDiff.toLocaleString()}
+          Payment Detail Total (Rs. ${mainRounded.toLocaleString()})${adjustmentText}  vs  Revenue Report Collected Total: Rs. ${revenueCollected.toLocaleString()}${revMatch ? '' : '  — difference: Rs. ' + revDiff.toLocaleString()}
         </div>
       </div>`;
   }
