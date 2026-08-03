@@ -6466,35 +6466,41 @@ function computeMovement(fromDate, toDate){
     if(checkIn && maxNights > 0){
       const computedCheckout = addDaysToDateStr(checkIn, maxNights);
       if(computedCheckout >= fromDate && computedCheckout <= toDate){
-        expectedCheckouts.push(item);
+        // Carries the computed date alongside the item so the Expected
+        // Checkouts panel can display the SAME date that put it on this
+        // list — the guest's own typed Check-out field (what the other two
+        // panels show) is a separate, sometimes-stale value and can easily
+        // read as a different date, which looks like the wrong guest showed up.
+        expectedCheckouts.push({ ...item, dateShown: computedCheckout });
       }
     }
 
     if(actualCheckout && actualCheckout >= fromDate && actualCheckout <= toDate){
-      actualCheckouts.push(item);
+      actualCheckouts.push({ ...item, dateShown: actualCheckout });
     }
   });
 
   return { checkins, expectedCheckouts, actualCheckouts };
 }
 
-function renderMovementList(containerId, items){
+function renderMovementList(containerId, items, dateColumnLabel){
   const el = document.getElementById(containerId);
   if(!el) return;
   if(items.length === 0){
     el.innerHTML = '<div class="empty-note">None.</div>';
     return;
   }
+  const label = dateColumnLabel || 'Exp. Checkout';
   const sorted = items.slice().sort((a,b)=> getLatestActivity(b.entry).localeCompare(getLatestActivity(a.entry)));
   el.innerHTML = `
     <table>
-      <thead><tr><th>Guest</th><th style="width:90px;">Room</th><th style="width:92px;">Check-in</th><th style="width:110px;">Exp. Checkout</th><th style="width:100px;">Due</th><th style="width:84px;">Status</th></tr></thead>
-      <tbody>${sorted.map(({entry, t, roomNos})=> `
+      <thead><tr><th>Guest</th><th style="width:90px;">Room</th><th style="width:92px;">Check-in</th><th style="width:110px;">${label}</th><th style="width:100px;">Due</th><th style="width:84px;">Status</th></tr></thead>
+      <tbody>${sorted.map(({entry, t, roomNos, dateShown})=> `
         <tr style="cursor:pointer;" onclick="openDetail('${entry.id}')" title="Open this guest">
           <td>${entry.guestName || '(no name)'}</td>
           <td>${roomNos || '-'}</td>
           <td>${entry.checkIn ? formatDateShort(entry.checkIn) : '-'}</td>
-          <td>${entry.checkOut ? formatDateShort(entry.checkOut) : '-'}</td>
+          <td>${dateShown ? formatDateShort(dateShown) : (entry.checkOut ? formatDateShort(entry.checkOut) : '-')}</td>
           <td style="font-weight:700; color:${t.due > 0 ? 'var(--danger)' : 'inherit'};">${t.due.toLocaleString()}</td>
           <td><span class="status ${t.status.toLowerCase()}">${t.status}</span></td>
         </tr>`).join('')}</tbody>
@@ -6565,9 +6571,9 @@ function renderCico(){
   }
 
   const move = computeMovement(fromDate, toDate);
-  renderMovementList('cicoExpectedCheckouts', move.expectedCheckouts);
-  renderMovementList('cicoActualCheckins', move.checkins);
-  renderMovementList('cicoActualCheckouts', move.actualCheckouts);
+  renderMovementList('cicoActualCheckins', move.checkins, 'Exp. Checkout');
+  renderMovementList('cicoActualCheckouts', move.actualCheckouts, 'Checked Out');
+  renderMovementList('cicoExpectedCheckouts', move.expectedCheckouts, 'Expected Checkout');
 }
 
 // ---- Guest detail page ----
