@@ -2914,7 +2914,10 @@
 
     <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <h1 style="margin:0;">Ledgers</h1>
-      <button class="btn secondary" onclick="showView('before19')">Before 19</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn secondary" onclick="showView('before19')">Before 19</button>
+        <button class="btn secondary" onclick="showView('handover')">Money Handover</button>
+      </div>
     </div>
     <div class="sub no-print">Room-night by room-night — rent charged, what was received against it (oldest payment first), and what's left for that night, by guest</div>
 
@@ -2981,6 +2984,38 @@
 
     <div class="panel accent-report">
       <div id="before19Body" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-handover">
+
+    <h1 class="no-print">Money Handover</h1>
+    <div class="sub no-print">Cash actually received against each room's rent — split into cash you took in DURING this range (hand this over) vs cash that paid for one of these nights but was received outside this range (already handed over back when it actually came in)</div>
+
+    <div class="print-header">
+      <h1 id="hoPrintTitle">Money Handover</h1>
+      <div class="print-header-sub" id="hoPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>From Date</label>
+          <input type="date" id="hoFrom">
+          <div class="date-readout" id="hoFromReadout"></div>
+        </div>
+        <div>
+          <label>To Date</label>
+          <input type="date" id="hoTo">
+          <div class="date-readout" id="hoToReadout"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="hoSummary" style="font-size:15px; font-weight:700; margin-bottom:10px;"></div>
+      <div id="handoverBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -3521,7 +3556,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','revenue','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','revenue','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -3580,6 +3615,7 @@ function showView(view, fromPopState){
   if(view === 'addpay') renderApList();
   if(view === 'ledgers') renderLedgers();
   if(view === 'before19') renderBefore19();
+  if(view === 'handover') renderMoneyHandover();
   if(view === 'revenue') renderRevenue();
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
@@ -3847,6 +3883,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
     updateDateReadout(e.target, document.getElementById('b19FromReadout'));
     renderBefore19();
   });
+  document.getElementById('hoFrom').value = '2026-07-19';
+  document.getElementById('hoTo').value = '2026-07-31';
+  ['hoFrom','hoTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', e=>{
+      updateDateReadout(e.target, document.getElementById(id + 'Readout'));
+      renderMoneyHandover();
+    });
+  });
+  updateDateReadout(document.getElementById('hoFrom'), document.getElementById('hoFromReadout'));
+  updateDateReadout(document.getElementById('hoTo'), document.getElementById('hoToReadout'));
   document.getElementById('acDate').addEventListener('input', renderAutoCheckout);
   document.getElementById('acDate').value = todayStr();
   document.getElementById('dlDate').value = todayStr();
@@ -3890,7 +3936,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   [
     'cicoFrom','cicoTo','auditEntryDate','dNewDate','gsearchDate',
     'filterFrom','filterTo','lgFrom','lgTo','rvFrom','rvTo',
-    'dlDate','acDate','auditPageDate','rdDate','b19From'
+    'dlDate','acDate','auditPageDate','rdDate','b19From','hoFrom','hoTo'
   ].forEach(addDateStepper);
 });
 
@@ -5868,6 +5914,7 @@ const GLOBAL_SEARCH_PAGES = [
   { label: 'Reservations', view: 'reservations', keywords: ['advance', 'booking', 'future check-ins'] },
   { label: 'Ledgers', view: 'ledgers', keywords: ['room-night', 'balance', 'credit', 'debt'] },
   { label: 'Before 19', view: 'before19', keywords: ['carried in', 'carry-in', 'pre-range', 'cash handler', 'before date'] },
+  { label: 'Money Handover', view: 'handover', keywords: ['cash handler', 'hand over', 'cash to give', 'room rent cash'] },
   { label: 'Full Audit', view: 'audit', keywords: ['change history', 'entry created', 'entry edited', 'all changes'] },
   { label: 'Day Lock', view: 'daylock', keywords: ['lock day', 'unlock day', 'locked days'] },
   { label: 'Delete Entity', view: 'deleteentity', keywords: ['delete', 'remove entry'] },
@@ -7625,6 +7672,119 @@ function renderBefore19(){
   const t = reportRowsToTableHtml(carriedInRows);
   container.innerHTML = `
     <div class="rpt-day-group">${t.html}</div>`;
+}
+
+// ---- Money Handover: how much CASH actually needs to change hands for a
+// date range, room by room. Built on top of buildRevenueReport's own
+// room/night data (same numbers as Revenue Report, not a separate
+// calculation) but re-sliced by which of a room's cash chunks are dated
+// IN this range (hand this over) vs dated outside it (a payment that
+// happens to fund one of these nights but was actually received earlier
+// or later, and — if it was ever handed over at all — was handed over as
+// part of THAT range's own handover, not this one). ----
+function renderMoneyHandover(){
+  const container = document.getElementById('handoverBody');
+  const summaryEl = document.getElementById('hoSummary');
+  if(!initialLoadDone){
+    container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    summaryEl.innerHTML = '';
+    return;
+  }
+  const fromVal = document.getElementById('hoFrom').value;
+  const toVal = document.getElementById('hoTo').value;
+  updateDateReadout(document.getElementById('hoFrom'), document.getElementById('hoFromReadout'));
+  updateDateReadout(document.getElementById('hoTo'), document.getElementById('hoToReadout'));
+  const dayWord = fromVal && toVal ? formatDate(fromVal) + ' to ' + formatDate(toVal) : 'this range';
+  document.getElementById('hoPrintTitle').textContent = 'Money Handover — ' + dayWord;
+  document.getElementById('hoPrintHeaderSub').textContent = 'Generated ' + formatDate(todayStr());
+
+  const data = buildRevenueReport(fromVal, toVal);
+  const dateInRange = d => (!fromVal || d >= fromVal) && (!toVal || d <= toVal);
+
+  // One row per room+guest (nights across the range summed together), not
+  // per room-night — a guest holding the same room for several nights in
+  // range is one handover line, not one per night.
+  const groups = {};
+  data.roomRows.forEach(r=>{
+    const key = r.guestId + '|' + r.roomNo;
+    if(!groups[key]) groups[key] = { roomNo: r.roomNo, guest: r.guest, guestId: r.guestId, rent: 0, cashInRange: 0, cashOutRange: 0, outRangeDates: [] };
+    const g = groups[key];
+    g.rent += r.rent;
+    r.chunks.forEach(c=>{
+      if(c.cash <= 0) return;
+      if(dateInRange(c.date)) g.cashInRange += c.cash;
+      else { g.cashOutRange += c.cash; g.outRangeDates.push(c.date); }
+    });
+  });
+  const rows = Object.values(groups)
+    .filter(g=> g.cashInRange > 0 || g.cashOutRange > 0)
+    .sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+
+  // Cash received in-range that isn't tied to any in-range night's rent at
+  // all (a misc charge, an advance, a top-up on an older due) — still
+  // physical cash that needs handing over, so it belongs in the total even
+  // though it has no room row of its own above.
+  const otherCashRows = (data.unlinkedPayments || []).filter(p=> p.source === 'Cash' && dateInRange(p.date));
+
+  const totalHandover = rows.reduce((s,r)=> s + r.cashInRange, 0) + otherCashRows.reduce((s,p)=> s + p.amount, 0);
+  const totalOld = rows.reduce((s,r)=> s + r.cashOutRange, 0);
+
+  summaryEl.textContent = 'Rs. ' + Math.round(totalHandover).toLocaleString() + ' to hand over for ' + dayWord;
+
+  if(rows.length === 0 && otherCashRows.length === 0){
+    container.innerHTML = '<div class="empty-note">No cash received for ' + dayWord + '.</div>';
+    return;
+  }
+
+  let html = `
+    <table>
+      <thead><tr>
+        <th style="width:50px;">Sr</th><th style="width:110px;">Room No</th><th>Guest</th>
+        <th style="width:110px;">Rent</th><th style="width:130px;">Cash Received (${dayWord})</th>
+        <th style="width:220px;">Cash Received Outside Range</th>
+      </tr></thead>
+      <tbody>`;
+  rows.forEach((r, idx)=>{
+    html += `
+      <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+        <td>${idx + 1}</td>
+        <td>${r.roomNo}</td>
+        <td>${r.guest}</td>
+        <td>${r.rent.toLocaleString()}</td>
+        <td class="cash-amt">${r.cashInRange > 0 ? 'Rs. ' + r.cashInRange.toLocaleString() : '-'}</td>
+        <td>${r.cashOutRange > 0 ? 'Rs. ' + r.cashOutRange.toLocaleString() + ' (' + r.outRangeDates.map(formatDateShort).join(', ') + ')' : '-'}</td>
+      </tr>`;
+  });
+  otherCashRows.forEach((p, idx)=>{
+    html += `
+      <tr style="cursor:pointer;" onclick="openDetail('${p.guestId}')" title="Open this guest">
+        <td>${rows.length + idx + 1}</td>
+        <td>${p.roomNo}</td>
+        <td>${p.guest} <span style="color:var(--muted);">(not room rent)</span></td>
+        <td>-</td>
+        <td class="cash-amt">Rs. ${p.amount.toLocaleString()}</td>
+        <td>-</td>
+      </tr>`;
+  });
+  html += `
+      </tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="4">Total to hand over for ${dayWord}</td>
+          <td class="cash-amt">Rs. ${totalHandover.toLocaleString()}</td>
+          <td>${totalOld > 0 ? 'Rs. ' + totalOld.toLocaleString() + ' already handled earlier' : '-'}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+
+  if(totalOld > 0){
+    html += `
+      <div class="sub no-print" style="margin-top:12px;">
+        <b>Why "Cash Received Outside Range" doesn't count toward the total:</b> that cash paid for a night inside ${dayWord}, but the guest actually handed it over on a different date — so it was already part of THAT date's handover, not this one. Counting it again here would double-hand-over the same rupee. For example, Haseeb Hassan's Rs. 75,000 cash (room D-102) funds a night inside this range but was received 12 Jun 2026 — long before this range even started — so it isn't part of what you owe the cash handler for ${dayWord}.
+      </div>`;
+  }
+
+  container.innerHTML = html;
 }
 
 function formatDate(iso){
