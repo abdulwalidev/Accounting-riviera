@@ -1811,8 +1811,8 @@
   }
   @media print{
     @page{
-      size: portrait;
-      margin: 14mm 12mm;
+      size: A4 portrait;
+      margin: 16mm 14mm;
     }
     .no-print{ display:none !important; }
     body{ background:#fff; }
@@ -1822,6 +1822,23 @@
     .print-header{ display:block; }
     .panel{ border:none; padding:0; margin-bottom:14px; }
     .day-group{ break-inside:avoid; page-break-inside:avoid; }
+
+    /* A4's printable width (page minus the margins above) is ~180mm —
+       comfortably less than the pixel min-widths several report tables
+       set on screen so their many columns (Revenue Report's Rooms table
+       especially, 10-13 columns) never need horizontal scrolling there.
+       Left alone, that on-screen min-width either gets silently clipped
+       at the page edge or forces the browser to shrink the ENTIRE page
+       (text included) down to fit — neither is "perfect." Overriding
+       every table back to auto/shrink-to-fit for print lets columns
+       narrow and cell text wrap instead, at full readable font size. */
+    #rvRoomsBody table, .rpt-day-group table{
+      table-layout:auto !important;
+      min-width:0 !important;
+      width:100% !important;
+    }
+    table{ table-layout:auto; }
+    th, td{ word-break:break-word; }
 
     /* A black-and-white printer converts saturated color to grayscale by
        luminance, not by how dark it reads on screen — a mid-blue label, a
