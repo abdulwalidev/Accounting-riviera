@@ -2763,6 +2763,15 @@
           </div>
         </div>
       </div>
+      <div class="checkline">
+        <input type="checkbox" id="filterExcludePrevPending">
+        <label for="filterExcludePrevPending" style="margin:0;">Exclude Prev Pending Received — pull out payments that actually settled a night from before From Date</label>
+      </div>
+      <div class="checkline">
+        <input type="checkbox" id="filterExcludeAdvance">
+        <label for="filterExcludeAdvance" style="margin:0;">Exclude Advance Received — pull out payments that actually prepaid a night from after To Date</label>
+      </div>
+      <div class="sub no-print" style="margin-top:2px;">Turn both on and pick the same dates on Revenue Report to make the two totals match — that's what they're for.</div>
       <div class="actions" style="margin-top:12px;">
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn secondary" onclick="clearFilters()">Clear Filters</button>
@@ -3659,6 +3668,8 @@ function clearFilters(){
   document.getElementById('filterTo').value = '';
   document.getElementById('filterSearch').value = '';
   document.getElementById('filterCashSearch').value = '';
+  document.getElementById('filterExcludePrevPending').checked = false;
+  document.getElementById('filterExcludeAdvance').checked = false;
   updateFilterDateReadouts();
   renderReport();
 }
@@ -3684,6 +3695,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   ['filterFrom','filterTo','filterSearch','filterCashSearch'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderReport);
+  });
+  ['filterExcludePrevPending','filterExcludeAdvance'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', renderReport);
   });
   document.getElementById('gsearchInput').addEventListener('input', renderSearch);
   document.getElementById('resvSearchInput').addEventListener('input', renderReservations);
@@ -7225,29 +7239,41 @@ function renderReport(){
     return;
   }
 
-  // Every payment is split by whichever night's rent it actually paid for,
-  // not its own date — a payment dated inside this range can still be
-  // partly settling an older due (Prev Pending) and/or partly prepaying a
-  // future stay (Advance), alongside whatever it paid for an in-range
-  // night. Only the in-range portion makes up the main day-by-day
-  // breakdown; a payment untouched by any out-of-range night stays whole.
-  const classification = classifyPaymentsByNightRange(fromVal, toVal);
+  const excludePrevPending = document.getElementById('filterExcludePrevPending').checked;
+  const excludeAdvance = document.getElementById('filterExcludeAdvance').checked;
+
+  // Both toggles off = exactly the original report: every payment in
+  // range, one merged day-by-day breakdown, nothing carved out — no
+  // classification work even runs. Turning a toggle on fractionally pulls
+  // that portion of each payment out into its own section instead: a
+  // lump-sum payment routinely covers several nights at once (partly an
+  // old due, partly an in-range night), so this has to be a fractional
+  // split (via classifyPaymentsByNightRange's full-stay FIFO), not a
+  // whole-row pick, or the totals stop reconciling against Revenue Report.
   const mainRows = [], prevPendingRows = [], advanceRows = [];
-  const EPS = 0.005; // ignore sub-cent rounding noise, not real money
-  rows.forEach(r=>{
-    const c = classification[r.paymentId];
-    if(!c){ mainRows.push(r); return; }
-    const beforeAmt = Math.round(c.before * 100) / 100;
-    const afterAmt = Math.round(c.after * 100) / 100;
-    const withinAmt = Math.round((r.total - beforeAmt - afterAmt) * 100) / 100;
-    if(beforeAmt > EPS) prevPendingRows.push(splitPaymentAmount(r, beforeAmt));
-    if(afterAmt > EPS) advanceRows.push(splitPaymentAmount(r, afterAmt));
-    if(withinAmt > EPS) mainRows.push(splitPaymentAmount(r, withinAmt));
-  });
+  if(!excludePrevPending && !excludeAdvance){
+    mainRows.push(...rows);
+  } else {
+    const classification = classifyPaymentsByNightRange(fromVal, toVal);
+    const EPS = 0.005; // ignore sub-cent rounding noise, not real money
+    rows.forEach(r=>{
+      const c = classification[r.paymentId];
+      if(!c){ mainRows.push(r); return; }
+      const beforeAmt = excludePrevPending ? Math.round(c.before * 100) / 100 : 0;
+      const afterAmt = excludeAdvance ? Math.round(c.after * 100) / 100 : 0;
+      const withinAmt = Math.round((r.total - beforeAmt - afterAmt) * 100) / 100;
+      if(beforeAmt > EPS) prevPendingRows.push(splitPaymentAmount(r, beforeAmt));
+      if(afterAmt > EPS) advanceRows.push(splitPaymentAmount(r, afterAmt));
+      if(withinAmt > EPS) mainRows.push(withinAmt >= r.total - EPS ? r : splitPaymentAmount(r, withinAmt));
+    });
+  }
+  const prevPending = reportRowsToTableHtml(prevPendingRows);
+  const advance = reportRowsToTableHtml(advanceRows);
 
   let html = '';
 
-  // ---- Main day-by-day breakdown (Prev Pending / Advance excluded) ----
+  // ---- Main day-by-day breakdown (Prev Pending / Advance excluded, if their toggle is on) ----
+  const mainTotalLabel = (excludePrevPending || excludeAdvance) ? 'Payment Detail Total' : 'Grand Total';
   let mainGrandTotal = 0, mainCash = 0, mainMCB = 0, mainAlfalah = 0, mainHaji = 0;
   if(mainRows.length === 0){
     html += '<div class="empty-note">No current-range payments match these filters.</div>';
@@ -7275,7 +7301,7 @@ function renderReport(){
       dayHtml = `
         <div class="rpt-grandtotal-box">
           <div class="rpt-grandtotal-head">
-            <div class="rpt-grandtotal-label">Payment Detail Total</div>
+            <div class="rpt-grandtotal-label">${mainTotalLabel}</div>
             <div class="rpt-grandtotal-range">${formatDate(oldestDate)} to ${formatDate(newestDate)}</div>
           </div>
           <table>
@@ -7298,54 +7324,63 @@ function renderReport(){
     html += dayHtml;
   }
 
-  // ---- Prev Pending Received: in-range payments that settled a night from
-  // before fromVal — an old due finally cleared, not this range's revenue ----
-  const prevPending = reportRowsToTableHtml(prevPendingRows);
-  html += `
-    <div class="section-divider no-print"></div>
-    <h2 class="no-print">Prev Pending Received</h2>
-    <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">Payments received in this range that actually settled a room-night from before ${fromVal ? formatDate(fromVal) : 'the start'} — an old due finally cleared, not this range's own revenue</div>
-    <div class="rpt-day-group">${prevPendingRows.length ? prevPending.html : '<div class="empty-note">No prev pending payments received in this range.</div>'}</div>`;
+  // ---- Prev Pending Received: only shown when its checkbox is on — in-range
+  // payments that settled a night from before fromVal (an old due finally
+  // cleared, not this range's own revenue) ----
+  if(excludePrevPending){
+    html += `
+      <div class="section-divider no-print"></div>
+      <h2 class="no-print">Prev Pending Received</h2>
+      <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">Payments received in this range that actually settled a room-night from before ${fromVal ? formatDate(fromVal) : 'the start'} — an old due finally cleared, not this range's own revenue</div>
+      <div class="rpt-day-group">${prevPendingRows.length ? prevPending.html : '<div class="empty-note">No prev pending payments received in this range.</div>'}</div>`;
+  }
 
-  // ---- Advance Received: in-range payments that prepaid a night from
-  // after toVal — an advance for a future stay, not this range's revenue ----
-  const advance = reportRowsToTableHtml(advanceRows);
-  html += `
-    <div class="section-divider no-print"></div>
-    <h2 class="no-print">Advance Received</h2>
-    <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">Payments received in this range that actually prepaid a room-night from after ${toVal ? formatDate(toVal) : 'now'} — an advance for a future stay, not this range's own revenue</div>
-    <div class="rpt-day-group">${advanceRows.length ? advance.html : '<div class="empty-note">No advance payments received in this range.</div>'}</div>`;
+  // ---- Advance Received: only shown when its checkbox is on — in-range
+  // payments that prepaid a night from after toVal (a future stay, not this
+  // range's own revenue) ----
+  if(excludeAdvance){
+    html += `
+      <div class="section-divider no-print"></div>
+      <h2 class="no-print">Advance Received</h2>
+      <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">Payments received in this range that actually prepaid a room-night from after ${toVal ? formatDate(toVal) : 'now'} — an advance for a future stay, not this range's own revenue</div>
+      <div class="rpt-day-group">${advanceRows.length ? advance.html : '<div class="empty-note">No advance payments received in this range.</div>'}</div>`;
+  }
 
-  // ---- Validation: self-check the three-way split, then cross-check
-  // against Revenue Report's Collected total for this same range — the two
-  // are computed by entirely different logic (payment-centric here,
-  // night-centric there), so agreement is a real reconciliation signal, not
-  // a tautology. A small residual is expected/normal: Revenue Report's own
-  // "Extra Money" (misc charges, deposits) isn't tied to any room-night, so
-  // it never lands in Payment Detail Total on this side either.
-  const totalReceivedInRange = Math.round(rows.reduce((s,r)=> s + r.total, 0) * 100) / 100;
-  const splitSum = Math.round((mainGrandTotal + prevPending.subtotal + advance.subtotal) * 100) / 100;
-  const splitOk = Math.abs(splitSum - totalReceivedInRange) < 0.01;
+  // ---- Validation: only shown with BOTH toggles on — that's the one
+  // combination this is built to reconcile. Self-checks that the three-way
+  // split sums back to the total received, then cross-checks Payment
+  // Detail Total against Revenue Report's own Collected total for this same
+  // range — the two are computed by entirely different logic (payment-
+  // centric here, night-centric there), so agreement is a real
+  // reconciliation signal, not a tautology. A small residual is expected/
+  // normal: a room-night inside this range that was paid by a payment
+  // dated OUTSIDE it is invisible to Payment Detail (payment-date-scoped)
+  // but still counted by Revenue Report (night-date-scoped).
+  if(excludePrevPending && excludeAdvance){
+    const totalReceivedInRange = Math.round(rows.reduce((s,r)=> s + r.total, 0) * 100) / 100;
+    const splitSum = Math.round((mainGrandTotal + prevPending.subtotal + advance.subtotal) * 100) / 100;
+    const splitOk = Math.abs(splitSum - totalReceivedInRange) < 0.01;
 
-  const rvData = buildRevenueReport(fromVal, toVal);
-  const revenueCollected = Math.round(rvData.totalCollected * 100) / 100;
-  const mainRounded = Math.round(mainGrandTotal * 100) / 100;
-  const revDiff = Math.round((mainRounded - revenueCollected) * 100) / 100;
-  const revMatch = Math.abs(revDiff) < 1;
+    const rvData = buildRevenueReport(fromVal, toVal);
+    const revenueCollected = Math.round(rvData.totalCollected * 100) / 100;
+    const mainRounded = Math.round(mainGrandTotal * 100) / 100;
+    const revDiff = Math.round((mainRounded - revenueCollected) * 100) / 100;
+    const revMatch = Math.abs(revDiff) < 1;
 
-  html += `
-    <div class="section-divider no-print"></div>
-    <div class="panel accent-report no-print" style="margin-top:0;">
-      <h2>Validation</h2>
-      <div style="margin-bottom:10px;">
-        <span style="font-weight:700; color:${splitOk ? 'var(--cash)' : 'var(--danger)'};">${splitOk ? '✓' : '✗'}</span>
-        Payment Detail Total (Rs. ${mainRounded.toLocaleString()}) + Prev Pending Received (Rs. ${Math.round(prevPending.subtotal).toLocaleString()}) + Advance Received (Rs. ${Math.round(advance.subtotal).toLocaleString()}) = Total Money Received in Range (Rs. ${totalReceivedInRange.toLocaleString()})
-      </div>
-      <div style="${revMatch ? '' : 'color:var(--danger); font-weight:700;'}">
-        <span style="font-weight:700; color:${revMatch ? 'var(--cash)' : 'var(--danger)'};">${revMatch ? '✓' : '✗'}</span>
-        Payment Detail Total: Rs. ${mainRounded.toLocaleString()}  vs  Revenue Report Collected Total: Rs. ${revenueCollected.toLocaleString()}${revMatch ? '' : '  — difference: Rs. ' + revDiff.toLocaleString()}
-      </div>
-    </div>`;
+    html += `
+      <div class="section-divider no-print"></div>
+      <div class="panel accent-report no-print" style="margin-top:0;">
+        <h2>Validation</h2>
+        <div style="margin-bottom:10px;">
+          <span style="font-weight:700; color:${splitOk ? 'var(--cash)' : 'var(--danger)'};">${splitOk ? '✓' : '✗'}</span>
+          Payment Detail Total (Rs. ${mainRounded.toLocaleString()}) + Prev Pending Received (Rs. ${Math.round(prevPending.subtotal).toLocaleString()}) + Advance Received (Rs. ${Math.round(advance.subtotal).toLocaleString()}) = Total Money Received in Range (Rs. ${totalReceivedInRange.toLocaleString()})
+        </div>
+        <div style="${revMatch ? '' : 'color:var(--danger); font-weight:700;'}">
+          <span style="font-weight:700; color:${revMatch ? 'var(--cash)' : 'var(--danger)'};">${revMatch ? '✓' : '✗'}</span>
+          Payment Detail Total: Rs. ${mainRounded.toLocaleString()}  vs  Revenue Report Collected Total: Rs. ${revenueCollected.toLocaleString()}${revMatch ? '' : '  — difference: Rs. ' + revDiff.toLocaleString()}
+        </div>
+      </div>`;
+  }
 
   container.innerHTML = html;
 }
