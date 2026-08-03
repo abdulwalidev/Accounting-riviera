@@ -1822,8 +1822,70 @@
     .print-header{ display:block; }
     .panel{ border:none; padding:0; margin-bottom:14px; }
     .day-group{ break-inside:avoid; page-break-inside:avoid; }
-    table{ font-size:11px; }
-    th{ background:#eee !important; color:#000 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+    /* A black-and-white printer converts saturated color to grayscale by
+       luminance, not by how dark it reads on screen — a mid-blue label, a
+       pastel row tint, or (worst case) white text on a colored fill can
+       all wash out to unreadable. None of the color-coding here (cash vs
+       account, status pills, accent headings) is load-bearing on paper —
+       bold text and solid borders carry the same information without
+       depending on how one particular printer happens to render a color —
+       so print drops color entirely instead of gambling on it. This has
+       to be forced with !important because a lot of the color throughout
+       the app is set via inline style="color:var(--x)" on individual
+       cells (built at render time), which only a stylesheet !important
+       rule can override.
+       -webkit-print-color-adjust / print-color-adjust:exact is required
+       on anything that still needs a background to print (table headers,
+       total rows) — browsers strip "decorative" backgrounds by default
+       in print unless told this one is exact/functional, not decorative. */
+    *{
+      color:#000 !important;
+      box-shadow:none !important;
+      text-shadow:none !important;
+    }
+    table{ font-size:11px; border-collapse:collapse; width:100%; }
+    th, td{
+      border:1px solid #000 !important;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    th{
+      background:#ddd !important;
+      color:#000 !important;
+      font-weight:700;
+    }
+    /* Cash/Account color-coding and pastel row tints all collapse to plain
+       white rows — the Mode column (now a bordered box, see .mode-badge
+       below) and the Cash/Account column headers already say which is
+       which, so nothing is actually lost by dropping the tint. */
+    tbody tr:nth-child(even) td,
+    tr.mode-cash td, tr.mode-bank td,
+    tbody tr.mode-cash:nth-child(even) td, tbody tr.mode-bank:nth-child(even) td{
+      background:#fff !important;
+    }
+    tr.day-foot-total td{
+      background:#eee !important;
+      border-top:2px solid #000 !important;
+      font-weight:700;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    .day-head, .rpt-day-head{
+      background:#fff !important;
+      color:#000 !important;
+      border:2px solid #000 !important;
+      border-radius:0;
+    }
+    .mode-badge, .status{
+      background:#fff !important;
+      color:#000 !important;
+      border:1px solid #000 !important;
+    }
+    .rpt-day-group, .rpt-grandtotal-box, .total-due-box, .date-box,
+    .rev-grandtotal-box, .panel.accent-guest, .panel.accent-rooms,
+    .panel.accent-payments{
+      background:#fff !important;
+      border:2px solid #000 !important;
+    }
   }
 
   /* ================= Dark theme ================= */
