@@ -7516,9 +7516,10 @@ function getFilteredLedgersRecords(){
   if(toVal) rows = rows.filter(r=> r.date <= toVal);
   if(personId) rows = rows.filter(r=> r.guestId === personId);
 
-  // sorted by guest (so a guest's nights land next to each other), then
-  // by date within that guest — the multi-night "connected" read
-  rows.sort((a,b)=> a.guest.localeCompare(b.guest) || a.date.localeCompare(b.date) || a.roomNo.localeCompare(b.roomNo));
+  // Latest date first, always — guest name and then room number only break
+  // ties on the same date (e.g. a multi-room booking for one guest that
+  // night still lands next to itself).
+  rows.sort((a,b)=> b.date.localeCompare(a.date) || a.guest.localeCompare(b.guest) || a.roomNo.localeCompare(b.roomNo));
   return { rows, fromVal, toVal };
 }
 
@@ -7551,10 +7552,10 @@ function renderLedgers(){
     totalDebt += r.rent;
     totalCredit += r.received;
     totalBalance += balance;
-    // A guest's second and later night in the list reads as a continuation
-    // of the row above it (same guest, next night) rather than a fresh,
-    // unrelated entry — a small tree connector plus a lighter name marks
-    // that, instead of repeating the full-strength name on every row.
+    // Two adjacent rows for the same guest (same date, more than one room
+    // that night) read as one connected entry rather than two unrelated
+    // ones — a small tree connector plus a lighter name marks that,
+    // instead of repeating the full-strength name on every row.
     const isContinuation = r.guestId === lastGuestId;
     lastGuestId = r.guestId;
     const nameCell = isContinuation
