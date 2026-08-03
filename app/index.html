@@ -2958,6 +2958,7 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportBreakfastExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printBreakfastReport()">🖶 Print</button>
+          <button class="btn secondary" id="bfSimpleBtn" onclick="toggleBreakfastSimpleView()">Simple</button>
         </div>
       </div>
     </div>
@@ -8206,6 +8207,17 @@ function buildBreakfastReport(){
   return { rows, roomCount, totals };
 }
 
+// Simple view: kitchen-facing cut of the same data — just who's getting
+// breakfast and how many, room by room. A room with nobody having
+// breakfast at all stays in the list (so it's clear it wasn't missed) but
+// reads struck-through rather than as a normal row.
+let bfSimpleView = false;
+function toggleBreakfastSimpleView(){
+  bfSimpleView = !bfSimpleView;
+  document.getElementById('bfSimpleBtn').textContent = bfSimpleView ? 'Full View' : 'Simple';
+  renderBreakfastReport();
+}
+
 function renderBreakfastReport(){
   const body = document.getElementById('bfBody');
   const summary = document.getElementById('bfSummary');
@@ -8225,6 +8237,28 @@ function renderBreakfastReport(){
     body.innerHTML = '<div class="empty-note">Nobody in-house right now.</div>';
     return;
   }
+
+  if(bfSimpleView){
+    body.innerHTML = `
+      <table>
+        <thead><tr>
+          <th style="width:110px;">Room No</th>
+          <th>Guest</th>
+          <th class="th-green" style="width:140px;">Breakfast Adults</th>
+          <th class="th-green" style="width:140px;">Breakfast Children</th>
+        </tr></thead>
+        <tbody>${data.rows.map(r=> `
+          <tr style="cursor:pointer; ${r.breakfastTotal === 0 ? 'text-decoration:line-through; opacity:0.6;' : ''}" onclick="openDetail('${r.guestId}')" title="Open this guest">
+            <td>${r.roomNo}</td>
+            <td>${r.guest}</td>
+            <td>${r.breakfastAdults}</td>
+            <td>${r.breakfastChildren}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+    return;
+  }
+
   body.innerHTML = `
     <table>
       <thead><tr>
