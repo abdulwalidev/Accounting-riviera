@@ -7349,12 +7349,27 @@ function renderReport(){
   const searchVal = document.getElementById('filterSearch').value.trim().toLowerCase();
   const cashSearchVal = document.getElementById('filterCashSearch').value.replace(/,/g,'').trim();
 
+  // Classify once, whenever there's a From Date or either toggle needs it —
+  // powers Prev Pending/Advance/Main splitting below AND the "Before
+  // <fromVal>" carried-in lookup, off the same FIFO walk.
+  const classified = (fromVal || excludePrevPending || excludeAdvance) ? classifyPaymentsByNightRange(fromVal, toVal) : null;
+
+  // "Before <fromVal>": payments DATED before this range whose money still
+  // funded a room-night on or after fromVal — already counted in Ledgers
+  // and Revenue Report for this range, even though Payment Detail Total
+  // below (payment-date-scoped) never includes it. Independent of both
+  // toggles above — this is its own always-available lookup.
+  const carriedInRows = (fromVal && classified)
+    ? filterRowsBySearch(classified.withinRows.concat(classified.afterRows).filter(r => r.date < fromVal), searchVal, cashSearchVal)
+    : [];
+
   // Both toggles off: bail out here exactly like before — no payment dated
   // in range at all, nothing to show. With either toggle on, `rows` being
   // empty does NOT mean there's nothing to show — money from OUTSIDE this
   // range can still land in Main/Prev Pending/Advance via night-anchoring,
-  // so that check happens later, after those are actually built.
-  if(rows.length === 0 && !excludePrevPending && !excludeAdvance){
+  // so that check happens later, after those are actually built. Also
+  // don't bail if there's carried-in money to report even with Main empty.
+  if(rows.length === 0 && !excludePrevPending && !excludeAdvance && carriedInRows.length === 0){
     container.innerHTML = '<div class="empty-note">No payments match these filters.</div>';
     return;
   }
@@ -7378,7 +7393,7 @@ function renderReport(){
   if(!excludePrevPending && !excludeAdvance){
     mainRows = rows;
   } else {
-    const { beforeRows, withinRows, afterRows, totalExtra: extra } = classifyPaymentsByNightRange(fromVal, toVal);
+    const { beforeRows, withinRows, afterRows, totalExtra: extra } = classified;
     const dateInRange = r => (!fromVal || r.date >= fromVal) && (!toVal || r.date <= toVal);
     totalExtra = extra;
     mainRows = filterRowsBySearch(withinRows.filter(dateInRange), searchVal, cashSearchVal);
@@ -7388,13 +7403,14 @@ function renderReport(){
     else mainRows = mainRows.concat(filterRowsBySearch(afterRows.filter(dateInRange), searchVal, cashSearchVal));
   }
 
-  if(mainRows.length === 0 && prevPendingRows.length === 0 && advanceRows.length === 0){
+  if(mainRows.length === 0 && prevPendingRows.length === 0 && advanceRows.length === 0 && carriedInRows.length === 0){
     container.innerHTML = '<div class="empty-note">No payments match these filters.</div>';
     return;
   }
 
   const prevPending = reportRowsToTableHtml(prevPendingRows);
   const advance = reportRowsToTableHtml(advanceRows);
+  const carriedIn = reportRowsToTableHtml(carriedInRows);
 
   let html = '';
 
@@ -7473,6 +7489,21 @@ function renderReport(){
       <h2 class="no-print">Advance Received</h2>
       <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">The portion of a payment received in this range that actually prepaid a room-night from after ${toVal ? formatDate(toVal) : 'now'} — an advance for a future stay, not this range's own revenue</div>
       <div class="rpt-day-group">${advanceRows.length ? advance.html : '<div class="empty-note">No payments prepaid a room-night after this range.</div>'}</div>`;
+  }
+
+  // ---- Before <fromVal>: payments dated before this range whose money
+  // still funded a room-night on or after fromVal — already counted in
+  // Ledgers and Revenue Report for this range, but Payment Detail Total
+  // above never includes it (it only ever counts money dated in this
+  // range). Shown whenever From Date is set, independent of both toggles —
+  // this is the itemized answer to "where did the rest of Revenue Report's
+  // Collected total go." ----
+  if(fromVal && carriedInRows.length > 0){
+    html += `
+      <div class="section-divider no-print"></div>
+      <h2 class="no-print">Before ${formatDate(fromVal)}</h2>
+      <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">Payments received before ${formatDate(fromVal)} whose money still funded a room-night on or after ${formatDate(fromVal)} — already counted in Ledgers and Revenue Report for this range, but not in Payment Detail Total above since that only counts money dated in this range</div>
+      <div class="rpt-day-group">${carriedIn.html}</div>`;
   }
 
   // ---- Validation: only shown when either toggle is on. Informational,
