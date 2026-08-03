@@ -6227,21 +6227,26 @@ function computeRoomStatuses(asOfDate){
       current = all.find(e=> e.id === lastNight.guestId) || null;
       lastNightDate = lastNight.date;
     }
-    // Housekeeping (Ready/Dirty/OOO) is tracked separately from booking —
-    // it only counts as "someone dealt with this room" if it was touched on
-    // or after the guest's last night. A Ready/Dirty status left over from
-    // two guests ago must NOT silently suppress today's Extended flag.
     const housekeeping = roomStatusMap[roomNo];
-    const resolvedByHousekeeping = !!(housekeeping && lastNightDate && housekeeping.updated_at &&
-      toKarachiDateStr(housekeeping.updated_at) >= lastNightDate);
     const housekeepingStatus = housekeeping ? housekeeping.status : 'Ready';
 
     // Nobody's confirmed this room actually emptied out — its last booked
     // night was yesterday and nothing's been booked since. Treat it as
     // still inhouse (gold "Extended") rather than silently reading Vacant,
-    // until someone either books it fresh or marks the room Dirty/OOO/Ready
-    // via Check Out Today or the room-status modal.
-    const extended = !todayNight && lastNightDate === addDaysToDateStr(refDate, -1) && !resolvedByHousekeeping;
+    // until someone either books it fresh or actually confirms the guest
+    // left (Check Out Today, or the Extended room-status modal's checkout
+    // action — both of which set the guest's own Actual Checkout field).
+    // Deliberately NOT resolved by a bare housekeeping-status touch: the
+    // room-status modal is also used for routine cleaning/OOO housekeeping
+    // completely unrelated to this specific guest's departure, and staff
+    // touch it constantly for reasons that have nothing to do with anyone
+    // checking out. Trusting that timestamp let a guest silently vanish
+    // from Inhouse/Room Detail/Dashboard the moment their booked nights
+    // ran out, with no checkout ever confirmed by anyone — only this
+    // guest's own Actual Checkout date can resolve Extended.
+    const actualCheckoutDate = current ? getDetailValue(current, 'Actual Checkout') : '';
+    const resolvedByCheckout = !!(actualCheckoutDate && lastNightDate && actualCheckoutDate >= lastNightDate);
+    const extended = !todayNight && lastNightDate === addDaysToDateStr(refDate, -1) && !resolvedByCheckout;
     return {
       roomNo,
       section: getRoomSection(roomNo),
@@ -8944,27 +8949,24 @@ function buildAutoCheckoutRows(asOfDate){
       };
     });
 
-  // Checked out on asOfDate via this page (bulk or the per-row button)
-  // stays listed here too, with an Undo, instead of quietly vanishing.
+  // Checked out on asOfDate stays listed here too, with an Undo, instead of
+  // quietly vanishing. Driven off each guest's own Actual Checkout field —
+  // NOT editLogs, which is a same-session-only write log (guest_edits is
+  // deliberately never pulled from the cloud on load) and would silently
+  // miss any checkout done earlier today from a different device, by a
+  // different staff member, or before the page was last refreshed.
   const all = loadAllEntries();
   const dueGuestIds = new Set(due.map(r=> r.guestId));
-  const seen = new Set();
-  const checkedOut = editLogs
-    .filter(l=> l.action === 'checked_out' && l.at && toKarachiDateStr(l.at) === asOfDate && !dueGuestIds.has(l.guest_id))
-    .sort((a,b)=> (b.at || '').localeCompare(a.at || ''))
-    .map(l=>{
-      if(seen.has(l.guest_id)) return null; // keep only the latest checkout per guest that day
-      seen.add(l.guest_id);
-      const entry = all.find(e=> e.id === l.guest_id);
-      if(!entry) return null;
+  const checkedOut = all
+    .filter(entry=> !dueGuestIds.has(entry.id) && getDetailValue(entry, 'Actual Checkout') === asOfDate)
+    .map(entry=>{
       const roomNos = formatRoomChain(entry.rooms);
       return {
         roomNo: roomNos || '-', guestId: entry.id, guest: entry.guestName || '(no name)',
         checkIn: entry.checkIn || '', checkoutDate: computeExpectedCheckoutDate(entry),
         due: computeTotals(entry).due, status: 'checked_out'
       };
-    })
-    .filter(Boolean);
+    });
 
   return due.concat(checkedOut).sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
 }
