@@ -7577,11 +7577,6 @@ function renderReport(){
     const extraRounded = Math.round(totalExtra * 100) / 100;
     const revDiff = Math.round((mainRounded - revenueCollected) * 100) / 100;
     const match = Math.abs(revDiff) < 1;
-    const carriedInTotal = Math.round(carriedIn.subtotal * 100) / 100;
-    const carriedAfterTotal = Math.round(carriedAfter.subtotal * 100) / 100;
-    const accountedTotal = Math.round((mainRounded + carriedInTotal + carriedAfterTotal) * 100) / 100;
-    const accountedDiff = Math.round((revenueCollected - accountedTotal) * 100) / 100;
-    const accountedMatch = Math.abs(accountedDiff) < 1;
 
     html += `
       <div class="section-divider no-print"></div>
@@ -7592,12 +7587,7 @@ function renderReport(){
           Payment Detail Total: Rs. ${mainRounded.toLocaleString()}  vs  Revenue Report Collected Total: Rs. ${revenueCollected.toLocaleString()}${match ? '' : '  — difference: Rs. ' + revDiff.toLocaleString()}
         </div>
         ${extraRounded > 0 ? `<div style="color:var(--muted); margin-top:6px;">Rs. ${extraRounded.toLocaleString()} received in this range isn't tied to any room (Snooker/BBQ/Misc) — left out of all three sections above, same as Revenue Report's own Extra Money table.</div>` : ''}
-        ${match ? '' : `
-        <div style="color:var(--muted); margin-top:6px;">Expected: this counts only payments dated in this range. Revenue Report also counts money dated outside this range that paid for a night inside it — which this deliberately does not, since you're not accountable for cash received before your own From Date.</div>
-        <div style="margin-top:6px;">
-          <span style="font-weight:700; color:${accountedMatch ? 'var(--cash)' : 'var(--danger)'};">${accountedMatch ? '✓' : '✗'}</span>
-          Full reconciliation: Payment Detail Total (Rs. ${mainRounded.toLocaleString()}) + Before ${fromVal ? formatDate(fromVal) : 'range'} (Rs. ${carriedInTotal.toLocaleString()}) + After ${toVal ? formatDate(toVal) : 'range'} (Rs. ${carriedAfterTotal.toLocaleString()}) = Rs. ${accountedTotal.toLocaleString()}${accountedMatch ? ' — matches Revenue Report Collected exactly, so every rupee is accounted for.' : ', still Rs. ' + Math.abs(accountedDiff).toLocaleString() + (accountedDiff > 0 ? ' short of' : ' over') + ' Revenue Report Collected — this residual is unexplained and needs investigating.'}
-        </div>`}
+        ${match ? '' : '<div style="color:var(--muted); margin-top:6px;">Expected: this counts only payments dated in this range. Revenue Report also counts money dated outside this range that paid for a night inside it — which this deliberately does not, since you\'re not accountable for cash received before your own From Date.</div>'}
       </div>`;
   }
 
