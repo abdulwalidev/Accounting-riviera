@@ -217,6 +217,29 @@
     margin-top:4px;
   }
   .date-readout:empty{ display:none; }
+  /* Prev/Next Day arrows under a standalone date filter — one click to
+     step the date by a day instead of reopening the calendar. */
+  .date-stepper{
+    display:flex;
+    gap:6px;
+    justify-content:center;
+    margin-top:4px;
+  }
+  .date-stepper-btn{
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--muted);
+    border-radius:6px;
+    width:28px;
+    height:22px;
+    font-size:11px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .date-stepper-btn:hover{ background:var(--account); color:#fff; border-color:var(--account); }
   /* Change Room: flags the vacated row and its continuation row so the
      pair reads as one stay, not two unrelated rooms — see
      refreshRoomChangeLinks(). */
@@ -2846,17 +2869,23 @@
     </div>
 
     <div class="panel no-print accent-filters">
-      <h2>As Of</h2>
+      <h2>Date Range</h2>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
-          <label>As Of Date</label>
-          <input type="date" id="rvDate">
-          <div class="date-readout" id="rvDateReadout"></div>
+          <label>From Date</label>
+          <input type="date" id="rvFrom">
+          <div class="date-readout" id="rvFromReadout"></div>
+        </div>
+        <div>
+          <label>To Date</label>
+          <input type="date" id="rvTo">
+          <div class="date-readout" id="rvToReadout"></div>
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn secondary" onclick="setRevenueToday()">Today</button>
+          <button class="btn secondary" onclick="clearRevenueFilters()">Clear Filter (All Days)</button>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportRevenueExcel()">⬇ Export</button>
@@ -2880,9 +2909,9 @@
     <div class="section-divider no-print"></div>
 
     <div class="panel accent-report">
-      <h2 class="no-print">Extra Money Today (not today's rent)</h2>
-      <div class="sub no-print" style="margin-top:-6px;">Money received today that did NOT go toward today's room rent above — an advance for a future night, a payment against an older due, a reservation deposit, a misc charge, or money for a guest who isn't in-house today</div>
-      <div id="rvTodayBody" style="overflow-x:auto;"><div class="empty-note">No extra payments today.</div></div>
+      <h2 class="no-print">Extra Money (not linked to an in-range night's rent)</h2>
+      <div class="sub no-print" style="margin-top:-6px;">Money received in this range that did NOT go toward an in-range night's own room rent above — an advance for a later night, a payment against an older due, a reservation deposit, a misc charge, or money for a guest who wasn't in-house on that date</div>
+      <div id="rvTodayBody" style="overflow-x:auto;"><div class="empty-note">No extra payments in range.</div></div>
     </div>
 
   </div>
@@ -3675,8 +3704,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('lgFrom').value = todayStr();
   document.getElementById('lgTo').value = todayStr();
   updateLedgersDateReadouts();
-  document.getElementById('rvDate').addEventListener('input', renderRevenue);
-  document.getElementById('rvDate').value = todayStr();
+  ['rvFrom','rvTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', renderRevenue);
+  });
+  document.getElementById('rvFrom').value = todayStr();
+  document.getElementById('rvTo').value = todayStr();
   document.getElementById('acDate').addEventListener('input', renderAutoCheckout);
   document.getElementById('acDate').value = todayStr();
   document.getElementById('dlDate').value = todayStr();
@@ -3717,6 +3749,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   renderTodayEntries();
   scheduleKarachiMidnightRollover();
+  [
+    'cicoFrom','cicoTo','auditEntryDate','dNewDate','gsearchDate',
+    'filterFrom','filterTo','lgFrom','lgTo','rvFrom','rvTo',
+    'dlDate','acDate','auditPageDate','rdDate'
+  ].forEach(addDateStepper);
 });
 
 let rowCount = 0;
@@ -4556,7 +4593,7 @@ function scheduleKarachiMidnightRollover(){
 function handleKarachiMidnightRollover(){
   const newToday = todayStr();
   if(newToday === lastKnownToday) return;
-  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','rvDate','dlDate','auditEntryDate','auditPageDate','acDate'].forEach(id=>{
+  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','rvFrom','rvTo','dlDate','auditEntryDate','auditPageDate','acDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(el && el.value === lastKnownToday) el.value = newToday;
   });
@@ -4571,8 +4608,10 @@ function handleKarachiMidnightRollover(){
   if(checkInDateEl) updateDateReadout(checkInDateEl, document.getElementById('checkInDateReadout'));
   const rdDateEl = document.getElementById('rdDate');
   if(rdDateEl) updateDateReadout(rdDateEl, document.getElementById('rdDateReadout'));
-  const rvDateEl = document.getElementById('rvDate');
-  if(rvDateEl) updateDateReadout(rvDateEl, document.getElementById('rvDateReadout'));
+  const rvFromEl = document.getElementById('rvFrom');
+  if(rvFromEl) updateDateReadout(rvFromEl, document.getElementById('rvFromReadout'));
+  const rvToEl = document.getElementById('rvTo');
+  if(rvToEl) updateDateReadout(rvToEl, document.getElementById('rvToReadout'));
   const dlDateEl = document.getElementById('dlDate');
   if(dlDateEl) updateDateReadout(dlDateEl, document.getElementById('dlDateReadout'));
   const acDateEl = document.getElementById('acDate');
@@ -4757,6 +4796,32 @@ function onExtraKindChange(sel){
 function updateDateReadout(input, readoutEl){
   if(!readoutEl) return;
   readoutEl.textContent = (input.type === 'date' && input.value) ? formatDate(input.value) : '';
+}
+
+// Small Prev/Next Day arrows under a standalone date filter — steps that
+// field's value by a day and fires 'input'/'change' so whatever that field
+// already does on a normal pick (re-render, readout update, etc.) fires
+// exactly the same way. Scoped to plain filter/report type="date" inputs;
+// the custom stay-date pickers (Check-in/Check-out/Actual Checkout) and the
+// per-room/per-payment row dates have their own interaction and are left
+// alone.
+function addDateStepper(inputId){
+  const input = document.getElementById(inputId);
+  if(!input || input.dataset.stepperAdded) return;
+  input.dataset.stepperAdded = '1';
+  const wrap = document.createElement('div');
+  wrap.className = 'date-stepper';
+  wrap.innerHTML = '<button type="button" class="date-stepper-btn" title="Previous day">◀</button><button type="button" class="date-stepper-btn" title="Next day">▶</button>';
+  const [prevBtn, nextBtn] = wrap.querySelectorAll('button');
+  const step = (delta)=>{
+    input.value = addDaysToDateStr(input.value || todayStr(), delta);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  prevBtn.addEventListener('click', ()=> step(-1));
+  nextBtn.addEventListener('click', ()=> step(1));
+  const readout = input.parentElement.querySelector('.date-readout');
+  (readout || input).insertAdjacentElement('afterend', wrap);
 }
 
 function collectExtraDetails(){
@@ -7550,35 +7615,45 @@ function printLedgers(){
 // =========================================================
 // REVENUE REPORT — this is the function behind the "why did I get 5 lac
 // when only 20 rooms are occupied (2 lac worth)" question. It answers that
-// with two tables, both scoped strictly to asOfDate (one specific night):
-//   Table 1 (roomRows) — every room occupied ON asOfDate, with THAT NIGHT's
-//      rent only (not the guest's full-stay rent), how much of that specific
-//      night's rent has been collected and paid (dated chunks — so an
-//      advance paid days before check-in still shows up as "when it was
-//      collected"), and what's still owed for that one night.
-//   Table 2 (unlinkedPayments) — every payment actually received on
-//      asOfDate that did NOT go toward that night's rent: an advance for a
+// with two tables, both scoped to [fromDate, toDate] — a single night when
+// From === To, any wider span (or both blank, via Clear Filter, for every
+// night ever booked) otherwise:
+//   Table 1 (roomRows) — one row per room-NIGHT that falls in range, with
+//      THAT NIGHT's rent only (not the guest's full-stay rent), how much of
+//      that specific night's rent has been collected and paid (dated
+//      chunks — so an advance paid days before check-in still shows up as
+//      "when it was collected"), and what's still owed for that one night.
+//      A single day keeps the old one-row-per-room shape (no Date column,
+//      since every row is implicitly that same night); a range sorts by
+//      date first so multiple nights read top-to-bottom in order.
+//   Table 2 (unlinkedPayments) — every payment actually received in range
+//      that did NOT go toward an in-range night's rent: an advance for a
 //      future night, money that cleared an older night's due, a standalone
 //      misc charge (Snooker/BBQ/Bonfire), a reservation deposit, or a
-//      payment from a guest who isn't in Table 1 at all. That's "the extra
-//      money of today, except today's rent."
+//      payment from a guest who isn't in Table 1 at all.
 // FIFO payments are still walked across a guest's ENTIRE stay in date order
-// (oldest night/payment first) so the split between "toward tonight" and
-// "extra" is correct even when tonight's rent was partly paid off before an
-// older due — only what lands on asOfDate ever gets recorded.
+// (oldest night/payment first) so the split between "toward an in-range
+// night" and "extra" is correct even when an in-range night's rent was
+// partly paid off before an older due — only what lands on an in-range
+// night/payment date ever gets recorded here.
 // =========================================================
-function buildRevenueReport(asOfDate){
+function buildRevenueReport(fromDate, toDate){
   const all = loadAllEntries();
-  const nightsByEntryRoom = {};
-  const chunksByEntryRoom = {}; // entryId -> roomNo -> { paymentDate: {cash, account} }, asOfDate's night only
+  // Keyed by `${guestId}|${roomNo}|${date}` — one entry per room-night in
+  // range, rather than per room, so the same room across several nights in
+  // the range shows up as separate rows instead of collapsing into one.
+  const nightsByKey = {};
+  const chunksByKey = {};
+  const rowMeta = {};
+  const inRange = (d)=> (!fromDate || d >= fromDate) && (!toDate || d <= toDate);
 
-  let tonightRentTotal = 0;
-  const unlinkedPayments = []; // money received ON asOfDate that isn't asOfDate's room rent
+  const unlinkedPayments = []; // money received in-range that isn't rent for an in-range night
 
   all.forEach(entry=>{
     const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     if(!startDate) return;
     const guestId = entry.id;
+    const guest = entry.guestName || '(no name)';
 
     const nights = [];
     // Same room split across more than one row chains onto its own previous
@@ -7595,40 +7670,42 @@ function buildRevenueReport(asOfDate){
       roomCursor[r.roomNo] = addDaysToDateStr(rowStart, nightsCount);
     });
     nights.sort((a,b)=> a.date.localeCompare(b.date));
-    nights.forEach(n=>{ if(n.date === asOfDate) tonightRentTotal += n.rent; });
 
     const payQueue = (entry.payments || [])
       .slice()
       .sort((a,b)=> (a.date || '').localeCompare(b.date || ''))
-      .map(p=> ({ remaining: parseFloat(p.total) || 0, total: parseFloat(p.total) || 0, date: p.date || '', mode: p.mode, bank: p.bank, towardAsOfNight: 0 }));
+      .map(p=> ({ remaining: parseFloat(p.total) || 0, total: parseFloat(p.total) || 0, date: p.date || '', mode: p.mode, bank: p.bank, towardRange: 0 }));
 
+    // Payments are still walked across the WHOLE stay in date order (a
+    // payment can prepay a future night or catch up an older one) — only
+    // whether a given night's own money gets recorded here depends on
+    // whether that night falls in range.
     let payIdx = 0;
     nights.forEach(night=>{
       let owed = night.rent;
-      const isAsOfNight = night.date === asOfDate;
-      if(isAsOfNight){
-        if(!nightsByEntryRoom[guestId]) nightsByEntryRoom[guestId] = {};
-        if(!nightsByEntryRoom[guestId][night.roomNo]) nightsByEntryRoom[guestId][night.roomNo] = { rent: 0, received: 0 };
-        nightsByEntryRoom[guestId][night.roomNo].rent += night.rent;
+      const within = inRange(night.date);
+      const key = guestId + '|' + night.roomNo + '|' + night.date;
+      if(within){
+        if(!nightsByKey[key]){ nightsByKey[key] = { rent: 0, received: 0 }; rowMeta[key] = { roomNo: night.roomNo, date: night.date, guestId, guest }; }
+        nightsByKey[key].rent += night.rent;
       }
 
       while(owed > 0 && payIdx < payQueue.length){
         const pay = payQueue[payIdx];
         if(pay.remaining <= 0){ payIdx++; continue; }
         const applied = Math.min(owed, pay.remaining);
-        if(applied > 0 && isAsOfNight){
-          nightsByEntryRoom[guestId][night.roomNo].received += applied;
-          if(!chunksByEntryRoom[guestId]) chunksByEntryRoom[guestId] = {};
-          if(!chunksByEntryRoom[guestId][night.roomNo]) chunksByEntryRoom[guestId][night.roomNo] = {};
-          if(!chunksByEntryRoom[guestId][night.roomNo][pay.date]) chunksByEntryRoom[guestId][night.roomNo][pay.date] = { cash: 0, account: 0, banks: {} };
+        if(applied > 0 && within){
+          nightsByKey[key].received += applied;
+          if(!chunksByKey[key]) chunksByKey[key] = {};
+          if(!chunksByKey[key][pay.date]) chunksByKey[key][pay.date] = { cash: 0, account: 0, banks: {} };
           const bucket = pay.mode === 'Cash' ? 'cash' : 'account';
-          chunksByEntryRoom[guestId][night.roomNo][pay.date][bucket] += applied;
+          chunksByKey[key][pay.date][bucket] += applied;
           if(bucket === 'account'){
             const bankName = pay.bank || pay.mode || 'Account';
-            const banks = chunksByEntryRoom[guestId][night.roomNo][pay.date].banks;
+            const banks = chunksByKey[key][pay.date].banks;
             banks[bankName] = (banks[bankName] || 0) + applied;
           }
-          pay.towardAsOfNight += applied;
+          pay.towardRange += applied;
         }
         pay.remaining -= applied;
         owed -= applied;
@@ -7636,60 +7713,54 @@ function buildRevenueReport(asOfDate){
       }
     });
 
-    // Whatever a payment dated asOfDate didn't put toward asOfDate's own
-    // room rent is "extra" — an advance for a later night, a top-up on an
-    // older due, or (for a guest with no room occupied on asOfDate at all)
-    // the whole amount.
+    // Whatever a payment dated in-range didn't put toward an in-range
+    // night's own room rent is "extra" — an advance for a later night, a
+    // top-up on an older due, or (for a guest with no room occupied in
+    // range at all) the whole amount.
     payQueue.forEach(pay=>{
-      if(pay.date !== asOfDate) return;
-      const extra = Math.round((pay.total - pay.towardAsOfNight) * 100) / 100;
+      if(!inRange(pay.date)) return;
+      const extra = Math.round((pay.total - pay.towardRange) * 100) / 100;
       if(extra <= 0) return;
       const roomNos = formatRoomChain(entry.rooms) || 'N/A';
       const source = pay.mode === 'Cash' ? 'Cash' : (pay.bank || pay.mode || '-');
-      unlinkedPayments.push({ guestId, guest: entry.guestName || '(no name)', roomNo: roomNos, amount: extra, source, date: pay.date });
+      unlinkedPayments.push({ guestId, guest, roomNo: roomNos, amount: extra, source, date: pay.date });
     });
   });
 
-  // Same occupancy source as Room Detail and the Dashboard: checkIn (or a
-  // mid-stay room move) plus this room's own booked nights, trusting
-  // "Actual Checkout" only when it was actually filled in. Keeps "which
-  // rooms are occupied" consistent everywhere in the app instead of each
-  // page guessing it a different way.
-  const roomRows = computeRoomStatuses(asOfDate)
-    .filter(rs=> rs.occupied && rs.entry)
-    .map(rs=>{
-      const roomData = (nightsByEntryRoom[rs.entry.id] || {})[rs.roomNo] || { rent: 0, received: 0 };
-      const chunkMap = (chunksByEntryRoom[rs.entry.id] || {})[rs.roomNo] || {};
-      const chunks = Object.keys(chunkMap)
-        .sort((a,b)=> a.localeCompare(b))
-        .map(date=>{
-          const cash = Math.round(chunkMap[date].cash * 100) / 100;
-          const account = Math.round(chunkMap[date].account * 100) / 100;
-          const banks = {};
-          Object.keys(chunkMap[date].banks || {}).forEach(b=>{ banks[b] = Math.round(chunkMap[date].banks[b] * 100) / 100; });
-          return { date, cash, account, banks, total: Math.round((cash + account) * 100) / 100 };
-        });
-      const rent = roomData.rent;
-      const collected = roomData.received;
-      // Per-room split by where the money actually landed — same three
-      // fixed banks as the Report page's Grand Total table.
-      let cashTotal = 0, mcbTotal = 0, alfalahTotal = 0, hajiTotal = 0;
-      chunks.forEach(c=>{
-        cashTotal += c.cash;
-        mcbTotal += c.banks['MCB'] || 0;
-        alfalahTotal += c.banks['Alfalah'] || 0;
-        hajiTotal += c.banks['Haji (MCB)'] || 0;
+  const roomRows = Object.keys(nightsByKey).map(key=>{
+    const meta = rowMeta[key];
+    const roomData = nightsByKey[key];
+    const chunkMap = chunksByKey[key] || {};
+    const chunks = Object.keys(chunkMap)
+      .sort((a,b)=> a.localeCompare(b))
+      .map(date=>{
+        const cash = Math.round(chunkMap[date].cash * 100) / 100;
+        const account = Math.round(chunkMap[date].account * 100) / 100;
+        const banks = {};
+        Object.keys(chunkMap[date].banks || {}).forEach(b=>{ banks[b] = Math.round(chunkMap[date].banks[b] * 100) / 100; });
+        return { date, cash, account, banks, total: Math.round((cash + account) * 100) / 100 };
       });
-      return {
-        roomNo: rs.roomNo,
-        guest: rs.entry.guestName || '(no name)',
-        guestId: rs.entry.id,
-        rent, collected, chunks,
-        cashTotal, mcbTotal, alfalahTotal, hajiTotal,
-        due: Math.max(rent - collected, 0)
-      };
-    })
-    .sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+    const rent = roomData.rent;
+    const collected = roomData.received;
+    // Per-room split by where the money actually landed — same three
+    // fixed banks as the Report page's Grand Total table.
+    let cashTotal = 0, mcbTotal = 0, alfalahTotal = 0, hajiTotal = 0;
+    chunks.forEach(c=>{
+      cashTotal += c.cash;
+      mcbTotal += c.banks['MCB'] || 0;
+      alfalahTotal += c.banks['Alfalah'] || 0;
+      hajiTotal += c.banks['Haji (MCB)'] || 0;
+    });
+    return {
+      date: meta.date,
+      roomNo: meta.roomNo,
+      guest: meta.guest,
+      guestId: meta.guestId,
+      rent, collected, chunks,
+      cashTotal, mcbTotal, alfalahTotal, hajiTotal,
+      due: Math.max(rent - collected, 0)
+    };
+  }).sort((a,b)=> a.date.localeCompare(b.date) || a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
 
   const totalRent = roomRows.reduce((s,r)=> s + r.rent, 0);
   const totalCollected = roomRows.reduce((s,r)=> s + r.collected, 0);
@@ -7725,18 +7796,31 @@ function buildRevenueReport(asOfDate){
   unlinkedPayments.sort((a,b)=> b.amount - a.amount);
   const unlinkedTotal = unlinkedPayments.reduce((s,r)=> s + r.amount, 0);
 
+  const distinctRoomCount = new Set(roomRows.map(r=> r.roomNo.toUpperCase())).size;
+
   return {
     roomRows, totalRent, totalCollected, totalDue,
     totalCash, totalMCB, totalAlfalah, totalHaji,
-    tonightRentTotal,
+    distinctRoomCount,
     paymentsByDate, paymentsByDateCashTotal, paymentsByDateAccountTotal, paymentsByDateGrandTotal,
     unlinkedPayments, unlinkedTotal
   };
 }
 
 function setRevenueToday(){
-  document.getElementById('rvDate').value = todayStr();
-  updateDateReadout(document.getElementById('rvDate'), document.getElementById('rvDateReadout'));
+  const t = todayStr();
+  document.getElementById('rvFrom').value = t;
+  document.getElementById('rvTo').value = t;
+  updateDateReadout(document.getElementById('rvFrom'), document.getElementById('rvFromReadout'));
+  updateDateReadout(document.getElementById('rvTo'), document.getElementById('rvToReadout'));
+  renderRevenue();
+}
+
+function clearRevenueFilters(){
+  document.getElementById('rvFrom').value = '';
+  document.getElementById('rvTo').value = '';
+  updateDateReadout(document.getElementById('rvFrom'), document.getElementById('rvFromReadout'));
+  updateDateReadout(document.getElementById('rvTo'), document.getElementById('rvToReadout'));
   renderRevenue();
 }
 
@@ -7753,21 +7837,37 @@ function renderRevenue(){
     return;
   }
 
-  const dateEl = document.getElementById('rvDate');
-  const asOfDate = dateEl.value || todayStr();
-  updateDateReadout(dateEl, document.getElementById('rvDateReadout'));
-  const asOfLabel = asOfDate === todayStr() ? 'today' : 'as of ' + formatDate(asOfDate);
-  const dayWord = asOfDate === todayStr() ? 'today' : 'on ' + formatDate(asOfDate);
-  document.getElementById('rvPrintHeaderSub').textContent = 'Occupied rooms ' + asOfLabel + '  ·  Generated ' + formatDate(todayStr());
-  document.getElementById('rvNightlyDateLabel').textContent = formatDate(asOfDate) + (asOfDate === todayStr() ? ' (tonight)' : '');
+  const fromEl = document.getElementById('rvFrom');
+  const toEl = document.getElementById('rvTo');
+  const fromVal = fromEl.value;
+  const toVal = toEl.value;
+  updateDateReadout(fromEl, document.getElementById('rvFromReadout'));
+  updateDateReadout(toEl, document.getElementById('rvToReadout'));
+  // A single specific day (From === To) keeps the original one-room-per-row
+  // shape with no Date column, exactly like before this became a range.
+  // Any wider range — or Clear Filter's wide-open "all days" (both blank)
+  // — shows one row per room-NIGHT instead, so the same room across
+  // several nights in range doesn't collapse into one row.
+  const isSingleDay = !!fromVal && !!toVal && fromVal === toVal;
+  const showDateCol = !isSingleDay;
+  let dayWord;
+  if(isSingleDay) dayWord = fromVal === todayStr() ? 'today' : 'on ' + formatDate(fromVal);
+  else if(!fromVal && !toVal) dayWord = 'across all days';
+  else dayWord = 'from ' + (fromVal ? formatDate(fromVal) : 'the start') + ' to ' + (toVal ? formatDate(toVal) : 'now');
+  document.getElementById('rvPrintHeaderSub').textContent = 'Occupied rooms ' + dayWord + '  ·  Generated ' + formatDate(todayStr());
+  document.getElementById('rvNightlyDateLabel').textContent = isSingleDay
+    ? formatDate(fromVal) + (fromVal === todayStr() ? ' (tonight)' : '')
+    : (dayWord.charAt(0).toUpperCase() + dayWord.slice(1));
 
-  const data = buildRevenueReport(asOfDate);
+  const data = buildRevenueReport(fromVal, toVal);
 
-  // ---- Rooms: how many occupied tonight + full-stay rent/collected/due ----
-  nightlySummary.textContent = data.roomRows.length + (data.roomRows.length === 1 ? ' room' : ' rooms') + ' occupied ' + dayWord + ' — Rs. ' + data.tonightRentTotal.toLocaleString() + ' rent for ' + dayWord;
+  // ---- Rooms: full-stay rent/collected/due for every room-night in range ----
+  nightlySummary.textContent = isSingleDay
+    ? data.roomRows.length + (data.roomRows.length === 1 ? ' room' : ' rooms') + ' occupied ' + dayWord + ' — Rs. ' + data.totalRent.toLocaleString() + ' rent for ' + dayWord
+    : data.roomRows.length + (data.roomRows.length === 1 ? ' room-night' : ' room-nights') + ' (' + data.distinctRoomCount + (data.distinctRoomCount === 1 ? ' room' : ' rooms') + ') ' + dayWord + ' — Rs. ' + data.totalRent.toLocaleString() + ' total rent';
 
   if(data.roomRows.length === 0){
-    roomsBody.innerHTML = '<div class="empty-note">No rooms occupied ' + asOfLabel + '.</div>';
+    roomsBody.innerHTML = '<div class="empty-note">No rooms occupied ' + dayWord + '.</div>';
   } else {
     // As many "Payment N" columns as the room with the most instalments
     // needs — one column for everyone if every room was paid in a single
@@ -7795,15 +7895,19 @@ function renderRevenue(){
     // explicit total width is required here: plain width:auto still let
     // the browser's auto layout algorithm distribute the panel's leftover
     // space across the columns instead of respecting the narrow hints.
-    const HASH_W = 30, ROOMNO_W = 44, GUEST_W = 80, RENT_W = 60,
+    const HASH_W = 30, DATE_W = 92, ROOMNO_W = 44, GUEST_W = 80, RENT_W = 60,
       CASH_W = 60, MCB_W = 52, HAJI_W = 122, ALFALAH_W = 92, DUE_W = 52;
-    const totalW = HASH_W + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W;
+    const totalW = HASH_W + (showDateCol ? DATE_W : 0) + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W;
+    const dateTh = showDateCol ? `<th style="width:${DATE_W}px; white-space:nowrap;">Date</th>` : '';
+    const dateTd = (r)=> showDateCol ? `<td>${formatDate(r.date)}</td>` : '';
+    const leadColspan = showDateCol ? 4 : 3;
     roomsBody.innerHTML = `
       <table style="table-layout:fixed; width:100%; min-width:${totalW}px;">
-        <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th><th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th></tr></thead>
+        <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th>${dateTh}<th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th></tr></thead>
         <tbody>${data.roomRows.map((r,i)=> `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${i + 1}</td>
+            ${dateTd(r)}
             <td>${r.roomNo}</td>
             <td>${r.guest}</td>
             <td>${r.rent.toLocaleString()}</td>
@@ -7817,7 +7921,7 @@ function renderRevenue(){
         </tbody>
         <tfoot>
           <tr class="day-foot-total">
-            <td colspan="3">Total</td>
+            <td colspan="${leadColspan}">Total</td>
             <td>${data.totalRent.toLocaleString()}</td>
             <td class="cash-amt" colspan="${maxChunks}">Collected: ${data.totalCollected.toLocaleString()}</td>
             <td class="cash-amt">${data.totalCash.toLocaleString()}</td>
@@ -7896,9 +8000,10 @@ function renderRevenue(){
 }
 
 function exportRevenueExcel(){
-  const dateEl = document.getElementById('rvDate');
-  const asOfDate = dateEl.value || todayStr();
-  const data = buildRevenueReport(asOfDate);
+  const fromVal = document.getElementById('rvFrom').value;
+  const toVal = document.getElementById('rvTo').value;
+  const isSingleDay = !!fromVal && !!toVal && fromVal === toVal;
+  const data = buildRevenueReport(fromVal, toVal);
   if(data.roomRows.length === 0 && data.unlinkedPayments.length === 0){ showNotice('No data to export.'); return; }
 
   const wb = XLSX.utils.book_new();
@@ -7909,13 +8014,14 @@ function exportRevenueExcel(){
     return formatDate(c.date) + ' — Cash: ' + c.cash + ', ' + accountText + ', Total: ' + c.total;
   }).join(' | ');
   const roomsData = data.roomRows.map(r=> ({
+    ...(isSingleDay ? {} : { 'Date': formatDate(r.date) }),
     'Room No': r.roomNo, 'Guest': r.guest, 'Room Rent': r.rent,
     'Payments': chunkText(r),
     'Cash': r.cashTotal, 'MCB': r.mcbTotal, 'Haji (MCB)': r.hajiTotal, 'Alfalah': r.alfalahTotal,
     'Collected Total': r.collected, 'Due': r.due
   }));
   const ws1 = XLSX.utils.json_to_sheet(roomsData);
-  ws1['!cols'] = [{wch:12},{wch:20},{wch:14},{wch:50},{wch:12},{wch:12},{wch:14},{wch:12},{wch:14},{wch:14}];
+  ws1['!cols'] = (isSingleDay ? [] : [{wch:14}]).concat([{wch:12},{wch:20},{wch:14},{wch:50},{wch:12},{wch:12},{wch:14},{wch:12},{wch:14},{wch:14}]);
   XLSX.utils.book_append_sheet(wb, ws1, 'Occupied Rooms');
 
   const byDateData = data.paymentsByDate.map(r=> ({
@@ -7933,7 +8039,8 @@ function exportRevenueExcel(){
   ws2['!cols'] = [{wch:20},{wch:14},{wch:14},{wch:14},{wch:14}];
   XLSX.utils.book_append_sheet(wb, ws2, 'Advance-Unlinked');
 
-  XLSX.writeFile(wb, `revenue-report-${asOfDate}.xlsx`);
+  const fileTag = isSingleDay ? fromVal : ((fromVal || 'start') + '_to_' + (toVal || 'now'));
+  XLSX.writeFile(wb, `revenue-report-${fileTag}.xlsx`);
 }
 
 function printRevenue(){
