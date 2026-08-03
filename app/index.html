@@ -8473,6 +8473,13 @@ function renderBreakfastReport(){
             <td>${r.breakfastChildren}</td>
           </tr>`).join('')}
         </tbody>
+        <tfoot>
+          <tr class="day-foot-total">
+            <td colspan="2">Total</td>
+            <td>${data.totals.breakfastAdults}</td>
+            <td>${data.totals.breakfastChildren}</td>
+          </tr>
+        </tfoot>
       </table>`;
     return;
   }
