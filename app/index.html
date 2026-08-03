@@ -1875,6 +1875,20 @@
   html[data-theme="dark"] .hdr-row3 .navbtn:hover{ color:var(--ink-fill); }
   html[data-theme="dark"] .hdr-row2 .navbtn.active,
   html[data-theme="dark"] .hdr-row3 .navbtn.active{ color:var(--ink-fill); border-bottom-color:var(--ink-fill); }
+  /* Header search: unlike ordinary form inputs (see the light-field rule
+     below), this one sits in the header chrome itself rather than inside a
+     data-entry panel, so it follows the dark theme instead of staying a
+     bright white box. Specificity (.hdr-search beats the plain `input`
+     rule) makes this win regardless of source order. */
+  html[data-theme="dark"] .hdr-search{ background:rgba(255,255,255,0.12); color:#fff; border-color:transparent; }
+  html[data-theme="dark"] .hdr-search::placeholder{ color:rgba(255,255,255,0.65); }
+  html[data-theme="dark"] .hdr-search-kbd{ background:rgba(255,255,255,0.18); color:#fff; }
+  html[data-theme="dark"] .hdr-search-results{ background:#1A1A1A; color:#fff; box-shadow:0 8px 24px rgba(0,0,0,0.5); }
+  html[data-theme="dark"] .hdr-search-row{ border-bottom-color:rgba(255,255,255,0.12); }
+  html[data-theme="dark"] .hdr-search-row:hover{ background:rgba(255,255,255,0.08); }
+  html[data-theme="dark"] .hdr-search-row b{ color:var(--ink-fill); }
+  html[data-theme="dark"] .hdr-search-sub,
+  html[data-theme="dark"] .hdr-search-empty{ color:#9C9C9C; }
   /* typed/selected content (inputs, dates) stays on a light field so the
      text itself can be plain black, instead of following the dark chrome */
   html[data-theme="dark"] input,
@@ -2954,7 +2968,7 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportBreakfastExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printBreakfastReport()">🖶 Print</button>
-          <button class="btn secondary" id="bfSimpleBtn" onclick="toggleBreakfastSimpleView()">Simple</button>
+          <button class="btn secondary" id="bfSimpleBtn" onclick="toggleBreakfastSimpleView()">Full View</button>
         </div>
       </div>
     </div>
@@ -7685,7 +7699,7 @@ function renderLedgers(){
 
   let totalDebt = 0, totalCredit = 0, totalBalance = 0;
   let lastGuestId = null;
-  const bodyRows = rows.map(r=>{
+  const bodyRows = rows.map((r, idx)=>{
     const balance = r.rent - r.received;
     totalDebt += r.rent;
     totalCredit += r.received;
@@ -7701,6 +7715,7 @@ function renderLedgers(){
       : `<span class="lg-name-primary">${r.guest}</span>`;
     return `
       <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+        <td>${idx + 1}</td>
         <td>${formatDate(r.date)}</td>
         <td>${r.roomNo}</td>
         <td>${nameCell}</td>
@@ -7713,12 +7728,12 @@ function renderLedgers(){
   container.innerHTML = `
     <table>
       <thead>
-        <tr><th style="width:100px;">Date</th><th style="width:110px;">Room No</th><th>Name</th><th style="width:110px;">Credit</th><th style="width:110px;">Debt</th><th style="width:110px;">Balance</th></tr>
+        <tr><th style="width:50px;">Sr</th><th style="width:100px;">Date</th><th style="width:110px;">Room No</th><th>Name</th><th style="width:110px;">Credit</th><th style="width:110px;">Debt</th><th style="width:110px;">Balance</th></tr>
       </thead>
       <tbody>${bodyRows}</tbody>
       <tfoot>
         <tr class="day-foot-total">
-          <td colspan="3">Total</td>
+          <td colspan="4">Total</td>
           <td class="cash-amt">${totalCredit.toLocaleString()}</td>
           <td>${totalDebt.toLocaleString()}</td>
           <td style="font-weight:700; color:${totalBalance > 0 ? 'var(--danger)' : 'inherit'};">${totalBalance.toLocaleString()}</td>
@@ -8348,7 +8363,7 @@ function buildBreakfastReport(){
 // breakfast and how many, room by room. A room with nobody having
 // breakfast at all stays in the list (so it's clear it wasn't missed) but
 // reads struck-through rather than as a normal row.
-let bfSimpleView = false;
+let bfSimpleView = true;
 function toggleBreakfastSimpleView(){
   bfSimpleView = !bfSimpleView;
   document.getElementById('bfSimpleBtn').textContent = bfSimpleView ? 'Full View' : 'Simple';
