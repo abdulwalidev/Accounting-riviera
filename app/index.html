@@ -8210,36 +8210,29 @@ function printRevenue(){
 // =========================================================
 function buildInhouseReport(){
   const today = todayStr();
-  // Group by guest, not by room — a guest with more than one room booked
-  // (e.g. an apartment plus an overflow room) is one person/party, not one
-  // per room. Rooming them separately double-counted their own adults/
-  // children against every room they held.
-  const roomsByEntity = {};
-  let roomCount = 0;
-  computeRoomStatuses(today)
+  // One row per occupied ROOM, not per guest — a guest holding more than
+  // one room (an apartment plus an overflow room) shows as separate rows,
+  // each with just that room's own Adults/Children. A room split across
+  // more than one entry.rooms row (a mid-stay rate change, or a group's
+  // headcount broken out separately) still sums onto its one room-row here
+  // rather than appearing twice.
+  const rows = computeRoomStatuses(today)
     .filter(rs=> (rs.occupied || rs.extended) && rs.entry)
-    .forEach(rs=>{
-      roomCount++;
-      const id = rs.entry.id;
-      if(!roomsByEntity[id]) roomsByEntity[id] = { entry: rs.entry, roomNos: [] };
-      roomsByEntity[id].roomNos.push(rs.roomNo);
-    });
-  // Adults/Children now live per room (not on the guest entry itself), so
-  // a guest's headcount here is the sum across whichever of their rooms
-  // are actually occupied today.
-  const rows = Object.values(roomsByEntity).map(({ entry, roomNos })=>{
-    const relevantRooms = (entry.rooms || []).filter(r=> roomNos.includes(r.roomNo));
-    const adultsSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
-    const childrenSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
-    return {
-      roomNo: formatRoomChain(relevantRooms),
-      guest: entry.guestName || '(no name)',
-      guestId: entry.id,
-      adultsDisplay: adultsSum,
-      childrenDisplay: childrenSum,
-      pax: adultsSum + childrenSum
-    };
-  }).sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+    .map(rs=>{
+      const relevantRooms = (rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo);
+      const adultsDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
+      const childrenDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
+      return {
+        roomNo: rs.roomNo,
+        guest: rs.entry.guestName || '(no name)',
+        guestId: rs.entry.id,
+        adultsDisplay,
+        childrenDisplay,
+        pax: adultsDisplay + childrenDisplay
+      };
+    })
+    .sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+  const roomCount = rows.length;
   const totalAdults = rows.reduce((s,r)=> s + r.adultsDisplay, 0);
   const totalChildren = rows.reduce((s,r)=> s + r.childrenDisplay, 0);
   const totalPax = rows.reduce((s,r)=> s + r.pax, 0);
@@ -8267,9 +8260,10 @@ function renderInhouse(){
   }
   body.innerHTML = `
     <table>
-      <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Adults</th><th style="width:110px;">Children</th><th style="width:130px;">Total Individuals</th></tr></thead>
-      <tbody>${data.rows.map(r=> `
+      <thead><tr><th style="width:50px;">Sr</th><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Adults</th><th style="width:110px;">Children</th><th style="width:130px;">Total Individuals</th></tr></thead>
+      <tbody>${data.rows.map((r, idx)=> `
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+          <td>${idx + 1}</td>
           <td>${r.roomNo}</td>
           <td>${r.guest}</td>
           <td>${r.adultsDisplay}</td>
@@ -8279,7 +8273,7 @@ function renderInhouse(){
       </tbody>
       <tfoot>
         <tr class="day-foot-total">
-          <td colspan="2">Total</td>
+          <td colspan="3">Total</td>
           <td>${data.totalAdults}</td>
           <td>${data.totalChildren}</td>
           <td>${data.totalPax}</td>
