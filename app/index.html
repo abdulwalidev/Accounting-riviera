@@ -7020,7 +7020,7 @@ function updateAddPayPreview(){
 // Report's Collected total whenever a payment straddles the range edge.
 function classifyPaymentsByNightRange(fromDate, toDate){
   const all = loadAllEntries();
-  const classification = {}; // paymentId -> { before, within, after } amounts
+  const classification = {}; // paymentId -> { before, within, after, extra } amounts
 
   all.forEach(entry=>{
     const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
@@ -7064,12 +7064,17 @@ function classifyPaymentsByNightRange(fromDate, toDate){
     });
 
     payQueue.forEach(pay=>{
-      // Money never applied to any known night (a misc charge with no room,
-      // more paid than any known rent, etc.) is folded into "within" — it
-      // isn't tied to a night outside the range, so there's no reason to
-      // pull it out of the main report.
+      // Money never applied to any known night (a misc charge like
+      // Snooker/BBQ — those never generate a "night" at all — a deposit
+      // with no room yet, more paid than any known rent, etc.) is folded
+      // into "within" for DISPLAY purposes: it isn't tied to a night
+      // outside the range, so there's no reason to pull it out of the main
+      // report. It's tracked separately as `extra` too, because Revenue
+      // Report's own Collected total never counted it either way (it puts
+      // this same money in its own "Extra Money" table) — the reconciliation
+      // check needs to subtract it back out to compare like for like.
       const extra = Math.max(pay.total - pay.towardBefore - pay.towardWithin - pay.towardAfter, 0);
-      classification[pay.id] = { before: pay.towardBefore, within: pay.towardWithin + extra, after: pay.towardAfter };
+      classification[pay.id] = { before: pay.towardBefore, within: pay.towardWithin + extra, after: pay.towardAfter, extra };
     });
   });
 
@@ -7251,6 +7256,12 @@ function renderReport(){
   // split (via classifyPaymentsByNightRange's full-stay FIFO), not a
   // whole-row pick, or the totals stop reconciling against Revenue Report.
   const mainRows = [], prevPendingRows = [], advanceRows = [];
+  // Money that never applied to any real room-night at all (Snooker/BBQ/
+  // Misc charges, mainly — those never generate a "night" to begin with)
+  // stays displayed as a normal main-report row either way, but Revenue
+  // Report's own Collected total never counted it, so it has to come back
+  // out for the reconciliation check below to compare like for like.
+  let totalExtra = 0;
   if(!excludePrevPending && !excludeAdvance){
     mainRows.push(...rows);
   } else {
@@ -7259,6 +7270,7 @@ function renderReport(){
     rows.forEach(r=>{
       const c = classification[r.paymentId];
       if(!c){ mainRows.push(r); return; }
+      totalExtra += c.extra || 0;
       const beforeAmt = excludePrevPending ? Math.round(c.before * 100) / 100 : 0;
       const afterAmt = excludeAdvance ? Math.round(c.after * 100) / 100 : 0;
       const withinAmt = Math.round((r.total - beforeAmt - afterAmt) * 100) / 100;
@@ -7352,10 +7364,13 @@ function renderReport(){
   // Detail Total against Revenue Report's own Collected total for this same
   // range — the two are computed by entirely different logic (payment-
   // centric here, night-centric there), so agreement is a real
-  // reconciliation signal, not a tautology. A small residual is expected/
-  // normal: a room-night inside this range that was paid by a payment
-  // dated OUTSIDE it is invisible to Payment Detail (payment-date-scoped)
-  // but still counted by Revenue Report (night-date-scoped).
+  // reconciliation signal, not a tautology. Money never tied to any real
+  // room-night (Snooker/BBQ/Misc charges — those never generate a "night"
+  // at all) still shows as a normal row up in the main table, but has to
+  // come back OUT of the comparison here: Revenue Report's Collected never
+  // counted it either (it puts that same money in its own Extra Money
+  // table instead), so leaving it in would make an otherwise-exact match
+  // look like a false mismatch.
   if(excludePrevPending && excludeAdvance){
     const totalReceivedInRange = Math.round(rows.reduce((s,r)=> s + r.total, 0) * 100) / 100;
     const splitSum = Math.round((mainGrandTotal + prevPending.subtotal + advance.subtotal) * 100) / 100;
@@ -7364,7 +7379,9 @@ function renderReport(){
     const rvData = buildRevenueReport(fromVal, toVal);
     const revenueCollected = Math.round(rvData.totalCollected * 100) / 100;
     const mainRounded = Math.round(mainGrandTotal * 100) / 100;
-    const revDiff = Math.round((mainRounded - revenueCollected) * 100) / 100;
+    const extraRounded = Math.round(totalExtra * 100) / 100;
+    const comparableTotal = Math.round((mainGrandTotal - totalExtra) * 100) / 100;
+    const revDiff = Math.round((comparableTotal - revenueCollected) * 100) / 100;
     const revMatch = Math.abs(revDiff) < 1;
 
     html += `
@@ -7377,7 +7394,7 @@ function renderReport(){
         </div>
         <div style="${revMatch ? '' : 'color:var(--danger); font-weight:700;'}">
           <span style="font-weight:700; color:${revMatch ? 'var(--cash)' : 'var(--danger)'};">${revMatch ? '✓' : '✗'}</span>
-          Payment Detail Total: Rs. ${mainRounded.toLocaleString()}  vs  Revenue Report Collected Total: Rs. ${revenueCollected.toLocaleString()}${revMatch ? '' : '  — difference: Rs. ' + revDiff.toLocaleString()}
+          Payment Detail Total (Rs. ${mainRounded.toLocaleString()})${extraRounded > 0 ? ' − Not Tied to Any Room, e.g. Snooker/BBQ/Misc (Rs. ' + extraRounded.toLocaleString() + ') = Rs. ' + comparableTotal.toLocaleString() : ''}  vs  Revenue Report Collected Total: Rs. ${revenueCollected.toLocaleString()}${revMatch ? '' : '  — difference: Rs. ' + revDiff.toLocaleString()}
         </div>
       </div>`;
   }
