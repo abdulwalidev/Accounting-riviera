@@ -2912,7 +2912,10 @@
 
   <div class="view" id="view-ledgers">
 
-    <h1 class="no-print">Ledgers</h1>
+    <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <h1 style="margin:0;">Ledgers</h1>
+      <button class="btn secondary" onclick="showView('before19')">Before 19</button>
+    </div>
     <div class="sub no-print">Room-night by room-night — rent charged, what was received against it (oldest payment first), and what's left for that night, by guest</div>
 
     <div class="print-header">
@@ -2952,6 +2955,32 @@
 
     <div class="panel accent-report">
       <div id="ledgersBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-before19">
+
+    <h1 class="no-print" id="b19H1">Before 19 Jul 2026</h1>
+    <div class="sub no-print">Payments received before this date whose money still funded a room-night on or after it — already counted in Ledgers and Revenue Report from that date onward, but not in Payment Detail Total on the Report page, since that only counts money dated in range</div>
+
+    <div class="print-header">
+      <h1 id="b19PrintTitle">Before 19 Jul 2026</h1>
+      <div class="print-header-sub" id="b19PrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>Before Date</label>
+          <input type="date" id="b19From">
+          <div class="date-readout" id="b19FromReadout"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="before19Body" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -3492,7 +3521,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','revenue','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','revenue','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -3550,6 +3579,7 @@ function showView(view, fromPopState){
   if(view === 'entry') renderTodayEntries();
   if(view === 'addpay') renderApList();
   if(view === 'ledgers') renderLedgers();
+  if(view === 'before19') renderBefore19();
   if(view === 'revenue') renderRevenue();
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
@@ -3811,6 +3841,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   document.getElementById('rvFrom').value = todayStr();
   document.getElementById('rvTo').value = todayStr();
+  document.getElementById('b19From').value = '2026-07-19';
+  updateDateReadout(document.getElementById('b19From'), document.getElementById('b19FromReadout'));
+  document.getElementById('b19From').addEventListener('input', e=>{
+    updateDateReadout(e.target, document.getElementById('b19FromReadout'));
+    renderBefore19();
+  });
   document.getElementById('acDate').addEventListener('input', renderAutoCheckout);
   document.getElementById('acDate').value = todayStr();
   document.getElementById('dlDate').value = todayStr();
@@ -3854,7 +3890,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   [
     'cicoFrom','cicoTo','auditEntryDate','dNewDate','gsearchDate',
     'filterFrom','filterTo','lgFrom','lgTo','rvFrom','rvTo',
-    'dlDate','acDate','auditPageDate','rdDate'
+    'dlDate','acDate','auditPageDate','rdDate','b19From'
   ].forEach(addDateStepper);
 });
 
@@ -5831,6 +5867,7 @@ const GLOBAL_SEARCH_PAGES = [
   { label: 'Check-in / Check-out', view: 'cico', keywords: ['check-in', 'checkin', 'check-out', 'checkout', 'actual checkin', 'actual checkout', 'expected checkout', 'check out today'] },
   { label: 'Reservations', view: 'reservations', keywords: ['advance', 'booking', 'future check-ins'] },
   { label: 'Ledgers', view: 'ledgers', keywords: ['room-night', 'balance', 'credit', 'debt'] },
+  { label: 'Before 19', view: 'before19', keywords: ['carried in', 'carry-in', 'pre-range', 'cash handler', 'before date'] },
   { label: 'Full Audit', view: 'audit', keywords: ['change history', 'entry created', 'entry edited', 'all changes'] },
   { label: 'Day Lock', view: 'daylock', keywords: ['lock day', 'unlock day', 'locked days'] },
   { label: 'Delete Entity', view: 'deleteentity', keywords: ['delete', 'remove entry'] },
@@ -7539,6 +7576,34 @@ function renderReport(){
   }
 
   container.innerHTML = html;
+}
+
+// ---- Before <date>: standalone page version of the Report page's
+// "Before <fromVal>" section — same carried-in money, but always visible
+// on its own with a single date picker, no need to open Report and toggle
+// Exclude Prev Pending/Advance first. ----
+function renderBefore19(){
+  const container = document.getElementById('before19Body');
+  if(!initialLoadDone){
+    container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const fromVal = document.getElementById('b19From').value || '2026-07-19';
+
+  document.getElementById('b19H1').textContent = 'Before ' + formatDate(fromVal);
+  document.getElementById('b19PrintTitle').textContent = 'Before ' + formatDate(fromVal);
+  document.getElementById('b19PrintHeaderSub').textContent = 'Generated ' + formatDate(todayStr());
+
+  const classified = classifyPaymentsByNightRange(fromVal, '');
+  const carriedInRows = classified.withinRows.concat(classified.afterRows).filter(r => r.date < fromVal);
+
+  if(carriedInRows.length === 0){
+    container.innerHTML = '<div class="empty-note">No payments before ' + formatDate(fromVal) + ' funded a room-night on or after it.</div>';
+    return;
+  }
+  const t = reportRowsToTableHtml(carriedInRows);
+  container.innerHTML = `
+    <div class="rpt-day-group">${t.html}</div>`;
 }
 
 function formatDate(iso){
