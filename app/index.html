@@ -1932,6 +1932,14 @@
       background:#fff !important;
       border:2px solid #000 !important;
     }
+
+    /* Night Summary's printed Guest Charges table only — no grid lines at
+       all, just the existing tr.day-foot-total top rule above the totals
+       row (unchanged, still 2px solid #000 from above). Scoped to
+       #nsRoomsBody specifically so no other printed report is affected. */
+    #nsRoomsBody th, #nsRoomsBody td{
+      border:none !important;
+    }
   }
 
   /* ================= Dark theme ================= */
