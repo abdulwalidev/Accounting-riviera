@@ -2137,6 +2137,55 @@
      rules for the same selectors (table, .topnav, .grid, etc). */
   @media (max-width:600px){
 
+    /* Header row 1 (brand/search/date-pill/theme-toggle/avatar/logout) is a
+       single flex row with a hard-coded 375px search box — on a phone
+       that's wider than the whole screen by itself, so every sibling
+       (brand name, sync status, date pill, icons) piled on top of it
+       instead of fitting beside it. Wrapping onto its own stacked rows
+       (brand+status, then the search box full-width, then the icon row)
+       costs some sticky-header height but is the difference between
+       readable and an unreadable overlapping mess. */
+    .hdr-row1{
+      flex-wrap:wrap;
+      gap:8px;
+      padding:8px 12px;
+    }
+    .hdr-left{
+      flex-wrap:wrap;
+      width:100%;
+      gap:8px;
+    }
+    .hdr-search-wrap{
+      width:100%;
+      flex:1 1 100%;
+    }
+    .hdr-search-kbd{ display:none; } /* "Ctrl + /" means nothing without a physical keyboard */
+    .hdr-right{
+      width:100%;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    /* Nav tabs (hdr-row2/hdr-row3) already horizontally scroll
+       (overflow-x:auto) rather than wrap or clip — but with no visible
+       scrollbar or fade, a tab cut off mid-word at the edge (e.g.
+       "Revenue Report" showing as just "R") reads as broken instead of
+       scrollable. A subtle fade on the trailing edge signals "there's
+       more" without changing the scroll behavior itself. */
+    .hdr-row2, .hdr-row3{
+      position:relative;
+    }
+    .hdr-row2::after, .hdr-row3::after{
+      content:'';
+      position:absolute;
+      top:0; right:0; bottom:0;
+      width:28px;
+      pointer-events:none;
+      background:linear-gradient(to right, transparent, #fff);
+    }
+    html[data-theme="dark"] .hdr-row2::after{ background:linear-gradient(to right, transparent, var(--paper)); }
+    html[data-theme="dark"] .hdr-row3::after{ background:linear-gradient(to right, transparent, #1A1A1A); }
+
     /* Multi-column forms/info-grids stack to one column — two side-by-side
        fields under a phone keyboard is unusable. (.grid already auto-fits
        to 1 column at this width via its minmax(200px) floor in most cases;
