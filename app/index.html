@@ -3112,7 +3112,7 @@
 
     <div class="panel accent-report">
       <h2 class="no-print">ROOM STATISTICS</h2>
-      <div class="sub no-print" style="margin-top:-6px;">Live occupancy as of today, independent of the date range above</div>
+      <div class="sub no-print" style="margin-top:-6px;" id="rvStatSub">Occupancy as of the selected date</div>
       <div class="room-stats-grid" style="margin-top:12px;">
         <div class="dash-card">
           <div class="dash-card-lbl">Occupied</div>
@@ -8868,12 +8868,16 @@ function renderRevenue(){
 
   const data = buildRevenueReport(fromVal, toVal);
 
-  // ---- Room Statistics: live occupancy as of today, independent of the
-  // date range above (occupancy is a right-now concept, not a range one).
-  // "Occupied" here strictly means booked for tonight -- same as the Rooms
-  // table below and unlike Dashboard/Room Detail, Extended is NOT folded
-  // in, since an unconfirmed departure isn't a confirmed occupied room. ----
-  const statRooms = computeRoomStatuses(todayStr());
+  // ---- Room Statistics: occupancy as of the report's own selected date —
+  // the END of the range (To Date) if one's picked, since that's the
+  // point-in-time snapshot a range naturally settles on; falls back to
+  // From Date, then today, if the range is cleared. "Occupied" here
+  // strictly means booked for that exact night -- same as the Rooms table
+  // below and unlike Dashboard/Room Detail, Extended is NOT folded in,
+  // since an unconfirmed departure isn't a confirmed occupied room. ----
+  const statDate = toVal || fromVal || todayStr();
+  document.getElementById('rvStatSub').textContent = 'Occupancy as of ' + formatDate(statDate) + (statDate === todayStr() ? ' (today)' : '');
+  const statRooms = computeRoomStatuses(statDate);
   const statTotal = statRooms.length;
   const statOccupiedRooms = statRooms.filter(rs=> rs.occupied);
   const statOccupied = statOccupiedRooms.length;
