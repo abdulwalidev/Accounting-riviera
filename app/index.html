@@ -3101,6 +3101,7 @@
           <button class="btn secondary" onclick="clearLedgersFilters()">Clear Filters</button>
           <button class="btn secondary" onclick="setLedgersToday()">Today</button>
         </div>
+        <div id="lgRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportLedgersExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printLedgers()">🖶 Print</button>
@@ -8777,6 +8778,7 @@ function renderLedgers(){
   populateLedgersPersonSelect();
 
   const { rows, fromVal, toVal } = getFilteredLedgersRecords();
+  document.getElementById('lgRangeReadout').textContent = formatIsoRangeDisplay(fromVal, toVal);
 
   const subParts = [];
   subParts.push(fromVal || toVal ? `${fromVal ? formatDate(fromVal) : 'Start'} to ${toVal ? formatDate(toVal) : 'Today'}` : 'All dates');
