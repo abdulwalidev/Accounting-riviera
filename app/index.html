@@ -3124,7 +3124,7 @@
         </div>
         <div class="dash-card">
           <div class="dash-card-lbl">Pax</div>
-          <div class="dash-card-val" id="rvStatPax">0</div>
+          <div class="dash-card-val" id="rvStatPax"></div>
         </div>
         <div class="dash-card">
           <div class="dash-card-lbl">Occupancy Rate</div>
@@ -8890,7 +8890,7 @@ function renderRevenue(){
   const statOccRate = statTotal > 0 ? (statOccupied / statTotal * 100) : 0;
   document.getElementById('rvStatOccupied').textContent = statOccupied;
   document.getElementById('rvStatVacant').textContent = statVacant;
-  document.getElementById('rvStatPax').textContent = statPax;
+  document.getElementById('rvStatPax').textContent = statPax > 0 ? statPax : '';
   document.getElementById('rvStatOccRate').textContent = statOccRate.toFixed(1) + '%';
 
   // ---- Rooms: full-stay rent/collected/due for every room-night in range ----
