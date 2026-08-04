@@ -222,6 +222,7 @@
   .date-stepper{
     display:flex;
     gap:6px;
+    flex-wrap:wrap;
     justify-content:center;
     margin-top:4px;
   }
@@ -5060,15 +5061,30 @@ function addDateStepper(inputId){
   input.dataset.stepperAdded = '1';
   const wrap = document.createElement('div');
   wrap.className = 'date-stepper';
-  wrap.innerHTML = '<button type="button" class="date-stepper-btn" title="Previous day">◀</button><button type="button" class="date-stepper-btn" title="Next day">▶</button>';
-  const [prevBtn, nextBtn] = wrap.querySelectorAll('button');
+  wrap.innerHTML =
+    '<button type="button" class="date-stepper-btn" title="Back a month">«</button>' +
+    '<button type="button" class="date-stepper-btn" title="Back 2 days">◀◀</button>' +
+    '<button type="button" class="date-stepper-btn" title="Previous day">◀</button>' +
+    '<button type="button" class="date-stepper-btn" title="Next day">▶</button>' +
+    '<button type="button" class="date-stepper-btn" title="Forward 2 days">▶▶</button>' +
+    '<button type="button" class="date-stepper-btn" title="Forward a month">»</button>';
+  const [monthBackBtn, twoBackBtn, prevBtn, nextBtn, twoFwdBtn, monthFwdBtn] = wrap.querySelectorAll('button');
   const step = (delta)=>{
     input.value = addDaysToDateStr(input.value || todayStr(), delta);
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
+  const stepMonths = (delta)=>{
+    input.value = addMonthsToDateStr(input.value || todayStr(), delta);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  monthBackBtn.addEventListener('click', ()=> stepMonths(-1));
+  twoBackBtn.addEventListener('click', ()=> step(-2));
   prevBtn.addEventListener('click', ()=> step(-1));
   nextBtn.addEventListener('click', ()=> step(1));
+  twoFwdBtn.addEventListener('click', ()=> step(2));
+  monthFwdBtn.addEventListener('click', ()=> stepMonths(1));
   const readout = input.parentElement.querySelector('.date-readout');
   (readout || input).insertAdjacentElement('afterend', wrap);
 }
@@ -8226,6 +8242,23 @@ function addDaysToDateStr(dateStr, days){
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+// Clamps to the last real day of the target month instead of overflowing
+// into the month after (native Date month arithmetic would turn 31 Jan + 1
+// month into 3 Mar, not 28/29 Feb) — a stepper jumping a stay's date around
+// should never silently skip a whole extra month like that.
+function addMonthsToDateStr(dateStr, months){
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  const daysInTargetMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, daysInTargetMonth));
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
 }
 
 function buildLedgersRecords(){
