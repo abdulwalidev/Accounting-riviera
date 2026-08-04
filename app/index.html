@@ -2982,13 +2982,12 @@
       </div>
       <div class="checkline">
         <input type="checkbox" id="filterExcludePrevPending">
-        <label for="filterExcludePrevPending" style="margin:0;">Exclude Prev Pending Received — pull out payments that actually settled a night from before From Date</label>
+        <label for="filterExcludePrevPending" style="margin:0;">Exclude Prev Pending Received</label>
       </div>
       <div class="checkline">
         <input type="checkbox" id="filterExcludeAdvance">
-        <label for="filterExcludeAdvance" style="margin:0;">Exclude Advance Received — pull out payments that actually prepaid a night from after To Date</label>
+        <label for="filterExcludeAdvance" style="margin:0;">Exclude Advance Received</label>
       </div>
-      <div class="sub no-print" style="margin-top:2px;">Only ever splits out payments dated in this range — never pulls in money received before From Date or after To Date, even if it happens to cover a night in this range. So this can come in lower than Revenue Report's Collected total for the same range; see the note at the bottom of the report for why.</div>
       <div class="actions" style="margin-top:12px;">
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn secondary" onclick="clearFilters()">Clear Filters</button>
