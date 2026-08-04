@@ -513,6 +513,17 @@
   @media (max-width: 560px){
     .dash-grid{ grid-template-columns:1fr; }
   }
+  .room-stats-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+  }
+  @media (max-width: 900px){
+    .room-stats-grid{ grid-template-columns:repeat(2,1fr); }
+  }
+  @media (max-width: 560px){
+    .room-stats-grid{ grid-template-columns:1fr; }
+  }
   .dash-card{
     background:var(--paper);
     border:1px solid var(--line);
@@ -3099,13 +3110,36 @@
     </div>
 
     <div class="panel accent-report">
+      <h2 class="no-print">ROOM STATISTICS</h2>
+      <div class="sub no-print" style="margin-top:-6px;">Live occupancy as of today, independent of the date range above</div>
+      <div class="room-stats-grid" style="margin-top:12px;">
+        <div class="dash-card">
+          <div class="dash-card-lbl">Occupied</div>
+          <div class="dash-card-val" id="rvStatOccupied">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">Vacant</div>
+          <div class="dash-card-val" id="rvStatVacant">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">Pax</div>
+          <div class="dash-card-val" id="rvStatPax">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">Occupancy Rate</div>
+          <div class="dash-card-val" id="rvStatOccRate">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
       <h2 class="no-print">Payments By Date</h2>
       <div class="sub no-print" style="margin-top:-6px;">The Rooms total below, re-sliced by the day the money actually came in — cash vs account, across every room</div>
       <div id="rvByDateBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
     <div class="panel accent-report">
-      <h2 class="no-print">Rooms — <span id="rvNightlyDateLabel"></span></h2>
+      <h2 class="no-print">GUEST CHARGES SUMMARY FROM — <span id="rvNightlyDateLabel"></span></h2>
       <div id="rvNightlySummary" style="font-size:15px; font-weight:700; margin:10px 0;"></div>
       <div id="rvRoomsBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
@@ -8497,12 +8531,25 @@ function buildRevenueReport(fromDate, toDate){
   const inRange = (d)=> (!fromDate || d >= fromDate) && (!toDate || d <= toDate);
 
   const unlinkedPayments = []; // money received in-range that isn't rent for an in-range night
+  let totalMisc = 0; // Snooker/BBQ/Bonfire charges only, placed by the guest's check-in date
 
   all.forEach(entry=>{
     const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     if(!startDate) return;
     const guestId = entry.id;
     const guest = entry.guestName || '(no name)';
+
+    // Misc rows never generate a room-night (excluded below), so they have
+    // no date of their own to compare against the range — the guest's
+    // check-in date is the only sensible placement, same simplification
+    // buildLedgersRecords already makes for these rows.
+    if(inRange(startDate)){
+      (entry.rooms || []).forEach(r=>{
+        if(r.roomNo && isMiscRoomNo(r.roomNo)){
+          totalMisc += parseFloat(String(r.rent).replace(/,/g,'')) || 0;
+        }
+      });
+    }
 
     const nights = [];
     // Same room split across more than one row chains onto its own previous
@@ -8652,7 +8699,7 @@ function buildRevenueReport(fromDate, toDate){
     totalCash, totalMCB, totalAlfalah, totalHaji,
     distinctRoomCount,
     paymentsByDate, paymentsByDateCashTotal, paymentsByDateAccountTotal, paymentsByDateGrandTotal,
-    unlinkedPayments, unlinkedTotal
+    unlinkedPayments, unlinkedTotal, totalMisc
   };
 }
 
@@ -8683,6 +8730,8 @@ function renderRevenue(){
     nightlySummary.innerHTML = '';
     byDateBody.innerHTML = '';
     todayBody.innerHTML = '';
+    ['rvStatOccupied','rvStatVacant','rvStatPax'].forEach(id=> document.getElementById(id).textContent = '…');
+    document.getElementById('rvStatOccRate').textContent = '…';
     return;
   }
 
@@ -8709,6 +8758,27 @@ function renderRevenue(){
     : (dayWord.charAt(0).toUpperCase() + dayWord.slice(1));
 
   const data = buildRevenueReport(fromVal, toVal);
+
+  // ---- Room Statistics: live occupancy as of today, independent of the
+  // date range above (occupancy is a right-now concept, not a range one).
+  // "Occupied" here strictly means booked for tonight -- same as the Rooms
+  // table below and unlike Dashboard/Room Detail, Extended is NOT folded
+  // in, since an unconfirmed departure isn't a confirmed occupied room. ----
+  const statRooms = computeRoomStatuses(todayStr());
+  const statTotal = statRooms.length;
+  const statOccupiedRooms = statRooms.filter(rs=> rs.occupied);
+  const statOccupied = statOccupiedRooms.length;
+  const statVacant = statTotal - statOccupied;
+  const statPax = statOccupiedRooms.reduce((s,rs)=>{
+    if(!rs.entry) return s;
+    const relevantRooms = (rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo);
+    return s + relevantRooms.reduce((rs2,r)=> rs2 + (parseInt(r.adults) || 0) + (parseInt(r.children) || 0), 0);
+  }, 0);
+  const statOccRate = statTotal > 0 ? (statOccupied / statTotal * 100) : 0;
+  document.getElementById('rvStatOccupied').textContent = statOccupied;
+  document.getElementById('rvStatVacant').textContent = statVacant;
+  document.getElementById('rvStatPax').textContent = statPax;
+  document.getElementById('rvStatOccRate').textContent = statOccRate.toFixed(1) + '%';
 
   // ---- Rooms: full-stay rent/collected/due for every room-night in range ----
   nightlySummary.textContent = isSingleDay
@@ -8806,12 +8876,14 @@ function renderRevenue(){
       <div class="rev-grandtotal-box">
         <div class="date-box-head">Revenue Grand Total</div>
         <table>
-          <thead><tr><th>Cash</th><th>Account</th><th>Total</th></tr></thead>
+          <thead><tr><th>Cash</th><th>Account</th><th>Total</th><th>Miscellaneous</th><th>Cash + Miscellaneous</th></tr></thead>
           <tbody>
             <tr class="day-foot-total">
               <td class="cash-amt">${data.paymentsByDateCashTotal.toLocaleString()}</td>
               <td class="account-amt">${data.paymentsByDateAccountTotal.toLocaleString()}</td>
               <td>${data.paymentsByDateGrandTotal.toLocaleString()}</td>
+              <td>${data.totalMisc.toLocaleString()}</td>
+              <td class="cash-amt">${(data.paymentsByDateCashTotal + data.totalMisc).toLocaleString()}</td>
             </tr>
           </tbody>
         </table>
