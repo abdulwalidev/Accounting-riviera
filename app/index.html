@@ -173,6 +173,15 @@
     min-height:34px;
   }
   input::placeholder{ color:var(--muted); }
+  /* The visible box for every flatpickr-backed date field, sized to match
+     flatpickr's own calendar popup exactly (307.875px, its library default —
+     see .flatpickr-calendar in vendor/flatpickr.min.css) instead of
+     stretching to fill whatever grid/flex column it happens to sit in.
+     Without this the box and the popup that drops out of it are two
+     different widths, which reads as visually broken even though nothing
+     is actually wrong. max-width:100% keeps it from overflowing a
+     container narrower than that on small screens. */
+  .flatpickr-alt-input{ width:307.875px; max-width:100%; }
   /* Search fields: a pulsing ✕ appears once something is typed (pure CSS,
      via :placeholder-shown) so a leftover filter is never invisible/easy
      to forget about. Clicking it clears the field and re-fires whatever
@@ -4026,6 +4035,7 @@ function initStayDatePickers(){
     stayDatePickers[id] = flatpickr(el, {
       dateFormat: 'Y-m-d',
       altInput: true,
+      altInputClass: 'flatpickr-alt-input',
       altFormat: 'd M Y',
       allowInput: true,
       disableMobile: true
@@ -4057,6 +4067,7 @@ function initFilterDatePickers(){
     filterDatePickers[id] = flatpickr(el, {
       dateFormat: 'Y-m-d',
       altInput: true,
+      altInputClass: 'flatpickr-alt-input',
       altFormat: 'D, d M Y',
       allowInput: true,
       disableMobile: true
@@ -4100,6 +4111,7 @@ function initRangeDatePicker(rangeId, fromId, toId, onRangeChange){
     mode: 'range',
     dateFormat: 'Y-m-d',
     altInput: true,
+    altInputClass: 'flatpickr-alt-input',
     altFormat: 'd M Y',
     allowInput: true,
     disableMobile: true,
