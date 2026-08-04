@@ -2475,14 +2475,10 @@
     <div class="panel">
       <div class="search-row">
         <div>
-          <label>From</label>
-          <input type="date" id="cicoFrom">
-          <div class="date-readout" id="cicoFromReadout"></div>
-        </div>
-        <div>
-          <label>To</label>
-          <input type="date" id="cicoTo">
-          <div class="date-readout" id="cicoToReadout"></div>
+          <label>Date Range</label>
+          <input type="text" id="cicoRange" placeholder="Select a date range">
+          <input type="date" id="cicoFrom" style="display:none">
+          <input type="date" id="cicoTo" style="display:none">
         </div>
         <div>
           <label>&nbsp;</label>
@@ -2971,14 +2967,10 @@
       <h2>Filters</h2>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
-          <label>From Date</label>
-          <input type="date" id="filterFrom">
-          <div class="date-readout" id="filterFromReadout"></div>
-        </div>
-        <div>
-          <label>To Date</label>
-          <input type="date" id="filterTo">
-          <div class="date-readout" id="filterToReadout"></div>
+          <label>Date Range</label>
+          <input type="text" id="filterRange" placeholder="Select a date range">
+          <input type="date" id="filterFrom" style="display:none">
+          <input type="date" id="filterTo" style="display:none">
         </div>
         <div style="grid-column:span 2;">
           <label>Search (name, father name, CNIC, room no, type, mode)</label>
@@ -3070,14 +3062,10 @@
       <h2>Filters</h2>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
-          <label>From Date</label>
-          <input type="date" id="lgFrom">
-          <div class="date-readout" id="lgFromReadout"></div>
-        </div>
-        <div>
-          <label>To Date</label>
-          <input type="date" id="lgTo">
-          <div class="date-readout" id="lgToReadout"></div>
+          <label>Date Range</label>
+          <input type="text" id="lgRange" placeholder="Select a date range">
+          <input type="date" id="lgFrom" style="display:none">
+          <input type="date" id="lgTo" style="display:none">
         </div>
         <div style="grid-column:span 2;">
           <label>Guest (detailed ledger for one guest — leave blank for everyone)</label>
@@ -3141,14 +3129,10 @@
     <div class="panel no-print accent-filters">
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
-          <label>From Date</label>
-          <input type="date" id="hoFrom">
-          <div class="date-readout" id="hoFromReadout"></div>
-        </div>
-        <div>
-          <label>To Date</label>
-          <input type="date" id="hoTo">
-          <div class="date-readout" id="hoToReadout"></div>
+          <label>Date Range</label>
+          <input type="text" id="hoRange" placeholder="Select a date range">
+          <input type="date" id="hoFrom" style="display:none">
+          <input type="date" id="hoTo" style="display:none">
         </div>
       </div>
     </div>
@@ -3169,14 +3153,10 @@
       <h2>Date Range</h2>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
-          <label>From Date</label>
-          <input type="date" id="nprFrom">
-          <div class="date-readout" id="nprFromReadout"></div>
-        </div>
-        <div>
-          <label>To Date</label>
-          <input type="date" id="nprTo">
-          <div class="date-readout" id="nprToReadout"></div>
+          <label>Date Range</label>
+          <input type="text" id="nprRange" placeholder="Select a date range">
+          <input type="date" id="nprFrom" style="display:none">
+          <input type="date" id="nprTo" style="display:none">
         </div>
       </div>
     </div>
@@ -3215,14 +3195,10 @@
       <h2>Date Range</h2>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
-          <label>From Date</label>
-          <input type="date" id="rvFrom">
-          <div class="date-readout" id="rvFromReadout"></div>
-        </div>
-        <div>
-          <label>To Date</label>
-          <input type="date" id="rvTo">
-          <div class="date-readout" id="rvToReadout"></div>
+          <label>Date Range</label>
+          <input type="text" id="rvRange" placeholder="Select a date range">
+          <input type="date" id="rvFrom" style="display:none">
+          <input type="date" id="rvTo" style="display:none">
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
@@ -4104,6 +4080,59 @@ function getPickerFor(id){
   return stayDatePickers[id] || filterDatePickers[id] || null;
 }
 
+// ---- Range date pickers: one flatpickr range-mode calendar per From/To
+// pair — click a start day then an end day, the days between highlight as
+// a trail, same as picking a range of photos. The pair's two original
+// #xxFrom/#xxTo inputs stay in the DOM (hidden) as the backing store every
+// existing render/filter function already reads and writes; only the
+// visible control consolidates from two separate boxes into this one.
+const rangeDatePickers = {};
+function isoFromJsDate(d){
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function initRangeDatePicker(rangeId, fromId, toId, onRangeChange){
+  if(typeof flatpickr === 'undefined') return;
+  const rangeEl = document.getElementById(rangeId);
+  if(!rangeEl || rangeDatePickers[rangeId]) return;
+  const fromEl = document.getElementById(fromId);
+  const toEl = document.getElementById(toId);
+  const initialDates = [fromEl.value, toEl.value].filter(Boolean);
+  rangeDatePickers[rangeId] = flatpickr(rangeEl, {
+    mode: 'range',
+    dateFormat: 'Y-m-d',
+    altInput: true,
+    altFormat: 'd M Y',
+    allowInput: true,
+    disableMobile: true,
+    defaultDate: initialDates.length ? initialDates : undefined,
+    onChange: (selectedDates)=>{
+      if(selectedDates.length === 0) return;
+      const fromIso = isoFromJsDate(selectedDates[0]);
+      const toIso = isoFromJsDate(selectedDates[selectedDates.length - 1]);
+      fromEl.value = fromIso;
+      toEl.value = toIso;
+      fromEl.dispatchEvent(new Event('input', { bubbles: true }));
+      toEl.dispatchEvent(new Event('input', { bubbles: true }));
+      if(onRangeChange) onRangeChange();
+    }
+  });
+}
+// Every place that sets a range pair's dates programmatically (a "Today"
+// button, Clear Filter, midnight rollover) needs to go through this so the
+// range calendar's display doesn't fall out of sync with the real values —
+// the same reason setFilterDate/setStayDate exist for single-date fields.
+function setRangeDate(rangeId, fromId, toId, fromIso, toIso){
+  const fromEl = document.getElementById(fromId);
+  const toEl = document.getElementById(toId);
+  fromEl.value = fromIso || '';
+  toEl.value = toIso || '';
+  const fp = rangeDatePickers[rangeId];
+  if(!fp) return;
+  if(fromIso && toIso) fp.setDate([fromIso, toIso], false);
+  else if(fromIso) fp.setDate([fromIso], false);
+  else fp.clear(false);
+}
+
 // Native <input type="date"> only pops its calendar when you hit the tiny
 // icon on the right — clicking anywhere else in the box just plants a text
 // cursor. showPicker() opens it from a click anywhere in the field instead,
@@ -4117,29 +4146,18 @@ document.addEventListener('click', e=>{
   }
 });
 
-function updateFilterDateReadouts(){
-  const fromVal = document.getElementById('filterFrom').value;
-  const toVal = document.getElementById('filterTo').value;
-  document.getElementById('filterFromReadout').textContent = fromVal ? formatDate(fromVal) : '';
-  document.getElementById('filterToReadout').textContent = toVal ? formatDate(toVal) : '';
-}
-
 function clearFilters(){
-  document.getElementById('filterFrom').value = '';
-  document.getElementById('filterTo').value = '';
+  setRangeDate('filterRange', 'filterFrom', 'filterTo', '', '');
   document.getElementById('filterSearch').value = '';
   document.getElementById('filterCashSearch').value = '';
   document.getElementById('filterExcludePrevPending').checked = false;
   document.getElementById('filterExcludeAdvance').checked = false;
-  updateFilterDateReadouts();
   renderReport();
 }
 
 function setFiltersToday(){
   const t = todayStr();
-  document.getElementById('filterFrom').value = t;
-  document.getElementById('filterTo').value = t;
-  updateFilterDateReadouts();
+  setRangeDate('filterRange', 'filterFrom', 'filterTo', t, t);
   renderReport();
 }
 
@@ -4148,13 +4166,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initRouter();
   initStayDatePickers();
   initFilterDatePickers();
+  initRangeDatePicker('filterRange', 'filterFrom', 'filterTo', renderReport);
   setFiltersToday();
   setStayDate('checkInDate', todayStr());
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
   autoFillExpectedCheckout();
-  ['filterFrom','filterTo'].forEach(id=>{
-    document.getElementById(id).addEventListener('input', updateFilterDateReadouts);
-  });
   ['filterFrom','filterTo','filterSearch','filterCashSearch'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderReport);
   });
@@ -4178,22 +4194,18 @@ document.addEventListener('DOMContentLoaded', ()=>{
   setFilterDate('rdDate', todayStr());
   document.getElementById('cicoFrom').addEventListener('input', renderCico);
   document.getElementById('cicoTo').addEventListener('input', renderCico);
-  document.getElementById('cicoFrom').value = todayStr();
-  document.getElementById('cicoTo').value = todayStr();
-  ['lgFrom','lgTo'].forEach(id=>{
-    document.getElementById(id).addEventListener('input', updateLedgersDateReadouts);
-  });
+  initRangeDatePicker('cicoRange', 'cicoFrom', 'cicoTo', renderCico);
+  setRangeDate('cicoRange', 'cicoFrom', 'cicoTo', todayStr(), todayStr());
   ['lgFrom','lgTo'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderLedgers);
   });
-  document.getElementById('lgFrom').value = todayStr();
-  document.getElementById('lgTo').value = todayStr();
-  updateLedgersDateReadouts();
+  initRangeDatePicker('lgRange', 'lgFrom', 'lgTo', renderLedgers);
+  setRangeDate('lgRange', 'lgFrom', 'lgTo', todayStr(), todayStr());
   ['rvFrom','rvTo'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderRevenue);
   });
-  document.getElementById('rvFrom').value = todayStr();
-  document.getElementById('rvTo').value = todayStr();
+  initRangeDatePicker('rvRange', 'rvFrom', 'rvTo', renderRevenue);
+  setRangeDate('rvRange', 'rvFrom', 'rvTo', todayStr(), todayStr());
   document.getElementById('nsDate').addEventListener('input', renderNightSummary);
   setFilterDate('nsDate', todayStr());
   setFilterDate('b19From', '2026-07-19');
@@ -4202,26 +4214,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
     updateDateReadout(e.target, document.getElementById('b19FromReadout'));
     renderBefore19();
   });
-  document.getElementById('hoFrom').value = '2026-07-19';
-  document.getElementById('hoTo').value = '2026-07-31';
   ['hoFrom','hoTo'].forEach(id=>{
-    document.getElementById(id).addEventListener('input', e=>{
-      updateDateReadout(e.target, document.getElementById(id + 'Readout'));
-      renderMoneyHandover();
-    });
+    document.getElementById(id).addEventListener('input', renderMoneyHandover);
   });
-  updateDateReadout(document.getElementById('hoFrom'), document.getElementById('hoFromReadout'));
-  updateDateReadout(document.getElementById('hoTo'), document.getElementById('hoToReadout'));
-  document.getElementById('nprFrom').value = todayStr();
-  document.getElementById('nprTo').value = todayStr();
+  initRangeDatePicker('hoRange', 'hoFrom', 'hoTo', renderMoneyHandover);
+  setRangeDate('hoRange', 'hoFrom', 'hoTo', '2026-07-19', '2026-07-31');
   ['nprFrom','nprTo'].forEach(id=>{
-    document.getElementById(id).addEventListener('input', e=>{
-      updateDateReadout(e.target, document.getElementById(id + 'Readout'));
-      renderNPR();
-    });
+    document.getElementById(id).addEventListener('input', renderNPR);
   });
-  updateDateReadout(document.getElementById('nprFrom'), document.getElementById('nprFromReadout'));
-  updateDateReadout(document.getElementById('nprTo'), document.getElementById('nprToReadout'));
+  initRangeDatePicker('nprRange', 'nprFrom', 'nprTo', renderNPR);
+  setRangeDate('nprRange', 'nprFrom', 'nprTo', todayStr(), todayStr());
   document.getElementById('acDate').addEventListener('input', renderAutoCheckout);
   setFilterDate('acDate', todayStr());
   setFilterDate('dlDate', todayStr());
@@ -4263,9 +4265,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   renderTodayEntries();
   scheduleKarachiMidnightRollover();
   [
-    'cicoFrom','cicoTo','auditEntryDate','dNewDate','gsearchDate',
-    'filterFrom','filterTo','lgFrom','lgTo','rvFrom','rvTo',
-    'dlDate','acDate','auditPageDate','rdDate','b19From','hoFrom','hoTo','nprFrom','nprTo','nsDate'
+    'auditEntryDate','dNewDate','gsearchDate',
+    'dlDate','acDate','auditPageDate','rdDate','b19From','nsDate'
   ].forEach(addDateStepper);
 });
 
@@ -5106,16 +5107,31 @@ function scheduleKarachiMidnightRollover(){
 function handleKarachiMidnightRollover(){
   const newToday = todayStr();
   if(newToday === lastKnownToday) return;
-  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','rvFrom','rvTo','nsDate','dlDate','auditEntryDate','auditPageDate','acDate'].forEach(id=>{
+  // Single-date fields: roll forward any field currently sitting on
+  // yesterday's "today", through whichever picker registry (if any) owns
+  // it, so its calendar display can't fall out of sync with the value.
+  ['gsearchDate','dNewDate','checkInDate','rdDate','nsDate','dlDate','auditEntryDate','auditPageDate','acDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el || el.value !== lastKnownToday) return;
     el.value = newToday;
     const fp = getPickerFor(id);
     if(fp) fp.setDate(newToday, false);
   });
+  // Range pairs that default to "today": only roll forward a pair whose
+  // From AND To both still sit on yesterday's "today" — anything else was
+  // deliberately set to a specific range and shouldn't be touched.
+  [
+    { range: 'filterRange', from: 'filterFrom', to: 'filterTo' },
+    { range: 'lgRange', from: 'lgFrom', to: 'lgTo' },
+    { range: 'rvRange', from: 'rvFrom', to: 'rvTo' }
+  ].forEach(({range, from, to})=>{
+    const fromEl = document.getElementById(from);
+    const toEl = document.getElementById(to);
+    if(fromEl && toEl && fromEl.value === lastKnownToday && toEl.value === lastKnownToday){
+      setRangeDate(range, from, to, newToday, newToday);
+    }
+  });
   lastKnownToday = newToday;
-  updateFilterDateReadouts();
-  updateLedgersDateReadouts();
   const gsearchDateEl = document.getElementById('gsearchDate');
   if(gsearchDateEl) updateDateReadout(gsearchDateEl, document.getElementById('gsearchDateReadout'));
   const dNewDateEl = document.getElementById('dNewDate');
@@ -5124,10 +5140,6 @@ function handleKarachiMidnightRollover(){
   if(checkInDateEl) updateDateReadout(checkInDateEl, document.getElementById('checkInDateReadout'));
   const rdDateEl = document.getElementById('rdDate');
   if(rdDateEl) updateDateReadout(rdDateEl, document.getElementById('rdDateReadout'));
-  const rvFromEl = document.getElementById('rvFrom');
-  if(rvFromEl) updateDateReadout(rvFromEl, document.getElementById('rvFromReadout'));
-  const rvToEl = document.getElementById('rvTo');
-  if(rvToEl) updateDateReadout(rvToEl, document.getElementById('rvToReadout'));
   const nsDateEl = document.getElementById('nsDate');
   if(nsDateEl) updateDateReadout(nsDateEl, document.getElementById('nsDateReadout'));
   const dlDateEl = document.getElementById('dlDate');
@@ -5138,10 +5150,6 @@ function handleKarachiMidnightRollover(){
   if(auditEntryDateEl) updateDateReadout(auditEntryDateEl, document.getElementById('auditEntryDateReadout'));
   const auditPageDateEl = document.getElementById('auditPageDate');
   if(auditPageDateEl) updateDateReadout(auditPageDateEl, document.getElementById('auditPageDateReadout'));
-  const cicoFromEl = document.getElementById('cicoFrom');
-  if(cicoFromEl) updateDateReadout(cicoFromEl, document.getElementById('cicoFromReadout'));
-  const cicoToEl = document.getElementById('cicoTo');
-  if(cicoToEl) updateDateReadout(cicoToEl, document.getElementById('cicoToReadout'));
   if(currentView === 'entry') renderTodayEntries();
   if(currentView === 'reservations') renderReservations();
   if(currentView === 'report') renderReport();
@@ -7009,10 +7017,7 @@ function renderDashboard(){
 // ---- Check-in / Check-out ----
 function setCicoToday(){
   const t = todayStr();
-  document.getElementById('cicoFrom').value = t;
-  document.getElementById('cicoTo').value = t;
-  updateDateReadout(document.getElementById('cicoFrom'), document.getElementById('cicoFromReadout'));
-  updateDateReadout(document.getElementById('cicoTo'), document.getElementById('cicoToReadout'));
+  setRangeDate('cicoRange', 'cicoFrom', 'cicoTo', t, t);
   renderCico();
 }
 
@@ -7025,8 +7030,6 @@ function renderCico(){
   }
   const fromDate = fromEl.value || todayStr();
   const toDate = toEl.value || fromDate;
-  updateDateReadout(fromEl, document.getElementById('cicoFromReadout'));
-  updateDateReadout(toEl, document.getElementById('cicoToReadout'));
 
   if(!initialLoadDone){
     ['cicoExpectedCheckouts','cicoActualCheckins','cicoActualCheckouts'].forEach(id=>{
@@ -8071,8 +8074,6 @@ function renderMoneyHandover(){
   }
   const fromVal = document.getElementById('hoFrom').value;
   const toVal = document.getElementById('hoTo').value;
-  updateDateReadout(document.getElementById('hoFrom'), document.getElementById('hoFromReadout'));
-  updateDateReadout(document.getElementById('hoTo'), document.getElementById('hoToReadout'));
   const dayWord = fromVal && toVal ? formatDate(fromVal) + ' to ' + formatDate(toVal) : 'this range';
   document.getElementById('hoPrintTitle').textContent = 'Money Handover — ' + dayWord;
   document.getElementById('hoPrintHeaderSub').textContent = 'Generated ' + formatDate(todayStr());
@@ -8180,8 +8181,6 @@ function renderNPR(){
   }
   const fromVal = document.getElementById('nprFrom').value;
   const toVal = document.getElementById('nprTo').value;
-  updateDateReadout(document.getElementById('nprFrom'), document.getElementById('nprFromReadout'));
-  updateDateReadout(document.getElementById('nprTo'), document.getElementById('nprToReadout'));
 
   const rows = buildNprOccupiedRows(fromVal, toVal);
   const dayWord = fromVal && toVal ? formatDate(fromVal) + ' to ' + formatDate(toVal) : 'this range';
@@ -8624,26 +8623,15 @@ function populateLedgersPersonSelect(){
   if(prev && all.some(e=> e.id === prev)) sel.value = prev;
 }
 
-function updateLedgersDateReadouts(){
-  const fromVal = document.getElementById('lgFrom').value;
-  const toVal = document.getElementById('lgTo').value;
-  document.getElementById('lgFromReadout').textContent = fromVal ? formatDate(fromVal) : '';
-  document.getElementById('lgToReadout').textContent = toVal ? formatDate(toVal) : '';
-}
-
 function clearLedgersFilters(){
-  document.getElementById('lgFrom').value = '';
-  document.getElementById('lgTo').value = '';
+  setRangeDate('lgRange', 'lgFrom', 'lgTo', '', '');
   document.getElementById('lgPersonSelect').value = '';
-  updateLedgersDateReadouts();
   renderLedgers();
 }
 
 function setLedgersToday(){
   const t = todayStr();
-  document.getElementById('lgFrom').value = t;
-  document.getElementById('lgTo').value = t;
-  updateLedgersDateReadouts();
+  setRangeDate('lgRange', 'lgFrom', 'lgTo', t, t);
   renderLedgers();
 }
 
@@ -8965,18 +8953,12 @@ function buildRevenueReport(fromDate, toDate){
 
 function setRevenueToday(){
   const t = todayStr();
-  document.getElementById('rvFrom').value = t;
-  document.getElementById('rvTo').value = t;
-  updateDateReadout(document.getElementById('rvFrom'), document.getElementById('rvFromReadout'));
-  updateDateReadout(document.getElementById('rvTo'), document.getElementById('rvToReadout'));
+  setRangeDate('rvRange', 'rvFrom', 'rvTo', t, t);
   renderRevenue();
 }
 
 function clearRevenueFilters(){
-  document.getElementById('rvFrom').value = '';
-  document.getElementById('rvTo').value = '';
-  updateDateReadout(document.getElementById('rvFrom'), document.getElementById('rvFromReadout'));
-  updateDateReadout(document.getElementById('rvTo'), document.getElementById('rvToReadout'));
+  setRangeDate('rvRange', 'rvFrom', 'rvTo', '', '');
   renderRevenue();
 }
 
@@ -9089,8 +9071,6 @@ function renderRevenue(){
   const toEl = document.getElementById('rvTo');
   const fromVal = fromEl.value;
   const toVal = toEl.value;
-  updateDateReadout(fromEl, document.getElementById('rvFromReadout'));
-  updateDateReadout(toEl, document.getElementById('rvToReadout'));
   // A single specific day (From === To) keeps the original one-room-per-row
   // shape with no Date column, exactly like before this became a range.
   // Any wider range — or Clear Filter's wide-open "all days" (both blank)
