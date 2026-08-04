@@ -6497,22 +6497,27 @@ function computeRoomStatuses(asOfDate){
     const housekeepingStatus = housekeeping ? housekeeping.status : 'Ready';
 
     // Nobody's confirmed this room actually emptied out — its last booked
-    // night was yesterday and nothing's been booked since. Treat it as
-    // still inhouse (gold "Extended") rather than silently reading Vacant,
-    // until someone either books it fresh or actually confirms the guest
-    // left (Check Out Today, or the Extended room-status modal's checkout
-    // action — both of which set the guest's own Actual Checkout field).
+    // night has passed and nothing's been booked since. Treat it as still
+    // inhouse (gold "Extended") rather than silently reading Vacant, no
+    // matter how many days ago that last night was — until someone either
+    // books it fresh or actually confirms the guest left (Check Out Today,
+    // or the Extended room-status modal's checkout action — both of which
+    // set the guest's own Actual Checkout field). This used to expire the
+    // day after the last booked night (i.e. only count as Extended if that
+    // night was exactly "yesterday"), which meant a guest whose stay nobody
+    // ever formally checked out would silently disappear from Inhouse/Room
+    // Detail/Dashboard/Auto Checkout two or more days later, with no
+    // checkout ever confirmed by anyone. There is no such expiry now: a
+    // guest stays Extended indefinitely until manually checked out.
     // Deliberately NOT resolved by a bare housekeeping-status touch: the
     // room-status modal is also used for routine cleaning/OOO housekeeping
     // completely unrelated to this specific guest's departure, and staff
     // touch it constantly for reasons that have nothing to do with anyone
-    // checking out. Trusting that timestamp let a guest silently vanish
-    // from Inhouse/Room Detail/Dashboard the moment their booked nights
-    // ran out, with no checkout ever confirmed by anyone — only this
-    // guest's own Actual Checkout date can resolve Extended.
+    // checking out — only this guest's own Actual Checkout date can resolve
+    // Extended.
     const actualCheckoutDate = current ? getDetailValue(current, 'Actual Checkout') : '';
     const resolvedByCheckout = !!(actualCheckoutDate && lastNightDate && actualCheckoutDate >= lastNightDate);
-    const extended = !todayNight && lastNightDate === addDaysToDateStr(refDate, -1) && !resolvedByCheckout;
+    const extended = !todayNight && !!lastNightDate && lastNightDate < refDate && !resolvedByCheckout;
     return {
       roomNo,
       section: getRoomSection(roomNo),
