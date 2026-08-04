@@ -1932,14 +1932,6 @@
       background:#fff !important;
       border:2px solid #000 !important;
     }
-
-    /* Night Summary's printed Guest Charges table only — no grid lines at
-       all, just the existing tr.day-foot-total top rule above the totals
-       row (unchanged, still 2px solid #000 from above). Scoped to
-       #nsRoomsBody specifically so no other printed report is affected. */
-    #nsRoomsBody th, #nsRoomsBody td{
-      border:none !important;
-    }
   }
 
   /* ================= Dark theme ================= */
@@ -2151,6 +2143,70 @@
       flex-wrap:wrap;
     }
   }
+
+  /* ================= Night Summary — matches an external reference
+     design exactly (its own font, colors, spacing), independent of the
+     rest of the app's visual system. Identical on screen and in print —
+     the !important overrides below are what's needed to survive the
+     generic @media print reset above (which forces * { color:#000
+     !important } and 1px solid black borders on every th/td). ================= */
+  #view-nightsummary{
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  }
+  #view-nightsummary .ns-title{
+    font-size:20px; font-weight:600; color:#222 !important; margin:0 0 4px;
+  }
+  #view-nightsummary .ns-subtitle{
+    color:#444 !important; font-size:13px; margin-bottom:20px;
+  }
+  #view-nightsummary .ns-subtitle b{ font-weight:600; color:#444 !important; }
+  #view-nightsummary .ns-card{
+    background:#fff !important;
+    border:1px solid #ddd !important;
+    border-left:1px solid #ddd !important;
+    border-radius:6px;
+    padding:16px;
+    margin-bottom:20px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  }
+  #view-nightsummary .ns-section-header{
+    font-size:12px; font-weight:700; letter-spacing:0.3px; color:#333 !important; margin-bottom:14px;
+  }
+  #view-nightsummary .ns-stats-grid{
+    display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:10px;
+  }
+  #view-nightsummary .ns-stat-box{
+    border:1.5px solid #222 !important; border-radius:5px; padding:10px 6px; text-align:center; background:#fff !important;
+  }
+  #view-nightsummary .ns-stat-box.ns-blue{ border-color:#2f6fed !important; }
+  #view-nightsummary .ns-stat-num{ font-size:22px; font-weight:700; color:#111 !important; }
+  #view-nightsummary .ns-stat-box.ns-blue .ns-stat-num{ color:#2f6fed !important; }
+  #view-nightsummary .ns-stat-label{ font-size:10px; font-weight:600; color:#444 !important; letter-spacing:0.3px; margin-top:2px; }
+  #view-nightsummary .ns-stat-box.ns-blue .ns-stat-label{ color:#2f6fed !important; }
+  #view-nightsummary .ns-occ-box{
+    border:1.5px solid #222 !important; border-radius:5px; padding:14px 16px; position:relative; min-height:60px; background:#fff !important;
+  }
+  #view-nightsummary .ns-occ-label{ font-size:10px; font-weight:700; letter-spacing:0.3px; color:#333 !important; margin-bottom:6px; }
+  #view-nightsummary .ns-occ-rate{ font-size:14px; font-weight:600; color:#333 !important; }
+  #view-nightsummary .ns-occ-sub{
+    position:absolute; left:0; right:0; bottom:12px; text-align:center; font-size:11px; color:#2f6fed !important;
+  }
+  #view-nightsummary .ns-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  #view-nightsummary .ns-table thead th{
+    text-align:left; color:#666 !important; font-weight:600; font-size:11px; padding:6px 8px;
+    border:none !important; border-bottom:1px solid #ddd !important; background:transparent !important;
+  }
+  #view-nightsummary .ns-table thead th.num{ text-align:right; }
+  #view-nightsummary .ns-table tbody td{
+    padding:6px 8px; border:none !important; border-bottom:1px solid #f0f0f0 !important; color:#222 !important; background:transparent !important;
+  }
+  #view-nightsummary .ns-table tbody td.num{ text-align:right; }
+  #view-nightsummary .ns-table tbody tr td:first-child{ color:#2f6fed !important; }
+  #view-nightsummary .ns-table tbody tr td:nth-child(2){ color:#2f6fed !important; }
+  #view-nightsummary .ns-table tfoot td{
+    padding:8px; font-weight:700; border:none !important; border-top:2px solid #333 !important; background:transparent !important; color:#222 !important;
+  }
+  #view-nightsummary .ns-table tfoot td.num{ text-align:right; }
 </style>
 <script>
   (function(){
@@ -3182,13 +3238,8 @@
 
   <div class="view" id="view-nightsummary">
 
-    <h1 class="no-print">Night Summary</h1>
-    <div class="sub no-print">One night's room statistics, occupancy rate, and guest charges — same data as Revenue Report, formatted to match the printed Night Posting Report</div>
-
-    <div class="print-header">
-      <h1 id="nsPrintTitle">Night Posting Report</h1>
-      <div class="print-header-sub" id="nsPrintHeaderSub"></div>
-    </div>
+    <div class="ns-title" id="nsPrintTitle">Night Posting Report</div>
+    <div class="ns-subtitle" id="nsPrintHeaderSub"></div>
 
     <div class="panel no-print accent-filters">
       <h2>Posted For</h2>
@@ -3209,50 +3260,28 @@
       </div>
     </div>
 
-    <div class="panel accent-report">
-      <h2 class="no-print">ROOM STATISTICS</h2>
-      <div class="night-stats-grid" style="margin-top:12px;">
-        <div class="dash-card">
-          <div class="dash-card-lbl">Occupied</div>
-          <div class="dash-card-val" id="nsStatOccupied">0</div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-lbl">Vacant</div>
-          <div class="dash-card-val" id="nsStatVacant">0</div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-lbl">OOO</div>
-          <div class="dash-card-val" id="nsStatOOO">0</div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-lbl">Pax</div>
-          <div class="dash-card-val" id="nsStatPax">0</div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-lbl">OOS</div>
-          <div class="dash-card-val">0</div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-lbl">House Use</div>
-          <div class="dash-card-val">0</div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-lbl">Short Stay</div>
-          <div class="dash-card-val">0</div>
-        </div>
+    <div class="ns-card">
+      <div class="ns-section-header">📄 ROOM STATISTICS</div>
+      <div class="ns-stats-grid">
+        <div class="ns-stat-box"><div class="ns-stat-num" id="nsStatOccupied">0</div><div class="ns-stat-label">OCCUPIED</div></div>
+        <div class="ns-stat-box"><div class="ns-stat-num" id="nsStatVacant">0</div><div class="ns-stat-label">VACANT</div></div>
+        <div class="ns-stat-box"><div class="ns-stat-num" id="nsStatOOO">0</div><div class="ns-stat-label">OOO</div></div>
+        <div class="ns-stat-box"><div class="ns-stat-num">0</div><div class="ns-stat-label">OOS</div></div>
+        <div class="ns-stat-box"><div class="ns-stat-num" id="nsStatPax">0</div><div class="ns-stat-label">PAX</div></div>
       </div>
-
-      <div class="rev-grandtotal-box" style="margin-top:16px;">
-        <div class="date-box-head">Occupancy Rate</div>
-        <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-          <div style="font-size:26px; font-weight:700;" id="nsStatOccRate">0%</div>
-          <div style="color:var(--muted); font-size:13px;" id="nsStatOccRateSub"></div>
-        </div>
+      <div class="ns-stats-grid">
+        <div class="ns-stat-box ns-blue"><div class="ns-stat-num">0</div><div class="ns-stat-label">HOUSE USE</div></div>
+        <div class="ns-stat-box ns-blue"><div class="ns-stat-num">0</div><div class="ns-stat-label">SHORT STAY</div></div>
+      </div>
+      <div class="ns-occ-box">
+        <div class="ns-occ-label">OCCUPANCY RATE</div>
+        <div class="ns-occ-rate" id="nsStatOccRate">0%</div>
+        <div class="ns-occ-sub" id="nsStatOccRateSub"></div>
       </div>
     </div>
 
-    <div class="panel accent-report">
-      <h2 class="no-print">GUEST CHARGES SUMMARY</h2>
+    <div class="ns-card">
+      <div class="ns-section-header">👥 GUEST CHARGES SUMMARY</div>
       <div id="nsRoomsBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
@@ -9198,7 +9227,7 @@ function renderNightSummary(){
 
   const data = buildNightSummaryReport(date);
 
-  document.getElementById('nsPrintHeaderSub').textContent = '📅 Posted for ' + formatDate(date);
+  document.getElementById('nsPrintHeaderSub').innerHTML = '📅 Posted for <b>' + formatDate(date) + '</b>';
 
   document.getElementById('nsStatOccupied').textContent = data.occupiedCount;
   document.getElementById('nsStatVacant').textContent = data.vacantCount;
@@ -9215,16 +9244,16 @@ function renderNightSummary(){
   const money = (n)=> n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   body.innerHTML = `
-    <table>
+    <table class="ns-table">
       <thead>
         <tr>
-          <th style="width:50px;">#</th>
-          <th>Guest</th>
-          <th style="width:100px;">Room</th>
-          <th style="width:110px;">Rate</th>
-          <th style="width:100px;">Extra Bed</th>
-          <th style="width:110px;">Total</th>
-          <th style="width:70px;">Pax</th>
+          <th>#</th>
+          <th>GUEST</th>
+          <th>ROOM</th>
+          <th class="num">RATE</th>
+          <th class="num">EXTRA BED</th>
+          <th class="num">TOTAL</th>
+          <th class="num">PAX</th>
         </tr>
       </thead>
       <tbody>${data.rows.map((r, idx)=> `
@@ -9232,18 +9261,18 @@ function renderNightSummary(){
           <td>${idx + 1}</td>
           <td>${r.guest}</td>
           <td>${r.roomNo}</td>
-          <td>${money(r.rate)}</td>
-          <td>${money(r.extraBed)}</td>
-          <td style="font-weight:700;">${money(r.total)}</td>
-          <td>${r.pax}</td>
+          <td class="num">${money(r.rate)}</td>
+          <td class="num">${money(r.extraBed)}</td>
+          <td class="num">${money(r.total)}</td>
+          <td class="num">${r.pax}</td>
         </tr>`).join('')}
       </tbody>
       <tfoot>
-        <tr class="day-foot-total">
-          <td colspan="3">Totals</td>
-          <td>${money(data.totalRate)}</td>
-          <td>${money(0)}</td>
-          <td>${money(data.totalAmount)}</td>
+        <tr>
+          <td colspan="3" style="text-align:right;">Totals</td>
+          <td class="num">${money(data.totalRate)}</td>
+          <td class="num">${money(0)}</td>
+          <td class="num">${money(data.totalAmount)}</td>
           <td></td>
         </tr>
       </tfoot>
