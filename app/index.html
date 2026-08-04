@@ -526,11 +526,14 @@
   }
   .night-stats-grid{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    grid-template-columns:repeat(5,1fr);
     gap:14px;
   }
+  @media (max-width: 900px){
+    .night-stats-grid{ grid-template-columns:repeat(3,1fr); }
+  }
   @media (max-width: 560px){
-    .night-stats-grid{ grid-template-columns:1fr; }
+    .night-stats-grid{ grid-template-columns:repeat(2,1fr); }
   }
   .dash-card{
     background:var(--paper);
@@ -3200,7 +3203,7 @@
 
     <div class="panel accent-report">
       <h2 class="no-print">ROOM STATISTICS</h2>
-      <div class="room-stats-grid" style="margin-top:12px;">
+      <div class="night-stats-grid" style="margin-top:12px;">
         <div class="dash-card">
           <div class="dash-card-lbl">Occupied</div>
           <div class="dash-card-val" id="nsStatOccupied">0</div>
@@ -3217,8 +3220,6 @@
           <div class="dash-card-lbl">Pax</div>
           <div class="dash-card-val" id="nsStatPax">0</div>
         </div>
-      </div>
-      <div class="night-stats-grid" style="margin-top:14px;">
         <div class="dash-card">
           <div class="dash-card-lbl">OOS</div>
           <div class="dash-card-val">0</div>
