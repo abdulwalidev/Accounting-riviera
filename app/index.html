@@ -526,14 +526,11 @@
   }
   .night-stats-grid{
     display:grid;
-    grid-template-columns:repeat(5,1fr);
+    grid-template-columns:repeat(3,1fr);
     gap:14px;
   }
-  @media (max-width: 900px){
-    .night-stats-grid{ grid-template-columns:repeat(3,1fr); }
-  }
   @media (max-width: 560px){
-    .night-stats-grid{ grid-template-columns:repeat(2,1fr); }
+    .night-stats-grid{ grid-template-columns:1fr; }
   }
   .dash-card{
     background:var(--paper);
@@ -3117,7 +3114,6 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportRevenueExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printRevenue()">🖶 Print</button>
-          <button class="btn secondary" onclick="printRevenueTaxless()">🖶 Taxless Print</button>
         </div>
       </div>
     </div>
@@ -3204,7 +3200,7 @@
 
     <div class="panel accent-report">
       <h2 class="no-print">ROOM STATISTICS</h2>
-      <div class="night-stats-grid" style="margin-top:12px;">
+      <div class="room-stats-grid" style="margin-top:12px;">
         <div class="dash-card">
           <div class="dash-card-lbl">Occupied</div>
           <div class="dash-card-val" id="nsStatOccupied">0</div>
@@ -3218,12 +3214,14 @@
           <div class="dash-card-val" id="nsStatOOO">0</div>
         </div>
         <div class="dash-card">
-          <div class="dash-card-lbl">OOS</div>
-          <div class="dash-card-val">0</div>
-        </div>
-        <div class="dash-card">
           <div class="dash-card-lbl">Pax</div>
           <div class="dash-card-val" id="nsStatPax">0</div>
+        </div>
+      </div>
+      <div class="night-stats-grid" style="margin-top:14px;">
+        <div class="dash-card">
+          <div class="dash-card-lbl">OOS</div>
+          <div class="dash-card-val">0</div>
         </div>
         <div class="dash-card">
           <div class="dash-card-lbl">House Use</div>
@@ -8826,9 +8824,7 @@ function clearRevenueFilters(){
 }
 
 // Builds the Rooms table's HTML from a roomRows array + totals — pulled out
-// of renderRevenue() so the taxless print view can reuse the exact same
-// table-building logic against a divided-by-1.1 copy of the numbers,
-// instead of a second hand-maintained copy that could drift out of sync.
+// of renderRevenue() as its own function for readability.
 function buildRoomsTableHtml(roomRows, totals, showDateCol){
   // As many "Payment N" columns as the room with the most instalments
   // needs — one column for everyone if every room was paid in a single
@@ -9107,52 +9103,6 @@ function printRevenue(){
   window.print();
 }
 
-// ---- Taxless Print: a print-only view of the Rooms table with each room's
-// rent divided by 1.1 (stripping an assumed 10% tax baked into the stored
-// rent figures) and Due recomputed against that lower rent. Collected/
-// Cash/MCB/Haji/Alfalah stay exactly as-is — those are real money actually
-// received, not derived from rent, so dividing rent must never touch them.
-// This never writes anywhere: it temporarily swaps the on-screen Rooms
-// table for the divided numbers, prints, then restores the real view the
-// moment the print dialog closes (whether printed or cancelled). Nothing
-// about the stored data, the normal view, or any other calculation in the
-// app is touched. ----
-function printRevenueTaxless(){
-  const roomsBody = document.getElementById('rvRoomsBody');
-  if(!initialLoadDone || !roomsBody) return;
-  const fromVal = document.getElementById('rvFrom').value;
-  const toVal = document.getElementById('rvTo').value;
-  const showDateCol = !(!!fromVal && !!toVal && fromVal === toVal);
-  const data = buildRevenueReport(fromVal, toVal);
-  if(data.roomRows.length === 0){ window.print(); return; }
-
-  const TAX_DIVISOR = 1.1;
-  const taxlessRoomRows = data.roomRows.map(r=>{
-    const taxlessRent = Math.round((r.rent / TAX_DIVISOR) * 100) / 100;
-    return { ...r, rent: taxlessRent, due: Math.max(Math.round((taxlessRent - r.collected) * 100) / 100, 0) };
-  });
-  const taxlessTotalRent = taxlessRoomRows.reduce((s,r)=> s + r.rent, 0);
-  const taxlessTotalDue = taxlessRoomRows.reduce((s,r)=> s + r.due, 0);
-
-  const titleEl = document.getElementById('rvPrintTitle');
-  const originalTitle = titleEl.textContent;
-  const originalRoomsHtml = roomsBody.innerHTML;
-
-  titleEl.textContent = originalTitle + ' (Taxless — rent ÷ 1.1)';
-  roomsBody.innerHTML = buildRoomsTableHtml(taxlessRoomRows, {
-    totalRent: taxlessTotalRent, totalCollected: data.totalCollected, totalCash: data.totalCash,
-    totalMCB: data.totalMCB, totalHaji: data.totalHaji, totalAlfalah: data.totalAlfalah, totalDue: taxlessTotalDue
-  }, showDateCol);
-
-  const restore = ()=>{
-    titleEl.textContent = originalTitle;
-    roomsBody.innerHTML = originalRoomsHtml;
-    window.removeEventListener('afterprint', restore);
-  };
-  window.addEventListener('afterprint', restore);
-  window.print();
-}
-
 // =========================================================
 // NIGHT SUMMARY — a single-night snapshot of Revenue Report's own data
 // (computeRoomStatuses + buildLedgersRecords), reshaped to match a printed
@@ -9242,7 +9192,6 @@ function renderNightSummary(){
       <thead>
         <tr>
           <th style="width:50px;">#</th>
-          <th style="width:110px;">Guest #</th>
           <th>Guest</th>
           <th style="width:100px;">Room</th>
           <th style="width:110px;">Rate</th>
@@ -9254,7 +9203,6 @@ function renderNightSummary(){
       <tbody>${data.rows.map((r, idx)=> `
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${idx + 1}</td>
-          <td>${r.roomNo}</td>
           <td>${r.guest}</td>
           <td>${r.roomNo}</td>
           <td>${money(r.rate)}</td>
@@ -9265,7 +9213,7 @@ function renderNightSummary(){
       </tbody>
       <tfoot>
         <tr class="day-foot-total">
-          <td colspan="4">Totals</td>
+          <td colspan="3">Totals</td>
           <td>${money(data.totalRate)}</td>
           <td>${money(0)}</td>
           <td>${money(data.totalAmount)}</td>
