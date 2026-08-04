@@ -181,7 +181,7 @@
      different widths, which reads as visually broken even though nothing
      is actually wrong. max-width:100% keeps it from overflowing a
      container narrower than that on small screens. */
-  .flatpickr-alt-input{ width:307.875px; max-width:100%; text-align:center; }
+  .flatpickr-alt-input{ display:block; width:307.875px; max-width:100%; margin:0 auto; text-align:center; }
   /* Search fields: a pulsing ✕ appears once something is typed (pure CSS,
      via :placeholder-shown) so a leftover filter is never invisible/easy
      to forget about. Clicking it clears the field and re-fires whatever
@@ -4030,11 +4030,35 @@ const PICKER_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', '
 function formatPickerDisplay(selectedDates){
   const one = d=> String(d.getDate()).padStart(2, '0') + ' ' + PICKER_MONTHS[d.getMonth()] + ' ' + String(d.getFullYear()).slice(-2);
   if(!selectedDates || selectedDates.length === 0) return '';
-  if(selectedDates.length === 1) return one(selectedDates[0]);
-  return one(selectedDates[0]) + ' to ' + one(selectedDates[selectedDates.length - 1]);
+  const first = selectedDates[0];
+  const last = selectedDates[selectedDates.length - 1];
+  // A range that collapsed to a single day (both ends the same calendar
+  // day) reads as just that one date, not "05 AUGUST 26 → 05 AUGUST 26".
+  const sameDay = first.getFullYear() === last.getFullYear() && first.getMonth() === last.getMonth() && first.getDate() === last.getDate();
+  if(selectedDates.length === 1 || sameDay) return one(first);
+  return one(first) + ' → ' + one(last);
 }
 function applyPickerDisplay(instance){
   if(instance.altInput) instance.altInput.value = formatPickerDisplay(instance.selectedDates);
+}
+
+// Every flatpickr calendar gets its own Clear/Today footer bar, left-aligned
+// under the day grid — a self-contained pair of controls right in the
+// popup, not just a page-level button somewhere else on the page. Both
+// close the calendar after acting. onReady only ever fires once per
+// instance (calendar creation, not every open/redraw), so this only ever
+// runs once — the querySelector guard is just a safety net.
+function addPickerFooter(instance, onToday, onClear){
+  if(instance.calendarContainer.querySelector('.picker-footer')) return;
+  const footer = document.createElement('div');
+  footer.className = 'picker-footer';
+  footer.innerHTML =
+    '<button type="button" class="btn secondary picker-footer-btn">Clear</button>' +
+    '<button type="button" class="btn secondary picker-footer-btn">Today</button>';
+  const [clearBtn, todayBtn] = footer.querySelectorAll('button');
+  clearBtn.addEventListener('click', e=>{ e.preventDefault(); onClear(); instance.close(); });
+  todayBtn.addEventListener('click', e=>{ e.preventDefault(); onToday(); instance.close(); });
+  instance.calendarContainer.appendChild(footer);
 }
 
 // ---- Stay & Status date pickers (Check-in / Expected Checkout / Actual
