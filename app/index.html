@@ -6487,12 +6487,25 @@ function computeRoomStatuses(asOfDate){
     let lastNightDate = '';
     if(todayNight){
       current = all.find(e=> e.id === todayNight.guestId) || null;
-    } else if(roomNights.length){
+    } else {
       // Vacant: surface whoever's booked nights most recently ended, purely
       // as context in the UI — this never feeds back into the occupied flag.
-      const lastNight = roomNights.slice().sort((a,b)=> b.date.localeCompare(a.date))[0];
-      current = all.find(e=> e.id === lastNight.guestId) || null;
-      lastNightDate = lastNight.date;
+      // Must only look at nights up to refDate — a room with a future
+      // reservation already on the books (rebooked ahead before the
+      // current guest ever formally checked out) would otherwise have its
+      // "who left" context hijacked by that future guest's later date,
+      // burying the guest who's actually still unconfirmed-departed as of
+      // refDate. That's not a cosmetic mislabel: lastNightDate feeds
+      // straight into Extended below, so a future booking silently made
+      // the real previous guest's stay invisible to Room Detail, Dashboard,
+      // and Auto Checkout — nothing to click Undo on, no checkout ever
+      // logged, they just vanished the moment someone rebooked the room.
+      const pastNights = roomNights.filter(n=> n.date <= refDate);
+      if(pastNights.length){
+        const lastNight = pastNights.slice().sort((a,b)=> b.date.localeCompare(a.date))[0];
+        current = all.find(e=> e.id === lastNight.guestId) || null;
+        lastNightDate = lastNight.date;
+      }
     }
     const housekeeping = roomStatusMap[roomNo];
     const housekeepingStatus = housekeeping ? housekeeping.status : 'Ready';
