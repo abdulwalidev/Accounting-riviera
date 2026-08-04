@@ -2505,6 +2505,10 @@
           <label>&nbsp;</label>
           <button class="btn secondary" onclick="setCicoToday()">Today</button>
         </div>
+        <div>
+          <label>&nbsp;</label>
+          <div id="cicoRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em; min-height:34px; display:flex; align-items:center;"></div>
+        </div>
       </div>
     </div>
 
@@ -7141,6 +7145,7 @@ function renderCico(){
   }
   const fromDate = fromEl.value || todayStr();
   const toDate = toEl.value || fromDate;
+  document.getElementById('cicoRangeReadout').textContent = formatIsoRangeDisplay(fromDate, toDate);
 
   if(!initialLoadDone){
     ['cicoExpectedCheckouts','cicoActualCheckins','cicoActualCheckouts'].forEach(id=>{
