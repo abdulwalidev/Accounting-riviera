@@ -3105,6 +3105,7 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportRevenueExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printRevenue()">🖶 Print</button>
+          <button class="btn secondary" onclick="printRevenueTaxless()">🖶 Taxless Print</button>
         </div>
       </div>
     </div>
@@ -8720,6 +8721,76 @@ function clearRevenueFilters(){
   renderRevenue();
 }
 
+// Builds the Rooms table's HTML from a roomRows array + totals — pulled out
+// of renderRevenue() so the taxless print view can reuse the exact same
+// table-building logic against a divided-by-1.1 copy of the numbers,
+// instead of a second hand-maintained copy that could drift out of sync.
+function buildRoomsTableHtml(roomRows, totals, showDateCol){
+  // As many "Payment N" columns as the room with the most instalments
+  // needs — one column for everyone if every room was paid in a single
+  // shot, more only if some room actually needed it. Each cell is just
+  // the date it landed plus whichever of Cash/Account it came in as.
+  const maxChunks = Math.max(1, ...roomRows.map(r=> r.chunks.length));
+  const PAYMENT_COL_W = 112;
+  const paymentHeaders = Array.from({length: maxChunks}, (_,i)=> `<th style="width:${PAYMENT_COL_W}px; white-space:nowrap;">Payment ${i + 1}</th>`).join('');
+  const paymentCell = (c)=>{
+    if(!c) return '-';
+    const lines = [];
+    if(c.cash > 0) lines.push(`<span class="cash-amt">Cash: Rs. ${c.cash.toLocaleString()}</span>`);
+    const bankNames = Object.keys(c.banks || {});
+    if(bankNames.length){
+      bankNames.forEach(b=> lines.push(`<span class="account-amt">${b}: Rs. ${c.banks[b].toLocaleString()}</span>`));
+    } else if(c.account > 0){
+      lines.push(`<span class="account-amt">Account: Rs. ${c.account.toLocaleString()}</span>`);
+    }
+    return formatDate(c.date) + '<br>' + lines.join('<br>');
+  };
+  // These columns are sized to just fit their header text on one line —
+  // the floor, not a target. If a row's actual value is wider than that,
+  // it's fine for it to wrap to a second line rather than force every
+  // column wider to fit the rare long value. table-layout:fixed + an
+  // explicit total width is required here: plain width:auto still let
+  // the browser's auto layout algorithm distribute the panel's leftover
+  // space across the columns instead of respecting the narrow hints.
+  const HASH_W = 30, DATE_W = 92, ROOMNO_W = 44, GUEST_W = 80, RENT_W = 60,
+    CASH_W = 60, MCB_W = 52, HAJI_W = 122, ALFALAH_W = 92, DUE_W = 52;
+  const totalW = HASH_W + (showDateCol ? DATE_W : 0) + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W;
+  const dateTh = showDateCol ? `<th style="width:${DATE_W}px; white-space:nowrap;">Date</th>` : '';
+  const dateTd = (r)=> showDateCol ? `<td>${formatDate(r.date)}</td>` : '';
+  const leadColspan = showDateCol ? 4 : 3;
+  return `
+    <table style="table-layout:fixed; width:100%; min-width:${totalW}px;">
+      <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th>${dateTh}<th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th></tr></thead>
+      <tbody>${roomRows.map((r,i)=> `
+        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+          <td>${i + 1}</td>
+          ${dateTd(r)}
+          <td>${r.roomNo}</td>
+          <td>${r.guest}</td>
+          <td>${r.rent.toLocaleString()}</td>
+          ${Array.from({length: maxChunks}, (_,i)=> `<td>${paymentCell(r.chunks[i])}</td>`).join('')}
+          <td class="cash-amt">${r.cashTotal ? r.cashTotal.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
+          <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="${leadColspan}">Total</td>
+          <td>${totals.totalRent.toLocaleString()}</td>
+          <td class="cash-amt" colspan="${maxChunks}">Collected: ${totals.totalCollected.toLocaleString()}</td>
+          <td class="cash-amt">${totals.totalCash.toLocaleString()}</td>
+          <td class="account-amt">${totals.totalMCB.toLocaleString()}</td>
+          <td class="account-amt">${totals.totalHaji.toLocaleString()}</td>
+          <td class="account-amt">${totals.totalAlfalah.toLocaleString()}</td>
+          <td>${totals.totalDue.toLocaleString()}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
 function renderRevenue(){
   const roomsBody = document.getElementById('rvRoomsBody');
   const nightlySummary = document.getElementById('rvNightlySummary');
@@ -8788,69 +8859,10 @@ function renderRevenue(){
   if(data.roomRows.length === 0){
     roomsBody.innerHTML = '<div class="empty-note">No rooms occupied ' + dayWord + '.</div>';
   } else {
-    // As many "Payment N" columns as the room with the most instalments
-    // needs — one column for everyone if every room was paid in a single
-    // shot, more only if some room actually needed it. Each cell is just
-    // the date it landed plus whichever of Cash/Account it came in as.
-    const maxChunks = Math.max(1, ...data.roomRows.map(r=> r.chunks.length));
-    const PAYMENT_COL_W = 112;
-    const paymentHeaders = Array.from({length: maxChunks}, (_,i)=> `<th style="width:${PAYMENT_COL_W}px; white-space:nowrap;">Payment ${i + 1}</th>`).join('');
-    const paymentCell = (c)=>{
-      if(!c) return '-';
-      const lines = [];
-      if(c.cash > 0) lines.push(`<span class="cash-amt">Cash: Rs. ${c.cash.toLocaleString()}</span>`);
-      const bankNames = Object.keys(c.banks || {});
-      if(bankNames.length){
-        bankNames.forEach(b=> lines.push(`<span class="account-amt">${b}: Rs. ${c.banks[b].toLocaleString()}</span>`));
-      } else if(c.account > 0){
-        lines.push(`<span class="account-amt">Account: Rs. ${c.account.toLocaleString()}</span>`);
-      }
-      return formatDate(c.date) + '<br>' + lines.join('<br>');
-    };
-    // These columns are sized to just fit their header text on one line —
-    // the floor, not a target. If a row's actual value is wider than that,
-    // it's fine for it to wrap to a second line rather than force every
-    // column wider to fit the rare long value. table-layout:fixed + an
-    // explicit total width is required here: plain width:auto still let
-    // the browser's auto layout algorithm distribute the panel's leftover
-    // space across the columns instead of respecting the narrow hints.
-    const HASH_W = 30, DATE_W = 92, ROOMNO_W = 44, GUEST_W = 80, RENT_W = 60,
-      CASH_W = 60, MCB_W = 52, HAJI_W = 122, ALFALAH_W = 92, DUE_W = 52;
-    const totalW = HASH_W + (showDateCol ? DATE_W : 0) + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W;
-    const dateTh = showDateCol ? `<th style="width:${DATE_W}px; white-space:nowrap;">Date</th>` : '';
-    const dateTd = (r)=> showDateCol ? `<td>${formatDate(r.date)}</td>` : '';
-    const leadColspan = showDateCol ? 4 : 3;
-    roomsBody.innerHTML = `
-      <table style="table-layout:fixed; width:100%; min-width:${totalW}px;">
-        <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th>${dateTh}<th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th></tr></thead>
-        <tbody>${data.roomRows.map((r,i)=> `
-          <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
-            <td>${i + 1}</td>
-            ${dateTd(r)}
-            <td>${r.roomNo}</td>
-            <td>${r.guest}</td>
-            <td>${r.rent.toLocaleString()}</td>
-            ${Array.from({length: maxChunks}, (_,i)=> `<td>${paymentCell(r.chunks[i])}</td>`).join('')}
-            <td class="cash-amt">${r.cashTotal ? r.cashTotal.toLocaleString() : '-'}</td>
-            <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
-            <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
-            <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
-            <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
-          </tr>`).join('')}
-        </tbody>
-        <tfoot>
-          <tr class="day-foot-total">
-            <td colspan="${leadColspan}">Total</td>
-            <td>${data.totalRent.toLocaleString()}</td>
-            <td class="cash-amt" colspan="${maxChunks}">Collected: ${data.totalCollected.toLocaleString()}</td>
-            <td class="cash-amt">${data.totalCash.toLocaleString()}</td>
-            <td class="account-amt">${data.totalMCB.toLocaleString()}</td>
-            <td class="account-amt">${data.totalHaji.toLocaleString()}</td>
-            <td class="account-amt">${data.totalAlfalah.toLocaleString()}</td>
-            <td>${data.totalDue.toLocaleString()}</td>
-          </tr>
-        </tfoot>
-      </table>`;
+    roomsBody.innerHTML = buildRoomsTableHtml(data.roomRows, {
+      totalRent: data.totalRent, totalCollected: data.totalCollected, totalCash: data.totalCash,
+      totalMCB: data.totalMCB, totalHaji: data.totalHaji, totalAlfalah: data.totalAlfalah, totalDue: data.totalDue
+    }, showDateCol);
   }
 
   // ---- Payments By Date: the same money as the Rooms total above, just
@@ -8965,6 +8977,52 @@ function exportRevenueExcel(){
 }
 
 function printRevenue(){
+  window.print();
+}
+
+// ---- Taxless Print: a print-only view of the Rooms table with each room's
+// rent divided by 1.1 (stripping an assumed 10% tax baked into the stored
+// rent figures) and Due recomputed against that lower rent. Collected/
+// Cash/MCB/Haji/Alfalah stay exactly as-is — those are real money actually
+// received, not derived from rent, so dividing rent must never touch them.
+// This never writes anywhere: it temporarily swaps the on-screen Rooms
+// table for the divided numbers, prints, then restores the real view the
+// moment the print dialog closes (whether printed or cancelled). Nothing
+// about the stored data, the normal view, or any other calculation in the
+// app is touched. ----
+function printRevenueTaxless(){
+  const roomsBody = document.getElementById('rvRoomsBody');
+  if(!initialLoadDone || !roomsBody) return;
+  const fromVal = document.getElementById('rvFrom').value;
+  const toVal = document.getElementById('rvTo').value;
+  const showDateCol = !(!!fromVal && !!toVal && fromVal === toVal);
+  const data = buildRevenueReport(fromVal, toVal);
+  if(data.roomRows.length === 0){ window.print(); return; }
+
+  const TAX_DIVISOR = 1.1;
+  const taxlessRoomRows = data.roomRows.map(r=>{
+    const taxlessRent = Math.round((r.rent / TAX_DIVISOR) * 100) / 100;
+    return { ...r, rent: taxlessRent, due: Math.max(Math.round((taxlessRent - r.collected) * 100) / 100, 0) };
+  });
+  const taxlessTotalRent = taxlessRoomRows.reduce((s,r)=> s + r.rent, 0);
+  const taxlessTotalDue = taxlessRoomRows.reduce((s,r)=> s + r.due, 0);
+
+  const titleEl = document.getElementById('rvPrintTitle');
+  const originalTitle = titleEl.textContent;
+  const originalRoomsHtml = roomsBody.innerHTML;
+
+  titleEl.textContent = originalTitle + ' (Taxless — rent ÷ 1.1)';
+  roomsBody.innerHTML = buildRoomsTableHtml(taxlessRoomRows, {
+    totalRent: taxlessTotalRent, totalCollected: data.totalCollected, totalCash: data.totalCash,
+    totalMCB: data.totalMCB, totalHaji: data.totalHaji, totalAlfalah: data.totalAlfalah, totalDue: taxlessTotalDue
+  }, showDateCol);
+
+  const restore = ()=>{
+    titleEl.textContent = originalTitle;
+    roomsBody.innerHTML = originalRoomsHtml;
+    window.removeEventListener('afterprint', restore);
+  };
+  window.addEventListener('afterprint', restore);
   window.print();
 }
 
