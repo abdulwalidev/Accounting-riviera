@@ -8870,7 +8870,7 @@ function renderRevenue(){
         <div class="date-box-total">Total: ${total.toLocaleString()}</div>
       </div>`;
     byDateBody.innerHTML = `
-      <div class="date-box-row">
+      <div class="date-box-row no-print">
         ${data.paymentsByDate.map(r=> dateBox(formatDate(r.date), r.cash, r.banks, r.account, r.total)).join('')}
       </div>
       <div class="rev-grandtotal-box">
