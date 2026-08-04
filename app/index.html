@@ -2218,8 +2218,6 @@
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
       <button class="navbtn" id="topNavBreakfast" onclick="showView('breakfast')">Breakfast Report</button>
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
-      <button class="navbtn" id="topNavBefore19" onclick="showView('before19')">Before 19</button>
-      <button class="navbtn" id="topNavHandover" onclick="showView('handover')">Money Handover</button>
       <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="margin-left:auto; font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
     </div>
   </div>
@@ -3022,6 +3020,47 @@
 
   </div>
 
+  <div class="view" id="view-npr">
+
+    <h1 class="no-print">NPR — Night Posting Reconciliation</h1>
+    <div class="sub no-print">Read-only: what this system already has, one row per room per night — for checking against an external nightly report. Never edits, backfills, or auto-adds anything to real data.</div>
+
+    <div class="panel no-print accent-filters">
+      <h2>Date Range</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>From Date</label>
+          <input type="date" id="nprFrom">
+          <div class="date-readout" id="nprFromReadout"></div>
+        </div>
+        <div>
+          <label>To Date</label>
+          <input type="date" id="nprTo">
+          <div class="date-readout" id="nprToReadout"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2>Occupied Rooms (this system)</h2>
+      <div class="sub" style="margin-top:-6px;">One row per room per night in range — already expanded from check-in date through the night before checkout, same as Ledgers/Revenue Report</div>
+      <div id="nprSummary" style="font-size:15px; font-weight:700; margin:10px 0;"></div>
+      <div id="nprOccupiedBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+    <div class="panel accent-guest">
+      <h2>Compare Against an External Nightly Report</h2>
+      <div class="sub" style="margin-top:-6px;">Paste rows from the other report below, one per line: <code>YYYY-MM-DD, Room No, Guest Name, Rate</code> (comma or tab separated). Nothing here is saved anywhere — this only compares what you paste against the table above.</div>
+      <textarea id="nprPaste" rows="8" style="width:100%; margin-top:10px; font-family:monospace; font-size:13px;" placeholder="2026-07-19, 203, John Smith, 20000&#10;2026-07-20, 203, John Smith, 20000"></textarea>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn" onclick="runNprCompare()">Compare</button>
+        <button class="btn secondary" onclick="document.getElementById('nprPaste').value=''; document.getElementById('nprCompareBody').innerHTML='';">Clear</button>
+      </div>
+      <div id="nprCompareBody" style="overflow-x:auto; margin-top:14px;"></div>
+    </div>
+
+  </div>
+
   <div class="view" id="view-revenue">
 
     <h1 class="no-print">Revenue Report</h1>
@@ -3243,6 +3282,9 @@
         <button class="btn secondary" onclick="showView('audit')">Full Audit</button>
         <button class="btn secondary" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">Day Lock</button>
         <button class="btn danger-solid" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</button>
+        <button class="btn secondary" onclick="showView('before19')">Before 19</button>
+        <button class="btn secondary" onclick="showView('handover')">Money Handover</button>
+        <button class="btn secondary" onclick="showView('npr')">NPR</button>
       </div>
     </div>
 
@@ -3568,7 +3610,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','revenue','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -3616,11 +3658,9 @@ function showView(view, fromPopState){
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('topNavReport').classList.toggle('active', view === 'report' || view === 'graphs');
   document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
-  document.getElementById('topNavBefore19').classList.toggle('active', view === 'before19');
-  document.getElementById('topNavHandover').classList.toggle('active', view === 'handover');
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
-  document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock');
+  document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr');
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -3630,6 +3670,7 @@ function showView(view, fromPopState){
   if(view === 'ledgers') renderLedgers();
   if(view === 'before19') renderBefore19();
   if(view === 'handover') renderMoneyHandover();
+  if(view === 'npr') renderNPR();
   if(view === 'revenue') renderRevenue();
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
@@ -3907,6 +3948,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   updateDateReadout(document.getElementById('hoFrom'), document.getElementById('hoFromReadout'));
   updateDateReadout(document.getElementById('hoTo'), document.getElementById('hoToReadout'));
+  document.getElementById('nprFrom').value = todayStr();
+  document.getElementById('nprTo').value = todayStr();
+  ['nprFrom','nprTo'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', e=>{
+      updateDateReadout(e.target, document.getElementById(id + 'Readout'));
+      renderNPR();
+    });
+  });
+  updateDateReadout(document.getElementById('nprFrom'), document.getElementById('nprFromReadout'));
+  updateDateReadout(document.getElementById('nprTo'), document.getElementById('nprToReadout'));
   document.getElementById('acDate').addEventListener('input', renderAutoCheckout);
   document.getElementById('acDate').value = todayStr();
   document.getElementById('dlDate').value = todayStr();
@@ -3950,7 +4001,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   [
     'cicoFrom','cicoTo','auditEntryDate','dNewDate','gsearchDate',
     'filterFrom','filterTo','lgFrom','lgTo','rvFrom','rvTo',
-    'dlDate','acDate','auditPageDate','rdDate','b19From','hoFrom','hoTo'
+    'dlDate','acDate','auditPageDate','rdDate','b19From','hoFrom','hoTo','nprFrom','nprTo'
   ].forEach(addDateStepper);
 });
 
@@ -5929,6 +5980,7 @@ const GLOBAL_SEARCH_PAGES = [
   { label: 'Ledgers', view: 'ledgers', keywords: ['room-night', 'balance', 'credit', 'debt'] },
   { label: 'Before 19', view: 'before19', keywords: ['carried in', 'carry-in', 'pre-range', 'cash handler', 'before date'] },
   { label: 'Money Handover', view: 'handover', keywords: ['cash handler', 'hand over', 'cash to give', 'room rent cash'] },
+  { label: 'NPR', view: 'npr', keywords: ['night posting reconciliation', 'nightly report', 'occupied rooms', 'compare', 'diff'] },
   { label: 'Full Audit', view: 'audit', keywords: ['change history', 'entry created', 'entry edited', 'all changes'] },
   { label: 'Day Lock', view: 'daylock', keywords: ['lock day', 'unlock day', 'locked days'] },
   { label: 'Delete Entity', view: 'deleteentity', keywords: ['delete', 'remove entry'] },
@@ -7793,6 +7845,153 @@ function renderMoneyHandover(){
   }
 
   container.innerHTML = html;
+}
+
+// ---- NPR (Night Posting Reconciliation): read-only view of what this
+// system already has, one row per room per night — reuses the exact same
+// per-night expansion buildLedgersRecords already does (check-in through
+// the night before checkout), just filtered to real rooms (no Misc) and a
+// date range. Exists purely to compare against an EXTERNAL nightly report
+// pasted in by hand; never writes, backfills, or auto-creates anything in
+// this app's own data. ----
+function buildNprOccupiedRows(fromDate, toDate){
+  return buildLedgersRecords()
+    .filter(r=> !isMiscRoomNo(r.roomNo) && (!fromDate || r.date >= fromDate) && (!toDate || r.date <= toDate))
+    .sort((a,b)=> a.date.localeCompare(b.date) || a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+function renderNPR(){
+  const container = document.getElementById('nprOccupiedBody');
+  const summaryEl = document.getElementById('nprSummary');
+  if(!initialLoadDone){
+    container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    summaryEl.innerHTML = '';
+    return;
+  }
+  const fromVal = document.getElementById('nprFrom').value;
+  const toVal = document.getElementById('nprTo').value;
+  updateDateReadout(document.getElementById('nprFrom'), document.getElementById('nprFromReadout'));
+  updateDateReadout(document.getElementById('nprTo'), document.getElementById('nprToReadout'));
+
+  const rows = buildNprOccupiedRows(fromVal, toVal);
+  const dayWord = fromVal && toVal ? formatDate(fromVal) + ' to ' + formatDate(toVal) : 'this range';
+  const distinctRooms = new Set(rows.map(r=> r.roomNo)).size;
+  summaryEl.textContent = rows.length + (rows.length === 1 ? ' room-night' : ' room-nights') + ' (' + distinctRooms + (distinctRooms === 1 ? ' room' : ' rooms') + ') ' + dayWord;
+
+  if(rows.length === 0){
+    container.innerHTML = '<div class="empty-note">No occupied rooms ' + dayWord + '.</div>';
+    return;
+  }
+  container.innerHTML = `
+    <table>
+      <thead><tr><th style="width:110px;">Date</th><th style="width:110px;">Room No</th><th>Guest</th><th style="width:120px;">Rate</th></tr></thead>
+      <tbody>${rows.map(r=> `
+        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+          <td>${formatDate(r.date)}</td>
+          <td>${r.roomNo}</td>
+          <td>${r.guest}</td>
+          <td>${r.rent.toLocaleString()}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+// Accepts a couple of common date shapes (ISO, or D/M/Y and D-M-Y) so a
+// straight copy-paste from another system's report doesn't need
+// reformatting by hand first.
+function parseNprPasteLine(line){
+  const parts = line.split(/\t|,/).map(s=> s.trim()).filter(s=> s.length);
+  if(parts.length < 2) return null;
+  let date = parts[0];
+  const dmy = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/.exec(date);
+  if(dmy) date = dmy[3] + '-' + dmy[2].padStart(2,'0') + '-' + dmy[1].padStart(2,'0');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  return { date, roomNo: (parts[1] || '').toUpperCase(), guest: parts[2] || '', rate: parts[3] ? (parseFloat(parts[3].replace(/,/g,'')) || 0) : null };
+}
+
+// Diffs pasted rows (date, room, guest, rate) against this system's own
+// per-night rows for the same range — flags anything pasted that isn't
+// found here, or is found with a different rate. Read-only: nothing typed
+// or pasted here is ever saved.
+function runNprCompare(){
+  const raw = document.getElementById('nprPaste').value;
+  const resultBody = document.getElementById('nprCompareBody');
+  const lines = raw.split('\n').map(l=> l.trim()).filter(l=> l.length);
+  if(lines.length === 0){
+    resultBody.innerHTML = '<div class="empty-note">Paste some rows above first.</div>';
+    return;
+  }
+  const fromVal = document.getElementById('nprFrom').value;
+  const toVal = document.getElementById('nprTo').value;
+  const ours = buildNprOccupiedRows(fromVal, toVal);
+  const oursByKey = {};
+  ours.forEach(r=>{ oursByKey[r.date + '|' + r.roomNo.toUpperCase()] = r; });
+
+  const parsed = [];
+  const badLines = [];
+  lines.forEach(line=>{
+    const p = parseNprPasteLine(line);
+    if(!p) badLines.push(line);
+    else parsed.push(p);
+  });
+
+  const results = parsed.map(p=>{
+    const match = oursByKey[p.date + '|' + p.roomNo];
+    let status, note;
+    if(!match){
+      status = 'missing';
+      note = 'Not in this system for that room/night';
+    } else if(p.rate !== null && Math.abs(p.rate - match.rent) > 0.5){
+      status = 'rate-mismatch';
+      note = 'Rate differs — this system has Rs. ' + match.rent.toLocaleString();
+    } else {
+      status = 'match';
+      note = 'Matches this system';
+    }
+    return { date: p.date, roomNo: p.roomNo, guest: p.guest, rate: p.rate, status, note, guestId: match ? match.guestId : null };
+  });
+
+  const missingCount = results.filter(r=> r.status === 'missing').length;
+  const mismatchCount = results.filter(r=> r.status === 'rate-mismatch').length;
+
+  let html = `<div style="margin-bottom:10px; font-weight:700;">${results.length} row${results.length===1?'':'s'} compared — ${missingCount} missing, ${mismatchCount} rate mismatch${mismatchCount===1?'':'es'}${badLines.length ? ', ' + badLines.length + ' line' + (badLines.length===1?'':'s') + ' unreadable' : ''}</div>`;
+  html += `
+    <table>
+      <thead><tr><th style="width:110px;">Date</th><th style="width:110px;">Room No</th><th>Guest (pasted)</th><th style="width:120px;">Rate (pasted)</th><th style="width:150px;">Status</th><th style="width:110px;"></th></tr></thead>
+      <tbody>${results.map(r=>{
+        const cls = r.status === 'missing' ? 'checkoutdue' : (r.status === 'rate-mismatch' ? 'partial' : 'paid');
+        const label = r.status === 'missing' ? 'Missing' : (r.status === 'rate-mismatch' ? 'Rate Mismatch' : 'Match');
+        const guestEsc = (r.guest || '').replace(/'/g, "\\'");
+        const roomEsc = r.roomNo.replace(/'/g, "\\'");
+        const action = r.status === 'missing' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="startNprAdd('${r.date}','${roomEsc}','${guestEsc}')">Add</button>` : '';
+        return `
+        <tr title="${r.note}">
+          <td>${formatDate(r.date)}</td>
+          <td>${r.roomNo}</td>
+          <td>${r.guest || '-'}</td>
+          <td>${r.rate !== null ? r.rate.toLocaleString() : '-'}</td>
+          <td><span class="status ${cls}">${label}</span></td>
+          <td>${action}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  if(badLines.length){
+    html += `<div class="sub" style="margin-top:10px;">Couldn't read ${badLines.length} line${badLines.length===1?'':'s'} (expected <code>YYYY-MM-DD, Room No, Guest, Rate</code>): ${badLines.map(l=> '<code>' + l.replace(/</g,'&lt;') + '</code>').join(', ')}</div>`;
+  }
+  resultBody.innerHTML = html;
+}
+
+// Never auto-inserts a guest record into real data — pre-fills what's
+// known (name, check-in date) on the real Guest Entry form and lets a
+// human add the flagged room themselves, fill in the rest (father name,
+// CNIC, etc.), and save it, exactly like any other new booking.
+function startNprAdd(date, roomNo, guest){
+  showView('entry');
+  cancelEditMode();
+  document.getElementById('guestName').value = guest || '';
+  setStayDate('checkInDate', date);
+  updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
+  autoFillExpectedCheckout();
+  showNotice('Pre-filled name and check-in date from NPR — add room ' + roomNo + ' yourself and fill in the rest before saving.', 'success');
 }
 
 function formatDate(iso){
