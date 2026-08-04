@@ -524,6 +524,17 @@
   @media (max-width: 560px){
     .room-stats-grid{ grid-template-columns:1fr; }
   }
+  .night-stats-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:14px;
+  }
+  @media (max-width: 900px){
+    .night-stats-grid{ grid-template-columns:repeat(3,1fr); }
+  }
+  @media (max-width: 560px){
+    .night-stats-grid{ grid-template-columns:repeat(2,1fr); }
+  }
   .dash-card{
     background:var(--paper);
     border:1px solid var(--line);
@@ -2240,6 +2251,7 @@
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
       <button class="navbtn" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
+      <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
       <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none; margin-left:auto;">Auto Checkout / Extend</button>
     </div>
   </div>
@@ -3159,12 +3171,82 @@
       <div id="rvRoomsBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
-    <div class="section-divider no-print"></div>
+  </div>
+
+  <div class="view" id="view-nightsummary">
+
+    <h1 class="no-print">Night Summary</h1>
+    <div class="sub no-print">One night's room statistics, occupancy rate, and guest charges — same data as Revenue Report, formatted to match the printed Night Posting Report</div>
+
+    <div class="print-header">
+      <h1 id="nsPrintTitle">Night Posting Report</h1>
+      <div class="print-header-sub" id="nsPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <h2>Posted For</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>Date</label>
+          <input type="date" id="nsDate">
+          <div class="date-readout" id="nsDateReadout"></div>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="setNightSummaryToday()">Today</button>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="printNightSummary()">🖶 Print</button>
+        </div>
+      </div>
+    </div>
 
     <div class="panel accent-report">
-      <h2 class="no-print">Extra Money (not linked to an in-range night's rent)</h2>
-      <div class="sub no-print" style="margin-top:-6px;">Money received in this range that did NOT go toward an in-range night's own room rent above — an advance for a later night, a payment against an older due, a reservation deposit, a misc charge, or money for a guest who wasn't in-house on that date</div>
-      <div id="rvTodayBody" style="overflow-x:auto;"><div class="empty-note">No extra payments in range.</div></div>
+      <h2 class="no-print">ROOM STATISTICS</h2>
+      <div class="night-stats-grid" style="margin-top:12px;">
+        <div class="dash-card">
+          <div class="dash-card-lbl">Occupied</div>
+          <div class="dash-card-val" id="nsStatOccupied">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">Vacant</div>
+          <div class="dash-card-val" id="nsStatVacant">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">OOO</div>
+          <div class="dash-card-val" id="nsStatOOO">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">OOS</div>
+          <div class="dash-card-val">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">Pax</div>
+          <div class="dash-card-val" id="nsStatPax">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">House Use</div>
+          <div class="dash-card-val">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">Short Stay</div>
+          <div class="dash-card-val">0</div>
+        </div>
+      </div>
+
+      <div class="rev-grandtotal-box" style="margin-top:16px;">
+        <div class="date-box-head">Occupancy Rate</div>
+        <div style="display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+          <div style="font-size:26px; font-weight:700;" id="nsStatOccRate">0%</div>
+          <div style="color:var(--muted); font-size:13px;" id="nsStatOccRateSub"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2 class="no-print">GUEST CHARGES SUMMARY</h2>
+      <div id="nsRoomsBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -3660,7 +3742,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -3709,6 +3791,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavReport').classList.toggle('active', view === 'report' || view === 'graphs');
   document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
+  document.getElementById('topNavNightSummary').classList.toggle('active', view === 'nightsummary');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr');
   if(view === 'report') renderReport();
@@ -3722,6 +3805,7 @@ function showView(view, fromPopState){
   if(view === 'handover') renderMoneyHandover();
   if(view === 'npr') renderNPR();
   if(view === 'revenue') renderRevenue();
+  if(view === 'nightsummary') renderNightSummary();
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
   if(view === 'deleteentity') renderDeleteEntityList();
@@ -3982,6 +4066,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   document.getElementById('rvFrom').value = todayStr();
   document.getElementById('rvTo').value = todayStr();
+  document.getElementById('nsDate').addEventListener('input', renderNightSummary);
+  document.getElementById('nsDate').value = todayStr();
   document.getElementById('b19From').value = '2026-07-19';
   updateDateReadout(document.getElementById('b19From'), document.getElementById('b19FromReadout'));
   document.getElementById('b19From').addEventListener('input', e=>{
@@ -4051,7 +4137,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   [
     'cicoFrom','cicoTo','auditEntryDate','dNewDate','gsearchDate',
     'filterFrom','filterTo','lgFrom','lgTo','rvFrom','rvTo',
-    'dlDate','acDate','auditPageDate','rdDate','b19From','hoFrom','hoTo','nprFrom','nprTo'
+    'dlDate','acDate','auditPageDate','rdDate','b19From','hoFrom','hoTo','nprFrom','nprTo','nsDate'
   ].forEach(addDateStepper);
 });
 
@@ -4892,7 +4978,7 @@ function scheduleKarachiMidnightRollover(){
 function handleKarachiMidnightRollover(){
   const newToday = todayStr();
   if(newToday === lastKnownToday) return;
-  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','rvFrom','rvTo','dlDate','auditEntryDate','auditPageDate','acDate'].forEach(id=>{
+  ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','rvFrom','rvTo','nsDate','dlDate','auditEntryDate','auditPageDate','acDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(el && el.value === lastKnownToday) el.value = newToday;
   });
@@ -4911,6 +4997,8 @@ function handleKarachiMidnightRollover(){
   if(rvFromEl) updateDateReadout(rvFromEl, document.getElementById('rvFromReadout'));
   const rvToEl = document.getElementById('rvTo');
   if(rvToEl) updateDateReadout(rvToEl, document.getElementById('rvToReadout'));
+  const nsDateEl = document.getElementById('nsDate');
+  if(nsDateEl) updateDateReadout(nsDateEl, document.getElementById('nsDateReadout'));
   const dlDateEl = document.getElementById('dlDate');
   if(dlDateEl) updateDateReadout(dlDateEl, document.getElementById('dlDateReadout'));
   const acDateEl = document.getElementById('acDate');
@@ -4930,6 +5018,7 @@ function handleKarachiMidnightRollover(){
   if(currentView === 'search') renderSearch();
   if(currentView === 'ledgers') renderLedgers();
   if(currentView === 'revenue') renderRevenue();
+  if(currentView === 'nightsummary') renderNightSummary();
   if(currentView === 'audit') renderAuditPage();
   if(currentView === 'daylock') renderDayLock();
   if(currentView === 'roomdetail') renderRoomDetail();
@@ -6054,6 +6143,7 @@ const GLOBAL_SEARCH_PAGES = [
   { label: 'Search', view: 'search', keywords: ['balance due', 'total due'] },
   { label: 'Report', view: 'report', keywords: ['payment detail', 'grand total'] },
   { label: 'Revenue Report', view: 'revenue', keywords: ['payments by date', 'extra money', 'rooms occupied'] },
+  { label: 'Night Summary', view: 'nightsummary', keywords: ['night posting report', 'posted for', 'room statistics', 'occupancy rate', 'guest charges summary'] },
   { label: 'Settings', view: 'settings', keywords: ['delete entity', 'full audit', 'data', 'sync', 'tables'] }
 ];
 
@@ -8831,14 +8921,12 @@ function renderRevenue(){
   const byDateBoxBody = document.getElementById('rvByDateBoxBody');
   const byDateTableBody = document.getElementById('rvByDateTableBody');
   const byDateGrandTotal = document.getElementById('rvByDateGrandTotal');
-  const todayBody = document.getElementById('rvTodayBody');
   if(!initialLoadDone){
     roomsBody.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     nightlySummary.innerHTML = '';
     byDateBoxBody.innerHTML = '';
     byDateTableBody.innerHTML = '';
     byDateGrandTotal.innerHTML = '';
-    todayBody.innerHTML = '';
     ['rvStatOccupied','rvStatVacant','rvStatPax'].forEach(id=> document.getElementById(id).textContent = '…');
     document.getElementById('rvStatOccRate').textContent = '…';
     return;
@@ -8969,45 +9057,6 @@ function renderRevenue(){
           </tbody>
         </table>
       </div>`;
-
-  // ---- Extra Money Today: payments received on asOfDate that didn't go
-  // toward asOfDate's own room rent — an advance for a future night, a
-  // top-up on an older due, a reservation deposit, a misc charge on its
-  // own, or a payment for a guest who isn't in-house today at all.
-  if(data.unlinkedPayments.length === 0){
-    todayBody.innerHTML = '<div class="empty-note">No extra payments recorded ' + dayWord + '.</div>';
-  } else {
-    const unlinkedMCB = data.unlinkedPayments.filter(r=> r.source === 'MCB').reduce((s,r)=> s + r.amount, 0);
-    const unlinkedAlfalah = data.unlinkedPayments.filter(r=> r.source === 'Alfalah').reduce((s,r)=> s + r.amount, 0);
-    const unlinkedHaji = data.unlinkedPayments.filter(r=> r.source === 'Haji (MCB)').reduce((s,r)=> s + r.amount, 0);
-    todayBody.innerHTML = `
-      <table>
-        <thead><tr><th>Guest</th><th style="width:110px;">Room No</th><th style="width:110px;">Amount</th><th style="width:120px;">Source</th><th style="width:110px;">Date</th></tr></thead>
-        <tbody>${data.unlinkedPayments.map(r=> `
-          <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
-            <td>${r.guest}</td>
-            <td>${r.roomNo}</td>
-            <td style="font-weight:700;">${r.amount.toLocaleString()}</td>
-            <td>${r.source}</td>
-            <td>${formatDate(r.date)}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-      <div class="rev-grandtotal-box" style="margin-top:14px;">
-        <div class="date-box-head">Total</div>
-        <table>
-          <thead><tr><th>Total Sale</th><th>MCB</th><th>Alfalah</th><th>Haji (MCB)</th></tr></thead>
-          <tbody>
-            <tr class="day-foot-total">
-              <td>${data.unlinkedTotal.toLocaleString()}</td>
-              <td class="account-amt">${unlinkedMCB.toLocaleString()}</td>
-              <td class="account-amt">${unlinkedAlfalah.toLocaleString()}</td>
-              <td class="account-amt">${unlinkedHaji.toLocaleString()}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>`;
-  }
 }
 
 function exportRevenueExcel(){
@@ -9101,6 +9150,132 @@ function printRevenueTaxless(){
     window.removeEventListener('afterprint', restore);
   };
   window.addEventListener('afterprint', restore);
+  window.print();
+}
+
+// =========================================================
+// NIGHT SUMMARY — a single-night snapshot of Revenue Report's own data
+// (computeRoomStatuses + buildLedgersRecords), reshaped to match a printed
+// "Night Posting Report": room statistics, occupancy rate, then one row per
+// occupied room-night with that night's own rate. OOS, House Use and Short
+// Stay have no equivalent anywhere else in this app (no such room/booking
+// state is tracked) so they're always 0 — visual parity only, not real data.
+// =========================================================
+function setNightSummaryToday(){
+  document.getElementById('nsDate').value = todayStr();
+  updateDateReadout(document.getElementById('nsDate'), document.getElementById('nsDateReadout'));
+  renderNightSummary();
+}
+
+function buildNightSummaryReport(asOfDate){
+  const date = asOfDate || todayStr();
+  const all = loadAllEntries();
+  const byId = {};
+  all.forEach(e=> byId[e.id] = e);
+
+  const rooms = computeRoomStatuses(date);
+  const totalRooms = rooms.length;
+  const occupiedCount = rooms.filter(r=> r.occupied).length;
+  const vacantRooms = rooms.filter(r=> !r.occupied);
+  const vacantCount = vacantRooms.length;
+  const oooCount = vacantRooms.filter(r=> r.housekeepingStatus === 'OOO').length;
+
+  const nightRecords = buildLedgersRecords().filter(n=> n.date === date && !isMiscRoomNo(n.roomNo));
+  const rows = nightRecords.map(n=>{
+    const entry = byId[n.guestId];
+    const relevantRooms = entry ? (entry.rooms || []).filter(r=> r.roomNo === n.roomNo) : [];
+    const adultsDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
+    const childrenDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
+    return {
+      roomNo: n.roomNo,
+      guest: n.guest,
+      guestId: n.guestId,
+      rate: n.rent,
+      extraBed: 0,
+      total: n.rent,
+      pax: adultsDisplay + childrenDisplay
+    };
+  }).sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+
+  const totalPax = rows.reduce((s,r)=> s + r.pax, 0);
+  const totalRate = rows.reduce((s,r)=> s + r.rate, 0);
+  const totalAmount = rows.reduce((s,r)=> s + r.total, 0);
+  const occRate = totalRooms > 0 ? (occupiedCount / totalRooms * 100) : 0;
+
+  return { date, rows, totalRooms, occupiedCount, vacantCount, oooCount, totalPax, totalRate, totalAmount, occRate };
+}
+
+function renderNightSummary(){
+  const body = document.getElementById('nsRoomsBody');
+  if(!initialLoadDone){
+    body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    ['nsStatOccupied','nsStatVacant','nsStatOOO','nsStatPax'].forEach(id=> document.getElementById(id).textContent = '…');
+    document.getElementById('nsStatOccRate').textContent = '…';
+    document.getElementById('nsStatOccRateSub').textContent = '';
+    return;
+  }
+
+  const dateEl = document.getElementById('nsDate');
+  const date = dateEl.value || todayStr();
+  updateDateReadout(dateEl, document.getElementById('nsDateReadout'));
+
+  const data = buildNightSummaryReport(date);
+
+  document.getElementById('nsPrintHeaderSub').textContent = '📅 Posted for ' + formatDate(date);
+
+  document.getElementById('nsStatOccupied').textContent = data.occupiedCount;
+  document.getElementById('nsStatVacant').textContent = data.vacantCount;
+  document.getElementById('nsStatOOO').textContent = data.oooCount;
+  document.getElementById('nsStatPax').textContent = data.totalPax;
+  document.getElementById('nsStatOccRate').textContent = data.occRate.toFixed(1) + '%';
+  document.getElementById('nsStatOccRateSub').textContent = data.occupiedCount + ' of ' + data.totalRooms + ' rooms';
+
+  if(data.rows.length === 0){
+    body.innerHTML = '<div class="empty-note">No rooms occupied on ' + formatDate(date) + '.</div>';
+    return;
+  }
+
+  const money = (n)=> n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  body.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px;">#</th>
+          <th style="width:110px;">Guest #</th>
+          <th>Guest</th>
+          <th style="width:100px;">Room</th>
+          <th style="width:110px;">Rate</th>
+          <th style="width:100px;">Extra Bed</th>
+          <th style="width:110px;">Total</th>
+          <th style="width:70px;">Pax</th>
+        </tr>
+      </thead>
+      <tbody>${data.rows.map((r, idx)=> `
+        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+          <td>${idx + 1}</td>
+          <td>${r.roomNo}</td>
+          <td>${r.guest}</td>
+          <td>${r.roomNo}</td>
+          <td>${money(r.rate)}</td>
+          <td>${money(r.extraBed)}</td>
+          <td style="font-weight:700;">${money(r.total)}</td>
+          <td>${r.pax}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="4">Totals</td>
+          <td>${money(data.totalRate)}</td>
+          <td>${money(0)}</td>
+          <td>${money(data.totalAmount)}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
+function printNightSummary(){
   window.print();
 }
 
@@ -10383,6 +10558,7 @@ function rerenderActiveView(){
   else if(currentView === 'roomdetail'){ renderRoomDetail(); }
   else if(currentView === 'ledgers'){ renderLedgers(); }
   else if(currentView === 'revenue'){ renderRevenue(); }
+  else if(currentView === 'nightsummary'){ renderNightSummary(); }
   else if(currentView === 'daylock'){ renderDayLock(); }
   else if(currentView === 'deleteentity'){ renderDeleteEntityList(); }
   else if(currentView === 'dashboard'){ renderDashboard(); }
