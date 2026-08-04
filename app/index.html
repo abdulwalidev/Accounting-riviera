@@ -181,7 +181,7 @@
      different widths, which reads as visually broken even though nothing
      is actually wrong. max-width:100% keeps it from overflowing a
      container narrower than that on small screens. */
-  .flatpickr-alt-input{ width:307.875px; max-width:100%; }
+  .flatpickr-alt-input{ width:307.875px; max-width:100%; text-align:center; }
   /* Search fields: a pulsing ✕ appears once something is typed (pure CSS,
      via :placeholder-shown) so a leftover filter is never invisible/easy
      to forget about. Clicking it clears the field and re-fires whatever
@@ -4017,9 +4017,29 @@ function restoreLastView(){
   armExitGuard();
 }
 
+// Every flatpickr instance in the app (Stay dates, Filter dates, Range
+// pairs below) displays "05 AUGUST 26" — day, full month name in caps,
+// 2-digit year — or "05 AUGUST 26 to 06 AUGUST 26" once a range has both
+// ends picked. flatpickr's own altFormat tokens can't produce an uppercase
+// month with a lowercase " to " joiner in one format string, so this writes
+// the display text directly onto the altInput instead, hooked to
+// onValueUpdate (fires on every value change, including the programmatic
+// setDate(..., false) calls setStayDate/setFilterDate/setRangeDate use,
+// unlike onChange) and onReady (covers the very first render).
+const PICKER_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+function formatPickerDisplay(selectedDates){
+  const one = d=> String(d.getDate()).padStart(2, '0') + ' ' + PICKER_MONTHS[d.getMonth()] + ' ' + String(d.getFullYear()).slice(-2);
+  if(!selectedDates || selectedDates.length === 0) return '';
+  if(selectedDates.length === 1) return one(selectedDates[0]);
+  return one(selectedDates[0]) + ' to ' + one(selectedDates[selectedDates.length - 1]);
+}
+function applyPickerDisplay(instance){
+  if(instance.altInput) instance.altInput.value = formatPickerDisplay(instance.selectedDates);
+}
+
 // ---- Stay & Status date pickers (Check-in / Expected Checkout / Actual
 // Checkout): flatpickr with an altInput, so the field the user sees and
-// clicks shows a friendly "28 Jul 2026" with a calendar popup, while the
+// clicks shows the friendly display above with a calendar popup, while the
 // underlying element (same id, same .value every existing call site reads)
 // keeps the plain Y-m-d string those call sites already expect. Setting
 // .value directly (as plenty of code still does) doesn't tell flatpickr
@@ -4038,7 +4058,9 @@ function initStayDatePickers(){
       altInputClass: 'flatpickr-alt-input',
       altFormat: 'd M Y',
       allowInput: true,
-      disableMobile: true
+      disableMobile: true,
+      onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
+      onReady: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance)
     });
   });
 }
@@ -4070,7 +4092,9 @@ function initFilterDatePickers(){
       altInputClass: 'flatpickr-alt-input',
       altFormat: 'D, d M Y',
       allowInput: true,
-      disableMobile: true
+      disableMobile: true,
+      onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
+      onReady: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance)
     });
   });
 }
@@ -4125,7 +4149,9 @@ function initRangeDatePicker(rangeId, fromId, toId, onRangeChange){
       fromEl.dispatchEvent(new Event('input', { bubbles: true }));
       toEl.dispatchEvent(new Event('input', { bubbles: true }));
       if(onRangeChange) onRangeChange();
-    }
+    },
+    onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
+    onReady: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance)
   });
 }
 // Every place that sets a range pair's dates programmatically (a "Today"
