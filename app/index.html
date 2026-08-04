@@ -4116,6 +4116,19 @@ function formatPickerDisplay(selectedDates){
 function applyPickerDisplay(instance){
   if(instance.altInput) instance.altInput.value = formatPickerDisplay(instance.selectedDates);
 }
+// allowInput must stay false on every picker below — with it on, flatpickr
+// attaches a blur handler (only when allowInput is true) that, whenever the
+// visible text doesn't exactly match what its own altFormat would have
+// produced, re-parses that visible text as if the user had typed it and
+// calls setDate() from the result. The custom display above (uppercase
+// month, 2-digit year, "→") never matches flatpickr's own altFormat
+// output, so with allowInput on, ANY blur — clicking away, tabbing out,
+// even the window itself losing focus (e.g. Alt+Tab) — silently
+// re-parsed "05 AUGUST 26" against flatpickr's own tokens, which don't
+// understand a full uppercase month name, and quietly landed on January.
+// Turning allowInput off removes that listener entirely: nothing but an
+// actual calendar click or the Today/Clear footer buttons can ever change
+// a picker's date now.
 // Same "05 AUGUST 26" / "05 AUGUST 26 → 06 AUGUST 26" display, built from
 // plain Y-m-d strings instead of a flatpickr instance — for readouts that
 // live outside the picker itself (e.g. Revenue Report's action row).
@@ -4163,7 +4176,7 @@ function initStayDatePickers(){
       altInput: true,
       altInputClass: 'flatpickr-alt-input',
       altFormat: 'd M Y',
-      allowInput: true,
+      allowInput: false,
       disableMobile: true,
       onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
       onReady: (selectedDates, dateStr, instance)=>{
@@ -4203,7 +4216,7 @@ function initFilterDatePickers(){
       altInput: true,
       altInputClass: 'flatpickr-alt-input',
       altFormat: 'D, d M Y',
-      allowInput: true,
+      allowInput: false,
       disableMobile: true,
       onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
       onReady: (selectedDates, dateStr, instance)=>{
@@ -4255,7 +4268,7 @@ function initRangeDatePicker(rangeId, fromId, toId, onRangeChange){
     altInput: true,
     altInputClass: 'flatpickr-alt-input',
     altFormat: 'd M Y',
-    allowInput: true,
+    allowInput: false,
     disableMobile: true,
     defaultDate: initialDates.length ? initialDates : undefined,
     onChange: (selectedDates)=>{
