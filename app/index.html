@@ -7936,43 +7936,61 @@ function runNprCompare(){
 
   const results = parsed.map(p=>{
     const match = oursByKey[p.date + '|' + p.roomNo];
+    const ourRate = match ? match.rent : 0;
+    // Missing entirely means this system has nothing to set against the
+    // pasted rate at all — the whole pasted rate reads as the gap. With a
+    // rate on both sides it's the plain pasted-minus-ours difference. No
+    // pasted rate at all (paste line didn't include one) can't be diffed,
+    // so it contributes nothing to the total rather than a false gap.
+    const diff = p.rate === null ? 0 : (p.rate - ourRate);
     let status, note;
     if(!match){
       status = 'missing';
       note = 'Not in this system for that room/night';
-    } else if(p.rate !== null && Math.abs(p.rate - match.rent) > 0.5){
+    } else if(p.rate !== null && Math.abs(diff) > 0.5){
       status = 'rate-mismatch';
       note = 'Rate differs — this system has Rs. ' + match.rent.toLocaleString();
     } else {
       status = 'match';
       note = 'Matches this system';
     }
-    return { date: p.date, roomNo: p.roomNo, guest: p.guest, rate: p.rate, status, note, guestId: match ? match.guestId : null };
+    return { date: p.date, roomNo: p.roomNo, guest: p.guest, rate: p.rate, ourRate, diff, status, note, guestId: match ? match.guestId : null };
   });
 
   const missingCount = results.filter(r=> r.status === 'missing').length;
   const mismatchCount = results.filter(r=> r.status === 'rate-mismatch').length;
+  const totalDiff = results.reduce((s,r)=> s + r.diff, 0);
 
   let html = `<div style="margin-bottom:10px; font-weight:700;">${results.length} row${results.length===1?'':'s'} compared — ${missingCount} missing, ${mismatchCount} rate mismatch${mismatchCount===1?'':'es'}${badLines.length ? ', ' + badLines.length + ' line' + (badLines.length===1?'':'s') + ' unreadable' : ''}</div>`;
   html += `
     <table>
-      <thead><tr><th style="width:110px;">Date</th><th style="width:110px;">Room No</th><th>Guest (pasted)</th><th style="width:120px;">Rate (pasted)</th><th style="width:150px;">Status</th><th style="width:110px;"></th></tr></thead>
+      <thead><tr><th style="width:110px;">Date</th><th style="width:110px;">Room No</th><th>Guest (pasted)</th><th style="width:120px;">Rate (pasted)</th><th style="width:120px;">Rate (this system)</th><th style="width:120px;">Difference</th><th style="width:150px;">Status</th><th style="width:110px;"></th></tr></thead>
       <tbody>${results.map(r=>{
         const cls = r.status === 'missing' ? 'checkoutdue' : (r.status === 'rate-mismatch' ? 'partial' : 'paid');
         const label = r.status === 'missing' ? 'Missing' : (r.status === 'rate-mismatch' ? 'Rate Mismatch' : 'Match');
         const guestEsc = (r.guest || '').replace(/'/g, "\\'");
         const roomEsc = r.roomNo.replace(/'/g, "\\'");
         const action = r.status === 'missing' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="startNprAdd('${r.date}','${roomEsc}','${guestEsc}')">Add</button>` : '';
+        const diffCell = r.diff === 0 ? '-' : (r.diff > 0 ? '+' : '') + r.diff.toLocaleString();
         return `
         <tr title="${r.note}">
           <td>${formatDate(r.date)}</td>
           <td>${r.roomNo}</td>
           <td>${r.guest || '-'}</td>
           <td>${r.rate !== null ? r.rate.toLocaleString() : '-'}</td>
+          <td>${r.status === 'missing' ? '-' : r.ourRate.toLocaleString()}</td>
+          <td style="${r.diff !== 0 ? 'color:var(--danger); font-weight:700;' : ''}">${diffCell}</td>
           <td><span class="status ${cls}">${label}</span></td>
           <td>${action}</td>
         </tr>`;
       }).join('')}</tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="5">Total difference (pasted minus this system)</td>
+          <td style="font-weight:700;">${totalDiff === 0 ? 'Rs. 0' : (totalDiff > 0 ? '+Rs. ' : '-Rs. ') + Math.abs(totalDiff).toLocaleString()}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
     </table>`;
   if(badLines.length){
     html += `<div class="sub" style="margin-top:10px;">Couldn't read ${badLines.length} line${badLines.length===1?'':'s'} (expected <code>YYYY-MM-DD, Room No, Guest, Rate</code>): ${badLines.map(l=> '<code>' + l.replace(/</g,'&lt;') + '</code>').join(', ')}</div>`;
