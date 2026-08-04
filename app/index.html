@@ -3310,6 +3310,7 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn secondary" onclick="setNightSummaryToday()">Today</button>
         </div>
+        <div id="nsDateReadoutBig" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn secondary" onclick="printNightSummary()">🖶 Print</button>
         </div>
@@ -9428,6 +9429,7 @@ function renderNightSummary(){
   const dateEl = document.getElementById('nsDate');
   const date = dateEl.value || todayStr();
   updateDateReadout(dateEl, document.getElementById('nsDateReadout'));
+  document.getElementById('nsDateReadoutBig').textContent = formatIsoRangeDisplay(date);
 
   const data = buildNightSummaryReport(date);
 
