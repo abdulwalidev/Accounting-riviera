@@ -2855,6 +2855,7 @@
           <label for="gsearchShowZero" style="margin:0;">Show 0Rs guests</label>
         </div>
       </div>
+      <div id="gsearchDateReadoutBig" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em; margin-bottom:8px;"></div>
       <div class="glist" id="gsearchList"></div>
     </div>
 
@@ -6516,6 +6517,7 @@ function renderSearch(){
   const showZero = document.getElementById('gsearchShowZero').checked;
   const dateVal = document.getElementById('gsearchDate').value;
   document.getElementById('gsearchDateReadout').textContent = dateVal ? formatDate(dateVal) : '';
+  document.getElementById('gsearchDateReadoutBig').textContent = formatIsoRangeDisplay(dateVal);
   const listEl = document.getElementById('gsearchList');
 
   let items = all.map(entry=>{
