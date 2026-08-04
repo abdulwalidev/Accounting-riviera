@@ -2151,14 +2151,13 @@
      generic @media print reset above (which forces * { color:#000
      !important } and 1px solid black borders on every th/td).
 
-     This report is a fixed light design with no dark variant of its own
-     (same as a printed page never having one) — the .ns-card/.ns-stat-box/
-     table rules above already force light colors regardless of the app's
-     theme, but the VIEW ITSELF had no background, so in dark mode the
-     app's near-black page bleeded through around and between the cards,
-     and the title/subtitle (dark text, no background under them at all)
-     went nearly unreadable. Giving the whole view its own solid white
-     backdrop makes it read as one consistent page in either theme. ================= */
+     The rules directly below are the light palette — always what prints,
+     regardless of the app's theme toggle, since a printed page has no dark
+     variant. The actual dark-mode look lives in the separate
+     `@media screen{ html[data-theme="dark"] #view-nightsummary{...} }`
+     block further down: wrapping it in `@media screen` is what guarantees
+     it can never leak into print, however the toggle happens to be set
+     when someone hits Print. ================= */
   #view-nightsummary{
     font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
     background:#fff !important;
@@ -2219,6 +2218,47 @@
     padding:8px; font-weight:700; border:none !important; border-top:2px solid #333 !important; background:transparent !important; color:#222 !important;
   }
   #view-nightsummary .ns-table tfoot td.num{ text-align:right; }
+
+  /* Night Summary — dark mode (screen only, see comment above). Same
+     structure as the light palette, just re-colored to match the rest of
+     the app's dark theme (the #1A1A1A card surface and rgba(255,255,255,…)
+     borders here are the same ones .roomno-list/.hdr-row3/etc already use
+     elsewhere in this file). */
+  @media screen{
+    html[data-theme="dark"] #view-nightsummary{ background:#0A0A0A !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-title{ color:#fff !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-subtitle{ color:#9C9C9C !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-subtitle b{ color:#fff !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-card{
+      background:#1A1A1A !important; border-color:rgba(255,255,255,0.14) !important; box-shadow:0 4px 14px rgba(0,0,0,0.5);
+    }
+    html[data-theme="dark"] #view-nightsummary .ns-section-header{ color:#eee !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-stat-box{
+      border-color:rgba(255,255,255,0.35) !important; background:#141414 !important;
+    }
+    html[data-theme="dark"] #view-nightsummary .ns-stat-box.ns-blue{ border-color:#60A5FA !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-stat-num{ color:#fff !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-stat-box.ns-blue .ns-stat-num{ color:#60A5FA !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-stat-label{ color:#9C9C9C !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-stat-box.ns-blue .ns-stat-label{ color:#60A5FA !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-occ-box{
+      border-color:rgba(255,255,255,0.35) !important; background:#141414 !important;
+    }
+    html[data-theme="dark"] #view-nightsummary .ns-occ-label{ color:#eee !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-occ-rate{ color:#eee !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-occ-sub{ color:#60A5FA !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-table thead th{
+      color:#9C9C9C !important; border-bottom-color:rgba(255,255,255,0.14) !important;
+    }
+    html[data-theme="dark"] #view-nightsummary .ns-table tbody td{
+      color:#ddd !important; border-bottom-color:rgba(255,255,255,0.08) !important;
+    }
+    html[data-theme="dark"] #view-nightsummary .ns-table tbody tr td:first-child,
+    html[data-theme="dark"] #view-nightsummary .ns-table tbody tr td:nth-child(2){ color:#60A5FA !important; }
+    html[data-theme="dark"] #view-nightsummary .ns-table tfoot td{
+      color:#fff !important; border-top-color:#fff !important;
+    }
+  }
 </style>
 <script>
   (function(){
