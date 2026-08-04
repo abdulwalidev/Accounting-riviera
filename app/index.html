@@ -4065,6 +4065,45 @@ function setStayDate(id, isoValue){
   if(fp) fp.setDate(isoValue || null, false);
 }
 
+// ---- Filter/report date pickers: the same flatpickr treatment as the Stay
+// dates above (calendar popup instead of the native browser control), for
+// every plain single-date filter/report field — Room Detail, Night Summary,
+// Checkout/Pending, Day Lock, both Audit dates, Add Payment's date, Before19,
+// and Global Search. Kept as its own registry/setter rather than folding
+// into stayDatePickers/setStayDate so that already-proven code path stays
+// completely untouched.
+const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate'];
+const filterDatePickers = {};
+function initFilterDatePickers(){
+  if(typeof flatpickr === 'undefined') return;
+  FILTER_DATE_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el || filterDatePickers[id]) return;
+    filterDatePickers[id] = flatpickr(el, {
+      dateFormat: 'Y-m-d',
+      altInput: true,
+      altFormat: 'D, d M Y',
+      allowInput: true,
+      disableMobile: true
+    });
+  });
+}
+function setFilterDate(id, isoValue){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.value = isoValue || '';
+  const fp = filterDatePickers[id];
+  if(fp) fp.setDate(isoValue || null, false);
+}
+// Every place that steps/resets one of these date fields programmatically
+// (the Prev/Next Day stepper, Today buttons, midnight rollover) needs to go
+// through whichever picker registry (if any) actually owns that field's id,
+// or its flatpickr display silently falls out of sync with the real value —
+// this is the single lookup all of those call sites share.
+function getPickerFor(id){
+  return stayDatePickers[id] || filterDatePickers[id] || null;
+}
+
 // Native <input type="date"> only pops its calendar when you hit the tiny
 // icon on the right — clicking anywhere else in the box just plants a text
 // cursor. showPicker() opens it from a click anywhere in the field instead,
@@ -4108,6 +4147,7 @@ function setFiltersToday(){
 document.addEventListener('DOMContentLoaded', ()=>{
   initRouter();
   initStayDatePickers();
+  initFilterDatePickers();
   setFiltersToday();
   setStayDate('checkInDate', todayStr());
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
@@ -4135,7 +4175,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('rdSearchInput').addEventListener('input', renderRoomDetail);
   document.getElementById('rdOccupiedOnly').addEventListener('change', renderRoomDetail);
   document.getElementById('rdDate').addEventListener('input', renderRoomDetail);
-  document.getElementById('rdDate').value = todayStr();
+  setFilterDate('rdDate', todayStr());
   document.getElementById('cicoFrom').addEventListener('input', renderCico);
   document.getElementById('cicoTo').addEventListener('input', renderCico);
   document.getElementById('cicoFrom').value = todayStr();
@@ -4155,8 +4195,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('rvFrom').value = todayStr();
   document.getElementById('rvTo').value = todayStr();
   document.getElementById('nsDate').addEventListener('input', renderNightSummary);
-  document.getElementById('nsDate').value = todayStr();
-  document.getElementById('b19From').value = '2026-07-19';
+  setFilterDate('nsDate', todayStr());
+  setFilterDate('b19From', '2026-07-19');
   updateDateReadout(document.getElementById('b19From'), document.getElementById('b19FromReadout'));
   document.getElementById('b19From').addEventListener('input', e=>{
     updateDateReadout(e.target, document.getElementById('b19FromReadout'));
@@ -4183,20 +4223,20 @@ document.addEventListener('DOMContentLoaded', ()=>{
   updateDateReadout(document.getElementById('nprFrom'), document.getElementById('nprFromReadout'));
   updateDateReadout(document.getElementById('nprTo'), document.getElementById('nprToReadout'));
   document.getElementById('acDate').addEventListener('input', renderAutoCheckout);
-  document.getElementById('acDate').value = todayStr();
-  document.getElementById('dlDate').value = todayStr();
+  setFilterDate('acDate', todayStr());
+  setFilterDate('dlDate', todayStr());
   updateDateReadout(document.getElementById('dlDate'), document.getElementById('dlDateReadout'));
   document.getElementById('dlDate').addEventListener('input', e=>{
     updateDateReadout(e.target, document.getElementById('dlDateReadout'));
     renderDayLock();
   });
-  document.getElementById('auditEntryDate').value = todayStr();
+  setFilterDate('auditEntryDate', todayStr());
   updateDateReadout(document.getElementById('auditEntryDate'), document.getElementById('auditEntryDateReadout'));
   document.getElementById('auditEntryDate').addEventListener('input', e=>{
     updateDateReadout(e.target, document.getElementById('auditEntryDateReadout'));
     renderAuditLog('auditEntryBody', e.target.value, 200);
   });
-  document.getElementById('auditPageDate').value = todayStr();
+  setFilterDate('auditPageDate', todayStr());
   updateDateReadout(document.getElementById('auditPageDate'), document.getElementById('auditPageDateReadout'));
   document.getElementById('auditPageDate').addEventListener('input', e=>{
     updateDateReadout(e.target, document.getElementById('auditPageDateReadout'));
@@ -5068,7 +5108,10 @@ function handleKarachiMidnightRollover(){
   if(newToday === lastKnownToday) return;
   ['filterFrom','filterTo','lgFrom','lgTo','gsearchDate','dNewDate','checkInDate','rdDate','rvFrom','rvTo','nsDate','dlDate','auditEntryDate','auditPageDate','acDate'].forEach(id=>{
     const el = document.getElementById(id);
-    if(el && el.value === lastKnownToday) el.value = newToday;
+    if(!el || el.value !== lastKnownToday) return;
+    el.value = newToday;
+    const fp = getPickerFor(id);
+    if(fp) fp.setDate(newToday, false);
   });
   lastKnownToday = newToday;
   updateFilterDateReadouts();
@@ -5296,12 +5339,18 @@ function addDateStepper(inputId){
     '<button type="button" class="date-stepper-btn" title="Forward a month">»</button>';
   const [monthBackBtn, twoBackBtn, prevBtn, nextBtn, twoFwdBtn, monthFwdBtn] = wrap.querySelectorAll('button');
   const step = (delta)=>{
-    input.value = addDaysToDateStr(input.value || todayStr(), delta);
+    const newVal = addDaysToDateStr(input.value || todayStr(), delta);
+    input.value = newVal;
+    const fp = getPickerFor(inputId);
+    if(fp) fp.setDate(newVal, false);
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
   const stepMonths = (delta)=>{
-    input.value = addMonthsToDateStr(input.value || todayStr(), delta);
+    const newVal = addMonthsToDateStr(input.value || todayStr(), delta);
+    input.value = newVal;
+    const fp = getPickerFor(inputId);
+    if(fp) fp.setDate(newVal, false);
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
@@ -6830,7 +6879,7 @@ function renderAvailDays(year, month){
 
 function selectAvailDay(iso){
   closeAvailModal();
-  document.getElementById('rdDate').value = iso;
+  setFilterDate('rdDate', iso);
   showView('roomdetail');
 }
 
@@ -7228,7 +7277,7 @@ function toggleAuditEntrySection(){
 
 // ---- Add Payment page ----
 function resetPayForm(){
-  document.getElementById('dNewDate').value = todayStr();
+  setFilterDate('dNewDate', todayStr());
   document.getElementById('dNewDateReadout').textContent = formatDate(todayStr());
   document.getElementById('dNewCash').value = '';
   document.getElementById('dNewCash').disabled = false;
@@ -9220,7 +9269,7 @@ function printRevenue(){
 // state is tracked) so they're always 0 — visual parity only, not real data.
 // =========================================================
 function setNightSummaryToday(){
-  document.getElementById('nsDate').value = todayStr();
+  setFilterDate('nsDate', todayStr());
   updateDateReadout(document.getElementById('nsDate'), document.getElementById('nsDateReadout'));
   renderNightSummary();
 }
@@ -9917,7 +9966,7 @@ function renderAutoCheckout(){
 }
 
 function setAutoCheckoutToday(){
-  document.getElementById('acDate').value = todayStr();
+  setFilterDate('acDate', todayStr());
   renderAutoCheckout();
 }
 
