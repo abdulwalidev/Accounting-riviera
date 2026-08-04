@@ -2368,7 +2368,7 @@
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
       <button class="navbtn" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
       <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
-      <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none; margin-left:auto;">Auto Checkout / Extend</button>
+      <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none; margin-left:auto;">Checkout/Pending</button>
     </div>
   </div>
 </div>
@@ -3421,8 +3421,8 @@
 
   <div class="view" id="view-autocheckout">
 
-    <h1 class="no-print">Auto Checkout / Extend</h1>
-    <div class="sub no-print">Guests whose checkout date has arrived — settle up and check them out one at a time. "Extend" is just a label here: these are the guests who might be extending their stay — nothing on this page extends anything automatically.</div>
+    <h1 class="no-print">Checkout/Pending</h1>
+    <div class="sub no-print">Guests whose checkout date has arrived — settle up and check them out one at a time. Nothing on this page checks anyone out automatically; "Pending" just means their departure hasn't been confirmed yet, however long ago it was due.</div>
 
     <div class="print-header">
       <h1 id="acPrintTitle">Checkout Due</h1>
@@ -3521,7 +3521,7 @@
       <div class="settings-table-row">
         <div>
           <div class="settings-table-name">🚨 Audit Log (guest_edits)</div>
-          <div class="settings-table-desc">Who-did-what history. Never fetched from the cloud — saves fetching an ever-growing table on every sync. Full Audit, the per-guest audit tab, and Auto Checkout's "already checked out today" list only show actions taken on this device this session, not full history.</div>
+          <div class="settings-table-desc">Who-did-what history. Never fetched from the cloud — saves fetching an ever-growing table on every sync. Full Audit, the per-guest audit tab, and Checkout/Pending's "already checked out today" list only show actions taken on this device this session, not full history.</div>
         </div>
         <span class="settings-table-status settings-status-off">Off</span>
       </div>
@@ -3855,7 +3855,7 @@ function showView(view, fromPopState){
     return;
   }
   if(view === 'autocheckout' && !isAdmin()){
-    showNotice('Auto Checkout / Extend is only available to admin accounts.');
+    showNotice('Checkout/Pending is only available to admin accounts.');
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
@@ -4747,7 +4747,7 @@ async function confirmCheckoutConfirmModal(){
 // Marks a guest's Actual Checkout as today and the room Dirty (never
 // straight to Ready — whoever cleans it marks it Ready themselves via the
 // room-status modal). Shared by the room-status modal's checkout flow, the
-// Auto Checkout / Extend page's bulk run, and its per-guest manual button.
+// Checkout/Pending page's bulk run, and its per-guest manual button.
 async function checkOutEntryRoom(entryId, roomNo, logAction){
   const entry = loadAllEntries().find(e=> e.id === entryId);
   if(!entry) return false;
@@ -6587,7 +6587,7 @@ function computeRoomStatuses(asOfDate){
       // refDate. That's not a cosmetic mislabel: lastNightDate feeds
       // straight into Extended below, so a future booking silently made
       // the real previous guest's stay invisible to Room Detail, Dashboard,
-      // and Auto Checkout — nothing to click Undo on, no checkout ever
+      // and Checkout/Pending — nothing to click Undo on, no checkout ever
       // logged, they just vanished the moment someone rebooked the room.
       const pastNights = roomNights.filter(n=> n.date <= refDate);
       if(pastNights.length){
@@ -6609,7 +6609,7 @@ function computeRoomStatuses(asOfDate){
     // day after the last booked night (i.e. only count as Extended if that
     // night was exactly "yesterday"), which meant a guest whose stay nobody
     // ever formally checked out would silently disappear from Inhouse/Room
-    // Detail/Dashboard/Auto Checkout two or more days later, with no
+    // Detail/Dashboard/Checkout/Pending two or more days later, with no
     // checkout ever confirmed by anyone. There is no such expiry now: a
     // guest stays Extended indefinitely until manually checked out.
     // Deliberately NOT resolved by a bare housekeeping-status touch: the
@@ -6719,7 +6719,7 @@ function renderRoomDetail(){
       // Checkout day arrived (last booked night was yesterday) but the
       // balance isn't settled at exactly 0 — owes money, or has paid ahead
       // for nights that were never booked. Either way, a human needs to
-      // look at it before it can be checked out (Auto Checkout skips these).
+      // look at it before it can be checked out (Checkout/Pending skips these).
       const isCheckoutPending = r.extended && due !== 0;
       const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '-';
       const guestCell = goesToGuest
@@ -9789,7 +9789,7 @@ function buildAutoCheckoutRows(asOfDate){
   // checked out overall — Actual Checkout is stored once per guest entry,
   // not per room, so checking out "their" ended room while another room is
   // still active would wrongly mark the whole guest as gone. Never let
-  // Auto Checkout touch them; just show it as "Extended" so they don't
+  // Checkout/Pending touch them; just show it as "Extended" so they don't
   // silently vanish from the list with no explanation.
   const activeGuestIds = new Set(statuses.filter(rs=> rs.occupied && rs.entry).map(rs=> rs.entry.id));
   const due = statuses
@@ -9923,10 +9923,10 @@ function setAutoCheckoutToday(){
 
 // The per-row manual button — never opens the checkout-confirm modal for a
 // guest whose balance isn't settled at exactly 0. This is the same rule
-// Run Auto Checkout applies in bulk; there is no manual override.
+// Run Checkout/Pending applies in bulk; there is no manual override.
 function startManualCheckout(roomNo, due){
   if(due !== 0){
-    showNotice('This guest\'s balance isn\'t settled at exactly 0 (owed money, or paid ahead of what\'s booked) — Auto Checkout / Extend never checks out a guest like this, even manually. Settle the balance first.');
+    showNotice('This guest\'s balance isn\'t settled at exactly 0 (owed money, or paid ahead of what\'s booked) — Checkout/Pending never checks out a guest like this, even manually. Settle the balance first.');
     return;
   }
   pendingRoomStatusRoomNo = roomNo;
