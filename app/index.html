@@ -8977,6 +8977,9 @@ function renderRevenue(){
   if(data.unlinkedPayments.length === 0){
     todayBody.innerHTML = '<div class="empty-note">No extra payments recorded ' + dayWord + '.</div>';
   } else {
+    const unlinkedMCB = data.unlinkedPayments.filter(r=> r.source === 'MCB').reduce((s,r)=> s + r.amount, 0);
+    const unlinkedAlfalah = data.unlinkedPayments.filter(r=> r.source === 'Alfalah').reduce((s,r)=> s + r.amount, 0);
+    const unlinkedHaji = data.unlinkedPayments.filter(r=> r.source === 'Haji (MCB)').reduce((s,r)=> s + r.amount, 0);
     todayBody.innerHTML = `
       <table>
         <thead><tr><th>Guest</th><th style="width:110px;">Room No</th><th style="width:110px;">Amount</th><th style="width:120px;">Source</th><th style="width:110px;">Date</th></tr></thead>
@@ -8989,14 +8992,21 @@ function renderRevenue(){
             <td>${formatDate(r.date)}</td>
           </tr>`).join('')}
         </tbody>
-        <tfoot>
-          <tr class="day-foot-total">
-            <td colspan="2">Total</td>
-            <td>${data.unlinkedTotal.toLocaleString()}</td>
-            <td colspan="2"></td>
-          </tr>
-        </tfoot>
-      </table>`;
+      </table>
+      <div class="rev-grandtotal-box" style="margin-top:14px;">
+        <div class="date-box-head">Total</div>
+        <table>
+          <thead><tr><th>Total Sale</th><th>MCB</th><th>Alfalah</th><th>Haji (MCB)</th></tr></thead>
+          <tbody>
+            <tr class="day-foot-total">
+              <td>${data.unlinkedTotal.toLocaleString()}</td>
+              <td class="account-amt">${unlinkedMCB.toLocaleString()}</td>
+              <td class="account-amt">${unlinkedAlfalah.toLocaleString()}</td>
+              <td class="account-amt">${unlinkedHaji.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`;
   }
 }
 
