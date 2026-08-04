@@ -9830,13 +9830,21 @@ function renderAutoCheckout(){
       </table>`;
   }
 
-  // Pure append-only history of every checkout run through this page on
-  // asOfDate (separate from the table above, which only ever shows the
-  // LATEST checkout per guest — this shows every individual action,
-  // undos included).
+  // History of checkouts run through this page on asOfDate — but only
+  // guests who are STILL actually checked out as of right now. This used
+  // to be a pure append-only log (every action ever, undos included), so
+  // a guest who got Undo'd kept sitting here forever looking checked out
+  // with no way to tell the undo had happened — checked live against each
+  // entry's own current Actual Checkout date instead, which also cleans
+  // up every already-undone entry logged before this fix, not just new
+  // ones going forward.
   const all = loadAllEntries();
   const dayCheckouts = editLogs
     .filter(l=> l.action === 'checked_out' && l.at && toKarachiDateStr(l.at) === asOfDate)
+    .filter(l=>{
+      const entry = all.find(e=> e.id === l.guest_id);
+      return !!entry && getDetailValue(entry, 'Actual Checkout') === asOfDate;
+    })
     .sort((a,b)=> (b.at || '').localeCompare(a.at || ''));
   if(dayCheckouts.length === 0){
     logBody.innerHTML = '<div class="empty-note">Nobody was checked out ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
