@@ -3018,6 +3018,7 @@
           <button class="btn secondary" onclick="clearFilters()">Clear Filters</button>
           <button class="btn secondary" onclick="setFiltersToday()">Today</button>
         </div>
+        <div id="filterRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <input type="text" id="filterCashSearch" placeholder="type total amount" style="width:180px;" autocomplete="off">
           <!-- <button class="btn secondary" onclick="showView('graphs')">📊 Detailed Graphs</button> -->
@@ -7923,6 +7924,7 @@ function renderReport(){
     return;
   }
   const { rows, fromVal, toVal } = getFilteredReportRows();
+  document.getElementById('filterRangeReadout').textContent = formatIsoRangeDisplay(fromVal, toVal);
 
   const subParts = [];
   subParts.push(fromVal || toVal ? `${fromVal ? formatDate(fromVal) : 'Start'} to ${toVal ? formatDate(toVal) : 'Today'}` : 'All dates');
