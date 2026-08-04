@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Matches .hdr-row1's own background (#1a73e8) — without this, mobile
+     browsers tint their own address-bar/status-bar strip white/default
+     instead of the app's blue, leaving a mismatched seam above the
+     in-page header that isn't actually part of the page at all. -->
+<meta name="theme-color" content="#1a73e8">
 <title>Riviera Resort</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <!-- self-hosted: Edge/Brave Tracking Prevention silently blocks some CDN
