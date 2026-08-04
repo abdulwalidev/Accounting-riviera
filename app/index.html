@@ -3136,7 +3136,21 @@
     <div class="panel accent-report">
       <h2 class="no-print">Payments By Date</h2>
       <div class="sub no-print" style="margin-top:-6px;">The Rooms total below, re-sliced by the day the money actually came in — cash vs account, across every room</div>
-      <div id="rvByDateBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+
+      <div class="collapse-head no-print" onclick="toggleRvByDate()" style="margin-top:10px;">
+        <span>RECEIVED DATE</span>
+        <span id="rvByDateChev" class="collapse-chev">▸ Show</span>
+      </div>
+      <div id="rvByDateCollapse" class="no-print" style="display:none; margin-top:10px;">
+        <div class="rd-switch" style="margin-bottom:10px;">
+          <button type="button" class="rd-switch-btn" id="rvByDateModeTable" onclick="setRvByDateMode('table')">Table</button>
+          <button type="button" class="rd-switch-btn active" id="rvByDateModeBox" onclick="setRvByDateMode('box')">Box</button>
+        </div>
+        <div id="rvByDateBoxBody"><div class="empty-note">No data yet.</div></div>
+        <div id="rvByDateTableBody" style="display:none; overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+      </div>
+
+      <div id="rvByDateGrandTotal" style="margin-top:14px;"><div class="empty-note">No data yet.</div></div>
     </div>
 
     <div class="panel accent-report">
@@ -8791,15 +8805,39 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
     </table>`;
 }
 
+function toggleRvByDate(){
+  const box = document.getElementById('rvByDateCollapse');
+  const chev = document.getElementById('rvByDateChev');
+  const isOpen = box.style.display !== 'none';
+  box.style.display = isOpen ? 'none' : 'block';
+  chev.textContent = isOpen ? '▸ Show' : '▾ Hide';
+}
+
+// Both Box and Table bodies are rendered every time renderRevenue() runs;
+// this just shows/hides between them, same instant-switch pattern as Room
+// Detail's SMART/MUNCHI toggle — no re-render needed, and whichever mode
+// was last picked survives the next data refresh since re-rendering only
+// touches innerHTML, never these style.display flags.
+function setRvByDateMode(mode){
+  document.getElementById('rvByDateModeTable').classList.toggle('active', mode === 'table');
+  document.getElementById('rvByDateModeBox').classList.toggle('active', mode === 'box');
+  document.getElementById('rvByDateBoxBody').style.display = mode === 'box' ? '' : 'none';
+  document.getElementById('rvByDateTableBody').style.display = mode === 'table' ? '' : 'none';
+}
+
 function renderRevenue(){
   const roomsBody = document.getElementById('rvRoomsBody');
   const nightlySummary = document.getElementById('rvNightlySummary');
-  const byDateBody = document.getElementById('rvByDateBody');
+  const byDateBoxBody = document.getElementById('rvByDateBoxBody');
+  const byDateTableBody = document.getElementById('rvByDateTableBody');
+  const byDateGrandTotal = document.getElementById('rvByDateGrandTotal');
   const todayBody = document.getElementById('rvTodayBody');
   if(!initialLoadDone){
     roomsBody.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     nightlySummary.innerHTML = '';
-    byDateBody.innerHTML = '';
+    byDateBoxBody.innerHTML = '';
+    byDateTableBody.innerHTML = '';
+    byDateGrandTotal.innerHTML = '';
     todayBody.innerHTML = '';
     ['rvStatOccupied','rvStatVacant','rvStatPax'].forEach(id=> document.getElementById(id).textContent = '…');
     document.getElementById('rvStatOccRate').textContent = '…';
@@ -8866,11 +8904,16 @@ function renderRevenue(){
   }
 
   // ---- Payments By Date: the same money as the Rooms total above, just
-  // re-summed by the day it actually came in instead of by room. Plain
-  // stacked lines, no box/table wrapper — just date, then whichever of
-  // Cash/Account applies, then that date's total.
+  // re-summed by the day it actually came in instead of by room. Lives
+  // inside the collapsed-by-default "RECEIVED DATE" section, as either
+  // individual day cards (Box, the default once expanded) or one combined
+  // table (Table) — both rendered up front and toggled by CSS display,
+  // same pattern as Room Detail's SMART/MUNCHI switch, so switching is
+  // instant with no re-render. Revenue Grand Total stays outside the
+  // collapse, always visible.
   if(data.paymentsByDate.length === 0){
-    byDateBody.innerHTML = '<div class="empty-note">No payments recorded toward ' + dayWord + '\'s rent.</div>';
+    byDateBoxBody.innerHTML = '<div class="empty-note">No payments recorded toward ' + dayWord + '\'s rent.</div>';
+    byDateTableBody.innerHTML = '';
   } else {
     const dateBox = (label, cash, banks, account, total)=> `
       <div class="date-box">
@@ -8881,10 +8924,32 @@ function renderRevenue(){
           : (account > 0 ? `<div class="account-amt">Account: ${account.toLocaleString()}</div>` : '')}
         <div class="date-box-total">Total: ${total.toLocaleString()}</div>
       </div>`;
-    byDateBody.innerHTML = `
-      <div class="date-box-row no-print">
-        ${data.paymentsByDate.map(r=> dateBox(formatDate(r.date), r.cash, r.banks, r.account, r.total)).join('')}
-      </div>
+    byDateBoxBody.innerHTML = `<div class="date-box-row">${data.paymentsByDate.map(r=> dateBox(formatDate(r.date), r.cash, r.banks, r.account, r.total)).join('')}</div>`;
+
+    byDateTableBody.innerHTML = `
+      <table>
+        <thead><tr><th>Date</th><th>Cash</th><th>MCB</th><th>Haji (MCB)</th><th>Alfalah</th><th>Total</th></tr></thead>
+        <tbody>${data.paymentsByDate.map(r=> `
+          <tr>
+            <td>${formatDate(r.date)}</td>
+            <td class="cash-amt">${r.cash ? r.cash.toLocaleString() : '-'}</td>
+            <td class="account-amt">${r.banks['MCB'] ? r.banks['MCB'].toLocaleString() : '-'}</td>
+            <td class="account-amt">${r.banks['Haji (MCB)'] ? r.banks['Haji (MCB)'].toLocaleString() : '-'}</td>
+            <td class="account-amt">${r.banks['Alfalah'] ? r.banks['Alfalah'].toLocaleString() : '-'}</td>
+            <td>${r.total.toLocaleString()}</td>
+          </tr>`).join('')}</tbody>
+        <tfoot>
+          <tr class="day-foot-total">
+            <td>Total</td>
+            <td class="cash-amt">${data.paymentsByDateCashTotal.toLocaleString()}</td>
+            <td class="account-amt" colspan="3">Account: ${data.paymentsByDateAccountTotal.toLocaleString()}</td>
+            <td>${data.paymentsByDateGrandTotal.toLocaleString()}</td>
+          </tr>
+        </tfoot>
+      </table>`;
+  }
+
+  byDateGrandTotal.innerHTML = `
       <div class="rev-grandtotal-box">
         <div class="date-box-head">Revenue Grand Total</div>
         <table>
@@ -8900,7 +8965,6 @@ function renderRevenue(){
           </tbody>
         </table>
       </div>`;
-  }
 
   // ---- Extra Money Today: payments received on asOfDate that didn't go
   // toward asOfDate's own room rent — an advance for a future night, a
