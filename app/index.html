@@ -183,12 +183,12 @@
      container narrower than that on small screens. */
   .flatpickr-alt-input{ display:block; width:307.875px; max-width:100%; margin:0 auto; text-align:center; }
   /* Clear/Today footer bar injected into every flatpickr calendar popup
-     (see addPickerFooter()) — left-aligned, with a bit of breathing room
-     above it separating it from the day grid. */
+     (see addPickerFooter()) — Clear on the left, Today on the right, with
+     a bit of breathing room above it separating it from the day grid. */
   .picker-footer{
     display:flex;
     gap:8px;
-    justify-content:flex-start;
+    justify-content:space-between;
     margin-top:10px;
     padding:8px 10px 6px;
     border-top:1px solid #e6e6e6;
@@ -3226,6 +3226,7 @@
           <button class="btn secondary" onclick="setRevenueToday()">Today</button>
           <button class="btn secondary" onclick="clearRevenueFilters()">Clear Filter (All Days)</button>
         </div>
+        <div id="rvRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportRevenueExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printRevenue()">🖶 Print</button>
@@ -4052,6 +4053,13 @@ function formatPickerDisplay(selectedDates){
 }
 function applyPickerDisplay(instance){
   if(instance.altInput) instance.altInput.value = formatPickerDisplay(instance.selectedDates);
+}
+// Same "05 AUGUST 26" / "05 AUGUST 26 → 06 AUGUST 26" display, built from
+// plain Y-m-d strings instead of a flatpickr instance — for readouts that
+// live outside the picker itself (e.g. Revenue Report's action row).
+function formatIsoRangeDisplay(fromIso, toIso){
+  const dates = [fromIso, toIso].filter(Boolean).map(iso=> new Date(iso + 'T00:00:00'));
+  return formatPickerDisplay(dates);
 }
 
 // Every flatpickr calendar gets its own Clear/Today footer bar, left-aligned
@@ -9174,6 +9182,7 @@ function renderRevenue(){
   const toEl = document.getElementById('rvTo');
   const fromVal = fromEl.value;
   const toVal = toEl.value;
+  document.getElementById('rvRangeReadout').textContent = formatIsoRangeDisplay(fromVal, toVal);
   // A single specific day (From === To) keeps the original one-room-per-row
   // shape with no Date column, exactly like before this became a range.
   // Any wider range — or Clear Filter's wide-open "all days" (both blank)
