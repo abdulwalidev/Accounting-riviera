@@ -3502,7 +3502,7 @@
   <div class="view" id="view-cashcheck">
 
     <h1>Cash Check</h1>
-    <div class="sub">Revenue Report's Cash-by-date vs. a raw independent sum of every Cash payment in the system, by the date it was received. These two are computed by completely different code paths — if a row doesn't match, that's a real bug worth chasing.</div>
+    <div class="sub">Revenue Cash: Guest Charges Summary's own Cash column, grouped by the room-night's date. Report Cash: every Cash payment in the system, grouped by the date it was actually received. These use two different meanings of "date" on purpose — a night paid off later will land on different rows in each column.</div>
 
     <div class="panel accent-report">
       <h2>Cash Received, Per Day</h2>
@@ -9550,9 +9550,15 @@ function buildCashCheckReport(){
     });
   });
 
+  // Revenue Cash sums Guest Charges Summary's own Cash column (Table 1),
+  // grouped by each row's own Date — the room-NIGHT date, not the date the
+  // payment was received. That's a different date than Report Cash uses
+  // (received-date), so a room-night paid off days later will show its
+  // cash under a different date in each column here on purpose — that's
+  // not a bug, it's the two tables using different date meanings.
   const revenue = buildRevenueReport('', '');
   const revenueCashByDate = {};
-  revenue.paymentsByDate.forEach(r=>{ revenueCashByDate[r.date] = r.cash; });
+  revenue.roomRows.forEach(r=>{ revenueCashByDate[r.date] = (revenueCashByDate[r.date] || 0) + r.cashTotal; });
 
   const dates = new Set([...Object.keys(reportCashByDate), ...Object.keys(revenueCashByDate)]);
   const rows = Array.from(dates).sort((a,b)=> a.localeCompare(b)).map(date=>({
