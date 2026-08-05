@@ -1075,6 +1075,14 @@
     font-size:13px;
     border-top:2px solid var(--ink);
     background:#F7F8FA;
+    /* Totals run much bigger than any single row's value (a whole range's
+       rent vs. one room's), so on narrow fixed-width columns they can be
+       wider than the cell. Numbers have no natural break point, so
+       without this they silently overflow into the next cell instead of
+       wrapping — reading as garbled overlapping text. */
+    white-space:normal;
+    overflow-wrap:break-word;
+    word-break:break-word;
   }
   tr.day-foot-total td:first-child{
     text-align:right;
