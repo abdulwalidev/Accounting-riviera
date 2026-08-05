@@ -2489,6 +2489,7 @@
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
       <button class="navbtn" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
       <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
+      <button class="navbtn" id="topNavCashCheck" onclick="showView('cashcheck')">Cash Check</button>
       <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none; margin-left:auto;">Checkout/Pending</button>
     </div>
   </div>
@@ -3498,6 +3499,18 @@
 
   </div>
 
+  <div class="view" id="view-cashcheck">
+
+    <h1>Cash Check</h1>
+    <div class="sub">Revenue Report's Cash-by-date vs. a raw independent sum of every Cash payment in the system, by the date it was received. These two are computed by completely different code paths — if a row doesn't match, that's a real bug worth chasing.</div>
+
+    <div class="panel accent-report">
+      <h2>Cash Received, Per Day</h2>
+      <div id="cashCheckBody" style="overflow-x:auto; margin-top:10px;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
   <div class="view" id="view-daylock">
 
     <h1>Day Lock</h1>
@@ -3929,7 +3942,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -3979,6 +3992,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
   document.getElementById('topNavNightSummary').classList.toggle('active', view === 'nightsummary');
+  document.getElementById('topNavCashCheck').classList.toggle('active', view === 'cashcheck');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr');
   if(view === 'report') renderReport();
@@ -3993,6 +4007,7 @@ function showView(view, fromPopState){
   if(view === 'npr') renderNPR();
   if(view === 'revenue') renderRevenue();
   if(view === 'nightsummary') renderNightSummary();
+  if(view === 'cashcheck') renderCashCheck();
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
   if(view === 'deleteentity') renderDeleteEntityList();
@@ -9514,6 +9529,67 @@ function exportRevenueExcel(){
 
 function printRevenue(){
   window.print();
+}
+
+// =========================================================
+// CASH CHECK — a standing cross-check between two independent computations
+// of "cash received on date X": Revenue Report's paymentsByDate (built via
+// buildRevenueReport's FIFO room-night/unlinked-payment logic) vs. a
+// brute-force sum of every payment.mode === 'Cash' across every entry,
+// grouped by its own date, no room-night matching involved at all. If these
+// ever disagree for a date, that's a real discrepancy in Revenue Report's
+// logic, not a data-entry issue.
+// =========================================================
+function buildCashCheckReport(){
+  const all = loadAllEntries();
+  const reportCashByDate = {};
+  all.forEach(entry=>{
+    (entry.payments || []).forEach(p=>{
+      if(p.mode !== 'Cash' || !p.date) return;
+      reportCashByDate[p.date] = (reportCashByDate[p.date] || 0) + (parseFloat(p.total) || 0);
+    });
+  });
+
+  const revenue = buildRevenueReport('', '');
+  const revenueCashByDate = {};
+  revenue.paymentsByDate.forEach(r=>{ revenueCashByDate[r.date] = r.cash; });
+
+  const dates = new Set([...Object.keys(reportCashByDate), ...Object.keys(revenueCashByDate)]);
+  const rows = Array.from(dates).sort((a,b)=> a.localeCompare(b)).map(date=>({
+    date,
+    revenueCash: Math.round((revenueCashByDate[date] || 0) * 100) / 100,
+    reportCash: Math.round((reportCashByDate[date] || 0) * 100) / 100
+  }));
+  const totalRevenueCash = rows.reduce((s,r)=> s + r.revenueCash, 0);
+  const totalReportCash = rows.reduce((s,r)=> s + r.reportCash, 0);
+  return { rows, totalRevenueCash, totalReportCash };
+}
+
+function renderCashCheck(){
+  const body = document.getElementById('cashCheckBody');
+  if(!initialLoadDone){ body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>'; return; }
+  const data = buildCashCheckReport();
+  if(data.rows.length === 0){
+    body.innerHTML = '<div class="empty-note">No cash payments recorded.</div>';
+    return;
+  }
+  body.innerHTML = `
+    <table>
+      <thead><tr><th>Date</th><th style="text-align:right;">Revenue Cash</th><th style="text-align:right;">Report Cash</th></tr></thead>
+      <tbody>${data.rows.map(r=> `
+        <tr${r.revenueCash !== r.reportCash ? ' style="background:#FEE2E2;"' : ''}>
+          <td>${formatDate(r.date)}</td>
+          <td class="cash-amt" style="text-align:right;">${r.revenueCash.toLocaleString()}</td>
+          <td class="cash-amt" style="text-align:right;">${r.reportCash.toLocaleString()}</td>
+        </tr>`).join('')}</tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td>Total</td>
+          <td style="text-align:right;">${data.totalRevenueCash.toLocaleString()}</td>
+          <td style="text-align:right;">${data.totalReportCash.toLocaleString()}</td>
+        </tr>
+      </tfoot>
+    </table>`;
 }
 
 // =========================================================
