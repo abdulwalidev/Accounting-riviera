@@ -91,6 +91,14 @@
     grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
     gap:12px;
   }
+  /* Grid items default to min-width:auto, meaning a child never shrinks
+     below its own content's natural size no matter how narrow its track
+     is — for a date-range field that content is the 307.875px flatpickr
+     box, so on a narrow screen the grid item (and the box's max-width:100%
+     safety net, which has nothing narrower than 307.875px to be 100% of)
+     just blew the whole row wider than the container instead of shrinking.
+     min-width:0 lets a grid item actually shrink to its track's real width. */
+  .grid > div{ min-width:0; }
   /* ---- Payment mode colour-coding ---- */
   .cash-amt{ color:var(--cash) !important; font-weight:700; }
   .account-amt{ color:var(--account) !important; font-weight:700; }
@@ -187,6 +195,10 @@
      is actually wrong. max-width:100% keeps it from overflowing a
      container narrower than that on small screens. */
   .flatpickr-alt-input{ display:block; width:307.875px; max-width:100%; margin:0 auto; text-align:center; }
+  /* The calendar popup is appended to <body> as position:absolute — a
+     max-width:100% here would resolve against the viewport, not against
+     however narrow the box above actually is, so matching them on a
+     narrow screen needs JS (see syncCalendarWidth()), not CSS. */
   /* Clear/Today footer bar injected into every flatpickr calendar popup
      (see addPickerFooter()) — Clear on the left, Today on the right, with
      a bit of breathing room above it separating it from the day grid. */
@@ -2747,7 +2759,6 @@
     <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
       <div>
         <h1>Reservations</h1>
-        <div class="sub">Future check-ins — booked ahead, not arrived yet</div>
       </div>
       <button class="btn" onclick="showView('entry')">+ Add Reservation</button>
     </div>
@@ -2877,7 +2888,6 @@
     <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
       <div>
         <h1>Search Guests</h1>
-        <div class="sub">Find any guest and check balance due, or open to add a payment</div>
       </div>
       <div id="gsearchTotalDue" class="total-due-box"></div>
     </div>
@@ -3131,7 +3141,6 @@
   <div class="view" id="view-ledgers">
 
     <h1 class="no-print">Ledgers</h1>
-    <div class="sub no-print">Room-night by room-night — rent charged, what was received against it (oldest payment first), and what's left for that night, by guest</div>
 
     <div class="print-header">
       <h1 id="lgPrintTitle">Ledgers</h1>
@@ -3265,7 +3274,6 @@
   <div class="view" id="view-revenue">
 
     <h1 class="no-print">Revenue Report</h1>
-    <div class="sub no-print">Every occupied room, its rent, what's been collected against it, and where any extra money on hand is coming from</div>
 
     <div class="print-header">
       <h1 id="rvPrintTitle">Revenue Report</h1>
@@ -3401,7 +3409,6 @@
   <div class="view" id="view-inhouse">
 
     <h1 class="no-print">Inhouse Report</h1>
-    <div class="sub no-print">Everyone in-house right now — room, guest, and headcount, for buffet/restaurant prep</div>
 
     <div class="print-header">
       <h1 id="ihPrintTitle">Inhouse Report</h1>
@@ -3428,7 +3435,6 @@
   <div class="view" id="view-breakfast">
 
     <h1 class="no-print">Breakfast Report</h1>
-    <div class="sub no-print">Who's in-house and how many of them are actually having breakfast — split out from the Inhouse headcount</div>
 
     <div class="print-header">
       <h1 id="bfPrintTitle">Breakfast Report</h1>
@@ -4116,6 +4122,19 @@ function formatPickerDisplay(selectedDates){
 function applyPickerDisplay(instance){
   if(instance.altInput) instance.altInput.value = formatPickerDisplay(instance.selectedDates);
 }
+// flatpickr appends the calendar to <body>, absolutely positioned — a CSS
+// max-width:100% on it resolves against the viewport, not against however
+// narrow the input's own actual container is, so on anything narrower than
+// flatpickr's fixed 307.875px default the calendar stayed full-width while
+// the input (which does shrink, via its own max-width:100% against its
+// real container) ended up a different width than the popup dropping out
+// of it. Matching them exactly needs the input's real rendered width, which
+// only exists once the input has already been laid out — so this runs from
+// onOpen, not CSS.
+function syncCalendarWidth(instance){
+  if(!instance.altInput) return;
+  instance.calendarContainer.style.width = instance.altInput.getBoundingClientRect().width + 'px';
+}
 // allowInput must stay false on every picker below — with it on, flatpickr
 // attaches a blur handler (only when allowInput is true) that, whenever the
 // visible text doesn't exactly match what its own altFormat would have
@@ -4179,6 +4198,7 @@ function initStayDatePickers(){
       allowInput: false,
       disableMobile: true,
       onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
+      onOpen: (selectedDates, dateStr, instance)=> syncCalendarWidth(instance),
       onReady: (selectedDates, dateStr, instance)=>{
         applyPickerDisplay(instance);
         addPickerFooter(instance,
@@ -4219,6 +4239,7 @@ function initFilterDatePickers(){
       allowInput: false,
       disableMobile: true,
       onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
+      onOpen: (selectedDates, dateStr, instance)=> syncCalendarWidth(instance),
       onReady: (selectedDates, dateStr, instance)=>{
         applyPickerDisplay(instance);
         addPickerFooter(instance,
@@ -4282,6 +4303,7 @@ function initRangeDatePicker(rangeId, fromId, toId, onRangeChange){
       if(onRangeChange) onRangeChange();
     },
     onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
+    onOpen: (selectedDates, dateStr, instance)=> syncCalendarWidth(instance),
     onReady: (selectedDates, dateStr, instance)=>{
       applyPickerDisplay(instance);
       addPickerFooter(instance,
