@@ -2723,7 +2723,6 @@
 
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn success" onclick="reviewEntry()">Save Entry</button>
-      <button class="btn" id="checkoutTodayBtn" onclick="openCheckoutModal()" style="display:none;">Check Out Today</button>
     </div>
 
     <div class="section-divider"></div>
@@ -3736,16 +3735,6 @@
   </div>
 </div>
 
-<div class="modal-backdrop" id="checkoutModalBackdrop">
-  <div class="modal" style="width:420px;">
-    <h3>Confirm Checkout</h3>
-    <div class="sub" style="margin-bottom:14px;" id="checkoutModalSub">Set today as the Actual Checkout date for this guest?</div>
-    <div class="modal-actions">
-      <button class="btn secondary" onclick="closeCheckoutModal()">Cancel</button>
-      <button class="btn" onclick="confirmCheckoutToday()">Check Out Today</button>
-    </div>
-  </div>
-</div>
 
 <div class="modal-backdrop" id="exitPromptModalBackdrop">
   <div class="modal" style="width:340px;">
@@ -3795,8 +3784,12 @@
 <div class="modal-backdrop" id="checkoutConfirmModalBackdrop">
   <div class="modal" style="width:460px;">
     <h3>Confirm Checkout</h3>
-    <div class="sub" style="margin-bottom:14px;">Check this is the right guest before confirming — this sets today as their Actual Checkout and marks the room Dirty.</div>
+    <div class="sub" style="margin-bottom:14px;">Check this is the right guest before confirming — this sets their Actual Checkout and marks the room Dirty.</div>
     <div class="grid" id="ccModalBody" style="margin-bottom:16px;"></div>
+    <div style="margin-bottom:16px;">
+      <label>Checkout Date</label>
+      <input type="date" id="ccCheckoutDate">
+    </div>
     <label>Type CHECKOUT to confirm</label>
     <input type="text" id="ccConfirmInput" placeholder="CHECKOUT" autocomplete="off">
     <div class="modal-actions">
@@ -4224,7 +4217,7 @@ function setStayDate(id, isoValue){
 // and Global Search. Kept as its own registry/setter rather than folding
 // into stayDatePickers/setStayDate so that already-proven code path stays
 // completely untouched.
-const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate'];
+const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate'];
 const filterDatePickers = {};
 function initFilterDatePickers(){
   if(typeof flatpickr === 'undefined') return;
@@ -4864,27 +4857,6 @@ function addRow(){
 // vacant and the new room to occupied) and adds a fresh row for the new room.
 let changeRoomActiveRows = [];
 
-function openCheckoutModal(){
-  if(!editingEntryId){
-    showNotice('Open an existing entry for editing first.');
-    return;
-  }
-  const name = document.getElementById('guestName').value.trim() || '(no name)';
-  document.getElementById('checkoutModalSub').textContent = `Set ${formatDate(todayStr())} as the Actual Checkout date for "${name}"?`;
-  document.getElementById('checkoutModalBackdrop').classList.add('active');
-}
-
-function closeCheckoutModal(){
-  document.getElementById('checkoutModalBackdrop').classList.remove('active');
-}
-
-function confirmCheckoutToday(){
-  setStayDate('actualCheckoutDate', todayStr());
-  updateDateReadout(document.getElementById('actualCheckoutDate'), document.getElementById('actualCheckoutDateReadout'));
-  closeCheckoutModal();
-  showNotice('Actual Checkout set to today — click Save Entry to save it.', 'success');
-}
-
 // ---- Room Detail: clicking a non-occupied room opens this instead of a
 // guest page. Extended rooms get a one-click "actually checked out"
 // resolution right here — no need to open the guest and edit them — plus
@@ -4974,6 +4946,7 @@ function openCheckoutConfirmModal(){
   const input = document.getElementById('ccConfirmInput');
   input.value = '';
   input.classList.remove('duplicate');
+  setFilterDate('ccCheckoutDate', todayStr());
   document.getElementById('checkoutConfirmModalBackdrop').classList.add('active');
 }
 
@@ -4993,15 +4966,16 @@ async function confirmCheckoutConfirmModal(){
   await confirmRoomCheckout();
 }
 
-// Marks a guest's Actual Checkout as today and the room Dirty (never
-// straight to Ready — whoever cleans it marks it Ready themselves via the
-// room-status modal). Shared by the room-status modal's checkout flow, the
-// Checkout/Pending page's bulk run, and its per-guest manual button.
-async function checkOutEntryRoom(entryId, roomNo, logAction){
+// Marks a guest's Actual Checkout (today, unless the Confirm Checkout
+// modal's Checkout Date field was set to something else — backdating a
+// checkout nobody got around to confirming yesterday, say) and the room
+// Dirty (never straight to Ready — whoever cleans it marks it Ready
+// themselves via the room-status modal).
+async function checkOutEntryRoom(entryId, roomNo, logAction, checkoutDate){
   const entry = loadAllEntries().find(e=> e.id === entryId);
   if(!entry) return false;
   const extraDetails = (entry.extraDetails || []).filter(d=> d.kind !== 'Actual Checkout');
-  extraDetails.unshift({ kind: 'Actual Checkout', value: todayStr() });
+  extraDetails.unshift({ kind: 'Actual Checkout', value: checkoutDate || todayStr() });
   entry.extraDetails = extraDetails;
   entry.editedAt = new Date().toISOString();
   entry.editedBy = currentUser ? currentUser.username : '';
@@ -5021,11 +4995,12 @@ async function confirmRoomCheckout(){
     showNotice('This guest\'s balance isn\'t settled at exactly 0 — checkout blocked.');
     return;
   }
-  const entry = await checkOutEntryRoom(rs.entry.id, roomNo);
+  const checkoutDate = document.getElementById('ccCheckoutDate').value || todayStr();
+  const entry = await checkOutEntryRoom(rs.entry.id, roomNo, undefined, checkoutDate);
   if(!entry) return;
   closeRoomStatusModal();
   rerenderActiveView();
-  showNotice((entry.guestName || 'Guest') + ' checked out — room ' + roomNo + ' marked Dirty.', 'success');
+  showNotice((entry.guestName || 'Guest') + ' checked out (' + formatDate(checkoutDate) + ') — room ' + roomNo + ' marked Dirty.', 'success');
 }
 
 function openChangeRoomModal(){
@@ -6143,7 +6118,6 @@ function confirmSaveEntry(){
     editingEntryId = null;
     editingBaseline = null;
     document.getElementById('editModeBar').style.display = 'none';
-    document.getElementById('checkoutTodayBtn').style.display = 'none';
     closeConfirmModal();
     resetEntryForm();
     renderTodayEntries();
@@ -6449,7 +6423,6 @@ function startEditEntry(entry){
 
   document.getElementById('editModeName').textContent = entry.guestName || '(no name)';
   document.getElementById('editModeBar').style.display = 'flex';
-  document.getElementById('checkoutTodayBtn').style.display = 'inline-block';
   showView('entry');
   window.scrollTo(0, 0);
 }
@@ -6458,7 +6431,6 @@ function cancelEditMode(){
   editingEntryId = null;
   editingBaseline = null;
   document.getElementById('editModeBar').style.display = 'none';
-  document.getElementById('checkoutTodayBtn').style.display = 'none';
   resetEntryForm();
   if(currentDetailId){
     openDetail(currentDetailId); // back to the guest page, nothing changed
