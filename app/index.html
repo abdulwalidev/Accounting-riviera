@@ -3366,7 +3366,7 @@
 
     <div class="panel accent-report">
       <h2 class="no-print">Payments By Date</h2>
-      <div class="sub no-print" style="margin-top:-6px;">Every rupee received in range — Guest Charges below plus Other Payments — re-sliced by the day the money actually came in, cash vs account</div>
+      <div class="sub no-print" style="margin-top:-6px;">The Rooms total below, re-sliced by the day the money actually came in — cash vs account, across every room</div>
 
       <div class="collapse-head no-print" onclick="toggleRvByDate()" style="margin-top:10px;">
         <span>RECEIVED DATE</span>
@@ -3392,7 +3392,7 @@
 
     <div class="panel accent-report">
       <h2 class="no-print">OTHER PAYMENTS — <span id="rvUnlinkedDateLabel"></span></h2>
-      <div class="sub no-print" style="margin-top:-6px;">Money received in range that isn't rent for an in-range room-night above — an advance for a future stay, a top-up on an older due, or a guest with no room-night in this range at all. Already counted in the Revenue Grand Total.</div>
+      <div class="sub no-print" style="margin-top:-6px;">Money received in range that isn't rent for an in-range room-night above — an advance for a future stay, a top-up on an older due, or a guest with no room-night in this range at all. Not counted in the Revenue Grand Total, which only reflects room rent.</div>
       <div id="rvUnlinkedSummary" style="font-size:15px; font-weight:700; margin:10px 0;"></div>
       <div id="rvUnlinkedBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
@@ -9158,14 +9158,14 @@ function buildRevenueReport(fromDate, toDate){
   const totalAlfalah = roomRows.reduce((s,r)=> s + r.alfalahTotal, 0);
   const totalHaji = roomRows.reduce((s,r)=> s + r.hajiTotal, 0);
 
-  // Table 1.5 — EVERY rupee received in range, re-sliced by the day it
-  // actually landed: Table 1's per-room chunks (money that paid down an
-  // in-range night) PLUS Table 2's unlinked payments (advances, top-ups on
-  // older dues, or money from a guest with no in-range night at all). This
-  // has to include both, or a real deposit that happens to be an advance
-  // just vanishes from the Grand Total below while still having been
-  // physically received — see rvUnlinkedBody for the guest-level detail
-  // behind this same money.
+  // Table 1.5 — same money as Table 1's per-room chunks, just re-sliced by
+  // date instead of by room: "how much of tonight's rent (across every
+  // room) actually landed on this specific day, cash vs account." Room-rent
+  // money only — Table 2's unlinked payments (advances, top-ups on older
+  // dues, or a guest with no in-range night at all) are shown separately in
+  // rvUnlinkedBody but deliberately left out of this and the Grand Total
+  // below, which is meant to read as "rent collected," not "all cash ever
+  // received for any reason."
   const byDate = {};
   roomRows.forEach(r=> r.chunks.forEach(c=>{
     if(!byDate[c.date]) byDate[c.date] = { cash: 0, account: 0, banks: {} };
@@ -9173,15 +9173,6 @@ function buildRevenueReport(fromDate, toDate){
     byDate[c.date].account += c.account;
     Object.keys(c.banks || {}).forEach(b=>{ byDate[c.date].banks[b] = (byDate[c.date].banks[b] || 0) + c.banks[b]; });
   }));
-  unlinkedPayments.forEach(p=>{
-    if(!byDate[p.date]) byDate[p.date] = { cash: 0, account: 0, banks: {} };
-    if(p.source === 'Cash'){
-      byDate[p.date].cash += p.amount;
-    } else {
-      byDate[p.date].account += p.amount;
-      byDate[p.date].banks[p.source] = (byDate[p.date].banks[p.source] || 0) + p.amount;
-    }
-  });
   const paymentsByDate = Object.keys(byDate)
     .sort((a,b)=> a.localeCompare(b))
     .map(date=>{
