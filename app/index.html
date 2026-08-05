@@ -342,6 +342,8 @@
   tbody tr:nth-child(even) td{ background:#F7F9FC; }
   .cashcheck-table tbody tr:nth-child(odd) td{ background:#fff; }
   .cashcheck-table tbody tr:nth-child(even) td{ background:#EFF6FF; }
+  html[data-theme="dark"] .cashcheck-table tbody tr:nth-child(odd) td{ background:transparent; }
+  html[data-theme="dark"] .cashcheck-table tbody tr:nth-child(even) td{ background:rgba(96,165,250,0.10); }
   td input, td select{
     padding:6px 8px;
     font-size:13px;
@@ -9604,6 +9606,11 @@ function renderCashCheck(){
           <td style="text-align:right;">${revenueCashTotalText}</td>
           <td style="text-align:right;">${data.totalReportCash.toLocaleString()}</td>
         </tr>
+        <tr class="day-foot-total">
+          <td>Grand Total</td>
+          <td style="text-align:right;">${data.totalReportCash.toLocaleString()}</td>
+          <td style="text-align:right;">${data.totalReportCash.toLocaleString()}</td>
+        </tr>
       </tfoot>
     </table>`;
 }
@@ -10519,6 +10526,37 @@ let roomStatusMap = {};         // cloud mirror of room_status, keyed by room_no
 let initialLoadDone = false;    // nothing renders as "no data" until the first successful pull
 let appStarted = false;
 
+// Stale-while-revalidate cache: the entire point of pullFreshFromCloud is a
+// full-table download (every guest/room/payment ever entered), which only
+// gets bigger and slower as the hotel accumulates history. Without this,
+// every single login/refresh sits on the "Loading from the cloud
+// database…" screen for that whole download before painting anything, even
+// for a returning device that already has yesterday's data. Caching the
+// last snapshot to localStorage lets startApp() paint instantly from what's
+// already on disk while the real pull happens invisibly in the background
+// and silently reconciles once it lands (pullFreshFromCloud's own
+// changed/firstLoad check already handles that "did anything actually
+// change" comparison — this cache only affects what's on screen before
+// that first real response arrives).
+const CLOUD_CACHE_KEY = 'cloudSnapshotV1';
+function saveCloudSnapshotToCache(){
+  try{
+    localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify({ entries, lockedDays, roomStatusMap }));
+  }catch(e){ /* best effort — quota exceeded or storage disabled, cache just won't warm-start next time */ }
+}
+function loadCloudSnapshotFromCache(){
+  try{
+    const raw = localStorage.getItem(CLOUD_CACHE_KEY);
+    if(!raw) return false;
+    const cached = JSON.parse(raw);
+    if(!cached || !Array.isArray(cached.entries)) return false;
+    entries = cached.entries;
+    lockedDays = Array.isArray(cached.lockedDays) ? cached.lockedDays : [];
+    roomStatusMap = cached.roomStatusMap && typeof cached.roomStatusMap === 'object' ? cached.roomStatusMap : {};
+    return true;
+  }catch(e){ return false; }
+}
+
 // Bumped after every confirmed write. A pull whose snapshot was fetched
 // before a write finished is stale by definition — it gets discarded and
 // re-run instead of overwriting fresher in-memory state.
@@ -10961,6 +10999,7 @@ async function pullFreshFromCloud(){
           roomStatusMap = nextRoomStatus;
         }
         rerenderActiveView();
+        saveCloudSnapshotToCache();
       }
       if(firstLoad) setLoadingOverlay(false);
       updateCloudIndicator();
@@ -11274,8 +11313,18 @@ async function startApp(){
   if(appStarted) return;
   appStarted = true;
   updateCloudIndicator();
-  setLoadingOverlay(true, 'Fetching the latest data from the cloud database…');
-  rerenderActiveView(); // paints the "Loading…" state behind the overlay
+  // Paint last session's cached snapshot immediately (if there is one) so
+  // the app is usable right away instead of blocking on the full cloud
+  // download — pullFreshFromCloud below still runs and silently reconciles
+  // once the real data lands.
+  const hydratedFromCache = loadCloudSnapshotFromCache();
+  if(hydratedFromCache){
+    initialLoadDone = true;
+    setLoadingOverlay(false);
+  } else {
+    setLoadingOverlay(true, 'Fetching the latest data from the cloud database…');
+  }
+  rerenderActiveView(); // paints cached data, or the "Loading…" state behind the overlay
   await migrateLegacyLocalData();
   pullFreshFromCloud();
 }
