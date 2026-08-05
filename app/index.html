@@ -340,6 +340,8 @@
     vertical-align:middle;
   }
   tbody tr:nth-child(even) td{ background:#F7F9FC; }
+  .cashcheck-table tbody tr:nth-child(odd) td{ background:#fff; }
+  .cashcheck-table tbody tr:nth-child(even) td{ background:#EFF6FF; }
   td input, td select{
     padding:6px 8px;
     font-size:13px;
@@ -9579,11 +9581,19 @@ function renderCashCheck(){
     body.innerHTML = '<div class="empty-note">No cash payments recorded.</div>';
     return;
   }
+  // Revenue Cash only counts money tied to a room-night (Table 1); Report
+  // Cash also counts Cash payments that never landed on one — Misc charges
+  // (Snooker/BBQ/Bonfire) chief among them. That gap is called out on the
+  // Total row instead of just showing a smaller number with no explanation.
+  const miscGap = Math.round((data.totalReportCash - data.totalRevenueCash) * 100) / 100;
+  const revenueCashTotalText = miscGap > 0
+    ? `${data.totalRevenueCash.toLocaleString()} + ${miscGap.toLocaleString()} (Miscellaneous)`
+    : data.totalRevenueCash.toLocaleString();
   body.innerHTML = `
-    <table>
+    <table class="cashcheck-table">
       <thead><tr><th>Date</th><th style="text-align:right;">Revenue Cash</th><th style="text-align:right;">Report Cash</th></tr></thead>
       <tbody>${data.rows.map(r=> `
-        <tr${r.revenueCash !== r.reportCash ? ' style="background:#FEE2E2;"' : ''}>
+        <tr>
           <td>${formatDate(r.date)}</td>
           <td class="cash-amt" style="text-align:right;">${r.revenueCash.toLocaleString()}</td>
           <td class="cash-amt" style="text-align:right;">${r.reportCash.toLocaleString()}</td>
@@ -9591,7 +9601,7 @@ function renderCashCheck(){
       <tfoot>
         <tr class="day-foot-total">
           <td>Total</td>
-          <td style="text-align:right;">${data.totalRevenueCash.toLocaleString()}</td>
+          <td style="text-align:right;">${revenueCashTotalText}</td>
           <td style="text-align:right;">${data.totalReportCash.toLocaleString()}</td>
         </tr>
       </tfoot>
