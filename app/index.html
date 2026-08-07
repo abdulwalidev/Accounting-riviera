@@ -7277,6 +7277,25 @@ function computeRoomStatuses(asOfDate){
         lastNightDate = lastNight.date;
       }
     }
+    // Same-day turnover: today's slot already went to an incoming guest
+    // above, but if a DIFFERENT guest's last booked night was exactly
+    // yesterday and their own Actual Checkout was never confirmed, they'd
+    // otherwise vanish completely — the room's one "current" slot is taken,
+    // so they get none of Extended's usual visibility and nobody can ever
+    // check them out. Purely additive (every existing field above is
+    // unchanged); only Room Detail reads this to show a second row.
+    let previousGuestPending = null;
+    if(todayNight){
+      const priorNight = roomNights
+        .filter(n=> n.date === addDaysToDateStr(refDate, -1) && n.guestId !== todayNight.guestId)
+        .sort((a,b)=> b.date.localeCompare(a.date))[0];
+      if(priorNight){
+        const prevEntry = all.find(e=> e.id === priorNight.guestId) || null;
+        const prevCheckout = prevEntry ? getDetailValue(prevEntry, 'Actual Checkout') : '';
+        const resolved = !!(prevCheckout && prevCheckout >= priorNight.date);
+        if(prevEntry && !resolved) previousGuestPending = { entry: prevEntry, lastNightDate: priorNight.date };
+      }
+    }
     const housekeeping = roomStatusMap[roomNo];
     const housekeepingStatus = housekeeping ? housekeeping.status : 'Ready';
 
@@ -7328,6 +7347,7 @@ function computeRoomStatuses(asOfDate){
       occupied: !!todayNight && (!isLiveToday || !needsArrivalConfirm || confirmedCheckin),
       arrivalPending,
       extended,
+      previousGuestPending,
       housekeepingStatus,
       actualCheckout: lastNightDate ? addDaysToDateStr(lastNightDate, 1) : '',
       bookingCount: new Set(roomNights.map(n=> n.guestId)).size
@@ -7454,7 +7474,7 @@ function renderRoomDetail(){
       const statusLabel = r.arrivalPending ? 'Arrival Due' : isCheckoutPending ? 'Pending' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
       const statusCls = r.arrivalPending ? 'arrivaldue' : isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
-      return `<tr style="cursor:pointer;" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
+      const mainRow = `<tr style="cursor:pointer;" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <td><b>${r.roomNo}</b></td>
         <td>${roomDetailTypeLabel(r.type) || '-'}</td>
         <td>${arrival}</td>
@@ -7462,6 +7482,23 @@ function renderRoomDetail(){
         <td><span class="status ${statusCls}">${statusLabel}</span></td>
         <td>${guestCell}</td>
       </tr>`;
+      // Same-day turnover: today's row above already went to the incoming
+      // guest, so the outgoing one (last night was yesterday, checkout
+      // never confirmed) gets a second row here instead of vanishing —
+      // same room number, same click-through, its own Checkout/Pending.
+      const prevRow = r.previousGuestPending ? (()=>{
+        const pg = r.previousGuestPending;
+        const pgDue = computeTotals(pg.entry).due;
+        return `<tr style="cursor:pointer;" onclick="openDetail('${pg.entry.id}')" title="Open this guest">
+          <td><b>${r.roomNo}</b></td>
+          <td>${roomDetailTypeLabel(r.type) || '-'}</td>
+          <td>${pg.entry.checkIn ? formatDateShort(pg.entry.checkIn) : '-'}</td>
+          <td>${pgDue.toLocaleString()}</td>
+          <td><span class="status checkoutdue">Pending</span></td>
+          <td>${pg.entry.guestName || '(no name)'}</td>
+        </tr>`;
+      })() : '';
+      return mainRow + prevRow;
     }).join('');
     return `
       <div class="day-group">
@@ -7497,13 +7534,25 @@ function renderRoomDetail(){
       const statusCls = r.arrivalPending ? 'arrivaldue' : isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
       const guestCls = goesToGuest ? '' : ' sr-guest-muted';
-      return `<div class="smart-row clickable" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
+      const mainRow = `<div class="smart-row clickable" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <span class="sr-room">${r.roomNo}</span>
         <span class="sr-type">${roomDetailTypeLabel(r.type) || ''}</span>
         <span class="sr-status ${statusCls}">${statusText}</span>
         <span class="sr-arrival">${arrival}</span>
         <span class="sr-guest${guestCls}">${guestText}</span>
       </div>`;
+      // Same-day turnover — see the SMART table's own prevRow for why.
+      const prevRow = r.previousGuestPending ? (()=>{
+        const pg = r.previousGuestPending;
+        return `<div class="smart-row clickable" onclick="openDetail('${pg.entry.id}')" title="Open this guest">
+          <span class="sr-room">${r.roomNo}</span>
+          <span class="sr-type">${roomDetailTypeLabel(r.type) || ''}</span>
+          <span class="sr-status checkoutdue">pending</span>
+          <span class="sr-arrival">${pg.entry.checkIn ? formatDateShort(pg.entry.checkIn) : ''}</span>
+          <span class="sr-guest">${pg.entry.guestName || '(no name)'}</span>
+        </div>`;
+      })() : '';
+      return mainRow + prevRow;
     }).join('');
     return `
       <div class="smart-panel">
