@@ -8883,13 +8883,14 @@ function renderLedgers(){
   const simplify = document.getElementById('lgSimplify').checked;
   const creditLabel = simplify ? 'Received' : 'Credit';
   const debtLabel = simplify ? 'Room Rent' : 'Debt';
-  const balanceLabel = simplify ? 'Paid' : 'Balance';
-  // Simplify's "Paid" header reframes this same number as still-owed-money-
-  // as-a-negative instead of an alarming red positive — so still-owed shows
-  // as "-x" in plain text, no red, once the header itself already says Paid.
-  const balanceCell = (v)=> simplify
-    ? `<td style="font-weight:700;">${v > 0 ? '-' + v.toLocaleString() : v.toLocaleString()}</td>`
-    : `<td style="font-weight:700; color:${v > 0 ? 'var(--danger)' : 'inherit'};">${v.toLocaleString()}</td>`;
+  // "Balance" reads fine as-is even in Simplify mode — a negative balance
+  // already means "short by that much," same as a bank balance. Simplify
+  // just shows still-owed as "-x" (still red) instead of a plain positive x.
+  const balanceLabel = 'Balance';
+  const balanceCell = (v)=> {
+    const text = simplify && v > 0 ? '-' + v.toLocaleString() : v.toLocaleString();
+    return `<td style="font-weight:700; color:${v > 0 ? 'var(--danger)' : 'inherit'};">${text}</td>`;
+  };
 
   let totalDebt = 0, totalCredit = 0, totalBalance = 0;
   let lastGuestId = null;
