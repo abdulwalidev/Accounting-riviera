@@ -7778,6 +7778,10 @@ const RIVIERA_LETTER_CSS = `
   .riviera-letter-top-row{ display:flex; justify-content:space-between; margin-bottom:11px; }
   .riviera-letter-content p{ margin:6px 0; }
   .riviera-letter-section-title{ margin-top:18px; font-weight:bold; }
+  /* Georgia's old-style figures (uneven digit heights) read as "off" for an
+     account/IBAN number, where every digit is expected to line up evenly —
+     switch just these to a plain sans-serif with lining numerals. */
+  .riviera-letter-num{ font-family:Arial,Helvetica,sans-serif; font-variant-numeric:lining-nums; letter-spacing:0.02em; }
 `;
 
 // Same field set the resort's own confirmation-letter template expects,
@@ -7847,8 +7851,8 @@ function buildGuestLetterHtml(entry){
         <p><strong>Payment Status:</strong> ${f.paymentStatus}</p>
         <p><strong>Account Tittle:</strong> RIVIERA Resort PVT LTD<br>
         <strong>Bank Alfalah:</strong><br>
-        <strong>IBAN:</strong> PK36 ALFH 0336 0010 1029 8690<br>
-        <strong>ACC NO:</strong> 1010298690</p>
+        <strong>IBAN:</strong> <span class="riviera-letter-num">PK36 ALFH 0336 0010 1029 8690</span><br>
+        <strong>ACC NO:</strong> <span class="riviera-letter-num">1010298690</span></p>
 
         <p>We look forward to welcoming you to Riviera Resort soon. If you have any further inquiries or need to make changes to your reservation, please do not hesitate to contact us via 099-7430540-41, 0340-8022227. Thank you for choosing our hotel. We take pride in providing exceptional services to our guests, and we are committed to making your stay memorable.</p>
 
