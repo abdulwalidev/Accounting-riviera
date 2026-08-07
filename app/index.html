@@ -7774,7 +7774,7 @@ function renderAuditPage(){
 // =========================================================
 const RIVIERA_LETTER_CSS = `
   .riviera-letter-page{
-    width:210mm; min-height:297mm; box-sizing:border-box;
+    width:210mm; height:297mm; box-sizing:border-box;
     background-image:url('/app/assets/riviera-bg.png');
     background-size:cover; background-position:center; background-repeat:no-repeat;
     position:relative; overflow:hidden;
@@ -7784,6 +7784,11 @@ const RIVIERA_LETTER_CSS = `
   .riviera-letter-header{ display:flex; align-items:center; gap:12px; padding:9mm 20mm 0; }
   .riviera-letter-header img{ width:80px; display:block; }
   .riviera-letter-header h1{ font-size:23px; letter-spacing:2px; margin:0; }
+  /* fitLetterContent() below measures this against the space actually left
+     on the page and scales it down (transform, top-left anchored) if it
+     would run long — a guaranteed single-page fit instead of a guessed
+     font-size/line-height that only happens to work for one guest's worth
+     of text. */
   .riviera-letter-content{ padding:5mm 20mm 0; font-size:11.5px; line-height:1.48; }
   .riviera-letter-content p{ margin:4px 0; }
   .riviera-letter-section-title{ margin-top:12px; font-weight:bold; }
@@ -7873,6 +7878,30 @@ function waitForLetterImages(container){
   return Promise.all(imgs.map(img=> img.complete ? Promise.resolve() : new Promise(res=>{ img.onload = img.onerror = res; })));
 }
 
+// Scales riviera-letter-content down (uniformly, anchored top-left) only if
+// its natural height would run past what's actually left on the page below
+// the header — a guaranteed single physical page regardless of how much
+// text a given guest's stay ends up needing (more rooms, a longer due
+// note, ...), instead of fixed CSS numbers that only happen to fit one
+// example and spill a footer onto page 2 for a longer one.
+function fitLetterContent(pageEl){
+  if(!pageEl) return;
+  const header = pageEl.querySelector('.riviera-letter-header');
+  const content = pageEl.querySelector('.riviera-letter-content');
+  if(!header || !content) return;
+  const pageHeight = pageEl.getBoundingClientRect().height;
+  const headerHeight = header.getBoundingClientRect().height;
+  const bottomSafety = pageHeight * 0.03; // small breathing room above the physical edge
+  const available = pageHeight - headerHeight - bottomSafety;
+  const natural = content.scrollHeight;
+  if(available > 0 && natural > available){
+    const scale = Math.max(0.55, available / natural); // 0.55 floor keeps text legible even in a pathological case
+    content.style.transformOrigin = 'top left';
+    content.style.transform = `scale(${scale})`;
+    content.style.width = (100 / scale) + '%';
+  }
+}
+
 async function downloadGuestPdf(){
   const entry = getCurrentEntry();
   if(!entry) return;
@@ -7887,6 +7916,7 @@ async function downloadGuestPdf(){
   try{
     const pageEl = mount.querySelector('.riviera-letter-page');
     await waitForLetterImages(mount);
+    fitLetterContent(pageEl);
     const canvas = await html2canvas(pageEl, { scale: 2, useCORS: true });
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
     const doc = new jspdf.jsPDF({ orientation:'p', unit:'mm', format:'a4' });
@@ -7925,7 +7955,11 @@ function printGuestLetter(){
   const win = frame.contentWindow;
   const imgs = Array.from(doc.querySelectorAll('img'));
   Promise.all(imgs.map(img=> img.complete ? Promise.resolve() : new Promise(res=>{ img.onload = img.onerror = res; })))
-    .then(()=> setTimeout(()=>{ win.focus(); win.print(); }, 50));
+    .then(()=> setTimeout(()=>{
+      fitLetterContent(doc.querySelector('.riviera-letter-page'));
+      win.focus();
+      win.print();
+    }, 50));
 }
 
 function toggleRoomDetail(){
