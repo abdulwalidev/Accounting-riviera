@@ -4088,6 +4088,10 @@
     <h3>Confirm Arrival</h3>
     <div class="sub" style="margin-bottom:14px;">Check this is the right guest before confirming — this sets their Actual Checkin and the room reads as occupied from here on.</div>
     <div class="grid" id="acnModalBody" style="margin-bottom:16px;"></div>
+    <div style="margin-bottom:16px;">
+      <label>Checkin Date</label>
+      <input type="date" id="acnCheckinDate">
+    </div>
     <label>Staff confirming this arrival</label>
     <input type="text" id="acnStaffInput" placeholder="Staff name" autocomplete="off">
     <label style="margin-top:10px;">Type CHECKIN to confirm</label>
@@ -4546,7 +4550,7 @@ function setStayDate(id, isoValue){
 // and Global Search. Kept as its own registry/setter rather than folding
 // into stayDatePickers/setStayDate so that already-proven code path stays
 // completely untouched.
-const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate'];
+const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate', 'acnCheckinDate'];
 const filterDatePickers = {};
 function initFilterDatePickers(){
   if(typeof flatpickr === 'undefined') return;
@@ -10934,13 +10938,26 @@ function buildArrivalRows(asOfDate){
     checkIn: entry.checkIn || '',
     status
   });
-  // "Due" is overdue-inclusive (checkIn <= asOfDate), same as Checkout/
-  // Pending's own due list — a reservation whose check-in day came and went
-  // with nobody confirming it doesn't just fall off the list the next day;
-  // it keeps showing up until someone actually checks them in or undoes it.
-  const due = all
-    .filter(entry=> isAdvanceReservation(entry) && entry.checkIn <= asOfDate && !getDetailValue(entry, 'Actual Checkin'))
-    .map(entry=> toRow(entry, 'due'));
+  // "Due" is deliberately NOT "every advance reservation with checkIn <=
+  // asOfDate" — that resurfaced every unconfirmed reservation in the
+  // system's entire history (Actual Checkin didn't exist before this
+  // feature, so literally nobody had it set), most of whom already
+  // stayed and left long ago. Instead reuse the exact same test Room
+  // Detail's own "Arrival Due" badge uses: a guest only counts as due
+  // right now if they actually have a booked room-night landing on
+  // asOfDate today (computeRoomStatuses' arrivalPending) — this alone
+  // rules out both stale past reservations (no night lands on today
+  // anymore) and future ones (no night lands on today yet), while still
+  // catching an overdue guest like one whose check-in was yesterday but
+  // whose stay still covers today.
+  const dueSeen = new Set();
+  const due = [];
+  computeRoomStatuses(asOfDate).forEach(rs=>{
+    if(rs.arrivalPending && rs.entry && !dueSeen.has(rs.entry.id)){
+      dueSeen.add(rs.entry.id);
+      due.push(toRow(rs.entry, 'due'));
+    }
+  });
   // Checked in ON asOfDate specifically — lets the As Of Date filter show
   // what was confirmed that day, same as Checkout/Pending's log merge.
   const checkedIn = all
@@ -11050,6 +11067,7 @@ function openArrivalConfirmModal(){
     <div><div class="confirm-lbl">Room No</div><div class="confirm-val">${formatRoomChain(entry.rooms) || '-'}</div></div>
     <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${entry.checkIn ? formatDate(entry.checkIn) : '-'}</div></div>
   `;
+  setFilterDate('acnCheckinDate', todayStr());
   const staffInput = document.getElementById('acnStaffInput');
   staffInput.value = '';
   staffInput.classList.remove('duplicate');
@@ -11080,18 +11098,19 @@ async function confirmArrivalConfirmModal(){
     input.focus();
     return;
   }
+  const checkinDate = document.getElementById('acnCheckinDate').value || todayStr();
   const entry = loadAllEntries().find(e=> e.id === pendingArrivalGuestId);
   closeArrivalConfirmModal();
   if(!entry) return;
   const extraDetails = (entry.extraDetails || []).filter(d=> d.kind !== 'Actual Checkin');
-  extraDetails.unshift({ kind: 'Actual Checkin', value: todayStr() });
+  extraDetails.unshift({ kind: 'Actual Checkin', value: checkinDate });
   entry.extraDetails = extraDetails;
   entry.editedAt = new Date().toISOString();
   entry.editedBy = currentUser ? currentUser.username : '';
   logGuestAction(entry.id, 'checked_in', staffName);
   queueEntryPush(entry.id);
   renderArrival();
-  showNotice((entry.guestName || 'Guest') + ' checked in — room ' + (formatRoomChain(entry.rooms) || '') + ' now reads occupied.', 'success');
+  showNotice((entry.guestName || 'Guest') + ' checked in (' + formatDate(checkinDate) + ') — room ' + (formatRoomChain(entry.rooms) || '') + ' now reads occupied.', 'success');
 }
 
 async function undoArrivalCheckin(guestId){
