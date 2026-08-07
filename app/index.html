@@ -3697,9 +3697,15 @@
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:12px;">
         <div class="room-summary" id="roomDetailSummary" style="margin:0;"></div>
-        <div class="rd-switch">
-          <button type="button" class="rd-switch-btn" id="rdModeSmart" onclick="setRoomDetailMode('smart')">SMART</button>
-          <button type="button" class="rd-switch-btn active" id="rdModeMunchi" onclick="setRoomDetailMode('munchi')">MUNCHI</button>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div class="rd-switch" id="rdGuestModeSwitch">
+            <button type="button" class="rd-switch-btn" id="rdGuestModeCurrent" onclick="setRdGuestMode('current')">SHOW CURRENT</button>
+            <button type="button" class="rd-switch-btn active" id="rdGuestModePrevious" onclick="setRdGuestMode('previous')">SHOW PREVIOUS</button>
+          </div>
+          <div class="rd-switch">
+            <button type="button" class="rd-switch-btn" id="rdModeSmart" onclick="setRoomDetailMode('smart')">SMART</button>
+            <button type="button" class="rd-switch-btn active" id="rdModeMunchi" onclick="setRoomDetailMode('munchi')">MUNCHI</button>
+          </div>
         </div>
       </div>
       <div id="roomDetailSmartBody" style="overflow-x:auto; display:none; margin-top:14px;"></div>
@@ -4631,6 +4637,11 @@ function detectUnitType(roomNo){
 // whether it's a Room or an Apartment.
 const ROOM_TYPE_OPTIONS_HTML = '<option value="">—</option><option value="Room">Room</option><option value="Apartment">Apartment</option>';
 const MISC_TYPE_OPTIONS_HTML = '<option value="">—</option>' + MISC_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
+// A room number picked as "N/A" isn't a known Room/Apartment unit at all
+// (it's undecided), so its Type dropdown offers this separate list of
+// stay categories instead of Room/Apartment.
+const NA_TYPES = ['River View', 'Mountain View', 'Couple Suite', 'VIP Deluxe', '2 Bed', '3 Bed'];
+const NA_TYPE_OPTIONS_HTML = '<option value="">—</option>' + NA_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
 
 function updateUnitType(tr){
   const v = tr.querySelector('.roomNo').value.trim().toUpperCase();
@@ -4661,22 +4672,32 @@ function updateUnitType(tr){
     typeSel.classList.toggle('needs-pick', !typeSel.value);
     return;
   }
-  if(typeSel.dataset.mode === 'misc'){
-    typeSel.innerHTML = ROOM_TYPE_OPTIONS_HTML;
-    delete typeSel.dataset.mode;
+  // N/A rooms pick from the separate stay-category list above instead of
+  // Room/Apartment — swap the option list itself, same trick as Miscellaneous.
+  const isNA = v === 'N/A';
+  const wantMode = isNA ? 'na' : 'default';
+  if(typeSel.dataset.mode !== wantMode){
+    typeSel.innerHTML = isNA ? NA_TYPE_OPTIONS_HTML : ROOM_TYPE_OPTIONS_HTML;
+    typeSel.dataset.mode = wantMode;
   }
 
   const placeholder = typeSel.querySelector('option[value=""]');
-  const roomOpt = typeSel.querySelector('option[value="Room"]');
-  const aptOpt = typeSel.querySelector('option[value="Apartment"]');
-  roomOpt.textContent = 'Room';
-  aptOpt.textContent = 'Apartment';
   if(!v){
     typeSel.value = ''; typeSel.disabled = true;
     placeholder.textContent = '—';
     typeSel.classList.remove('needs-pick');
     return;
   }
+  if(isNA){
+    typeSel.disabled = false;
+    placeholder.textContent = 'SELECT THIS';
+    typeSel.classList.toggle('needs-pick', !typeSel.value);
+    return;
+  }
+  const roomOpt = typeSel.querySelector('option[value="Room"]');
+  const aptOpt = typeSel.querySelector('option[value="Apartment"]');
+  roomOpt.textContent = 'Room';
+  aptOpt.textContent = 'Apartment';
   const detected = detectUnitType(v);
   if(detected){
     // show a confident green "Room ✓" instead of a washed-out disabled look
@@ -4687,7 +4708,7 @@ function updateUnitType(tr){
     typeSel.classList.remove('needs-pick');
     return;
   }
-  // N/A or hand-typed unknown unit: the user must pick Room or Apartment
+  // hand-typed unknown unit: the user must pick Room or Apartment
   typeSel.disabled = false;
   placeholder.textContent = 'SELECT THIS';
   typeSel.classList.toggle('needs-pick', !typeSel.value);
@@ -5841,7 +5862,9 @@ async function reviewEntry(){
     if(!unitType){
       showNotice(isMiscRoomNo(roomNo)
         ? 'Please select which facility this Miscellaneous row is for — BBQ, Bonfire, or Snooker.'
-        : 'Please select whether "' + roomNo + '" is a Room or an Apartment in the Type column.');
+        : roomNo.trim().toUpperCase() === 'N/A'
+          ? 'Please select a Type for the N/A room in the Type column.'
+          : 'Please select whether "' + roomNo + '" is a Room or an Apartment in the Type column.');
       focusError(typeSel);
       return;
     }
@@ -6951,6 +6974,17 @@ function setRoomDetailMode(mode){
   document.getElementById('rdModeMunchi').classList.toggle('active', mode === 'munchi');
   document.getElementById('roomDetailSmartBody').style.display = mode === 'smart' ? '' : 'none';
   document.getElementById('roomDetailMunchiBody').style.display = mode === 'munchi' ? '' : 'none';
+  document.getElementById('rdGuestModeSwitch').style.display = mode === 'munchi' ? '' : 'none';
+}
+
+// MUNCHI-only: a vacant room still remembers its last guest, shown muted/
+// italic ("previous"). "current" strips that out so vacant rooms read blank.
+let rdGuestMode = 'previous';
+function setRdGuestMode(mode){
+  rdGuestMode = mode;
+  document.getElementById('rdGuestModeCurrent').classList.toggle('active', mode === 'current');
+  document.getElementById('rdGuestModePrevious').classList.toggle('active', mode === 'previous');
+  renderRoomDetail();
 }
 
 function renderRoomDetail(){
@@ -7058,7 +7092,7 @@ function renderRoomDetail(){
       const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '';
       const guestText = goesToGuest
         ? (r.entry.guestName || '')
-        : (r.entry ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
+        : (r.entry && rdGuestMode === 'previous' ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
       const statusText = isCheckoutPending ? 'pending' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
       const statusCls = isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
