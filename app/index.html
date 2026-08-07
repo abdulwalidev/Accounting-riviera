@@ -802,6 +802,10 @@
     background:var(--danger-bg);
     color:var(--danger);
   }
+  .status.arrivaldue{
+    background:#F7EBC5;
+    color:var(--gold-deep);
+  }
 
   /* ---- Layout ---- */
   .main{
@@ -1410,6 +1414,7 @@
   .smart-row .sr-status.checkoutdue{ color:var(--danger); }
   .smart-row .sr-status.dirty{ color:var(--gold-deep); }
   .smart-row .sr-status.ooo{ color:var(--muted); }
+  .smart-row .sr-status.arrivaldue{ color:var(--gold-deep); }
   .smart-row .sr-arrival{ color:var(--muted); font-size:11.5px; text-align:right; white-space:nowrap; border-right:1px solid #1725540F; padding-right:6px; }
   .smart-row .sr-guest{ color:var(--account); font-weight:600; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .smart-row .sr-guest.sr-guest-muted{ color:var(--muted); font-weight:500; font-style:italic; }
@@ -2610,7 +2615,8 @@
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
       <button class="navbtn" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
       <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
-      <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none; margin-left:auto;">Checkout/Pending</button>
+      <button class="navbtn" id="topNavArrival" onclick="showView('arrival')" style="display:none; margin-left:auto;">Arrival</button>
+      <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none;">Checkout/Pending</button>
     </div>
   </div>
 </div>
@@ -3126,6 +3132,10 @@
           <input type="text" id="dCheckOut" disabled>
         </div>
         <div>
+          <label>Actual Checkin</label>
+          <input type="text" id="dActualCheckin" disabled>
+        </div>
+        <div>
           <label>Actual Checkout</label>
           <input type="text" id="dActualCheckout" disabled>
         </div>
@@ -3588,7 +3598,7 @@
           <button class="btn secondary" onclick="printInhouse()">🖶 Print</button>
           <button class="btn secondary" onclick="showView('breakfast')">🥐 Breakfast Report</button>
         </div>
-        <div id="ihUnitSplit" style="font-size:15px; font-weight:700; color:var(--ink);"></div>
+        <div id="ihUnitSplit" class="dash-subtiles" style="max-width:220px; margin-top:0;"></div>
       </div>
     </div>
 
@@ -3702,6 +3712,41 @@
     <div class="panel accent-report no-print">
       <h2>Checked Out <span id="acLogDateLabel"></span></h2>
       <div id="autoCheckoutLogBody"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-arrival">
+
+    <h1 class="no-print">Arrival</h1>
+    <div class="sub no-print">Advance reservations whose check-in date is on file for today — confirm they've actually shown up before their room reads as occupied. Walk-ins entered today don't appear here; entering them already is the confirmation.</div>
+
+    <div class="panel no-print accent-filters">
+      <h2>As Of Date</h2>
+      <div class="sub" style="margin-top:-6px;">For review only — Check-in/Undo are only ever available when this is set to today, so nobody can be checked in under the wrong date.</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>Date</label>
+          <input type="date" id="arDate">
+          <div class="date-readout" id="arDateReadout"></div>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="setArrivalToday()">Today</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-filters">
+      <h2>Arrivals <span id="arDueDateLabel"></span></h2>
+      <div class="sub" style="margin-top:-6px;">Advance reservations with a check-in date on file for this day. "Arrival Due" rooms don't count as occupied anywhere until confirmed here.</div>
+      <div id="arrivalDueBody" style="overflow-x:auto; margin-top:14px;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2>Checked In <span id="arLogDateLabel"></span></h2>
+      <div id="arrivalLogBody"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -3882,7 +3927,7 @@
           <button type="button" class="rd-switch-btn active" id="rdModeMunchi" onclick="setRoomDetailMode('munchi')">MUNCHI</button>
         </div>
       </div>
-      <div id="roomDetailUnitBoxes" style="display:flex; margin-top:12px;"></div>
+      <div id="roomDetailUnitBoxes" style="display:flex; flex-wrap:wrap; gap:20px; row-gap:12px; margin-top:12px;"></div>
       <div id="roomDetailSmartBody" style="overflow-x:auto; display:none; margin-top:14px;"></div>
     </div>
 
@@ -4038,6 +4083,22 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="arrivalConfirmModalBackdrop">
+  <div class="modal" style="width:460px;">
+    <h3>Confirm Arrival</h3>
+    <div class="sub" style="margin-bottom:14px;">Check this is the right guest before confirming — this sets their Actual Checkin and the room reads as occupied from here on.</div>
+    <div class="grid" id="acnModalBody" style="margin-bottom:16px;"></div>
+    <label>Staff confirming this arrival</label>
+    <input type="text" id="acnStaffInput" placeholder="Staff name" autocomplete="off">
+    <label style="margin-top:10px;">Type CHECKIN to confirm</label>
+    <input type="text" id="acnConfirmInput" placeholder="CHECKIN" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeArrivalConfirmModal()">Cancel</button>
+      <button class="btn" onclick="confirmArrivalConfirmModal()">✓ Confirm Checked In</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="changeRoomModalBackdrop">
   <div class="modal">
     <h3>Change Room</h3>
@@ -4127,7 +4188,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','settings'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -4167,6 +4228,11 @@ function showView(view, fromPopState){
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
+  if(view === 'arrival' && !isAdmin()){
+    showNotice('Arrival is only available to admin accounts.');
+    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
+    return;
+  }
   currentView = view;
   try{
     localStorage.setItem('lastView', view);
@@ -4189,6 +4255,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
   document.getElementById('topNavNightSummary').classList.toggle('active', view === 'nightsummary');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
+  document.getElementById('topNavArrival').classList.toggle('active', view === 'arrival');
   document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck');
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
@@ -4210,6 +4277,7 @@ function showView(view, fromPopState){
   if(view === 'inhouse') renderInhouse();
   if(view === 'breakfast') renderBreakfastReport();
   if(view === 'autocheckout') renderAutoCheckout();
+  if(view === 'arrival') renderArrival();
   if(view === 'dashboard') renderDashboard();
   if(view === 'cico') renderCico();
   if(view === 'settings') renderSettings();
@@ -4340,7 +4408,7 @@ function restoreLastView(){
   let saved = null;
   try{ saved = localStorage.getItem('lastView'); }catch(e){ return; }
   if(!saved || saved === currentView || !ROUTABLE_VIEWS.includes(saved)) return;
-  if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout') && !isAdmin()) return;
+  if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout' || saved === 'arrival') && !isAdmin()) return;
   if(saved === 'detail'){
     let savedId = null;
     try{ savedId = localStorage.getItem('lastDetailId'); }catch(e){ /* ignore */ }
@@ -4478,7 +4546,7 @@ function setStayDate(id, isoValue){
 // and Global Search. Kept as its own registry/setter rather than folding
 // into stayDatePickers/setStayDate so that already-proven code path stays
 // completely untouched.
-const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate'];
+const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate'];
 const filterDatePickers = {};
 function initFilterDatePickers(){
   if(typeof flatpickr === 'undefined') return;
@@ -4683,6 +4751,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   setRangeDate('nprRange', 'nprFrom', 'nprTo', todayStr(), todayStr());
   document.getElementById('acDate').addEventListener('input', renderAutoCheckout);
   setFilterDate('acDate', todayStr());
+  document.getElementById('arDate').addEventListener('input', renderArrival);
+  setFilterDate('arDate', todayStr());
   setFilterDate('dlDate', todayStr());
   updateDateReadout(document.getElementById('dlDate'), document.getElementById('dlDateReadout'));
   document.getElementById('dlDate').addEventListener('input', e=>{
@@ -4723,7 +4793,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   scheduleKarachiMidnightRollover();
   [
     'auditEntryDate','dNewDate','gsearchDate',
-    'dlDate','acDate','auditPageDate','rdDate','b19From','nsDate'
+    'dlDate','acDate','arDate','auditPageDate','rdDate','b19From','nsDate'
   ].forEach(addDateStepper);
 });
 
@@ -5566,7 +5636,7 @@ function handleKarachiMidnightRollover(){
   // Single-date fields: roll forward any field currently sitting on
   // yesterday's "today", through whichever picker registry (if any) owns
   // it, so its calendar display can't fall out of sync with the value.
-  ['gsearchDate','dNewDate','checkInDate','rdDate','nsDate','dlDate','auditEntryDate','auditPageDate','acDate'].forEach(id=>{
+  ['gsearchDate','dNewDate','checkInDate','rdDate','nsDate','dlDate','auditEntryDate','auditPageDate','acDate','arDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el || el.value !== lastKnownToday) return;
     el.value = newToday;
@@ -5602,6 +5672,8 @@ function handleKarachiMidnightRollover(){
   if(dlDateEl) updateDateReadout(dlDateEl, document.getElementById('dlDateReadout'));
   const acDateEl = document.getElementById('acDate');
   if(acDateEl) updateDateReadout(acDateEl, document.getElementById('acDateReadout'));
+  const arDateEl = document.getElementById('arDate');
+  if(arDateEl) updateDateReadout(arDateEl, document.getElementById('arDateReadout'));
   const auditEntryDateEl = document.getElementById('auditEntryDate');
   if(auditEntryDateEl) updateDateReadout(auditEntryDateEl, document.getElementById('auditEntryDateReadout'));
   const auditPageDateEl = document.getElementById('auditPageDate');
@@ -5622,6 +5694,7 @@ function handleKarachiMidnightRollover(){
   if(currentView === 'autocheckout') renderAutoCheckout();
   if(currentView === 'inhouse') renderInhouse();
   if(currentView === 'autocheckout') renderAutoCheckout();
+  if(currentView === 'arrival') renderArrival();
 }
 
 function addPayRow(){
@@ -5903,13 +5976,22 @@ function formatExtraDetail(d){
 // the cloud table already has a JSON column for that array, so this needs
 // no schema change. These helpers move them between the fixed fields and
 // that array, and keep them out of the generic "+ Detail" list/dropdown.
-const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Adults', 'Children'];
+const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Actual Checkin', 'Adults', 'Children'];
 function getDetailValue(entry, kind){
   const d = (entry.extraDetails || []).find(d=> d.kind === kind);
   return d ? d.value : '';
 }
 function visibleExtraDetails(entry){
   return (entry.extraDetails || []).filter(d=> !HIDDEN_DETAIL_KINDS.includes(d.kind));
+}
+
+// A walk-in is entered AS the guest checks in — the save itself is the
+// arrival confirmation, so Arrival has nothing to add for them. Only a
+// booking made ahead of its own check-in date (savedAt strictly before
+// checkIn) is a genuine advance reservation that still needs someone at
+// the desk to confirm the guest actually showed up on the day.
+function isAdvanceReservation(entry){
+  return !!(entry && entry.savedAt && entry.checkIn && toKarachiDateStr(entry.savedAt) < entry.checkIn);
 }
 
 // Auto-inserts dashes as digits are typed (XXXXX-XXXXXXX-X). Strips any
@@ -6303,6 +6385,7 @@ function openConfirmModal(data){
       <div><div class="confirm-lbl">CNIC</div><div class="confirm-val">${data.cnic || '-'}</div></div>
       <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${data.checkIn ? formatDate(data.checkIn) : '-'}</div></div>
       <div><div class="confirm-lbl">Expected Checkout</div><div class="confirm-val">${data.checkOut ? formatDate(data.checkOut) : '-'}</div></div>
+      <div><div class="confirm-lbl">Actual Checkin</div><div class="confirm-val">${getDetailValue(data, 'Actual Checkin') ? formatDate(getDetailValue(data, 'Actual Checkin')) : '-'}</div></div>
       <div><div class="confirm-lbl">Actual Checkout</div><div class="confirm-val">${getDetailValue(data, 'Actual Checkout') ? formatDate(getDetailValue(data, 'Actual Checkout')) : '-'}</div></div>
       ${visibleExtraDetails(data).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
     </div>
@@ -7080,6 +7163,33 @@ function getRoomType(roomNo){
   }
   return '';
 }
+
+// Room Detail-only display relabeling — getRoomType()'s own raw strings
+// ('Family Deluxe with River'/'Mount', 'Suit Room') stay exactly as they
+// are everywhere else (Inhouse, Revenue Report, Checkout/Pending all read
+// the same r.type off computeRoomStatuses); this just maps them to the
+// shorter guest-facing names Room Detail itself shows, matching the same
+// category names NA_TYPES already uses for undecided rooms.
+const ROOM_DETAIL_TYPE_DISPLAY = {
+  'Family Deluxe with River': 'River View',
+  'Family Deluxe with Mount': 'Mountain View',
+  'Suit Room': 'Couple Suite'
+};
+function roomDetailTypeLabel(type){
+  return ROOM_DETAIL_TYPE_DISPLAY[type] || type;
+}
+
+// Which of the 6 type-count boxes an occupied room falls into. A real
+// numbered room/apartment goes through the same relabeling as the Type
+// column; an N/A room has no roomNo-derived type at all, so its own picked
+// unitType (already one of NA_TYPES verbatim) is used directly instead.
+function roomDetailTypeBucket(rs){
+  if((rs.roomNo || '').trim().toUpperCase() === 'N/A'){
+    const roomRow = rs.entry ? (rs.entry.rooms || []).find(r=> (r.roomNo || '').trim().toUpperCase() === 'N/A') : null;
+    return roomRow ? (roomRow.unitType || '') : '';
+  }
+  return roomDetailTypeLabel(rs.type);
+}
 function getRoomSection(roomNo){
   const v = (roomNo || '').trim().toUpperCase();
   if(ROOM_NUMBERS.includes(v)){
@@ -7112,12 +7222,21 @@ function roomSectionLabel(section){
 // all collapse back to the whole-entry window, matching the old behavior.
 function computeRoomStatuses(asOfDate){
   const refDate = asOfDate || todayStr();
+  // Only today's live read requires a confirmed arrival — a booking that
+  // simply has a night landing on some other refDate (forecasting a future
+  // date, or reviewing a past one in Room Detail's date filter) is read
+  // straight off the booking the same way it always was, no Arrival step
+  // involved. Confirmation only gates whether a guest reads as physically
+  // in the room *right now*.
+  const isLiveToday = refDate === todayStr();
   const all = loadAllEntries();
   // Occupancy is read straight off the same room-nights Ledgers bills by
   // (checkIn + each room row's own booked-nights count) — no checkIn/
-  // checkout date-window math of its own, no "Actual Checkout" field, no
-  // movedOut chaining. A room is occupied on refDate purely because a
-  // booked night lands on that exact date; nothing else decides it.
+  // checkout date-window math of its own, no movedOut chaining. A room is
+  // occupied on refDate because a booked night lands on that exact date —
+  // except for today, where a booked night alone only means a reservation
+  // is expected; the guest doesn't read as occupying the room until Arrival
+  // confirms they actually showed up (their own Actual Checkin field).
   const nights = buildLedgersRecords();
   const nightsByRoom = {};
   nights.forEach(n=>{
@@ -7183,18 +7302,31 @@ function computeRoomStatuses(asOfDate){
     const actualCheckoutDate = current ? getDetailValue(current, 'Actual Checkout') : '';
     const resolvedByCheckout = !!(actualCheckoutDate && lastNightDate && actualCheckoutDate >= lastNightDate);
     const extended = !todayNight && !!lastNightDate && lastNightDate < refDate && !resolvedByCheckout;
+    // Arrival gate — today only, and only for an advance reservation (booked
+    // ahead of its own check-in date). A walk-in entered the same day as its
+    // check-in date is its own confirmation — the front desk was looking at
+    // the guest while typing them in — so it's never gated. A guest booked
+    // ahead who hasn't been confirmed via the Arrival page (their own Actual
+    // Checkin field is still empty) doesn't count as occupying the room yet;
+    // Arrival is the only thing that can set it, so a stray click elsewhere
+    // can't silently mark someone in-house who never showed up.
+    const needsArrivalConfirm = current ? isAdvanceReservation(current) : false;
+    const confirmedCheckin = current ? !!getDetailValue(current, 'Actual Checkin') : false;
+    const arrivalPending = !!todayNight && isLiveToday && needsArrivalConfirm && !confirmedCheckin;
     return {
       roomNo,
       section: getRoomSection(roomNo),
       type: getRoomType(roomNo),
       entry: current,
-      // Strictly "booked for this exact night" — Extended is NOT folded in
-      // here. Dashboard and Room Detail are the only two places that treat
-      // an Extended room as occupied (they explicitly check `occupied ||
-      // extended`); every other consumer (Revenue Report, Reservations)
-      // only counts a room once its booking actually covers this night —
-      // an unconfirmed departure isn't real rent yet.
-      occupied: !!todayNight,
+      // Strictly "booked for this exact night, and (if this is today AND
+      // was booked ahead of time) actually confirmed arrived" — Extended is
+      // NOT folded in here. Dashboard and Room Detail are the only two
+      // places that treat an Extended room as occupied (they explicitly
+      // check `occupied || extended`); every other consumer (Revenue
+      // Report, Reservations) only counts a room once its booking actually
+      // covers this night — an unconfirmed departure isn't real rent yet.
+      occupied: !!todayNight && (!isLiveToday || !needsArrivalConfirm || confirmedCheckin),
+      arrivalPending,
       extended,
       housekeepingStatus,
       actualCheckout: lastNightDate ? addDaysToDateStr(lastNightDate, 1) : '',
@@ -7242,9 +7374,11 @@ function renderRoomDetail(){
   // still counts Extended rooms as occupied.
   const occupiedCount = rooms.filter(r=> r.occupied || r.extended).length;
   // Captured before the search filter below narrows `rooms` — these two
-  // boxes mirror "X rooms total" above, not whatever's currently searched.
-  const roomTypeCount = rooms.filter(r=> detectUnitType(r.roomNo) !== 'Apartment').length;
-  const apartmentTypeCount = rooms.filter(r=> detectUnitType(r.roomNo) === 'Apartment').length;
+  // boxes mirror "X occupied" above, not "X rooms total" (and not whatever's
+  // currently searched) — same in-house filter as Inhouse's own split.
+  const occupiedRooms = rooms.filter(r=> r.occupied || r.extended);
+  const roomTypeCount = occupiedRooms.filter(r=> detectUnitType(r.roomNo) !== 'Apartment').length;
+  const apartmentTypeCount = occupiedRooms.filter(r=> detectUnitType(r.roomNo) === 'Apartment').length;
 
   if(searchVal){
     const searchValNoDash = stripDashes(searchVal);
@@ -7258,15 +7392,27 @@ function renderRoomDetail(){
     <span><b>${occupiedCount}</b> occupied ${asOfLabel}</span>
     <span><b>${totalRooms - occupiedCount}</b> vacant</span>`;
 
-  unitBoxesEl.innerHTML = `
-    <div style="padding:8px 20px; border:1px solid var(--line); border-right:none; border-radius:6px 0 0 6px;">
-      <div style="font-family:'Inter',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted);">Room</div>
-      <div style="font-size:18px; font-weight:700; color:var(--ink);">${roomTypeCount}</div>
-    </div>
-    <div style="padding:8px 20px; border:1px solid var(--line); border-radius:0 6px 6px 0;">
-      <div style="font-family:'Inter',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted);">Apartment</div>
-      <div style="font-size:18px; font-weight:700; color:var(--ink);">${apartmentTypeCount}</div>
+  // Six finer-grained buckets alongside the plain Room/Apartment split —
+  // same in-house room set, just sorted by the category Room Detail's own
+  // Type column shows (see roomDetailTypeBucket) instead of the master
+  // Room/Apartment list. A '3 Bed Apartment' room can appear in both the
+  // Apartment box above and its own box here; they're two different splits
+  // of the same rooms, not additive.
+  const TYPE_BUCKETS = ['River View', 'Mountain View', 'Couple Suite', 'VIP Deluxe', '2 Bed Apartment', '3 Bed Apartment'];
+  const bucketCounts = {};
+  TYPE_BUCKETS.forEach(b=> bucketCounts[b] = 0);
+  occupiedRooms.forEach(rs=>{
+    const label = roomDetailTypeBucket(rs);
+    if(Object.prototype.hasOwnProperty.call(bucketCounts, label)) bucketCounts[label]++;
+  });
+  const box = (label, val, first, last)=> `
+    <div style="padding:8px 20px; border:1px solid var(--line); ${first ? '' : 'border-left:none;'} border-radius:${first ? '6px 0 0 6px' : last ? '0 6px 6px 0' : '0'};">
+      <div style="font-family:'Inter',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted);">${label}</div>
+      <div style="font-size:18px; font-weight:700; color:var(--ink);">${val}</div>
     </div>`;
+  unitBoxesEl.innerHTML = `
+    <div style="display:flex;">${box('Room', roomTypeCount, true, false)}${box('Apartment', apartmentTypeCount, false, true)}</div>
+    <div style="display:flex; flex-wrap:wrap;">${TYPE_BUCKETS.map((label, i)=> box(label, bucketCounts[label], i === 0, i === TYPE_BUCKETS.length - 1)).join('')}</div>`;
 
   if(rooms.length === 0){
     smartBody.innerHTML = '<div class="empty-note">No rooms match.</div>';
@@ -7288,23 +7434,29 @@ function renderRoomDetail(){
     const list = groups[section];
     const occ = list.filter(r=> r.occupied || r.extended).length;
     const rows = list.map(r=>{
-      const goesToGuest = (r.occupied || r.extended) && !!r.entry;
+      const goesToGuest = (r.occupied || r.extended || r.arrivalPending) && !!r.entry;
       const due = r.entry ? computeTotals(r.entry).due : 0;
       // Checkout day arrived (last booked night was yesterday) but the
       // balance isn't settled at exactly 0 — owes money, or has paid ahead
       // for nights that were never booked. Either way, a human needs to
       // look at it before it can be checked out (Checkout/Pending skips these).
       const isCheckoutPending = r.extended && due !== 0;
-      const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '-';
+      // Vacant rooms still show their status/type cells as normal — the
+      // guest name (and their check-in date, which is meaningless without a
+      // name attached to it — it's just when the person who LEFT arrived)
+      // is withheld once that guest has checked out, unless "Show people
+      // who have left" is on.
+      const showGuestInfo = goesToGuest || (r.entry && showLeft);
+      const arrival = showGuestInfo && r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '-';
       const guestCell = goesToGuest
         ? (r.entry.guestName || '(no name)')
-        : (r.entry && showLeft ? `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>` : '-');
-      const statusLabel = isCheckoutPending ? 'Pending' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
-      const statusCls = isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
+        : (showGuestInfo ? `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>` : '-');
+      const statusLabel = r.arrivalPending ? 'Arrival Due' : isCheckoutPending ? 'Pending' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
+      const statusCls = r.arrivalPending ? 'arrivaldue' : isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
       return `<tr style="cursor:pointer;" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <td><b>${r.roomNo}</b></td>
-        <td>${r.type || '-'}</td>
+        <td>${roomDetailTypeLabel(r.type) || '-'}</td>
         <td>${arrival}</td>
         <td>${goesToGuest ? due.toLocaleString() : '-'}</td>
         <td><span class="status ${statusCls}">${statusLabel}</span></td>
@@ -7328,23 +7480,26 @@ function renderRoomDetail(){
   const SR_STATUS_LABEL = { Ready: 'vacant', Dirty: 'dirty', OOO: 'ooo' };
   munchiBody.innerHTML = sections.map(section=>{
     const rows = groups[section].map(r=>{
-      const goesToGuest = (r.occupied || r.extended) && !!r.entry;
+      const goesToGuest = (r.occupied || r.extended || r.arrivalPending) && !!r.entry;
       const due = r.entry ? computeTotals(r.entry).due : 0;
       const isCheckoutPending = r.extended && due !== 0;
-      const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '';
-      // Vacant rooms still show their status/type/arrival cells as normal —
-      // the guest name is withheld once that guest has checked out, unless
-      // "Show people who have left" is on.
+      // Vacant rooms still show their status/type cells as normal — the
+      // guest name (and their check-in date, meaningless without a name
+      // attached — it's just when the person who LEFT arrived) is withheld
+      // once that guest has checked out, unless "Show people who have
+      // left" is on.
+      const showGuestInfo = goesToGuest || (r.entry && showLeft);
+      const arrival = showGuestInfo && r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '';
       const guestText = goesToGuest
         ? (r.entry.guestName || '')
-        : (r.entry && showLeft ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
-      const statusText = isCheckoutPending ? 'pending' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
-      const statusCls = isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
+        : (showGuestInfo ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
+      const statusText = r.arrivalPending ? 'arrival due' : isCheckoutPending ? 'pending' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
+      const statusCls = r.arrivalPending ? 'arrivaldue' : isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
       const guestCls = goesToGuest ? '' : ' sr-guest-muted';
       return `<div class="smart-row clickable" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <span class="sr-room">${r.roomNo}</span>
-        <span class="sr-type">${r.type || ''}</span>
+        <span class="sr-type">${roomDetailTypeLabel(r.type) || ''}</span>
         <span class="sr-status ${statusCls}">${statusText}</span>
         <span class="sr-arrival">${arrival}</span>
         <span class="sr-guest${guestCls}">${guestText}</span>
@@ -7608,6 +7763,8 @@ function renderDetail(){
   document.getElementById('dContactNo').value = getDetailValue(entry, 'Contact No') || '—';
   document.getElementById('dCheckIn').value = entry.checkIn ? formatDate(entry.checkIn) : '—';
   document.getElementById('dCheckOut').value = entry.checkOut ? formatDate(entry.checkOut) : '—';
+  const actualCheckin = getDetailValue(entry, 'Actual Checkin');
+  document.getElementById('dActualCheckin').value = actualCheckin ? formatDate(actualCheckin) : '—';
   const actualCheckout = getDetailValue(entry, 'Actual Checkout');
   document.getElementById('dActualCheckout').value = actualCheckout ? formatDate(actualCheckout) : '—';
   document.getElementById('dExtraDetails').innerHTML = visibleExtraDetails(entry).map(d=>
@@ -7678,7 +7835,7 @@ function renderDetail(){
 
 // Every recorded action on this entry, newest first: who did what, when.
 // The log is append-only on the server — nothing in the app can rewrite it.
-const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added', checked_out: 'Checked Out' };
+const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added', checked_out: 'Checked Out', checked_in: 'Checked In' };
 
 function renderChangeLog(entry){
   const box = document.getElementById('detailChangeLog');
@@ -9999,12 +10156,18 @@ function buildNightSummaryReport(asOfDate){
 
   const rooms = computeRoomStatuses(date);
   const totalRooms = rooms.length;
-  const occupiedCount = rooms.filter(r=> r.occupied).length;
-  const vacantRooms = rooms.filter(r=> !r.occupied);
+  // A billing report, not a live front-desk view — Occupied/Vacant/OOO here
+  // stay tied to actual booked nights (same source as the rows below), not
+  // computeRoomStatuses' `occupied` flag, which for today also requires an
+  // Arrival confirmation. Gating this too would make the stat tiles
+  // disagree with the table sitting right underneath them.
+  const nightRecords = buildLedgersRecords().filter(n=> n.date === date && !isMiscRoomNo(n.roomNo));
+  const bookedRoomKeys = new Set(nightRecords.map(n=> n.roomNo.trim().toUpperCase()));
+  const occupiedCount = rooms.filter(r=> bookedRoomKeys.has(r.roomNo)).length;
+  const vacantRooms = rooms.filter(r=> !bookedRoomKeys.has(r.roomNo));
   const vacantCount = vacantRooms.length;
   const oooCount = vacantRooms.filter(r=> r.housekeepingStatus === 'OOO').length;
 
-  const nightRecords = buildLedgersRecords().filter(n=> n.date === date && !isMiscRoomNo(n.roomNo));
   const rows = nightRecords.map(n=>{
     const entry = byId[n.guestId];
     const relevantRooms = entry ? (entry.rooms || []).filter(r=> r.roomNo === n.roomNo) : [];
@@ -10150,7 +10313,7 @@ function renderInhouse(){
   if(!initialLoadDone){
     body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     summary.innerHTML = '';
-    if(unitSplit) unitSplit.textContent = '';
+    if(unitSplit) unitSplit.innerHTML = '';
     return;
   }
 
@@ -10159,7 +10322,9 @@ function renderInhouse(){
   const data = buildInhouseReport();
   summary.textContent = data.roomCount + (data.roomCount === 1 ? ' room' : ' rooms') + ' in-house — ' +
     data.totalPax + (data.totalPax === 1 ? ' guest' : ' guests') + ' (' + data.totalAdults + ' adults, ' + data.totalChildren + ' children)';
-  if(unitSplit) unitSplit.textContent = 'ROOMS: ' + data.roomTypeCount + ', Apartments: ' + data.apartmentTypeCount;
+  if(unitSplit) unitSplit.innerHTML = `
+    <div class="dash-subtile"><div class="dash-subtile-val">${data.roomTypeCount}</div><div class="dash-subtile-lbl">Room</div></div>
+    <div class="dash-subtile"><div class="dash-subtile-val">${data.apartmentTypeCount}</div><div class="dash-subtile-lbl">Apartment</div></div>`;
 
   if(data.rows.length === 0){
     body.innerHTML = '<div class="empty-note">Nobody in-house right now.</div>';
@@ -10694,6 +10859,193 @@ function setAutoCheckoutToday(){
   renderAutoCheckout();
 }
 
+// =========================================================
+// ARRIVAL — admin-only. A reservation's check-in date arriving is not the
+// same as the guest actually being there: computeRoomStatuses only counts
+// today's booked nights as occupied once this page's confirmation has set
+// the guest's own Actual Checkin field. Until then the room reads
+// "Arrival Due" everywhere (Dashboard, Room Detail, Inhouse) instead of
+// occupied, same idea as Checkout/Pending on the other end of a stay.
+// =========================================================
+function buildArrivalRows(asOfDate){
+  const all = loadAllEntries();
+  return all
+    .filter(entry=> entry.checkIn === asOfDate && isAdvanceReservation(entry))
+    .map(entry=>{
+      const confirmed = !!getDetailValue(entry, 'Actual Checkin');
+      return {
+        guestId: entry.id,
+        guest: entry.guestName || '(no name)',
+        cnic: entry.cnic || '-',
+        roomNos: formatRoomChain(entry.rooms) || '-',
+        checkIn: entry.checkIn || '',
+        status: confirmed ? 'checked_in' : 'due'
+      };
+    })
+    .sort((a,b)=> a.roomNos.localeCompare(b.roomNos, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+function renderArrival(){
+  const dateEl = document.getElementById('arDate');
+  const dueBody = document.getElementById('arrivalDueBody');
+  const logBody = document.getElementById('arrivalLogBody');
+  if(!dueBody || !logBody || !dateEl) return;
+  if(!initialLoadDone){
+    dueBody.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    logBody.innerHTML = '';
+    return;
+  }
+
+  const asOfDate = dateEl.value || todayStr();
+  updateDateReadout(dateEl, document.getElementById('arDateReadout'));
+  const isToday = asOfDate === todayStr();
+  const dayWord = isToday ? 'Today' : 'on ' + formatDate(asOfDate);
+  document.getElementById('arDueDateLabel').textContent = dayWord;
+  document.getElementById('arLogDateLabel').textContent = dayWord;
+  // Check-in/Undo only ever act on today — a past date here is for review
+  // only, so nobody can be checked in under the wrong date.
+
+  const rows = buildArrivalRows(asOfDate);
+  const STATUS_BADGE = { due: ['arrivaldue', 'Arrival Due'], checked_in: ['paid', 'Checked In'] };
+  if(rows.length === 0){
+    dueBody.innerHTML = '<div class="empty-note">Nobody\'s check-in was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
+  } else {
+    dueBody.innerHTML = `
+      <table>
+        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:140px;">CNIC</th><th style="width:110px;">Check-in</th><th style="width:110px;">Status</th><th style="width:110px;"></th></tr></thead>
+        <tbody>${rows.map(r=>{
+          const [cls, label] = STATUS_BADGE[r.status];
+          const action = !isToday ? ''
+            : r.status === 'checked_in' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoArrivalCheckin('${r.guestId}')">Undo</button>`
+            : `<button class="btn" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startArrivalCheckin('${r.guestId}')">Check-in</button>`;
+          return `
+          <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+            <td>${r.roomNos}</td>
+            <td>${r.guest}</td>
+            <td>${r.cnic}</td>
+            <td>${r.checkIn ? formatDate(r.checkIn) : '-'}</td>
+            <td><span class="status ${cls}">${label}</span></td>
+            <td>${action}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  }
+
+  // Same "still actually checked in as of right now" cleanup Checkout/
+  // Pending's own log uses — an Undo'd arrival drops back out of this list
+  // instead of sitting here forever looking confirmed.
+  const all = loadAllEntries();
+  const dayCheckins = editLogs
+    .filter(l=> l.action === 'checked_in' && l.at && toKarachiDateStr(l.at) === asOfDate)
+    .filter(l=>{
+      const entry = all.find(e=> e.id === l.guest_id);
+      return !!entry && getDetailValue(entry, 'Actual Checkin') === asOfDate;
+    })
+    .sort((a,b)=> (b.at || '').localeCompare(a.at || ''));
+  if(dayCheckins.length === 0){
+    logBody.innerHTML = '<div class="empty-note">Nobody was checked in ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
+  } else {
+    logBody.innerHTML = `
+      <table>
+        <thead><tr><th style="width:170px;">When</th><th>Guest</th><th style="width:160px;">By</th></tr></thead>
+        <tbody>${dayCheckins.map(l=>{
+          const entry = all.find(e=> e.id === l.guest_id);
+          return `<tr style="cursor:pointer;" onclick="openDetail('${l.guest_id}')" title="Open this guest">
+            <td>${new Date(l.at).toLocaleString()}</td>
+            <td>${entry ? (entry.guestName || '(no name)') : '(deleted)'}</td>
+            <td>${l.username || '-'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  }
+}
+
+function setArrivalToday(){
+  setFilterDate('arDate', todayStr());
+  renderArrival();
+}
+
+let pendingArrivalGuestId = null;
+
+function startArrivalCheckin(guestId){
+  pendingArrivalGuestId = guestId;
+  openArrivalConfirmModal();
+}
+
+// A second, detail-bearing confirmation before the check-in actually runs —
+// same shape as Checkout's own confirm modal — plus a typed staff name so
+// the audit trail names whoever physically confirmed the guest, not just
+// whichever account happens to be signed into the front-desk device.
+function openArrivalConfirmModal(){
+  const entry = loadAllEntries().find(e=> e.id === pendingArrivalGuestId);
+  if(!entry) return;
+  document.getElementById('acnModalBody').innerHTML = `
+    <div><div class="confirm-lbl">Guest Name</div><div class="confirm-val">${entry.guestName || '(no name)'}</div></div>
+    <div><div class="confirm-lbl">CNIC</div><div class="confirm-val">${entry.cnic || '-'}</div></div>
+    <div><div class="confirm-lbl">Room No</div><div class="confirm-val">${formatRoomChain(entry.rooms) || '-'}</div></div>
+    <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${entry.checkIn ? formatDate(entry.checkIn) : '-'}</div></div>
+  `;
+  const staffInput = document.getElementById('acnStaffInput');
+  staffInput.value = '';
+  staffInput.classList.remove('duplicate');
+  const input = document.getElementById('acnConfirmInput');
+  input.value = '';
+  input.classList.remove('duplicate');
+  document.getElementById('arrivalConfirmModalBackdrop').classList.add('active');
+}
+
+function closeArrivalConfirmModal(){
+  document.getElementById('arrivalConfirmModalBackdrop').classList.remove('active');
+  pendingArrivalGuestId = null;
+}
+
+async function confirmArrivalConfirmModal(){
+  const staffInput = document.getElementById('acnStaffInput');
+  const staffName = staffInput.value.trim();
+  if(!staffName){
+    staffInput.classList.add('duplicate');
+    showNotice('Please write the staff name confirming this arrival.');
+    staffInput.focus();
+    return;
+  }
+  const input = document.getElementById('acnConfirmInput');
+  if(input.value.trim().toUpperCase() !== 'CHECKIN'){
+    input.classList.add('duplicate');
+    showNotice('Please type CHECKIN to confirm.');
+    input.focus();
+    return;
+  }
+  const entry = loadAllEntries().find(e=> e.id === pendingArrivalGuestId);
+  closeArrivalConfirmModal();
+  if(!entry) return;
+  const extraDetails = (entry.extraDetails || []).filter(d=> d.kind !== 'Actual Checkin');
+  extraDetails.unshift({ kind: 'Actual Checkin', value: todayStr() });
+  entry.extraDetails = extraDetails;
+  entry.editedAt = new Date().toISOString();
+  entry.editedBy = currentUser ? currentUser.username : '';
+  logGuestAction(entry.id, 'checked_in', staffName);
+  queueEntryPush(entry.id);
+  renderArrival();
+  showNotice((entry.guestName || 'Guest') + ' checked in — room ' + (formatRoomChain(entry.rooms) || '') + ' now reads occupied.', 'success');
+}
+
+async function undoArrivalCheckin(guestId){
+  const entry = loadAllEntries().find(e=> e.id === guestId);
+  if(!entry) return;
+  const ok = await showConfirmModal(
+    'Undo ' + (entry.guestName || 'this guest') + '\'s check-in? This clears their Actual Checkin date — their room goes back to Arrival Due until confirmed again.',
+    { title: 'Undo Check-in', okText: 'Undo', danger: true }
+  );
+  if(!ok) return;
+  entry.extraDetails = (entry.extraDetails || []).filter(d=> d.kind !== 'Actual Checkin');
+  entry.editedAt = new Date().toISOString();
+  entry.editedBy = currentUser ? currentUser.username : '';
+  logGuestAction(entry.id, 'edited');
+  queueEntryPush(entry.id);
+  renderArrival();
+  showNotice((entry.guestName || 'Guest') + '\'s check-in was undone.', 'success');
+}
+
 // The per-row manual button — never opens the checkout-confirm modal for a
 // guest whose balance isn't settled at exactly 0. This is the same rule
 // Run Checkout/Pending applies in bulk; there is no manual override.
@@ -11075,11 +11427,15 @@ let pushRetryTimer = null;
 
 // Records who did what for the change history. Queued alongside the save
 // itself and pushed with it.
-function logGuestAction(guestId, action){
+// staffName overrides the logged-in username for this one entry — Arrival
+// uses it so the audit trail names whoever actually confirmed the guest at
+// the desk, not just whichever account happens to be signed in on the
+// shared front-desk device.
+function logGuestAction(guestId, action, staffName){
   pendingEditLogs.push({
     id: uid('l'),
     guest_id: guestId,
-    username: currentUser ? currentUser.username : '',
+    username: staffName || (currentUser ? currentUser.username : ''),
     role: currentUser ? currentUser.role : '',
     action,
     at: new Date().toISOString()
@@ -11503,6 +11859,7 @@ function rerenderActiveView(){
   else if(currentView === 'inhouse'){ renderInhouse(); }
   else if(currentView === 'breakfast'){ renderBreakfastReport(); }
   else if(currentView === 'autocheckout'){ renderAutoCheckout(); }
+  else if(currentView === 'arrival'){ renderArrival(); }
 }
 
 window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); resumeAppFromIdle(); });
@@ -11702,6 +12059,8 @@ function applyRolePermissions(){
   if(deleteEntityBtn) deleteEntityBtn.style.display = isAdmin() ? '' : 'none';
   const autoCheckoutNav = document.getElementById('topNavAutoCheckout');
   if(autoCheckoutNav) autoCheckoutNav.style.display = isAdmin() ? '' : 'none';
+  const arrivalNav = document.getElementById('topNavArrival');
+  if(arrivalNav) arrivalNav.style.display = isAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
   const avatar = document.getElementById('hdrAvatar');
