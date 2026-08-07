@@ -7771,12 +7771,12 @@ const RIVIERA_LETTER_CSS = `
     font-family:Georgia,'Times New Roman',serif; color:#1a1a1a;
   }
   .riviera-letter-page *{ box-sizing:border-box; }
-  .riviera-letter-header{ display:flex; align-items:center; gap:14px; padding:14mm 20mm 0; }
-  .riviera-letter-header img{ width:100px; display:block; }
-  .riviera-letter-header h1{ font-size:26px; letter-spacing:2px; margin:0; }
-  .riviera-letter-content{ padding:8mm 20mm 0; font-size:12.5px; line-height:1.75; }
-  .riviera-letter-content p{ margin:6px 0; }
-  .riviera-letter-section-title{ margin-top:18px; font-weight:bold; }
+  .riviera-letter-header{ display:flex; align-items:center; gap:12px; padding:9mm 20mm 0; }
+  .riviera-letter-header img{ width:80px; display:block; }
+  .riviera-letter-header h1{ font-size:23px; letter-spacing:2px; margin:0; }
+  .riviera-letter-content{ padding:5mm 20mm 0; font-size:11.5px; line-height:1.48; }
+  .riviera-letter-content p{ margin:4px 0; }
+  .riviera-letter-section-title{ margin-top:12px; font-weight:bold; }
   /* Georgia's old-style figures (uneven digit heights) read as "off" for an
      account/IBAN number, where every digit is expected to line up evenly —
      switch just these to a plain sans-serif with lining numerals. */
@@ -7891,24 +7891,31 @@ async function downloadGuestPdf(){
   }
 }
 
+// Prints via a hidden same-page iframe instead of a new tab/window — the
+// iframe gets its own document (so it's untouched by the main app's report-
+// print rules, which add margins/resets this branded, fixed-layout letter
+// doesn't want), but nothing ever visibly navigates away from this page.
 function printGuestLetter(){
   const entry = getCurrentEntry();
   if(!entry) return;
-  const win = window.open('', '_blank');
-  if(!win){
-    showNotice('Please allow pop-ups for this site to print the confirmation letter.');
-    return;
+  let frame = document.getElementById('riviera-letter-print-frame');
+  if(!frame){
+    frame = document.createElement('iframe');
+    frame.id = 'riviera-letter-print-frame';
+    frame.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; visibility:hidden;';
+    document.body.appendChild(frame);
   }
-  win.document.open();
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Riviera Resort — ${(entry.guestName || 'Guest').replace(/</g,'')} Confirmation</title>
-    <style>*{margin:0; padding:0;} body{background:#ccc;} @media print{ body{background:none;} .riviera-letter-page{box-shadow:none;} } @page{ size:A4; margin:0; }</style>
+    <style>*{margin:0; padding:0;} @page{ size:A4; margin:0; }</style>
     </head><body>${buildGuestLetterHtml(entry)}</body></html>`);
-  win.document.close();
-  win.onload = function(){
-    win.focus();
-    win.print();
-  };
+  doc.close();
+  const win = frame.contentWindow;
+  const imgs = Array.from(doc.querySelectorAll('img'));
+  Promise.all(imgs.map(img=> img.complete ? Promise.resolve() : new Promise(res=>{ img.onload = img.onerror = res; })))
+    .then(()=> setTimeout(()=>{ win.focus(); win.print(); }, 50));
 }
 
 function toggleRoomDetail(){
