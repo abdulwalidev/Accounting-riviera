@@ -4969,27 +4969,20 @@ function closeRoomStatusModal(){
   pendingRoomStatusRoomNo = null;
 }
 
+// Optimistic + queued, same as a guest/payment save — the status change is
+// visible locally and handed to the same pendingRoomStatusPush queue that
+// pushPendingNow() retries automatically. A flaky connection right at the
+// moment of clicking used to just drop the change on the floor with an
+// error notice and nothing to retry it; now it behaves exactly like every
+// other save on this app.
 async function upsertRoomStatus(roomNo, status){
-  if(!sb){ showNotice('Not connected to the cloud database — try again once it reconnects.'); return false; }
-  try{
-    const nowIso = new Date().toISOString();
-    const username = currentUser ? currentUser.username : '';
-    const { error } = await sb.from('room_status').upsert({
-      room_no: roomNo,
-      status,
-      updated_by: username,
-      updated_at: nowIso
-    }, { onConflict: 'room_no' });
-    if(error) throw error;
-    roomStatusMap[roomNo] = { room_no: roomNo, status, updated_by: username, updated_at: nowIso };
-    return true;
-  }catch(e){
-    console.error('Setting room status failed', e);
-    showNotice(e && e.message && e.message.includes('room_status')
-      ? 'The Room Status table doesn\'t exist yet — run migration/room_status.sql in the Supabase SQL Editor first.'
-      : 'Couldn\'t update room status — check the internet connection and try again.');
-    return false;
-  }
+  const nowIso = new Date().toISOString();
+  const username = currentUser ? currentUser.username : '';
+  roomStatusMap[roomNo] = { room_no: roomNo, status, updated_by: username, updated_at: nowIso };
+  pendingRoomStatusPush.set(roomNo, { status, updated_by: username, updated_at: nowIso });
+  updateCloudIndicator();
+  pushPendingNow();
+  return true;
 }
 
 async function confirmRoomStatusChange(){
@@ -10700,6 +10693,7 @@ function paymentPayload(e, p){
 const pendingPushIds = new Set();
 const pendingSoftDeletes = []; // { kind: 'room' | 'payment', id }
 const pendingEditLogs = [];    // append-only audit rows not yet on the server
+const pendingRoomStatusPush = new Map(); // room_no -> { status, updated_by, updated_at } not yet confirmed by the server
 let editLogs = [];             // server mirror of the guest_edits log
 let pushInFlight = false;
 let pushRetryTimer = null;
@@ -10740,7 +10734,7 @@ function queueEntryPush(entryId){
 
 async function pushPendingNow(){
   if(!sb || pushInFlight) return;
-  if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0) return;
+  if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0 && pendingRoomStatusPush.size === 0) return;
   pushInFlight = true;
   try{
     // soft-deletes first, so an edit that removed a payment can never leave
@@ -10753,6 +10747,20 @@ async function pushPendingNow(){
       if(error) throw error;
       mutationStamp++;
       pendingSoftDeletes.shift();
+    }
+    for(const [roomNo, payload] of Array.from(pendingRoomStatusPush.entries())){
+      const { error } = await sb.from('room_status').upsert({
+        room_no: roomNo,
+        status: payload.status,
+        updated_by: payload.updated_by,
+        updated_at: payload.updated_at
+      }, { onConflict: 'room_no' });
+      if(error) throw error;
+      mutationStamp++;
+      // only drop it from the queue if nothing re-queued this same room
+      // while the request was in flight (would otherwise mean a newer
+      // status change here just got thrown away as "already pushed")
+      if(pendingRoomStatusPush.get(roomNo) === payload) pendingRoomStatusPush.delete(roomNo);
     }
     for(const id of Array.from(pendingPushIds)){
       const entry = entries.find(e=> e.id === id);
@@ -10796,9 +10804,11 @@ async function pushPendingNow(){
     // guests/rooms/payments refetch on every single save.
   }catch(e){
     console.error('Cloud push failed — will keep retrying automatically', e);
-    setSyncProblem(navigator.onLine === false
-      ? 'No internet — the save is queued and pushes the moment the connection is back.'
-      : 'Couldn\'t save to the cloud database — retrying automatically…');
+    setSyncProblem(e && e.message && e.message.includes('room_status')
+      ? 'The Room Status table doesn\'t exist yet — run migration/room_status.sql in the Supabase SQL Editor first.'
+      : navigator.onLine === false
+        ? 'No internet — the save is queued and pushes the moment the connection is back.'
+        : 'Couldn\'t save to the cloud database — retrying automatically…');
     clearTimeout(pushRetryTimer);
     pushRetryTimer = setTimeout(pushPendingNow, 1500); // near-instant retry, not just the 5s tick
   }finally{
