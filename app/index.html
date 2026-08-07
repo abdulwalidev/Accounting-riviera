@@ -3081,7 +3081,7 @@
 
   <div class="view" id="view-detail">
 
-    <span class="backlink" onclick="showView('search')">&larr; Back to Search</span>
+    <span class="backlink" onclick="goBack()">&larr; Back</span>
     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
       <div>
         <h1 id="detailName">Guest</h1>
@@ -4226,6 +4226,16 @@ function showView(view, fromPopState){
 
 function sameRoute(a, b){
   return !!a && !!b && a.view === b.view;
+}
+
+// Guest Detail's "← Back" — every list that opens a guest (Search, Room
+// Detail, Ledgers, Reservations, Checkout/Pending, ...) already lands here
+// via a real pushState navigation, so the browser's own history already
+// knows exactly where the user came from. Just walking it back one step
+// goes to the actual previous page, not a hardcoded "Search" regardless of
+// how the guest was actually reached.
+function goBack(){
+  history.back();
 }
 
 // Exit guard: there's no native browser API for "the user pressed Back
