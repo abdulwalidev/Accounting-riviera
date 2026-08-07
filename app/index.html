@@ -3697,15 +3697,9 @@
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:12px;">
         <div class="room-summary" id="roomDetailSummary" style="margin:0;"></div>
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <div class="rd-switch" id="rdGuestModeSwitch">
-            <button type="button" class="rd-switch-btn" id="rdGuestModeCurrent" onclick="setRdGuestMode('current')">SHOW CURRENT</button>
-            <button type="button" class="rd-switch-btn active" id="rdGuestModePrevious" onclick="setRdGuestMode('previous')">SHOW PREVIOUS</button>
-          </div>
-          <div class="rd-switch">
-            <button type="button" class="rd-switch-btn" id="rdModeSmart" onclick="setRoomDetailMode('smart')">SMART</button>
-            <button type="button" class="rd-switch-btn active" id="rdModeMunchi" onclick="setRoomDetailMode('munchi')">MUNCHI</button>
-          </div>
+        <div class="rd-switch">
+          <button type="button" class="rd-switch-btn" id="rdModeSmart" onclick="setRoomDetailMode('smart')">SMART</button>
+          <button type="button" class="rd-switch-btn active" id="rdModeMunchi" onclick="setRoomDetailMode('munchi')">MUNCHI</button>
         </div>
       </div>
       <div id="roomDetailSmartBody" style="overflow-x:auto; display:none; margin-top:14px;"></div>
@@ -6974,17 +6968,6 @@ function setRoomDetailMode(mode){
   document.getElementById('rdModeMunchi').classList.toggle('active', mode === 'munchi');
   document.getElementById('roomDetailSmartBody').style.display = mode === 'smart' ? '' : 'none';
   document.getElementById('roomDetailMunchiBody').style.display = mode === 'munchi' ? '' : 'none';
-  document.getElementById('rdGuestModeSwitch').style.display = mode === 'munchi' ? '' : 'none';
-}
-
-// MUNCHI-only: a vacant room still remembers its last guest, shown muted/
-// italic ("previous"). "current" strips that out so vacant rooms read blank.
-let rdGuestMode = 'previous';
-function setRdGuestMode(mode){
-  rdGuestMode = mode;
-  document.getElementById('rdGuestModeCurrent').classList.toggle('active', mode === 'current');
-  document.getElementById('rdGuestModePrevious').classList.toggle('active', mode === 'previous');
-  renderRoomDetail();
 }
 
 function renderRoomDetail(){
@@ -7090,19 +7073,18 @@ function renderRoomDetail(){
       const due = r.entry ? computeTotals(r.entry).due : 0;
       const isCheckoutPending = r.extended && due !== 0;
       const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '';
-      const guestText = goesToGuest
-        ? (r.entry.guestName || '')
-        : (r.entry && rdGuestMode === 'previous' ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
+      // Vacant rooms still show their status/type/arrival cells as normal —
+      // only the guest name is withheld once that guest has checked out.
+      const guestText = goesToGuest ? (r.entry.guestName || '') : '';
       const statusText = isCheckoutPending ? 'pending' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
       const statusCls = isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
-      const guestCls = goesToGuest ? '' : (r.entry ? ' sr-guest-muted' : '');
       return `<div class="smart-row clickable" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <span class="sr-room">${r.roomNo}</span>
         <span class="sr-type">${r.type || ''}</span>
         <span class="sr-status ${statusCls}">${statusText}</span>
         <span class="sr-arrival">${arrival}</span>
-        <span class="sr-guest${guestCls}">${guestText}</span>
+        <span class="sr-guest">${guestText}</span>
       </div>`;
     }).join('');
     return `
