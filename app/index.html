@@ -11010,6 +11010,7 @@ function renderBreakfastReport(){
           <th>Guest</th>
           <th class="th-green" style="width:140px;">Breakfast Adults</th>
           <th class="th-green" style="width:140px;">Breakfast Children</th>
+          <th class="th-green" style="width:120px;">Breakfast Total</th>
         </tr></thead>
         <tbody>${data.rows.map(r=> `
           <tr style="cursor:pointer; ${r.breakfastTotal === 0 ? 'text-decoration:line-through; opacity:0.6;' : ''}" onclick="openDetail('${r.guestId}')" title="Open this guest">
@@ -11017,6 +11018,7 @@ function renderBreakfastReport(){
             <td>${r.guest}</td>
             <td>${r.breakfastAdults}</td>
             <td>${r.breakfastChildren}</td>
+            <td style="font-weight:700;">${r.breakfastTotal}</td>
           </tr>`).join('')}
         </tbody>
         <tfoot>
@@ -11024,6 +11026,7 @@ function renderBreakfastReport(){
             <td colspan="2">Total</td>
             <td>${data.totals.breakfastAdults}</td>
             <td>${data.totals.breakfastChildren}</td>
+            <td>${data.totals.breakfastTotal}</td>
           </tr>
         </tfoot>
       </table>`;
