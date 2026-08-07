@@ -3489,7 +3489,7 @@
     </div>
 
     <div class="panel accent-report">
-      <h2 class="no-print">GUEST CHARGES SUMMARY FROM — <span id="rvNightlyDateLabel"></span></h2>
+      <h2 class="no-print">CHARGES SUMMARY : <span id="rvNightlyDateLabel"></span></h2>
       <div id="rvNightlySummary" style="font-size:15px; font-weight:700; margin:10px 0;"></div>
       <div id="rvRoomsBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
@@ -9710,7 +9710,7 @@ function renderRevenue(){
   else dayWord = 'from ' + (fromVal ? formatDate(fromVal) : 'the start') + ' to ' + (toVal ? formatDate(toVal) : 'now');
   document.getElementById('rvPrintHeaderSub').textContent = 'Occupied rooms ' + dayWord + '  ·  Generated ' + formatDate(todayStr());
   document.getElementById('rvNightlyDateLabel').textContent = isSingleDay
-    ? formatDate(fromVal) + (fromVal === todayStr() ? ' (tonight)' : '')
+    ? formatDate(fromVal) + (fromVal === todayStr() ? ' (today)' : '')
     : (dayWord.charAt(0).toUpperCase() + dayWord.slice(1));
 
   const data = buildRevenueReport(fromVal, toVal);
@@ -9745,8 +9745,8 @@ function renderRevenue(){
   document.getElementById('rvStatApartments').textContent = statApartmentTypeCount;
 
   // ---- Rooms: full-stay rent/collected/due for every room-night in range ----
-  nightlySummary.textContent = data.distinctRoomTypeCount + (data.distinctRoomTypeCount === 1 ? ' room' : ' rooms') + ', ' +
-    data.distinctApartmentTypeCount + (data.distinctApartmentTypeCount === 1 ? ' apartment' : ' apartments') + ', Total Room Rent: Rs. ' + data.totalRent.toLocaleString();
+  nightlySummary.textContent = data.distinctRoomTypeCount + (data.distinctRoomTypeCount === 1 ? ' room' : ' rooms') + '   ·   ' +
+    data.distinctApartmentTypeCount + (data.distinctApartmentTypeCount === 1 ? ' apartment' : ' apartments') + '   ·   Total Room Rent: Rs. ' + data.totalRent.toLocaleString();
 
   if(data.roomRows.length === 0){
     roomsBody.innerHTML = '<div class="empty-note">No rooms occupied ' + dayWord + '.</div>';
