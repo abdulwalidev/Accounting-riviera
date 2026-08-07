@@ -2506,6 +2506,31 @@
     #view-nightsummary .ns-table tbody td{ padding:3px 4px; }
     #view-nightsummary .ns-table tfoot td{ padding:4px; }
   }
+
+  /* Viewer role: Guest Entry and Add Payment become non-interactive and
+     visually grayed out — every mutating action on both forms is blocked
+     at the actual function too (defense in depth), this is just the visual
+     + click-blocking layer. See isViewer()/applyRolePermissions(). */
+  .role-viewer #view-entry,
+  .role-viewer #view-addpay{
+    opacity:0.5;
+    filter:grayscale(65%);
+    pointer-events:none;
+    user-select:none;
+  }
+  .viewer-lock-note{
+    display:none;
+    background:var(--danger-bg);
+    color:var(--danger);
+    border:1px solid var(--danger);
+    border-radius:8px;
+    padding:10px 14px;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:14px;
+  }
+  .role-viewer .viewer-lock-note{ display:block; }
 </style>
 <script>
   (function(){
@@ -2762,6 +2787,8 @@
 
   <div class="view active" id="view-entry">
 
+    <div class="viewer-lock-note no-print">👁 View-only account — Guest Entry is read-only. Nothing here can be saved.</div>
+
     <div class="editing-bar no-print" id="editModeBar" style="display:none;">
       <span>✎ EDITING: <b id="editModeName"></b> — saving will update this existing entry, not create a new one.</span>
       <button class="btn secondary" onclick="cancelEditMode()">Cancel Edit</button>
@@ -2946,6 +2973,8 @@
   </div>
 
   <div class="view" id="view-addpay">
+
+    <div class="viewer-lock-note no-print">👁 View-only account — Add Payment is read-only. Nothing here can be saved.</div>
 
     <h1>Add Payment</h1>
     <div class="sub">Take a payment against an existing entry</div>
@@ -5231,6 +5260,7 @@ let changeRoomActiveRows = [];
 let pendingRoomStatusRoomNo = null;
 
 function openRoomStatusModal(roomNo){
+  if(isViewer()){ showNotice('View-only account — room status can\'t be changed.'); return; }
   pendingRoomStatusRoomNo = roomNo;
   const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNo);
   document.getElementById('rsModalRoomNo').textContent = roomNo;
@@ -6084,6 +6114,7 @@ function toggleNA(fieldId){
 let pendingEntryData = null;
 
 async function reviewEntry(){
+  if(isViewer()){ showNotice('View-only account — Guest Entry can\'t be saved.'); return; }
   // ---- Guardrails: the person doing data entry may be rushed or new to
   // the form, so catch the mistakes that would otherwise sit quietly in
   // the saved data (missing name, a room typed twice, a bank left unset). ----
@@ -8374,6 +8405,7 @@ function toggleDetailMode(){
 }
 
 function addDetailPayment(){
+  if(isViewer()){ showNotice('View-only account — Add Payment can\'t be saved.'); return; }
   const date = document.getElementById('dNewDate').value;
   if(!date){ showNotice('Please pick a date.'); return; }
   if(isDateLocked(date)){
@@ -12148,12 +12180,24 @@ const LOGIN_SESSION_KEY = 'guest_system_logged_in_v1';
 // ---- Account roles ----
 // 'admin' — full access. 'staff' — everything EXCEPT editing mode: the
 // "✎ Edit This Entry" feature is completely unavailable (button hidden AND
-// every code path into it blocked). The role comes from the server with
-// each sign-in — it is never typed or chosen in the browser.
+// every code path into it blocked). 'viewer' — read-only everywhere: no
+// creating/editing/deleting anything at all (see isViewer()). The role
+// comes from the server with each sign-in — it is never typed or chosen
+// in the browser.
 let currentUser = null; // { username, role }
 
 function isAdmin(){
   return !!currentUser && currentUser.role === 'admin';
+}
+
+// 'viewer' — read-only, stricter than 'staff': can look at every page and
+// report, but can never create/edit/delete anything anywhere (no new
+// guest entries, no payments, no housekeeping status changes). Guarded
+// both visually (role-viewer body class grays out Guest Entry/Add Payment
+// and the CSS below hides mutating buttons) and at the actual mutating
+// functions themselves, so no click path can bypass it.
+function isViewer(){
+  return !!currentUser && currentUser.role === 'viewer';
 }
 
 function renderSettings(){
@@ -12178,6 +12222,7 @@ function applyRolePermissions(){
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
   const avatar = document.getElementById('hdrAvatar');
   if(avatar) avatar.textContent = currentUser ? currentUser.username.charAt(0).toUpperCase() : '';
+  document.documentElement.classList.toggle('role-viewer', isViewer());
 }
 
 // Returns the account's role string on success, false on wrong
@@ -12288,7 +12333,7 @@ addPayRow();
     const raw = sessionStorage.getItem(LOGIN_SESSION_KEY);
     if(raw){
       const parsed = JSON.parse(raw);
-      if(parsed && parsed.username && (parsed.role === 'admin' || parsed.role === 'staff')){
+      if(parsed && parsed.username && (parsed.role === 'admin' || parsed.role === 'staff' || parsed.role === 'viewer')){
         currentUser = parsed;
       } else {
         sessionStorage.removeItem(LOGIN_SESSION_KEY);
