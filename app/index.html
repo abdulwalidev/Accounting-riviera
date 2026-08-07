@@ -2799,13 +2799,13 @@
           </div>
           <div>
             <label>Expected Checkout</label>
-            <input type="text" id="checkOutDate" placeholder="Pick a date..." autocomplete="off" title="Reference only — does not affect any amount">
-            <div class="date-readout" id="checkOutDateReadout" style="display:none;"></div>
+            <input type="text" id="checkOutDate" disabled title="Auto-calculated from check-in + the longest room's booked nights">
+            <div style="font-size:11px; color:var(--muted); margin-top:3px;">Auto-calculated</div>
           </div>
           <div>
             <label>Actual Checkout</label>
-            <input type="text" id="actualCheckoutDate" placeholder="Pick a date..." autocomplete="off" title="Reference only — does not affect any amount">
-            <div class="date-readout" id="actualCheckoutDateReadout" style="display:none;"></div>
+            <input type="text" id="actualCheckoutDate" disabled title="Set automatically via Checkout/Pending — not editable here">
+            <div style="font-size:11px; color:var(--muted); margin-top:3px;">Auto-calculated</div>
           </div>
         </div>
       </div>
@@ -4501,15 +4501,16 @@ function addPickerFooter(instance, onToday, onClear){
   instance.calendarContainer.appendChild(footer);
 }
 
-// ---- Stay & Status date pickers (Check-in / Expected Checkout / Actual
-// Checkout): flatpickr with an altInput, so the field the user sees and
-// clicks shows the friendly display above with a calendar popup, while the
-// underlying element (same id, same .value every existing call site reads)
-// keeps the plain Y-m-d string those call sites already expect. Setting
-// .value directly (as plenty of code still does) doesn't tell flatpickr
-// anything changed, so every write goes through setStayDate() instead,
-// which updates both.
-const STAY_DATE_IDS = ['checkInDate', 'checkOutDate', 'actualCheckoutDate'];
+// ---- Stay date picker (Check-in only — Expected Checkout and Actual
+// Checkout are both disabled, auto-displayed fields now, not pickers):
+// flatpickr with an altInput, so the field the user sees and clicks shows
+// the friendly display above with a calendar popup, while the underlying
+// element (same id, same .value every existing call site reads) keeps the
+// plain Y-m-d string those call sites already expect. Setting .value
+// directly (as plenty of code still does) doesn't tell flatpickr anything
+// changed, so every write goes through setStayDate() instead, which
+// updates both.
+const STAY_DATE_IDS = ['checkInDate'];
 const stayDatePickers = {};
 function initStayDatePickers(){
   if(typeof flatpickr === 'undefined') return;
@@ -4702,7 +4703,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   setFiltersToday();
   setStayDate('checkInDate', todayStr());
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
-  autoFillExpectedCheckout();
+  updateExpectedCheckoutDisplay();
+  updateActualCheckoutDisplay(null);
   ['filterFrom','filterTo','filterSearch','filterCashSearch'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderReport);
   });
@@ -4783,14 +4785,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     });
     document.getElementById('checkInDate').addEventListener(evt, e=>{
       updateDateReadout(e.target, document.getElementById('checkInDateReadout'));
-      autoFillExpectedCheckout();
-    });
-    document.getElementById('checkOutDate').addEventListener(evt, e=>{
-      updateDateReadout(e.target, document.getElementById('checkOutDateReadout'));
-      checkoutSetByUser = true;
-    });
-    document.getElementById('actualCheckoutDate').addEventListener(evt, e=>{
-      updateDateReadout(e.target, document.getElementById('actualCheckoutDateReadout'));
+      updateExpectedCheckoutDisplay();
     });
   });
   renderTodayEntries();
@@ -4803,26 +4798,44 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 let rowCount = 0;
 
-// Expected Checkout defaults to one night after Check-in, but only while
-// the guest hasn't actually chosen a checkout date themselves — once they
-// type/pick one (or it's loaded from a saved entry that already had one),
-// this stops overwriting it even if Check-in changes afterward.
-let checkoutSetByUser = false;
-function autoFillExpectedCheckout(){
-  if(checkoutSetByUser) return;
+// Expected Checkout is entirely read-only display now — check-in + the
+// longest room's booked nights, same formula as everywhere else that shows
+// an expected checkout (Checkout/Pending, Reservations, Dashboard). Called
+// on check-in change and from calcGrandTotal() (fires on every rent/night-
+// count/row change already), so it stays live as the room table changes.
+function updateExpectedCheckoutDisplay(){
+  const el = document.getElementById('checkOutDate');
+  if(!el) return;
   const ci = document.getElementById('checkInDate').value;
-  if(!ci) return;
-  setStayDate('checkOutDate', addDaysToDateStr(ci, 1));
-  updateDateReadout(document.getElementById('checkOutDate'), document.getElementById('checkOutDateReadout'));
+  const roomNightTotals = {};
+  document.querySelectorAll('#roomBody tr').forEach(tr=>{
+    const roomNoInput = tr.querySelector('.roomNo');
+    const roomNo = roomNoInput ? roomNoInput.value.trim() : '';
+    if(!roomNo || isMiscRoomNo(roomNo)) return;
+    const nights = parseInt(tr.dataset.rooms) || 1;
+    roomNightTotals[roomNo] = (roomNightTotals[roomNo] || 0) + nights;
+  });
+  let maxNights = 0;
+  Object.values(roomNightTotals).forEach(n=>{ if(n > maxNights) maxNights = n; });
+  const computed = (ci && maxNights > 0) ? addDaysToDateStr(ci, maxNights) : '';
+  el.value = computed ? formatDate(computed) : '—';
 }
 
-// Actual Checkout is never auto-filled — it's a genuine confirmation
-// ("staff actually dealt with this departure"), not a prediction. It's only
-// ever set explicitly: the Check Out Today action (guest detail or the
-// Extended room-status modal), or by hand for an early/late departure.
-// computeRoomStatuses' Extended flag relies on this staying a real signal —
-// silently pre-filling it would make every stay look "resolved" the moment
-// it's saved.
+// Actual Checkout is never auto-filled or hand-typed — it's a genuine
+// confirmation ("staff actually dealt with this departure"), not a
+// prediction. It's only ever set explicitly through Checkout/Pending's own
+// confirm modal (or cleared through its Undo). This form just displays
+// whatever's already on the entry (updateActualCheckoutDisplay, called from
+// the same places Expected Checkout's display refreshes from) — it cannot
+// set or change it. computeRoomStatuses' Extended flag relies on this
+// staying a real signal — silently pre-filling it would make every stay
+// look "resolved" the moment it's saved.
+function updateActualCheckoutDisplay(entry){
+  const el = document.getElementById('actualCheckoutDate');
+  if(!el) return;
+  const value = entry ? getDetailValue(entry, 'Actual Checkout') : '';
+  el.value = value ? formatDate(value) : '—';
+}
 
 // ---------- Unit lists (from the property's existing room/apartment map) ----------
 const ROOM_NUMBERS = [
@@ -5573,6 +5586,7 @@ function calcGrandTotal(){
     sum += parseFloat(td.textContent.replace(/,/g,'')) || 0;
   });
   document.getElementById('grandTotal').textContent = sum.toLocaleString();
+  updateExpectedCheckoutDisplay();
   calcSummary();
 }
 
@@ -6136,23 +6150,27 @@ async function reviewEntry(){
     if(!proceed) return;
   }
 
-  // stay dates — reference only, no amount depends on them, but a
-  // checkout before the check-in is always a typo
   const checkInEl = document.getElementById('checkInDate');
-  const checkOutEl = document.getElementById('checkOutDate');
-  if(checkInEl.value && checkOutEl.value && checkOutEl.value < checkInEl.value){
-    showNotice('The Check-out date is before the Check-in date. Please fix the dates (they are for reference only).');
-    focusError(checkOutEl);
-    return;
-  }
 
   const extraDetails = collectExtraDetails();
   if(extraDetails === null) return;
 
   const contactNo = document.getElementById('contactNo').value.trim();
   if(contactNo) extraDetails.unshift({ kind: 'Contact No', value: contactNo });
-  const actualCheckout = document.getElementById('actualCheckoutDate').value;
-  if(actualCheckout) extraDetails.unshift({ kind: 'Actual Checkout', value: actualCheckout });
+  // Actual Checkin/Checkout are no longer editable on this form at all —
+  // Checkin only ever comes from Arrival's own confirm/undo, Checkout only
+  // from Checkout/Pending's. Editing and resaving a guest entry must carry
+  // whichever of these two the ORIGINAL entry already had forward
+  // unchanged, or every edit would silently un-checkin/un-checkout them
+  // the moment collectExtraDetails() rebuilds the array from scratch. A
+  // brand new entry has neither yet.
+  const originalEntryForEdit = editingEntryId ? loadAllEntries().find(e=> e.id === editingEntryId) : null;
+  if(originalEntryForEdit){
+    const origCheckin = getDetailValue(originalEntryForEdit, 'Actual Checkin');
+    if(origCheckin) extraDetails.unshift({ kind: 'Actual Checkin', value: origCheckin });
+    const origCheckout = getDetailValue(originalEntryForEdit, 'Actual Checkout');
+    if(origCheckout) extraDetails.unshift({ kind: 'Actual Checkout', value: origCheckout });
+  }
 
   const roomRows = Array.from(document.querySelectorAll('#roomBody tr'));
   const cleanRooms = [];
@@ -6345,12 +6363,27 @@ async function reviewEntry(){
     return;
   }
 
+  // Expected Checkout is no longer typed by hand — auto-calculated from
+  // check-in + the longest room's booked nights, same formula used
+  // everywhere else that shows an expected checkout (Checkout/Pending,
+  // Reservations, Dashboard), so this can never drift from what's
+  // actually booked the way a hand-typed date could.
+  const roomNightTotalsForCheckout = {};
+  cleanRooms.forEach(r=>{
+    if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
+    const nights = parseInt(r.count) || 1;
+    roomNightTotalsForCheckout[r.roomNo] = (roomNightTotalsForCheckout[r.roomNo] || 0) + nights;
+  });
+  let maxNightsForCheckout = 0;
+  Object.values(roomNightTotalsForCheckout).forEach(n=>{ if(n > maxNightsForCheckout) maxNightsForCheckout = n; });
+  const computedCheckOut = (checkInEl.value && maxNightsForCheckout > 0) ? addDaysToDateStr(checkInEl.value, maxNightsForCheckout) : '';
+
   const data = {
     guestName,
     fatherName,
     cnic,
     checkIn: checkInEl.value || '',
-    checkOut: checkOutEl.value || '',
+    checkOut: computedCheckOut,
     extraDetails,
     rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, adults: r.adults, children: r.children, breakfastAdults: r.breakfastAdults, breakfastChildren: r.breakfastChildren, count: r.count, movedOut: r.movedOut, total: r.total })),
     payments: cleanPayments
@@ -6550,8 +6583,8 @@ function confirmSaveEntry(){
 // Clear the whole entry form for the next guest.
 function resetEntryForm(){
   document.body.classList.remove('editing-mode');
-  ['guestName','cnic','contactNo','checkOutDate','actualCheckoutDate'].forEach(id=>{
-    if(stayDatePickers[id]) setStayDate(id, ''); else document.getElementById(id).value = '';
+  ['guestName','cnic','contactNo'].forEach(id=>{
+    document.getElementById(id).value = '';
   });
   document.getElementById('cnic').disabled = false;
   document.getElementById('cnicNA').checked = false;
@@ -6564,9 +6597,7 @@ function resetEntryForm(){
   // they're entered, so this saves re-picking the date on every single guest.
   setStayDate('checkInDate', todayStr());
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
-  checkoutSetByUser = false;
-  autoFillExpectedCheckout();
-  document.getElementById('actualCheckoutDateReadout').textContent = '';
+  updateActualCheckoutDisplay(null);
   document.getElementById('extraDetailList').innerHTML = '';
   document.getElementById('roomBody').innerHTML = '';
   document.getElementById('payBody').innerHTML = '';
@@ -6737,15 +6768,12 @@ function startEditEntry(entry){
   document.getElementById('cnic').disabled = entry.cnic === 'N/A';
   document.getElementById('contactNo').value = getDetailValue(entry, 'Contact No');
   setStayDate('checkInDate', entry.checkIn || '');
-  setStayDate('checkOutDate', entry.checkOut || '');
-  setStayDate('actualCheckoutDate', getDetailValue(entry, 'Actual Checkout'));
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
-  updateDateReadout(document.getElementById('checkOutDate'), document.getElementById('checkOutDateReadout'));
-  updateDateReadout(document.getElementById('actualCheckoutDate'), document.getElementById('actualCheckoutDateReadout'));
-  // an entry that already had a checkout saved keeps it — only a blank one
-  // (never set) still auto-follows Check-in from here on
-  checkoutSetByUser = !!entry.checkOut;
-  autoFillExpectedCheckout();
+  // Expected Checkout gets recomputed as the room rows below are populated
+  // (each addRow()+calcRow() call chains into calcGrandTotal(), which
+  // refreshes the display) — Actual Checkout only ever reflects what's
+  // already on the entry, never editable here.
+  updateActualCheckoutDisplay(entry);
 
   document.getElementById('extraDetailList').innerHTML = '';
   visibleExtraDetails(entry).forEach(d=> addExtraDetailRow(d.kind, d.value));
@@ -6778,6 +6806,7 @@ function startEditEntry(entry){
   });
   refreshDuplicateRoomHighlights();
   refreshRoomChangeLinks();
+  updateExpectedCheckoutDisplay();
 
   document.getElementById('payBody').innerHTML = '';
   payCount = 0;
@@ -9146,7 +9175,7 @@ function startNprAdd(date, roomNo, guest){
   document.getElementById('guestName').value = guest || '';
   setStayDate('checkInDate', date);
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
-  autoFillExpectedCheckout();
+  updateExpectedCheckoutDisplay();
   showNotice('Pre-filled name and check-in date from NPR — add room ' + roomNo + ' yourself and fill in the rest before saving.', 'success');
 }
 
