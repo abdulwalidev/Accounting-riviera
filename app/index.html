@@ -1045,6 +1045,112 @@
   .settings-status-off{ background:rgba(255,255,255,0.12); color:#6B7280; }
   html[data-theme="dark"] .settings-status-on{ color:#4ADE80; }
   html[data-theme="dark"] .settings-status-off{ color:#D1D5DB; }
+
+  /* ---- Settings: GitHub/Supabase-style shell — quiet sidebar nav +
+     grouped card sections with row lists, instead of the bold ledger-panel
+     look used for financial data elsewhere in the app. Deliberately its
+     own namespace (not .panel) so it can be subtle without touching any
+     other page. ---- */
+  .settings-shell{
+    display:grid;
+    grid-template-columns:216px 1fr;
+    gap:32px;
+    align-items:start;
+    margin-top:20px;
+  }
+  .settings-nav{
+    position:sticky;
+    top:20px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .settings-nav-item{
+    display:block;
+    padding:8px 12px;
+    border-radius:6px;
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    font-weight:500;
+    color:var(--muted);
+    text-decoration:none;
+    cursor:pointer;
+    border-left:2px solid transparent;
+    transition:background-color 150ms ease, color 150ms ease;
+  }
+  .settings-nav-item:hover{ background:rgba(2,132,199,0.07); color:var(--ink); }
+  .settings-nav-item.active{
+    background:rgba(2,132,199,0.1);
+    color:var(--ink);
+    font-weight:700;
+    border-left-color:var(--ink);
+  }
+  html[data-theme="dark"] .settings-nav-item:hover{ background:rgba(125,211,252,0.08); }
+  html[data-theme="dark"] .settings-nav-item.active{ background:rgba(125,211,252,0.12); }
+
+  .settings-content{ display:flex; flex-direction:column; gap:24px; min-width:0; }
+  .settings-card{
+    background:var(--paper);
+    border:1px solid rgba(0,0,0,0.1);
+    border-radius:10px;
+    overflow:hidden;
+    scroll-margin-top:20px;
+  }
+  html[data-theme="dark"] .settings-card{ border-color:rgba(255,255,255,0.12); }
+  .settings-card-head{
+    padding:16px 20px;
+    border-bottom:1px solid rgba(0,0,0,0.08);
+  }
+  html[data-theme="dark"] .settings-card-head{ border-bottom-color:rgba(255,255,255,0.1); }
+  .settings-card-head h2{
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:0;
+    text-transform:none;
+    color:var(--ink);
+    margin:0;
+    padding:0;
+    border:none;
+  }
+  .settings-card-head .sub{
+    font-size:12.5px;
+    letter-spacing:0;
+    text-transform:none;
+    color:var(--muted);
+    margin-top:4px;
+  }
+  .settings-list{ display:flex; flex-direction:column; }
+  .settings-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    padding:14px 20px;
+    border-bottom:1px solid rgba(0,0,0,0.06);
+  }
+  html[data-theme="dark"] .settings-row{ border-bottom-color:rgba(255,255,255,0.07); }
+  .settings-row:last-child{ border-bottom:none; }
+  .settings-row.clickable{ cursor:pointer; transition:background-color 150ms ease; }
+  .settings-row.clickable:hover{ background:rgba(2,132,199,0.05); }
+  html[data-theme="dark"] .settings-row.clickable:hover{ background:rgba(125,211,252,0.06); }
+  .settings-row-title{ font-family:'Inter',sans-serif; font-size:14px; font-weight:600; color:var(--ink); }
+  .settings-row.danger .settings-row-title{ color:var(--danger); }
+  .settings-row-desc{ font-size:12.5px; color:var(--muted); margin-top:2px; max-width:520px; line-height:1.5; }
+  .settings-row-chevron{ flex:none; color:var(--muted); font-size:18px; line-height:1; }
+  @media (max-width: 720px){
+    .settings-shell{ grid-template-columns:1fr; gap:16px; }
+    .settings-nav{
+      position:static;
+      flex-direction:row;
+      overflow-x:auto;
+      gap:6px;
+      padding-bottom:4px;
+      -webkit-overflow-scrolling:touch;
+    }
+    .settings-nav-item{ white-space:nowrap; border-left:none; border-bottom:2px solid transparent; }
+    .settings-nav-item.active{ border-left-color:transparent; border-bottom-color:var(--ink); }
+  }
   .rpt-grandtotal-box{
     border:2px solid #000;
     border-radius:8px;
@@ -3623,36 +3729,93 @@
     <h1>Settings</h1>
     <div class="sub">Admin tools and data/sync controls</div>
 
-    <div class="panel accent-guest">
-      <h2>Pages</h2>
-      <div class="sub" style="margin-top:-6px;">Moved here to keep the main nav short</div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-        <button class="btn secondary" onclick="showView('audit')">Full Audit</button>
-        <button class="btn secondary" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">Day Lock</button>
-        <button class="btn danger-solid" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</button>
-        <button class="btn secondary" onclick="showView('before19')">Before 19</button>
-        <button class="btn secondary" onclick="showView('handover')">Money Handover</button>
-        <button class="btn secondary" onclick="showView('npr')">NPR</button>
-        <button class="btn secondary" onclick="showView('cashcheck')">Cash Check</button>
-      </div>
-    </div>
+    <div class="settings-shell">
+      <nav class="settings-nav">
+        <a class="settings-nav-item active" onclick="settingsNavTo(this,'settingsSecPages')">Pages</a>
+        <a class="settings-nav-item" onclick="settingsNavTo(this,'settingsSecSync')">Data &amp; Sync</a>
+      </nav>
 
-    <div class="panel accent-report">
-      <h2>Data &amp; Sync</h2>
-      <div class="sub" style="margin-top:-6px;">What this app fetches from the cloud database, and what it deliberately doesn't</div>
-      <div class="settings-table-row">
-        <div>
-          <div class="settings-table-name">Guests / Rooms / Payments</div>
-          <div class="settings-table-desc">The actual booking data — required for the app to function, always on.</div>
+      <div class="settings-content">
+        <div class="settings-card" id="settingsSecPages">
+          <div class="settings-card-head">
+            <h2>Pages</h2>
+            <div class="sub">Moved here to keep the main nav short</div>
+          </div>
+          <div class="settings-list">
+            <div class="settings-row clickable" onclick="showView('audit')">
+              <div>
+                <div class="settings-row-title">Full Audit</div>
+                <div class="settings-row-desc">Every entry created, edited, or paid — recorded automatically this session.</div>
+              </div>
+              <span class="settings-row-chevron">›</span>
+            </div>
+            <div class="settings-row clickable" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">
+              <div>
+                <div class="settings-row-title">Day Lock</div>
+                <div class="settings-row-desc">Lock a date so no new payment can be dated on it.</div>
+              </div>
+              <span class="settings-row-chevron">›</span>
+            </div>
+            <div class="settings-row clickable" onclick="showView('before19')">
+              <div>
+                <div class="settings-row-title">Before 19</div>
+                <div class="settings-row-desc">Payments received before a date that still funded a later room-night.</div>
+              </div>
+              <span class="settings-row-chevron">›</span>
+            </div>
+            <div class="settings-row clickable" onclick="showView('handover')">
+              <div>
+                <div class="settings-row-title">Money Handover</div>
+                <div class="settings-row-desc">Cash actually received against each room's rent for a date range.</div>
+              </div>
+              <span class="settings-row-chevron">›</span>
+            </div>
+            <div class="settings-row clickable" onclick="showView('npr')">
+              <div>
+                <div class="settings-row-title">NPR</div>
+                <div class="settings-row-desc">Night Posting Reconciliation — compare against an external nightly report.</div>
+              </div>
+              <span class="settings-row-chevron">›</span>
+            </div>
+            <div class="settings-row clickable" onclick="showView('cashcheck')">
+              <div>
+                <div class="settings-row-title">Cash Check</div>
+                <div class="settings-row-desc">Cross-check Revenue Cash against total Cash payments received.</div>
+              </div>
+              <span class="settings-row-chevron">›</span>
+            </div>
+            <div class="settings-row clickable danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">
+              <div>
+                <div class="settings-row-title">⚠ Delete Entity</div>
+                <div class="settings-row-desc">Remove an accidentally created entry — soft delete, admin only.</div>
+              </div>
+              <span class="settings-row-chevron">›</span>
+            </div>
+          </div>
         </div>
-        <span class="settings-table-status settings-status-on">Always On</span>
-      </div>
-      <div class="settings-table-row">
-        <div>
-          <div class="settings-table-name">🚨 Audit Log (guest_edits)</div>
-          <div class="settings-table-desc">Who-did-what history. Never fetched from the cloud — saves fetching an ever-growing table on every sync. Full Audit, the per-guest audit tab, and Checkout/Pending's "already checked out today" list only show actions taken on this device this session, not full history.</div>
+
+        <div class="settings-card" id="settingsSecSync">
+          <div class="settings-card-head">
+            <h2>Data &amp; Sync</h2>
+            <div class="sub">What this app fetches from the cloud database, and what it deliberately doesn't</div>
+          </div>
+          <div class="settings-list">
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-title">Guests / Rooms / Payments</div>
+                <div class="settings-row-desc">The actual booking data — required for the app to function, always on.</div>
+              </div>
+              <span class="settings-table-status settings-status-on">Always On</span>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-title">🚨 Audit Log (guest_edits)</div>
+                <div class="settings-row-desc">Who-did-what history. Never fetched from the cloud — saves fetching an ever-growing table on every sync. Full Audit, the per-guest audit tab, and Checkout/Pending's "already checked out today" list only show actions taken on this device this session, not full history.</div>
+              </div>
+              <span class="settings-table-status settings-status-off">Off</span>
+            </div>
+          </div>
         </div>
-        <span class="settings-table-status settings-status-off">Off</span>
       </div>
     </div>
 
@@ -3965,6 +4128,17 @@ const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','sear
 // showView() itself rather than needing a separate navigate() wrapper at
 // every one of its call sites throughout the page.
 let currentRouteState = null; // { view } — mirrors what's currently on screen
+
+// Settings sidebar: both sections already sit on the same page (no actual
+// content swap needed for just two of them), so this only scrolls to the
+// card and marks the matching nav item active — a lighter version of the
+// GitHub/Supabase settings-sidebar pattern without a separate router.
+function settingsNavTo(el, sectionId){
+  document.querySelectorAll('.settings-nav-item').forEach(n=> n.classList.remove('active'));
+  el.classList.add('active');
+  const target = document.getElementById(sectionId);
+  if(target) target.scrollIntoView({ behavior:'smooth', block:'start' });
+}
 
 function showView(view, fromPopState){
   if(view === 'daylock' && !isAdmin()){
