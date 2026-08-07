@@ -9904,12 +9904,20 @@ function renderRevenue(){
   // From Date, then today, if the range is cleared. "Occupied" here
   // strictly means booked for that exact night -- same as the Rooms table
   // below and unlike Dashboard/Room Detail, Extended is NOT folded in,
-  // since an unconfirmed departure isn't a confirmed occupied room. ----
+  // since an unconfirmed departure isn't a confirmed occupied room. A
+  // billing snapshot, not a live front-desk view — same fix as Night
+  // Summary: stays tied to actual booked nights, not computeRoomStatuses'
+  // `occupied` flag, which for today also requires an Arrival confirmation
+  // and would otherwise disagree with the Charges Summary table below it
+  // (a reservation checking in today still owes/collects rent whether or
+  // not the front desk has clicked Check-in yet). ----
   const statDate = toVal || fromVal || todayStr();
   document.getElementById('rvStatSub').textContent = 'Occupancy as of ' + formatDate(statDate) + (statDate === todayStr() ? ' (today)' : '');
   const statRooms = computeRoomStatuses(statDate);
   const statTotal = statRooms.length;
-  const statOccupiedRooms = statRooms.filter(rs=> rs.occupied);
+  const statNightRecords = buildLedgersRecords().filter(n=> n.date === statDate && !isMiscRoomNo(n.roomNo));
+  const statBookedRoomKeys = new Set(statNightRecords.map(n=> n.roomNo.trim().toUpperCase()));
+  const statOccupiedRooms = statRooms.filter(rs=> statBookedRoomKeys.has(rs.roomNo));
   const statOccupied = statOccupiedRooms.length;
   const statVacant = statTotal - statOccupied;
   const statPax = statOccupiedRooms.reduce((s,rs)=>{
