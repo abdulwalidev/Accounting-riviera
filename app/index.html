@@ -10877,19 +10877,27 @@ function setAutoCheckoutToday(){
 // =========================================================
 function buildArrivalRows(asOfDate){
   const all = loadAllEntries();
-  return all
-    .filter(entry=> entry.checkIn === asOfDate && isAdvanceReservation(entry))
-    .map(entry=>{
-      const confirmed = !!getDetailValue(entry, 'Actual Checkin');
-      return {
-        guestId: entry.id,
-        guest: entry.guestName || '(no name)',
-        cnic: entry.cnic || '-',
-        roomNos: formatRoomChain(entry.rooms) || '-',
-        checkIn: entry.checkIn || '',
-        status: confirmed ? 'checked_in' : 'due'
-      };
-    })
+  const toRow = (entry, status)=> ({
+    guestId: entry.id,
+    guest: entry.guestName || '(no name)',
+    cnic: entry.cnic || '-',
+    roomNos: formatRoomChain(entry.rooms) || '-',
+    checkIn: entry.checkIn || '',
+    status
+  });
+  // "Due" is overdue-inclusive (checkIn <= asOfDate), same as Checkout/
+  // Pending's own due list — a reservation whose check-in day came and went
+  // with nobody confirming it doesn't just fall off the list the next day;
+  // it keeps showing up until someone actually checks them in or undoes it.
+  const due = all
+    .filter(entry=> isAdvanceReservation(entry) && entry.checkIn <= asOfDate && !getDetailValue(entry, 'Actual Checkin'))
+    .map(entry=> toRow(entry, 'due'));
+  // Checked in ON asOfDate specifically — lets the As Of Date filter show
+  // what was confirmed that day, same as Checkout/Pending's log merge.
+  const checkedIn = all
+    .filter(entry=> isAdvanceReservation(entry) && getDetailValue(entry, 'Actual Checkin') === asOfDate)
+    .map(entry=> toRow(entry, 'checked_in'));
+  return due.concat(checkedIn)
     .sort((a,b)=> a.roomNos.localeCompare(b.roomNos, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
