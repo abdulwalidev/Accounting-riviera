@@ -131,6 +131,15 @@
   tr.mode-bank td{ background:#EAF1FC; }
   tbody tr.mode-cash:nth-child(even) td{ background:#DDF0E5; }
   tbody tr.mode-bank:nth-child(even) td{ background:#DEE9FA; }
+  /* Day Lock already blocks saving an edit/delete on these rows (see
+     isDateLocked() checks) — grayed out here so it reads that way before
+     the user even tries. Wins over the cash/bank tint above on purpose. */
+  tr.pay-row-locked td,
+  tr.pay-row-locked.mode-cash td,
+  tr.pay-row-locked.mode-bank td{ background:#E5E5E5 !important; color:var(--muted); opacity:0.7; }
+  html[data-theme="dark"] tr.pay-row-locked td,
+  html[data-theme="dark"] tr.pay-row-locked.mode-cash td,
+  html[data-theme="dark"] tr.pay-row-locked.mode-bank td{ background:rgba(255,255,255,0.06) !important; color:var(--muted); opacity:0.7; }
   .mode-badge{
     display:inline-block;
     padding:2px 8px;
@@ -4814,6 +4823,7 @@ roomBodyEl.addEventListener('change', e=>{
   document.getElementById('payBody').addEventListener(evt, e=>{
     if(!e.target.classList.contains('payDate')) return;
     updateDateReadout(e.target, e.target.parentElement.querySelector('.payDateReadout'));
+    updatePayRowLockStyle(e.target.closest('tr'));
   });
   document.getElementById('extraDetailList').addEventListener(evt, e=>{
     if(!e.target.classList.contains('edValue')) return;
@@ -5467,6 +5477,17 @@ function addPayRow(){
     <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'payment')">✕</button></td>
   `;
   tbody.appendChild(tr);
+  updatePayRowLockStyle(tr);
+}
+
+// Day Lock already blocks saving a changed/new payment dated on a locked
+// day (see the isDateLocked() checks in the save flow) — this just makes
+// that visible up front instead of only on save.
+function updatePayRowLockStyle(tr){
+  const dateInput = tr.querySelector('.payDate');
+  const locked = isDateLocked(dateInput.value);
+  tr.classList.toggle('pay-row-locked', locked);
+  tr.title = locked ? formatDate(dateInput.value) + ' is locked — this payment can\'t be edited, moved, or removed until it\'s unlocked.' : '';
 }
 
 function toggleMode(sel){
@@ -6500,6 +6521,7 @@ function startEditEntry(entry){
     }
     tr.querySelector('.payRemarks').value = p.remarks || '';
     calcPayRow(tr.querySelector('.payCash'));
+    updatePayRowLockStyle(tr);
   });
 
   document.getElementById('editModeName').textContent = entry.guestName || '(no name)';
@@ -10949,6 +10971,34 @@ async function fetchLockedDaysOnly(){
   if(!error){ lockedDays = data || []; rerenderActiveView(); }
 }
 
+// Once a calendar day has actually finished, its payments shouldn't stay
+// editable forever waiting for an admin to remember to lock it — so every
+// time the app checks in with the cloud, it also checks whether YESTERDAY
+// (relative to right now) still needs locking, and does it itself if so.
+// isDateLocked() makes every call after the first a no-op, so this is safe
+// to call as often as we like (every cloud pull, in practice).
+let autoLockInFlight = false;
+async function autoLockYesterdayIfNeeded(){
+  if(!sb || !initialLoadDone || autoLockInFlight) return;
+  const yesterday = addDaysToDateStr(todayStr(), -1);
+  if(isDateLocked(yesterday)) return;
+  autoLockInFlight = true;
+  try{
+    const { error } = await sb.from('locked_days').upsert({
+      lock_date: yesterday,
+      locked_by: 'Auto Lock',
+      locked_at: new Date().toISOString(),
+      unlocked_by: null,
+      unlocked_at: null
+    }, { onConflict: 'lock_date' });
+    if(!error) await fetchLockedDaysOnly();
+  }catch(e){
+    console.error('Auto-locking yesterday failed', e);
+  }finally{
+    autoLockInFlight = false;
+  }
+}
+
 async function pullFreshFromCloud(){
   if(!sb) return;
   if(pullInFlight) return pullInFlight; // already fetching — don't pile up requests
@@ -10992,6 +11042,7 @@ async function pullFreshFromCloud(){
       }
       if(firstLoad) setLoadingOverlay(false);
       updateCloudIndicator();
+      autoLockYesterdayIfNeeded();
     }catch(e){
       console.error('Cloud pull failed — retrying on the next tick', e);
       setSyncProblem(navigator.onLine === false
