@@ -142,6 +142,17 @@
   html[data-theme="dark"] tr.pay-row-locked td,
   html[data-theme="dark"] tr.pay-row-locked.mode-cash td,
   html[data-theme="dark"] tr.pay-row-locked.mode-bank td{ background:rgba(255,255,255,0.06) !important; color:var(--muted); opacity:0.7; }
+  .pay-lock-tag{
+    display:none;
+    text-align:center;
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.03em;
+    color:#D32F2F;
+    margin-top:2px;
+  }
+  tr.pay-row-locked .pay-lock-tag{ display:block; opacity:1; }
   .mode-badge{
     display:inline-block;
     padding:2px 8px;
@@ -5752,7 +5763,7 @@ function addPayRow(){
   tr.classList.add('mode-cash');
   tr.innerHTML = `
     <td class="rmno">${payCount}</td>
-    <td><input type="date" class="payDate" value="${todayStr()}"><div class="date-readout payDateReadout">${formatDate(todayStr())}</div></td>
+    <td><input type="date" class="payDate" value="${todayStr()}"><div class="date-readout payDateReadout">${formatDate(todayStr())}</div><div class="pay-lock-tag">Day Locked</div></td>
     <td>
       <select class="payType">
         <option value="Reservation">Reservation</option>
@@ -5806,17 +5817,15 @@ function updatePayRowLockStyle(tr){
   const locked = isDateLocked(dateInput.value);
   tr.classList.toggle('pay-row-locked', locked);
   tr.title = locked ? formatDate(dateInput.value) + ' is locked — this payment can\'t be edited, moved, or removed until it\'s unlocked.' : '';
-  // The Date field itself stays enabled even when locked — someone who
-  // just picked a locked date by mistake on a brand-new row still needs a
-  // way to correct it. Every other field (and Delete) is locked out
-  // outright instead of only being caught at save time.
   const delBtn = tr.querySelector('.del button');
   if(locked){
+    dateInput.disabled = true;
     ['.payType', '.payMode', '.payBank', '.payRemarks', '.payCash', '.payAccount'].forEach(sel=>{
       tr.querySelector(sel).disabled = true;
     });
     if(delBtn) delBtn.disabled = true;
   } else {
+    dateInput.disabled = false;
     tr.querySelector('.payType').disabled = false;
     tr.querySelector('.payMode').disabled = false;
     tr.querySelector('.payRemarks').disabled = false;
