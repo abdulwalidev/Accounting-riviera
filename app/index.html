@@ -9,7 +9,13 @@
      in-page header that isn't actually part of the page at all. -->
 <meta name="theme-color" content="#1a73e8">
 <title>Riviera Resort</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<!-- Loaded async (media=print swapped to all on load) instead of a plain
+     blocking <link> — a pending stylesheet delays execution of every
+     <script> after it per spec, so if this specific request to Google's
+     CDN ever hangs instead of failing fast (flaky network, a firewall that
+     silently drops the connection), the whole app used to stall forever on
+     the loading screen before a single script tag below could even run. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <!-- self-hosted: Edge/Brave Tracking Prevention silently blocks some CDN
      copies (this is why supabase.js is served locally too) -->
 <script src="/app/vendor/xlsx.full.min.js"></script>
@@ -4701,10 +4707,15 @@ function initPayDatePicker(tr){
     allowInput: false,
     disableMobile: true,
     ...paymentDatePickerHooks(),
+    // Calls updatePayRowLockStyle directly rather than dispatching a
+    // synthetic input/change event for the delegated #payBody listener to
+    // pick up — updatePayRowLockStyle itself mutates this same instance
+    // (altInput.disabled / clickOpens), and routing that through a
+    // dispatched-event round trip re-entered onValueUpdate on every
+    // instance.set() call, recursing until the stack overflowed.
     onValueUpdate: (selectedDates, dateStr, instance)=>{
       applyPickerDisplay(instance);
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
+      updatePayRowLockStyle(tr);
     },
     // No syncCalendarWidth here on purpose — that matches the calendar's
     // width to the altInput's own rendered width, which is right for the
@@ -5925,14 +5936,19 @@ function updatePayRowLockStyle(tr){
   const fp = dateInput._flatpickr;
   if(locked){
     dateInput.disabled = true;
-    if(fp){ fp.altInput.disabled = true; fp.set('clickOpens', false); }
+    // Direct config mutation, not fp.set('clickOpens', ...) — set() runs
+    // flatpickr's full update/redraw cycle, which re-fires onValueUpdate
+    // and re-enters this same function (see initPayDatePicker's comment).
+    // clickOpens is only ever read off config at click time, so this is
+    // equivalent without the side effect.
+    if(fp){ fp.altInput.disabled = true; fp.config.clickOpens = false; }
     ['.payType', '.payMode', '.payBank', '.payRemarks', '.payCash', '.payAccount'].forEach(sel=>{
       tr.querySelector(sel).disabled = true;
     });
     if(delBtn) delBtn.disabled = true;
   } else {
     dateInput.disabled = false;
-    if(fp){ fp.altInput.disabled = false; fp.set('clickOpens', true); }
+    if(fp){ fp.altInput.disabled = false; fp.config.clickOpens = true; }
     tr.querySelector('.payType').disabled = false;
     tr.querySelector('.payMode').disabled = false;
     tr.querySelector('.payRemarks').disabled = false;
