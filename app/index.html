@@ -7781,17 +7781,15 @@ const RIVIERA_LETTER_CSS = `
     font-family:Georgia,'Times New Roman',serif; color:#1a1a1a;
   }
   .riviera-letter-page *{ box-sizing:border-box; }
-  .riviera-letter-header{ display:flex; align-items:center; gap:12px; padding:9mm 20mm 0; }
-  .riviera-letter-header img{ width:80px; display:block; }
-  .riviera-letter-header h1{ font-size:23px; letter-spacing:2px; margin:0; }
-  /* fitLetterContent() below measures this against the space actually left
-     on the page and scales it down (transform, top-left anchored) if it
-     would run long — a guaranteed single-page fit instead of a guessed
-     font-size/line-height that only happens to work for one guest's worth
-     of text. */
-  .riviera-letter-content{ padding:5mm 20mm 0; font-size:11.5px; line-height:1.48; }
-  .riviera-letter-content p{ margin:4px 0; }
-  .riviera-letter-section-title{ margin-top:12px; font-weight:bold; }
+  .riviera-letter-header{ display:flex; align-items:center; gap:14px; padding:14mm 20mm 0; }
+  .riviera-letter-header img{ width:100px; display:block; }
+  .riviera-letter-header h1{ font-size:26px; letter-spacing:2px; margin:0; }
+  /* Matches the reference template's own spacing — this fits real A4 fine;
+     fitLetterContent() below is only a safety net for an unusually long
+     stay (many rooms, a long due note, ...), not the normal case. */
+  .riviera-letter-content{ padding:8mm 20mm 0; font-size:12.5px; line-height:1.75; }
+  .riviera-letter-content p{ margin:6px 0; }
+  .riviera-letter-section-title{ margin-top:18px; font-weight:bold; }
   /* Georgia's old-style figures (uneven digit heights) read as "off" for an
      account/IBAN number, where every digit is expected to line up evenly —
      switch just these to a plain sans-serif with lining numerals. */
