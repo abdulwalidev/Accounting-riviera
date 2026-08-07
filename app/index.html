@@ -6484,7 +6484,7 @@ async function reviewEntry(){
       roomCursor[r.roomNo] = addDaysToDateStr(rowStart, nightsCount);
     }
     if(thisEntryNights.length > 0){
-      const otherNights = buildLedgersRecords().filter(n=> n.guestId !== editingEntryId);
+      const otherNights = buildLedgersRecords(true).filter(n=> n.guestId !== editingEntryId);
       const conflicts = [];
       thisEntryNights.forEach(n=>{
         const hit = otherNights.find(x=> x.roomNo.trim().toUpperCase() === n.roomNo.trim().toUpperCase() && x.date === n.date);
@@ -7481,7 +7481,7 @@ function computeRoomStatuses(asOfDate){
   // except for today, where a booked night alone only means a reservation
   // is expected; the guest doesn't read as occupying the room until Arrival
   // confirms they actually showed up (their own Actual Checkin field).
-  const nights = buildLedgersRecords();
+  const nights = buildLedgersRecords(true);
   const nightsByRoom = {};
   nights.forEach(n=>{
     if(isMiscRoomNo(n.roomNo)) return; // Snooker/BBQ/Bonfire aren't a room — never occupancy
@@ -7540,6 +7540,23 @@ function computeRoomStatuses(asOfDate){
         if(prevEntry && !resolved) previousGuestPending = { entry: prevEntry, lastNightDate: priorNight.date };
       }
     }
+    // Double-booking safety net, today only: `todayNight` above only ever
+    // surfaces ONE guest for this room/date (first match), so if a SECOND,
+    // different guest also has a booked night here today — someone's
+    // incoming arrival landed on a room that's already occupied — they'd
+    // otherwise vanish with no way to even see the conflict, let alone
+    // confirm them in on a different room. Surfaced as its own row (tagged
+    // Arrival) rather than folded into the main slot.
+    let nextGuestPending = null;
+    if(todayNight && isLiveToday){
+      const otherNight = roomNights.find(n=> n.date === refDate && n.guestId !== todayNight.guestId);
+      if(otherNight){
+        const nextEntry = all.find(e=> e.id === otherNight.guestId) || null;
+        if(nextEntry && isAdvanceReservation(nextEntry) && !getDetailValue(nextEntry, 'Actual Checkin')){
+          nextGuestPending = { entry: nextEntry };
+        }
+      }
+    }
     const housekeeping = roomStatusMap[roomNo];
     const housekeepingStatus = housekeeping ? housekeeping.status : 'Ready';
 
@@ -7592,6 +7609,7 @@ function computeRoomStatuses(asOfDate){
       arrivalPending,
       extended,
       previousGuestPending,
+      nextGuestPending,
       housekeepingStatus,
       actualCheckout: lastNightDate ? addDaysToDateStr(lastNightDate, 1) : '',
       bookingCount: new Set(roomNights.map(n=> n.guestId)).size
@@ -7742,7 +7760,23 @@ function renderRoomDetail(){
           <td>${pg.entry.guestName || '(no name)'}</td>
         </tr>`;
       })() : '';
-      return mainRow + prevRow;
+      // Double-booking conflict: a second, different guest also has a
+      // booked night on this same room today, unconfirmed — see
+      // nextGuestPending in computeRoomStatuses. Shown as its own Arrival
+      // row with an arrow tying it back to the room above it.
+      const nextRow = r.nextGuestPending ? (()=>{
+        const ng = r.nextGuestPending;
+        const ngDue = computeTotals(ng.entry).due;
+        return `<tr style="cursor:pointer;" onclick="openDetail('${ng.entry.id}')" title="Open this guest">
+          <td><b>${r.roomNo}</b> <span class="room-chain-arrow">→</span></td>
+          <td>${roomDetailTypeLabel(r.type) || '-'}</td>
+          <td>${ng.entry.checkIn ? formatDateShort(ng.entry.checkIn) : '-'}</td>
+          <td>${ngDue.toLocaleString()}</td>
+          <td><span class="status arrivaldue">Arrival</span></td>
+          <td>${ng.entry.guestName || '(no name)'}</td>
+        </tr>`;
+      })() : '';
+      return mainRow + prevRow + nextRow;
     }).join('');
     return `
       <div class="day-group">
@@ -7774,7 +7808,7 @@ function renderRoomDetail(){
       const guestText = goesToGuest
         ? (r.entry.guestName || '')
         : (showGuestInfo ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
-      const statusText = r.arrivalPending ? 'arrival due' : isCheckoutPending ? 'pending' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
+      const statusText = r.arrivalPending ? 'arrival' : isCheckoutPending ? 'pending' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
       const statusCls = r.arrivalPending ? 'arrivaldue' : isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
       const guestCls = goesToGuest ? '' : ' sr-guest-muted';
@@ -7796,7 +7830,18 @@ function renderRoomDetail(){
           <span class="sr-guest">${pg.entry.guestName || '(no name)'}</span>
         </div>`;
       })() : '';
-      return mainRow + prevRow;
+      // Double-booking conflict — see the SMART table's own nextRow for why.
+      const nextRow = r.nextGuestPending ? (()=>{
+        const ng = r.nextGuestPending;
+        return `<div class="smart-row clickable" onclick="openDetail('${ng.entry.id}')" title="Open this guest">
+          <span class="sr-room">${r.roomNo} <span class="room-chain-arrow">→</span></span>
+          <span class="sr-type">${roomDetailTypeLabel(r.type) || ''}</span>
+          <span class="sr-status arrivaldue">arrival</span>
+          <span class="sr-arrival">${ng.entry.checkIn ? formatDateShort(ng.entry.checkIn) : ''}</span>
+          <span class="sr-guest">${ng.entry.guestName || '(no name)'}</span>
+        </div>`;
+      })() : '';
+      return mainRow + prevRow + nextRow;
     }).join('');
     return `
       <div class="smart-panel">
@@ -9633,7 +9678,14 @@ function addMonthsToDateStr(dateStr, months){
   return `${y}-${m}-${dd}`;
 }
 
-function buildLedgersRecords(){
+// includeUnconfirmed=true bypasses the confirmation gate below — needed by
+// computeRoomStatuses() (which computes arrivalPending FROM this same raw
+// data, so it can't run on data the gate already stripped) and the
+// double-booking conflict check in the Guest Entry save flow (a room
+// should still warn about a clash even if the other booking on it hasn't
+// been confirmed yet). Every other caller — the actual Ledgers report, NPR,
+// Revenue's occupancy stat — wants the gated, confirmed-only picture.
+function buildLedgersRecords(includeUnconfirmed){
   const all = loadAllEntries();
   const records = [];
   all.forEach(entry=>{
@@ -9647,7 +9699,7 @@ function buildLedgersRecords(){
     // clicked "confirm arrival" on it (that Arrival-page step is newer than
     // plenty of existing bookings, and skipping it retroactively wiped real
     // room-nights out of both reports the first time this was tried).
-    if(entry.checkIn >= todayStr() && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
+    if(!includeUnconfirmed && entry.checkIn >= todayStr() && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
     const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     if(!startDate) return;
     const guest = entry.guestName || '(no name)';
