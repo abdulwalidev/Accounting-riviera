@@ -3878,6 +3878,7 @@
           <button type="button" class="rd-switch-btn active" id="rdModeMunchi" onclick="setRoomDetailMode('munchi')">MUNCHI</button>
         </div>
       </div>
+      <div id="roomDetailUnitBoxes" style="display:flex; margin-top:12px;"></div>
       <div id="roomDetailSmartBody" style="overflow-x:auto; display:none; margin-top:14px;"></div>
     </div>
 
@@ -7216,10 +7217,12 @@ function renderRoomDetail(){
   const smartBody = document.getElementById('roomDetailSmartBody');
   const munchiBody = document.getElementById('roomDetailMunchiBody');
   const summaryEl = document.getElementById('roomDetailSummary');
+  const unitBoxesEl = document.getElementById('roomDetailUnitBoxes');
   if(!initialLoadDone){
     smartBody.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     munchiBody.innerHTML = '';
     summaryEl.innerHTML = '';
+    unitBoxesEl.innerHTML = '';
     return;
   }
   const searchVal = document.getElementById('rdSearchInput').value.trim().toLowerCase();
@@ -7234,6 +7237,10 @@ function renderRoomDetail(){
   // Room Detail is one of only two places (the other being Dashboard) that
   // still counts Extended rooms as occupied.
   const occupiedCount = rooms.filter(r=> r.occupied || r.extended).length;
+  // Captured before the search filter below narrows `rooms` — these two
+  // boxes mirror "X rooms total" above, not whatever's currently searched.
+  const roomTypeCount = rooms.filter(r=> detectUnitType(r.roomNo) !== 'Apartment').length;
+  const apartmentTypeCount = rooms.filter(r=> detectUnitType(r.roomNo) === 'Apartment').length;
 
   if(searchVal){
     const searchValNoDash = stripDashes(searchVal);
@@ -7246,6 +7253,16 @@ function renderRoomDetail(){
     <span><b>${totalRooms}</b> rooms total</span>
     <span><b>${occupiedCount}</b> occupied ${asOfLabel}</span>
     <span><b>${totalRooms - occupiedCount}</b> vacant</span>`;
+
+  unitBoxesEl.innerHTML = `
+    <div style="padding:8px 20px; border:1px solid var(--line); border-right:none; border-radius:6px 0 0 6px;">
+      <div style="font-family:'Inter',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted);">Room</div>
+      <div style="font-size:18px; font-weight:700; color:var(--ink);">${roomTypeCount}</div>
+    </div>
+    <div style="padding:8px 20px; border:1px solid var(--line); border-radius:0 6px 6px 0;">
+      <div style="font-family:'Inter',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted);">Apartment</div>
+      <div style="font-size:18px; font-weight:700; color:var(--ink);">${apartmentTypeCount}</div>
+    </div>`;
 
   if(rooms.length === 0){
     smartBody.innerHTML = '<div class="empty-note">No rooms match.</div>';
