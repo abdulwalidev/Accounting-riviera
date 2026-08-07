@@ -11872,13 +11872,15 @@ async function fetchLockedDaysOnly(){
 // editable forever waiting for an admin to remember to lock it — so every
 // time the app checks in with the cloud, it also checks whether YESTERDAY
 // (relative to right now) still needs locking, and does it itself if so.
-// isDateLocked() makes every call after the first a no-op, so this is safe
-// to call as often as we like (every cloud pull, in practice).
+// Only days that have NEVER had a lock row get auto-locked — if an admin
+// has since unlocked it on purpose, findLockRow() still finds that row
+// (just with unlocked_at set) and this backs off, otherwise the next
+// background poll would silently re-lock a day the admin just unlocked.
 let autoLockInFlight = false;
 async function autoLockYesterdayIfNeeded(){
   if(!sb || !initialLoadDone || autoLockInFlight) return;
   const yesterday = addDaysToDateStr(todayStr(), -1);
-  if(isDateLocked(yesterday)) return;
+  if(lockedDays.some(l=> l.lock_date === yesterday)) return;
   autoLockInFlight = true;
   try{
     const { error } = await sb.from('locked_days').upsert({
