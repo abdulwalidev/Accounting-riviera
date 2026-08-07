@@ -14,6 +14,8 @@
      copies (this is why supabase.js is served locally too) -->
 <script src="/app/vendor/xlsx.full.min.js"></script>
 <script src="/app/vendor/flatpickr.min.js"></script>
+<script src="/app/vendor/html2canvas.min.js"></script>
+<script src="/app/vendor/jspdf.umd.min.js"></script>
 <link rel="stylesheet" href="/app/vendor/flatpickr.min.css">
 <style>
   :root{
@@ -3085,7 +3087,11 @@
         <h1 id="detailName">Guest</h1>
         <div class="sub" id="detailMeta"></div>
       </div>
-      <button class="btn edit-gold" id="editEntryBtn" onclick="openEditModal()">✎ Edit This Entry</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn secondary" onclick="downloadGuestPdf()">⬇ Download</button>
+        <button class="btn secondary" onclick="printGuestLetter()">🖶 Print</button>
+        <button class="btn edit-gold" id="editEntryBtn" onclick="openEditModal()">✎ Edit This Entry</button>
+      </div>
     </div>
 
     <div class="panel accent-guest">
@@ -7744,6 +7750,166 @@ function renderAuditPage(){
   const limitEl = document.getElementById('auditPageLimit');
   const limit = limitEl ? parseInt(limitEl.value, 10) || 0 : 100;
   renderAuditLog('auditPageBody', dateEl ? dateEl.value : '', limit);
+}
+
+// =========================================================
+// GUEST LETTER — Download/Print buttons on the Guest Detail page render
+// this guest's stay as a branded confirmation letter (matching the resort's
+// own reference template/logo/background), instead of a plain data dump.
+// Download rasterizes the exact on-screen layout (html2canvas) onto a
+// full-bleed A4 page image inside a PDF (jsPDF) — WYSIWYG, no auto-
+// pagination guesswork. Print opens the same letter in a fresh tab and
+// lets the browser's own print dialog handle it (including "Save as PDF"
+// there too, if preferred).
+// =========================================================
+const RIVIERA_LETTER_CSS = `
+  .riviera-letter-page{
+    width:210mm; min-height:297mm; box-sizing:border-box;
+    background-image:url('/app/assets/riviera-bg.png');
+    background-size:cover; background-position:center; background-repeat:no-repeat;
+    position:relative; overflow:hidden;
+    font-family:Georgia,'Times New Roman',serif; color:#1a1a1a;
+  }
+  .riviera-letter-page *{ box-sizing:border-box; }
+  .riviera-letter-header{ display:flex; align-items:center; gap:14px; padding:14mm 20mm 0; }
+  .riviera-letter-header img{ width:100px; display:block; }
+  .riviera-letter-header h1{ font-size:26px; letter-spacing:2px; margin:0; }
+  .riviera-letter-content{ padding:8mm 20mm 0; font-size:12.5px; line-height:1.75; }
+  .riviera-letter-top-row{ display:flex; justify-content:space-between; margin-bottom:11px; }
+  .riviera-letter-content p{ margin:6px 0; }
+  .riviera-letter-section-title{ margin-top:18px; font-weight:bold; }
+`;
+
+// Same field set the resort's own confirmation-letter template expects,
+// pulled from this entry's real data instead of the template's [XX] blanks.
+function buildGuestLetterFields(entry){
+  const t = computeTotals(entry);
+  const realRooms = (entry.rooms || []).filter(r=> r.roomNo && !isMiscRoomNo(r.roomNo));
+  const nights = Math.max(1, ...realRooms.map(r=> parseInt(r.count) || 1));
+  const adults = realRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
+  const children = realRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
+  const hasBreakfast = realRooms.some(r=> (parseInt(r.breakfastAdults) || 0) + (parseInt(r.breakfastChildren) || 0) > 0);
+  const rentPerNight = realRooms.reduce((s,r)=> s + (parseFloat(String(r.rent).replace(/,/g,'')) || 0), 0);
+  const roomTypeLine = realRooms.length
+    ? realRooms.map(r=> displayRoomNo(r.roomNo, r.unitType) + ' (' + (r.unitType || detectUnitType(r.roomNo) || 'Room') + ')').join(', ')
+    : '-';
+  const checkOutDate = entry.checkOut || computeExpectedCheckoutDate(entry);
+  return {
+    confirmationNo: (entry.id || '').replace(/-/g,'').slice(-6).toUpperCase() || '------',
+    guestName: entry.guestName || '(no name)',
+    fatherName: entry.fatherName && entry.fatherName !== 'N/A' ? entry.fatherName : '',
+    reservationDate: entry.savedAt ? formatDate(toKarachiDateStr(entry.savedAt)) : '-',
+    checkInDate: entry.checkIn ? formatDate(entry.checkIn) : '-',
+    checkOutDate: checkOutDate ? formatDate(checkOutDate) : '-',
+    nights,
+    roomTypeLine,
+    individuals: adults + children,
+    roomCount: realRooms.length,
+    breakfast: hasBreakfast ? 'Yes' : 'No',
+    rentPerNight: rentPerNight.toLocaleString(),
+    totalRent: t.bookingTotal.toLocaleString(),
+    paymentStatus: t.status + (t.due > 0 ? ' — Due: PKR. ' + t.due.toLocaleString() + '/-' : '')
+  };
+}
+
+function buildGuestLetterHtml(entry){
+  const f = buildGuestLetterFields(entry);
+  return `<style>${RIVIERA_LETTER_CSS}</style>
+    <div class="riviera-letter-page">
+      <div class="riviera-letter-header">
+        <img src="/app/assets/riviera-logo.png" alt="Riviera Resort Logo">
+        <h1>RIVIERA RESORT</h1>
+      </div>
+      <div class="riviera-letter-content">
+        <div class="riviera-letter-top-row">
+          <p><strong>Riviera Resort Naran Hotel.</strong></p>
+          <p><strong>Confirmation No:</strong> <em>${f.confirmationNo}</em></p>
+        </div>
+        <p><strong>Ghaar Road Naran, Pakistan</strong></p>
+        <p><strong>Guest Name:</strong> ${f.guestName}${f.fatherName ? ' s/o ' + f.fatherName : ''}<br>
+        Respected Guest,</p>
+
+        <p>We are pleased to let you know about the confirmation of your reservation at Riviera Resort, Naran Hotel for your upcoming stay. We highly appreciate your preference and are delighted to welcome you for an eminence stay with our resort.</p>
+
+        <p class="riviera-letter-section-title">Your Hotel Confirmation Details:</p>
+        <p><strong>Reservation Date:</strong> ${f.reservationDate}</p>
+        <p><strong>Check-in Date:</strong> ${f.checkInDate}</p>
+        <p><strong>Check-out Date:</strong> ${f.checkOutDate}</p>
+        <p><strong>No of Nights:</strong> ${f.nights}</p>
+        <p><strong>Room type:</strong> ${f.roomTypeLine}</p>
+        <p><strong>No of Individuals:</strong> ${f.individuals}</p>
+        <p><strong>No of Rooms:</strong> ${f.roomCount}</p>
+        <p><strong>Complimentary Breakfast:</strong> ${f.breakfast}</p>
+        <p><strong>Room rent Per night:</strong> PKR. ${f.rentPerNight}/-</p>
+        <p><strong>Total Rent Amount:</strong> PKR. ${f.totalRent}/-</p>
+
+        <p class="riviera-letter-section-title">Payment Details:</p>
+        <p><strong>Payment Status:</strong> ${f.paymentStatus}</p>
+        <p><strong>Account Tittle:</strong> RIVIERA Resort PVT LTD<br>
+        <strong>Bank Alfalah:</strong><br>
+        <strong>IBAN:</strong> PK36 ALFH 0336 0010 1029 8690<br>
+        <strong>ACC NO:</strong> 1010298690</p>
+
+        <p>We look forward to welcoming you to Riviera Resort soon. If you have any further inquiries or need to make changes to your reservation, please do not hesitate to contact us via 099-7430540-41, 0340-8022227. Thank you for choosing our hotel. We take pride in providing exceptional services to our guests, and we are committed to making your stay memorable.</p>
+
+        <p>Best regards,<br>
+        <strong>Riviera Resort Team</strong><br>
+        Riviera Resort Naran</p>
+      </div>
+    </div>`;
+}
+
+function waitForLetterImages(container){
+  const imgs = Array.from(container.querySelectorAll('img'));
+  return Promise.all(imgs.map(img=> img.complete ? Promise.resolve() : new Promise(res=>{ img.onload = img.onerror = res; })));
+}
+
+async function downloadGuestPdf(){
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  if(typeof html2canvas === 'undefined' || typeof jspdf === 'undefined'){
+    showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
+    return;
+  }
+  const mount = document.createElement('div');
+  mount.style.cssText = 'position:fixed; left:-10000px; top:0; z-index:-1;';
+  mount.innerHTML = buildGuestLetterHtml(entry);
+  document.body.appendChild(mount);
+  try{
+    const pageEl = mount.querySelector('.riviera-letter-page');
+    await waitForLetterImages(mount);
+    const canvas = await html2canvas(pageEl, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const doc = new jspdf.jsPDF({ orientation:'p', unit:'mm', format:'a4' });
+    doc.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+    const safeName = (entry.guestName || 'guest').trim().replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'guest';
+    doc.save(`riviera-confirmation-${safeName}.pdf`);
+  }catch(e){
+    console.error('Guest PDF generation failed', e);
+    showNotice('Couldn\'t generate the PDF — please try again.');
+  }finally{
+    document.body.removeChild(mount);
+  }
+}
+
+function printGuestLetter(){
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  const win = window.open('', '_blank');
+  if(!win){
+    showNotice('Please allow pop-ups for this site to print the confirmation letter.');
+    return;
+  }
+  win.document.open();
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Riviera Resort — ${(entry.guestName || 'Guest').replace(/</g,'')} Confirmation</title>
+    <style>*{margin:0; padding:0;} body{background:#ccc;} @media print{ body{background:none;} .riviera-letter-page{box-shadow:none;} } @page{ size:A4; margin:0; }</style>
+    </head><body>${buildGuestLetterHtml(entry)}</body></html>`);
+  win.document.close();
+  win.onload = function(){
+    win.focus();
+    win.print();
+  };
 }
 
 function toggleRoomDetail(){
