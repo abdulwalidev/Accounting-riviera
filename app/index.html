@@ -365,7 +365,7 @@
   }
   th{
     text-align:left;
-    color:#fff;
+    color:#000;
     font-family:'Inter',sans-serif;
     font-weight:700;
     font-size:11px;
@@ -380,10 +380,12 @@
   th.th-green{
     background:#16A34A;
     border-color:#15803D;
+    color:#fff;
   }
   th.th-purple{
     background:#7C3AED;
     border-color:#6D28D9;
+    color:#fff;
   }
   td{
     padding:6px 8px;
@@ -2217,13 +2219,13 @@
   html[data-theme="dark"] th{ border-color:rgba(255,255,255,0.15); }
   html[data-theme="dark"] td{ border-color:rgba(255,255,255,0.08); }
   html[data-theme="dark"] tbody tr:nth-child(even) td{ background:rgba(255,255,255,0.035); }
-  html[data-theme="dark"] th,
   html[data-theme="dark"] .btn,
   html[data-theme="dark"] .roomctrl button:hover,
   html[data-theme="dark"] .btn.secondary:hover,
   html[data-theme="dark"] .day-head,
   html[data-theme="dark"] .rd-switch-btn.active,
   html[data-theme="dark"] .backlink:hover{ background:var(--ink-fill); color:#fff; }
+  html[data-theme="dark"] th{ background:var(--ink-fill); color:#000; }
   html[data-theme="dark"] .status.paid{ background:rgba(74,222,128,0.18); }
   html[data-theme="dark"] .status.partial{ background:rgba(240,208,120,0.18); }
   html[data-theme="dark"] .status.ooo{ background:rgba(255,255,255,0.12); color:#D1D5DB; }
@@ -2677,7 +2679,7 @@
       <button class="navbtn active" id="topNavEntry" onclick="showView('entry')">Guest Entry</button>
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
-      <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
+      <button class="navbtn" id="topNavReport" onclick="showView('report')">Payment Report</button>
       <button class="navbtn" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
       <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
       <button class="navbtn" id="topNavArrival" onclick="showView('arrival')" style="display:none; margin-left:auto;">Arrival</button>
@@ -3286,7 +3288,7 @@
 
   <div class="view" id="view-report">
 
-    <h1 class="no-print">Report</h1>
+    <h1 class="no-print">Payment Report</h1>
     <div class="sub no-print">Payment detail, grouped by day</div>
 
     <div class="print-header">
@@ -3315,6 +3317,7 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn secondary" onclick="clearFilters()">Clear Filters</button>
           <button class="btn secondary" onclick="setFiltersToday()">Today</button>
+          <button class="btn secondary" id="reportExtraBtn" onclick="toggleReportExtra()">Extra</button>
         </div>
         <div id="filterRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
@@ -7095,7 +7098,7 @@ const GLOBAL_SEARCH_PAGES = [
   { label: 'Guest Entry / Reservation', view: 'entry', keywords: ['guest name', 'father name', 'cnic', 'room / apartment detail', 'today\'s entries'] },
   { label: 'Add Payment', view: 'addpay', keywords: ['cash amount', 'account amount', 'this payment'] },
   { label: 'Search', view: 'search', keywords: ['balance due', 'total due'] },
-  { label: 'Report', view: 'report', keywords: ['payment detail', 'grand total'] },
+  { label: 'Payment Report', view: 'report', keywords: ['report', 'payment detail', 'grand total'] },
   { label: 'Revenue Report', view: 'revenue', keywords: ['payments by date', 'extra money', 'rooms occupied'] },
   { label: 'Night Summary', view: 'nightsummary', keywords: ['night posting report', 'posted for', 'room statistics', 'occupancy rate', 'guest charges summary'] },
   { label: 'Settings', view: 'settings', keywords: ['delete entity', 'full audit', 'data', 'sync', 'tables'] }
@@ -8959,6 +8962,15 @@ function reportRowsToTableHtml(sectionRows){
   };
 }
 
+// Normal (default) view hides the Before/After carry-over sections below
+// the main day-by-day breakdown — Extra shows them. Same toggle pattern as
+// Breakfast Report's Simple/Full View.
+let reportShowExtra = false;
+function toggleReportExtra(){
+  reportShowExtra = !reportShowExtra;
+  document.getElementById('reportExtraBtn').textContent = reportShowExtra ? 'Normal' : 'Extra';
+  renderReport();
+}
 function renderReport(){
   const container = document.getElementById('reportBody');
   if(!initialLoadDone){
@@ -9062,14 +9074,14 @@ function renderReport(){
   // answer to "where did the rest of Revenue Report's Collected total go":
   // Main + Before + After always adds up to Revenue Report's Collected
   // exactly. ----
-  if(fromVal && carriedInRows.length > 0){
+  if(reportShowExtra && fromVal && carriedInRows.length > 0){
     html += `
       <div class="section-divider no-print"></div>
       <h2 class="no-print">Before ${formatDate(fromVal)}</h2>
       <div class="sub no-print" style="margin-top:-6px; margin-bottom:10px;">Payments received before ${formatDate(fromVal)} whose money still funded a room-night inside this range — already counted in Ledgers and Revenue Report for this range, but not in Grand Total above since that only counts money dated in this range</div>
       <div class="rpt-day-group">${carriedIn.html}</div>`;
   }
-  if(toVal && carriedAfterRows.length > 0){
+  if(reportShowExtra && toVal && carriedAfterRows.length > 0){
     html += `
       <div class="section-divider no-print"></div>
       <h2 class="no-print">After ${formatDate(toVal)}</h2>
