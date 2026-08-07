@@ -8884,6 +8884,12 @@ function renderLedgers(){
   const creditLabel = simplify ? 'Received' : 'Credit';
   const debtLabel = simplify ? 'Room Rent' : 'Debt';
   const balanceLabel = simplify ? 'Paid' : 'Balance';
+  // Simplify's "Paid" header reframes this same number as still-owed-money-
+  // as-a-negative instead of an alarming red positive — so still-owed shows
+  // as "-x" in plain text, no red, once the header itself already says Paid.
+  const balanceCell = (v)=> simplify
+    ? `<td style="font-weight:700;">${v > 0 ? '-' + v.toLocaleString() : v.toLocaleString()}</td>`
+    : `<td style="font-weight:700; color:${v > 0 ? 'var(--danger)' : 'inherit'};">${v.toLocaleString()}</td>`;
 
   let totalDebt = 0, totalCredit = 0, totalBalance = 0;
   let lastGuestId = null;
@@ -8909,7 +8915,7 @@ function renderLedgers(){
         <td>${nameCell}</td>
         <td class="cash-amt">${r.received ? r.received.toLocaleString() : '-'}</td>
         <td>${r.rent.toLocaleString()}</td>
-        <td style="font-weight:700; color:${balance > 0 ? 'var(--danger)' : 'inherit'};">${balance.toLocaleString()}</td>
+        ${balanceCell(balance)}
       </tr>`;
   }).join('');
 
@@ -8924,7 +8930,7 @@ function renderLedgers(){
           <td colspan="4">Total</td>
           <td class="cash-amt">${totalCredit.toLocaleString()}</td>
           <td>${totalDebt.toLocaleString()}</td>
-          <td style="font-weight:700; color:${totalBalance > 0 ? 'var(--danger)' : 'inherit'};">${totalBalance.toLocaleString()}</td>
+          ${balanceCell(totalBalance)}
         </tr>
       </tfoot>
     </table>`;
