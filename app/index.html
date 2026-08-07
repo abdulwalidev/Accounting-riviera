@@ -5476,11 +5476,41 @@ function addPayRow(){
 // Day Lock already blocks saving a changed/new payment dated on a locked
 // day (see the isDateLocked() checks in the save flow) — this just makes
 // that visible up front instead of only on save.
+// Sets payCash/payAccount/payBank enabled state to match the row's own
+// payMode — the same split toggleMode() applies on a manual mode change,
+// pulled out here so restoring a row after an unlock doesn't also have to
+// clear values the way a real mode change does.
+function applyPayModeEnablement(tr){
+  const mode = tr.querySelector('.payMode').value;
+  const cash = tr.querySelector('.payCash');
+  const acct = tr.querySelector('.payAccount');
+  const bank = tr.querySelector('.payBank');
+  if(mode === 'Cash'){ cash.disabled = false; acct.disabled = true; bank.disabled = true; }
+  else { cash.disabled = true; acct.disabled = false; bank.disabled = false; }
+}
+
 function updatePayRowLockStyle(tr){
   const dateInput = tr.querySelector('.payDate');
   const locked = isDateLocked(dateInput.value);
   tr.classList.toggle('pay-row-locked', locked);
   tr.title = locked ? formatDate(dateInput.value) + ' is locked — this payment can\'t be edited, moved, or removed until it\'s unlocked.' : '';
+  // The Date field itself stays enabled even when locked — someone who
+  // just picked a locked date by mistake on a brand-new row still needs a
+  // way to correct it. Every other field (and Delete) is locked out
+  // outright instead of only being caught at save time.
+  const delBtn = tr.querySelector('.del button');
+  if(locked){
+    ['.payType', '.payMode', '.payBank', '.payRemarks', '.payCash', '.payAccount'].forEach(sel=>{
+      tr.querySelector(sel).disabled = true;
+    });
+    if(delBtn) delBtn.disabled = true;
+  } else {
+    tr.querySelector('.payType').disabled = false;
+    tr.querySelector('.payMode').disabled = false;
+    tr.querySelector('.payRemarks').disabled = false;
+    applyPayModeEnablement(tr);
+    if(delBtn) delBtn.disabled = false;
+  }
 }
 
 function toggleMode(sel){
