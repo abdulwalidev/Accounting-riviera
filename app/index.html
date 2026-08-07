@@ -2493,7 +2493,6 @@
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Report</button>
       <button class="navbtn" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
       <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
-      <button class="navbtn" id="topNavCashCheck" onclick="showView('cashcheck')">Cash Check</button>
       <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none; margin-left:auto;">Checkout/Pending</button>
     </div>
   </div>
@@ -3627,6 +3626,7 @@
         <button class="btn secondary" onclick="showView('before19')">Before 19</button>
         <button class="btn secondary" onclick="showView('handover')">Money Handover</button>
         <button class="btn secondary" onclick="showView('npr')">NPR</button>
+        <button class="btn secondary" onclick="showView('cashcheck')">Cash Check</button>
       </div>
     </div>
 
@@ -3691,8 +3691,8 @@
           <div class="date-readout" id="rdDateReadout"></div>
         </div>
         <div class="checkline">
-          <input type="checkbox" id="rdOccupiedOnly">
-          <label for="rdOccupiedOnly" style="margin:0;">Only show occupied rooms</label>
+          <input type="checkbox" id="rdShowLeft">
+          <label for="rdShowLeft" style="margin:0;">Show people who have left</label>
         </div>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:12px;">
@@ -3996,9 +3996,8 @@ function showView(view, fromPopState){
   document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
   document.getElementById('topNavNightSummary').classList.toggle('active', view === 'nightsummary');
-  document.getElementById('topNavCashCheck').classList.toggle('active', view === 'cashcheck');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
-  document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr');
+  document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck');
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -4450,7 +4449,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('apSearchInput').addEventListener('input', renderApList);
   document.getElementById('apDueOnly').addEventListener('change', renderApList);
   document.getElementById('rdSearchInput').addEventListener('input', renderRoomDetail);
-  document.getElementById('rdOccupiedOnly').addEventListener('change', renderRoomDetail);
+  document.getElementById('rdShowLeft').addEventListener('change', renderRoomDetail);
   document.getElementById('rdDate').addEventListener('input', renderRoomDetail);
   setFilterDate('rdDate', todayStr());
   document.getElementById('cicoFrom').addEventListener('input', renderCico);
@@ -6981,7 +6980,7 @@ function renderRoomDetail(){
     return;
   }
   const searchVal = document.getElementById('rdSearchInput').value.trim().toLowerCase();
-  const occupiedOnly = document.getElementById('rdOccupiedOnly').checked;
+  const showLeft = document.getElementById('rdShowLeft').checked;
   const rdDateEl = document.getElementById('rdDate');
   const asOfDate = rdDateEl.value || todayStr();
   updateDateReadout(rdDateEl, document.getElementById('rdDateReadout'));
@@ -7000,10 +6999,6 @@ function renderRoomDetail(){
       return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
     });
   }
-  if(occupiedOnly){
-    rooms = rooms.filter(r=> r.occupied || r.extended);
-  }
-
   summaryEl.innerHTML = `
     <span><b>${totalRooms}</b> rooms total</span>
     <span><b>${occupiedCount}</b> occupied ${asOfLabel}</span>
@@ -7039,7 +7034,7 @@ function renderRoomDetail(){
       const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '-';
       const guestCell = goesToGuest
         ? (r.entry.guestName || '(no name)')
-        : (r.entry ? `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>` : '-');
+        : (r.entry && showLeft ? `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>` : '-');
       const statusLabel = isCheckoutPending ? 'Pending' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
       const statusCls = isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
@@ -7074,17 +7069,21 @@ function renderRoomDetail(){
       const isCheckoutPending = r.extended && due !== 0;
       const arrival = r.entry && r.entry.checkIn ? formatDateShort(r.entry.checkIn) : '';
       // Vacant rooms still show their status/type/arrival cells as normal —
-      // only the guest name is withheld once that guest has checked out.
-      const guestText = goesToGuest ? (r.entry.guestName || '') : '';
+      // the guest name is withheld once that guest has checked out, unless
+      // "Show people who have left" is on.
+      const guestText = goesToGuest
+        ? (r.entry.guestName || '')
+        : (r.entry && showLeft ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
       const statusText = isCheckoutPending ? 'pending' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
       const statusCls = isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
+      const guestCls = goesToGuest ? '' : ' sr-guest-muted';
       return `<div class="smart-row clickable" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <span class="sr-room">${r.roomNo}</span>
         <span class="sr-type">${r.type || ''}</span>
         <span class="sr-status ${statusCls}">${statusText}</span>
         <span class="sr-arrival">${arrival}</span>
-        <span class="sr-guest">${guestText}</span>
+        <span class="sr-guest${guestCls}">${guestText}</span>
       </div>`;
     }).join('');
     return `
