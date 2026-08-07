@@ -330,6 +330,15 @@
     justify-content:center;
   }
   .date-stepper-btn:hover{ background:var(--account); color:#fff; border-color:var(--account); }
+  /* Room Detail's "Occupancy as of" field sits in a flex-end-aligned row
+     next to Search and the "show people who have left" checkbox — with the
+     stepper counted as part of its normal height, this column was taller
+     than its neighbors, so flex-end pushed everything else down and threw
+     off the whole row's alignment. Taking the stepper out of flow (it just
+     floats below the date box) means this column's flex height matches its
+     neighbors again. */
+  .rd-occ-field{ position:relative; }
+  .rd-occ-field .date-stepper{ position:absolute; top:100%; left:0; right:0; margin-top:4px; }
   /* Change Room: flags the vacated row and its continuation row so the
      pair reads as one stay, not two unrelated rooms — see
      refreshRoomChangeLinks(). */
@@ -585,7 +594,8 @@
   .summary .box .lbl{
     font-family:'Inter',sans-serif;
     font-size:10.5px;
-    color:var(--muted);
+    font-weight:700;
+    color:var(--ink);
     text-transform:uppercase;
     letter-spacing:0.06em;
     margin-bottom:4px;
@@ -3194,21 +3204,23 @@
           <label>Contact No</label>
           <input type="text" id="dContactNo" disabled>
         </div>
-        <div>
-          <label>Check-in</label>
-          <input type="text" id="dCheckIn" disabled>
-        </div>
-        <div>
-          <label>Expected Checkout</label>
-          <input type="text" id="dCheckOut" disabled>
-        </div>
-        <div>
-          <label>Actual Checkin</label>
-          <input type="text" id="dActualCheckin" disabled>
-        </div>
-        <div>
-          <label>Actual Checkout</label>
-          <input type="text" id="dActualCheckout" disabled>
+        <div class="grid" style="grid-column:1 / -1;">
+          <div>
+            <label>Check-in</label>
+            <input type="text" id="dCheckIn" disabled>
+          </div>
+          <div>
+            <label>Expected Checkout</label>
+            <input type="text" id="dCheckOut" disabled>
+          </div>
+          <div>
+            <label>Actual Checkin</label>
+            <input type="text" id="dActualCheckin" disabled>
+          </div>
+          <div>
+            <label>Actual Checkout</label>
+            <input type="text" id="dActualCheckout" disabled>
+          </div>
         </div>
       </div>
       <div class="grid" id="dExtraDetails" style="margin-top:14px;"></div>
@@ -3985,7 +3997,7 @@
             <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
           </div>
         </div>
-        <div>
+        <div class="rd-occ-field">
           <label>Occupancy as of</label>
           <input type="date" id="rdDate">
           <div class="date-readout" id="rdDateReadout"></div>
