@@ -727,12 +727,8 @@
     gap:16px;
     margin-top:16px;
   }
-  .cico-left{ grid-column:1; grid-row:1 / 3; }
-  .cico-right-top{ grid-column:2; grid-row:1; }
-  .cico-right-bottom{ grid-column:2; grid-row:2; }
   @media (max-width:900px){
     .cico-grid{ grid-template-columns:1fr; }
-    .cico-left, .cico-right-top, .cico-right-bottom{ grid-column:auto; grid-row:auto; }
   }
   .cico-grid table{ font-size:12.5px; }
   .graphs-grid{
@@ -2270,6 +2266,18 @@
   html[data-theme="dark"] .new-flag,
   html[data-theme="dark"] .btn.edit-gold,
   html[data-theme="dark"] .btn.edit-gold:hover{ color:#0B1220; }
+  /* html[data-theme="dark"] .btn above (background:var(--ink-fill)) has
+     one more specificity point than any single .btn.<variant> class, so it
+     silently wins and flattens every semantic button color to blue unless
+     re-asserted here — border/text already survive since those properties
+     were never touched by that rule, so only background needed restating. */
+  /* --cash itself is brightened for dark mode (#4ADE80) so cash-amount TEXT
+     still reads against the near-black page — but that same bright value
+     read as neon on a solid button fill, so the button keeps the deep
+     light-theme green (#166534) instead of following --cash here. */
+  html[data-theme="dark"] .btn.success{ background:#166534; border-color:#166534; }
+  html[data-theme="dark"] .btn.danger-solid{ background:var(--danger); }
+  html[data-theme="dark"] .btn.edit-gold{ background:var(--amber); }
 
   .theme-toggle{
     display:inline-flex;
@@ -2686,7 +2694,7 @@
   </div>
   <div class="hdr-row3">
     <div class="topnav">
-      <button class="navbtn active" id="topNavEntry" onclick="showView('entry')">Guest Entry</button>
+      <button class="navbtn active" id="topNavEntry" onclick="showView('entry')">Add Checkin/Reservation</button>
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
       <button class="navbtn" id="topNavReport" onclick="showView('report')">Payment Report</button>
@@ -2821,15 +2829,19 @@
     </div>
 
     <div class="cico-grid">
-      <div class="panel cico-left">
-        <h2>Actual Checkins / Reservation</h2>
+      <div class="panel">
+        <h2>Expected Checkin</h2>
+        <div id="cicoExpectedCheckins"></div>
+      </div>
+      <div class="panel">
+        <h2>Actual Checkin</h2>
         <div id="cicoActualCheckins"></div>
       </div>
-      <div class="panel cico-right-top">
+      <div class="panel">
         <h2>Actual Checkouts</h2>
         <div id="cicoActualCheckouts"></div>
       </div>
-      <div class="panel cico-right-bottom">
+      <div class="panel">
         <h2>Expected Checkouts</h2>
         <div id="cicoExpectedCheckouts"></div>
       </div>
@@ -2839,14 +2851,14 @@
 
   <div class="view active" id="view-entry">
 
-    <div class="viewer-lock-note no-print">👁 View-only account — Guest Entry is read-only. Nothing here can be saved.</div>
+    <div class="viewer-lock-note no-print">👁 View-only account — Add Checkin/Reservation is read-only. Nothing here can be saved.</div>
 
     <div class="editing-bar no-print" id="editModeBar" style="display:none;">
       <span>✎ EDITING: <b id="editModeName"></b> — saving will update this existing entry, not create a new one.</span>
       <button class="btn secondary" onclick="cancelEditMode()">Cancel Edit</button>
     </div>
 
-    <h1>Guest Entry / Reservation</h1>
+    <h1>Add Checkin/Reservation</h1>
     <div class="sub">Customer detail &amp; room/apartment booking</div>
 
     <div class="panel accent-guest">
@@ -2966,7 +2978,7 @@
     </div>
 
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button class="btn success" onclick="reviewEntry()">Save Entry</button>
+      <button class="btn success" id="saveEntryBtn" onclick="reviewEntry()">Save and Checkin</button>
     </div>
 
     <div class="section-divider"></div>
@@ -4035,7 +4047,7 @@
 
 <div class="modal-backdrop" id="confirmModalBackdrop">
   <div class="modal">
-    <h3>Confirm Guest Entry</h3>
+    <h3>Confirm Checkin/Reservation</h3>
     <div class="sub" style="margin-bottom:14px;">Please check every detail below carefully before saving — this cannot be edited from the Report page later.</div>
     <div id="confirmBody"></div>
     <label for="confirmTotalInput" style="margin-top:4px;">Re-type the Grand Total (numbers only) to confirm it is correct</label>
@@ -4095,7 +4107,7 @@
 <div class="modal-backdrop" id="editModalBackdrop">
   <div class="modal">
     <h3>Edit This Entry</h3>
-    <div class="sub" style="margin-bottom:14px;">Check that this is the right guest — the whole entry will open for editing on the Guest Entry page.</div>
+    <div class="sub" style="margin-bottom:14px;">Check that this is the right guest — the whole entry will open for editing on the Add Checkin/Reservation page.</div>
     <div id="editBody"></div>
     <label for="editTypeInput" style="margin-top:4px;">Type EDIT to open this entry for editing</label>
     <input type="text" id="editTypeInput" placeholder="edit" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ confirmEditEntry(); }">
@@ -4611,7 +4623,19 @@ function initStayDatePickers(){
       altFormat: 'd M Y',
       allowInput: false,
       disableMobile: true,
-      onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
+      // A new check-in can't be backdated before the current hotel day —
+      // see checkinTodayStr(). allowInvalidPreload keeps this from wiping
+      // an EXISTING guest's genuinely-past Check-in date when editing them,
+      // or a deliberately-past date NPR pre-fills (startNprAdd) — the same
+      // fix as the payment date picker's locked-day preload issue.
+      ...(id === 'checkInDate' ? {
+        disable: [ d=> toKarachiDateStr(d) < checkinTodayStr() ],
+        allowInvalidPreload: true
+      } : {}),
+      onValueUpdate: (selectedDates, dateStr, instance)=>{
+        applyPickerDisplay(instance);
+        if(id === 'checkInDate') updateSaveEntryButtonLabel();
+      },
       onOpen: (selectedDates, dateStr, instance)=> syncCalendarWidth(instance),
       onReady: (selectedDates, dateStr, instance)=>{
         applyPickerDisplay(instance);
@@ -4751,6 +4775,17 @@ function initPayDatePicker(tr){
     altFormat: 'd M Y',
     allowInput: false,
     disableMobile: true,
+    // A saved payment can already be dated on a day that's since been
+    // locked (Day Lock runs after the fact, on a day that used to be
+    // pickable). Without this, setPayDate()'s fp.setDate() call runs the
+    // date through the same `disable` filter used to block NEW picks,
+    // finds it disabled, and flatpickr clears its own selectedDates AND
+    // the real input value — the date silently vanishes and, since
+    // updatePayRowLockStyle reads that same now-blanked input, the row
+    // also stops looking locked. This keeps a preloaded date visible (and
+    // still gray/locked-looking) even when it fails the disable check;
+    // it does not let a user newly pick a disabled day.
+    allowInvalidPreload: true,
     ...paymentDatePickerHooks(),
     // Calls updatePayRowLockStyle directly rather than dispatching a
     // synthetic input/change event for the delegated #payBody listener to
@@ -4895,8 +4930,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initFilterDatePickers();
   initRangeDatePicker('filterRange', 'filterFrom', 'filterTo', renderReport);
   setFiltersToday();
-  setStayDate('checkInDate', todayStr());
+  setStayDate('checkInDate', checkinTodayStr());
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
+  updateSaveEntryButtonLabel();
   updateExpectedCheckoutDisplay();
   updateActualCheckoutDisplay(null);
   ['filterFrom','filterTo','filterSearch','filterCashSearch'].forEach(id=>{
@@ -4980,10 +5016,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
     document.getElementById('checkInDate').addEventListener(evt, e=>{
       updateDateReadout(e.target, document.getElementById('checkInDateReadout'));
       updateExpectedCheckoutDisplay();
+      updateSaveEntryButtonLabel();
     });
   });
   renderTodayEntries();
   scheduleKarachiMidnightRollover();
+  scheduleCheckinCutoffRollover();
   [
     'auditEntryDate','dNewDate','gsearchDate',
     'dlDate','acDate','arDate','auditPageDate','rdDate','b19From','nsDate'
@@ -5807,6 +5845,21 @@ function todayStr(){
   return toKarachiDateStr();
 }
 
+// The front desk doesn't take new check-ins between midnight and
+// checkout/room-turnover time — someone walking in at 2 AM is still
+// checking in as of the day before, since nothing about the hotel day has
+// turned over yet. This ONLY governs the Check-in Date field's default and
+// allowed range; every other "today" in the app (Day Lock, Arrival,
+// Dashboard, reports) keeps rolling over at plain midnight via todayStr().
+const CHECKIN_CUTOFF_HOUR = 11;
+const CHECKIN_CUTOFF_MINUTE = 49;
+function checkinTodayStr(){
+  const parts = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Karachi', hour12: false });
+  const [h, m] = parts.split(':').map(Number);
+  const beforeCutoff = h < CHECKIN_CUTOFF_HOUR || (h === CHECKIN_CUTOFF_HOUR && m < CHECKIN_CUTOFF_MINUTE);
+  return beforeCutoff ? addDaysToDateStr(todayStr(), -1) : todayStr();
+}
+
 // Room numbers are often typed both with and without their dash ("C-12"
 // vs "C12") — every search box strips dashes from both sides before
 // matching so either spelling finds the same room, the same way amount
@@ -5854,7 +5907,9 @@ function handleKarachiMidnightRollover(){
   // Single-date fields: roll forward any field currently sitting on
   // yesterday's "today", through whichever picker registry (if any) owns
   // it, so its calendar display can't fall out of sync with the value.
-  ['gsearchDate','dNewDate','checkInDate','rdDate','nsDate','dlDate','auditEntryDate','auditPageDate','acDate','arDate'].forEach(id=>{
+  // checkInDate deliberately excluded — it rolls over at the check-in
+  // cutoff time instead of plain midnight, see scheduleCheckinCutoffRollover().
+  ['gsearchDate','dNewDate','rdDate','nsDate','dlDate','auditEntryDate','auditPageDate','acDate','arDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el || el.value !== lastKnownToday) return;
     el.value = newToday;
@@ -5880,8 +5935,6 @@ function handleKarachiMidnightRollover(){
   if(gsearchDateEl) updateDateReadout(gsearchDateEl, document.getElementById('gsearchDateReadout'));
   const dNewDateEl = document.getElementById('dNewDate');
   if(dNewDateEl) updateDateReadout(dNewDateEl, document.getElementById('dNewDateReadout'));
-  const checkInDateEl = document.getElementById('checkInDate');
-  if(checkInDateEl) updateDateReadout(checkInDateEl, document.getElementById('checkInDateReadout'));
   const rdDateEl = document.getElementById('rdDate');
   if(rdDateEl) updateDateReadout(rdDateEl, document.getElementById('rdDateReadout'));
   const nsDateEl = document.getElementById('nsDate');
@@ -5913,6 +5966,59 @@ function handleKarachiMidnightRollover(){
   if(currentView === 'inhouse') renderInhouse();
   if(currentView === 'autocheckout') renderAutoCheckout();
   if(currentView === 'arrival') renderArrival();
+}
+
+// Same one-shot precise-timeout approach as scheduleKarachiMidnightRollover,
+// but armed for the check-in cutoff (checkinTodayStr()) instead of plain
+// midnight — a tab left open overnight should still bump the Check-in Date
+// field forward right at cutoff, not sit on the stale hotel day until
+// something else forces a re-render.
+let lastKnownCheckinDay = checkinTodayStr();
+
+function msUntilNextCheckinCutoff(){
+  const now = new Date();
+  // Cutoff is 11:49 AM Karachi (UTC+5, no DST) = 06:49 UTC.
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), CHECKIN_CUTOFF_HOUR - 5, CHECKIN_CUTOFF_MINUTE, 0, 0));
+  if(next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
+  return next.getTime() - now.getTime();
+}
+
+function scheduleCheckinCutoffRollover(){
+  setTimeout(()=>{
+    handleCheckinCutoffRollover();
+    scheduleCheckinCutoffRollover();
+  }, msUntilNextCheckinCutoff() + 1000);
+}
+
+function handleCheckinCutoffRollover(){
+  const newCheckinDay = checkinTodayStr();
+  if(newCheckinDay === lastKnownCheckinDay) return;
+  const el = document.getElementById('checkInDate');
+  // Only bump a field still sitting on the stale hotel day forward — a
+  // deliberately-picked date (editing an old guest, an NPR back-fill)
+  // is left alone, same rule the midnight rollover uses.
+  if(el && el.value === lastKnownCheckinDay){
+    el.value = newCheckinDay;
+    const fp = getPickerFor('checkInDate');
+    if(fp) fp.setDate(newCheckinDay, false);
+    updateDateReadout(el, document.getElementById('checkInDateReadout'));
+    updateSaveEntryButtonLabel();
+    if(currentView === 'entry') updateExpectedCheckoutDisplay();
+  }
+  lastKnownCheckinDay = newCheckinDay;
+}
+
+// "Save Entry" reads as a dynamic promise about what happens next: a
+// future Check-in Date is still just a reservation (nobody's shown up
+// yet), while today's hotel day (or the still-current previous day before
+// the check-in cutoff, see checkinTodayStr()) means saving IS checking
+// them in — mirrors isAdvanceReservation()'s own savedAt-vs-checkIn logic.
+function updateSaveEntryButtonLabel(){
+  const btn = document.getElementById('saveEntryBtn');
+  const checkInEl = document.getElementById('checkInDate');
+  if(!btn || !checkInEl) return;
+  const checkIn = checkInEl.value;
+  btn.textContent = (checkIn && checkIn > checkinTodayStr()) ? 'Save Reservation' : 'Save and Checkin';
 }
 
 function addPayRow(){
@@ -6293,7 +6399,7 @@ function toggleNA(fieldId){
 let pendingEntryData = null;
 
 async function reviewEntry(){
-  if(isViewer()){ showNotice('View-only account — Guest Entry can\'t be saved.'); return; }
+  if(isViewer()){ showNotice('View-only account — Add Checkin/Reservation can\'t be saved.'); return; }
   // ---- Guardrails: the person doing data entry may be rushed or new to
   // the form, so catch the mistakes that would otherwise sit quietly in
   // the saved data (missing name, a room typed twice, a bank left unset). ----
@@ -6803,11 +6909,15 @@ function resetEntryForm(){
   document.getElementById('fatherName').value = 'N/A';
   document.getElementById('fatherName').disabled = true;
   document.getElementById('fatherNameNA').checked = true;
-  // Check-in defaults to today (Pakistan time) — nearly every walk-in checks in the day
-  // they're entered, so this saves re-picking the date on every single guest.
-  setStayDate('checkInDate', todayStr());
+  // Check-in defaults to the current hotel day (checkinTodayStr(), not
+  // plain todayStr()) — nearly every walk-in checks in the day they're
+  // entered, so this saves re-picking the date on every single guest, and
+  // still holds true for a graveyard-shift walk-in before checkout/
+  // turnover time even though the calendar date has already rolled over.
+  setStayDate('checkInDate', checkinTodayStr());
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
   updateActualCheckoutDisplay(null);
+  updateSaveEntryButtonLabel();
   document.getElementById('extraDetailList').innerHTML = '';
   document.getElementById('roomBody').innerHTML = '';
   destroyPayDatePickers(document.getElementById('payBody'));
@@ -6980,6 +7090,7 @@ function startEditEntry(entry){
   document.getElementById('contactNo').value = getDetailValue(entry, 'Contact No');
   setStayDate('checkInDate', entry.checkIn || '');
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
+  updateSaveEntryButtonLabel();
   // Expected Checkout gets recomputed as the room rows below are populated
   // (each addRow()+calcRow() call chains into calcGrandTotal(), which
   // refreshes the display) — Actual Checkout only ever reflects what's
@@ -7107,7 +7218,7 @@ const GLOBAL_SEARCH_PAGES = [
   { label: 'Full Audit', view: 'audit', keywords: ['change history', 'entry created', 'entry edited', 'all changes'] },
   { label: 'Day Lock', view: 'daylock', keywords: ['lock day', 'unlock day', 'locked days'] },
   { label: 'Delete Entity', view: 'deleteentity', keywords: ['delete', 'remove entry'] },
-  { label: 'Guest Entry / Reservation', view: 'entry', keywords: ['guest name', 'father name', 'cnic', 'room / apartment detail', 'today\'s entries'] },
+  { label: 'Add Checkin/Reservation', view: 'entry', keywords: ['guest name', 'father name', 'cnic', 'room / apartment detail', 'today\'s entries', 'guest entry'] },
   { label: 'Add Payment', view: 'addpay', keywords: ['cash amount', 'account amount', 'this payment'] },
   { label: 'Search', view: 'search', keywords: ['balance due', 'total due'] },
   { label: 'Payment Report', view: 'report', keywords: ['report', 'payment detail', 'grand total'] },
@@ -8039,6 +8150,45 @@ function setCicoToday(){
   renderCico();
 }
 
+// Expected Checkin mirrors the Arrival page exactly (same buildArrivalRows
+// "due" + "checked in on that day" logic) rather than a plain Check-in-date
+// filter — over a multi-day range it's the union of each day's Arrival list,
+// deduped by guest since a guest whose room-night is still pending stays
+// "due" across every day of the range until they're confirmed or move out.
+function computeExpectedCheckins(fromDate, toDate){
+  const all = loadAllEntries();
+  const seen = new Set();
+  const items = [];
+  for(let d = fromDate; d <= toDate; d = addDaysToDateStr(d, 1)){
+    buildArrivalRows(d).forEach(r=>{
+      if(seen.has(r.guestId)) return;
+      seen.add(r.guestId);
+      const entry = all.find(e=> e.id === r.guestId);
+      if(entry) items.push(buildMovementItem(entry));
+    });
+  }
+  return items;
+}
+
+// Actual Checkin = confirmed arrival, not just a booked Check-in date. A
+// walk-in confirms itself the moment it's saved (see isAdvanceReservation
+// — the save itself is the arrival confirmation), so its own Check-in date
+// counts; an advance reservation only counts once the desk has logged an
+// Actual Checkin via Arrival's Check-in button. An unconfirmed advance
+// reservation has a Check-in date but no confirmation yet, so it stays out
+// of this list (it shows up in Expected Checkin instead).
+function computeActualCheckins(fromDate, toDate){
+  const all = loadAllEntries();
+  const items = [];
+  all.forEach(entry=>{
+    const confirmedDate = isAdvanceReservation(entry) ? getDetailValue(entry, 'Actual Checkin') : (entry.checkIn || '');
+    if(confirmedDate && confirmedDate >= fromDate && confirmedDate <= toDate){
+      items.push({ ...buildMovementItem(entry), dateShown: confirmedDate });
+    }
+  });
+  return items;
+}
+
 function renderCico(){
   const fromEl = document.getElementById('cicoFrom');
   const toEl = document.getElementById('cicoTo');
@@ -8051,14 +8201,15 @@ function renderCico(){
   document.getElementById('cicoRangeReadout').textContent = formatIsoRangeDisplay(fromDate, toDate);
 
   if(!initialLoadDone){
-    ['cicoExpectedCheckouts','cicoActualCheckins','cicoActualCheckouts'].forEach(id=>{
+    ['cicoExpectedCheckins','cicoActualCheckins','cicoActualCheckouts','cicoExpectedCheckouts'].forEach(id=>{
       document.getElementById(id).innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     });
     return;
   }
 
   const move = computeMovement(fromDate, toDate);
-  renderMovementList('cicoActualCheckins', move.checkins, 'Exp. Checkout');
+  renderMovementList('cicoExpectedCheckins', computeExpectedCheckins(fromDate, toDate), 'Exp. Checkout');
+  renderMovementList('cicoActualCheckins', computeActualCheckins(fromDate, toDate), 'Checked In');
   renderMovementList('cicoActualCheckouts', move.actualCheckouts, 'Checked Out');
   renderMovementList('cicoExpectedCheckouts', move.expectedCheckouts, 'Expected Checkout');
 }
@@ -9441,6 +9592,7 @@ function startNprAdd(date, roomNo, guest){
   document.getElementById('guestName').value = guest || '';
   setStayDate('checkInDate', date);
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
+  updateSaveEntryButtonLabel();
   updateExpectedCheckoutDisplay();
   showNotice('Pre-filled name and check-in date from NPR — add room ' + roomNo + ' yourself and fill in the rest before saving.', 'success');
 }
