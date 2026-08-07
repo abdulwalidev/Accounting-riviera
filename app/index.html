@@ -2644,6 +2644,10 @@
           <span class="dash-card-lbl">Inhouse</span>
         </div>
         <div class="dash-card-val" id="dashInhouse">0</div>
+        <div class="dash-subtiles">
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashInhouseRoom">0</div><div class="dash-subtile-lbl">Room</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashInhouseApt">0</div><div class="dash-subtile-lbl">Apartment</div></div>
+        </div>
       </div>
       <div class="dash-card clickable" onclick="showView('cico')">
         <div class="dash-card-head">
@@ -7498,7 +7502,7 @@ function renderMovementList(containerId, items, dateColumnLabel){
 
 function renderDashboard(){
   if(!initialLoadDone){
-    ['dashArrivals','dashInhouse','dashDepartures','dashCheckedOut','dashOcc','dashReady','dashDirty','dashOOO','dashNightOcc','dashNightAvail'].forEach(id=>{
+    ['dashArrivals','dashInhouse','dashInhouseRoom','dashInhouseApt','dashDepartures','dashCheckedOut','dashOcc','dashReady','dashDirty','dashOOO','dashNightOcc','dashNightAvail'].forEach(id=>{
       document.getElementById(id).textContent = '…';
     });
     return;
@@ -7510,7 +7514,10 @@ function renderDashboard(){
   // still counts Extended rooms as occupied — everywhere else (Revenue
   // Report, Reservations) an Extended room is NOT counted as occupied,
   // since nobody's confirmed it's actually still generating rent.
-  const occupiedCount = rooms.filter(r=> r.occupied || r.extended).length;
+  const occupiedRooms = rooms.filter(r=> r.occupied || r.extended);
+  const occupiedCount = occupiedRooms.length;
+  const inhouseRoomCount = occupiedRooms.filter(r=> detectUnitType(r.roomNo) !== 'Apartment').length;
+  const inhouseAptCount = occupiedRooms.filter(r=> detectUnitType(r.roomNo) === 'Apartment').length;
   const vacantCount = totalRooms - occupiedCount;
   const vacantRooms = rooms.filter(r=> !r.occupied && !r.extended);
   const dirtyCount = vacantRooms.filter(r=> r.housekeepingStatus === 'Dirty').length;
@@ -7520,6 +7527,8 @@ function renderDashboard(){
 
   document.getElementById('dashArrivals').textContent = move.checkins.length;
   document.getElementById('dashInhouse').textContent = occupiedCount;
+  document.getElementById('dashInhouseRoom').textContent = inhouseRoomCount;
+  document.getElementById('dashInhouseApt').textContent = inhouseAptCount;
   document.getElementById('dashDepartures').textContent = move.expectedCheckouts.length;
   document.getElementById('dashCheckedOut').textContent = move.actualCheckouts.length;
   document.getElementById('dashOcc').textContent = occupiedCount;
