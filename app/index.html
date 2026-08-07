@@ -3365,6 +3365,14 @@
           <div class="dash-card-lbl">Occupancy Rate</div>
           <div class="dash-card-val" id="rvStatOccRate">0%</div>
         </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">Rooms</div>
+          <div class="dash-card-val" id="rvStatRooms">0</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-lbl">Apartments</div>
+          <div class="dash-card-val" id="rvStatApartments">0</div>
+        </div>
       </div>
     </div>
 
@@ -3384,11 +3392,11 @@
       </div>
       <div id="rvByDateCollapse" class="no-print" style="display:none; margin-top:10px;">
         <div class="rd-switch" style="margin-bottom:10px;">
-          <button type="button" class="rd-switch-btn" id="rvByDateModeTable" onclick="setRvByDateMode('table')">Table</button>
-          <button type="button" class="rd-switch-btn active" id="rvByDateModeBox" onclick="setRvByDateMode('box')">Box</button>
+          <button type="button" class="rd-switch-btn active" id="rvByDateModeTable" onclick="setRvByDateMode('table')">Table</button>
+          <button type="button" class="rd-switch-btn" id="rvByDateModeBox" onclick="setRvByDateMode('box')">Box</button>
         </div>
-        <div id="rvByDateBoxBody"><div class="empty-note">No data yet.</div></div>
-        <div id="rvByDateTableBody" style="display:none; overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+        <div id="rvByDateBoxBody" style="display:none;"><div class="empty-note">No data yet.</div></div>
+        <div id="rvByDateTableBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
       </div>
 
       <div id="rvByDateGrandTotal" style="margin-top:14px;"><div class="empty-note">No data yet.</div></div>
@@ -9284,7 +9292,7 @@ function renderRevenue(){
     byDateBoxBody.innerHTML = '';
     byDateTableBody.innerHTML = '';
     byDateGrandTotal.innerHTML = '';
-    ['rvStatOccupied','rvStatVacant','rvStatPax'].forEach(id=> document.getElementById(id).textContent = '…');
+    ['rvStatOccupied','rvStatVacant','rvStatPax','rvStatRooms','rvStatApartments'].forEach(id=> document.getElementById(id).textContent = '…');
     document.getElementById('rvStatOccRate').textContent = '…';
     return;
   }
@@ -9332,10 +9340,14 @@ function renderRevenue(){
     return s + relevantRooms.reduce((rs2,r)=> rs2 + (parseInt(r.adults) || 0) + (parseInt(r.children) || 0), 0);
   }, 0);
   const statOccRate = statTotal > 0 ? (statOccupied / statTotal * 100) : 0;
+  const statRoomTypeCount = statOccupiedRooms.filter(rs=> detectUnitType(rs.roomNo) !== 'Apartment').length;
+  const statApartmentTypeCount = statOccupiedRooms.filter(rs=> detectUnitType(rs.roomNo) === 'Apartment').length;
   document.getElementById('rvStatOccupied').textContent = statOccupied;
   document.getElementById('rvStatVacant').textContent = statVacant;
   document.getElementById('rvStatPax').textContent = statPax > 0 ? statPax : '';
   document.getElementById('rvStatOccRate').textContent = statOccRate.toFixed(1) + '%';
+  document.getElementById('rvStatRooms').textContent = statRoomTypeCount;
+  document.getElementById('rvStatApartments').textContent = statApartmentTypeCount;
 
   // ---- Rooms: full-stay rent/collected/due for every room-night in range ----
   nightlySummary.textContent = data.distinctRoomTypeCount + (data.distinctRoomTypeCount === 1 ? ' room' : ' rooms') + ', ' +
