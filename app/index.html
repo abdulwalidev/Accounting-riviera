@@ -167,8 +167,8 @@
   .payDate-alt-input{ text-align:center; font-size:11.5px; padding:6px 4px; }
   /* Locked/future days inside ANY payment date picker's calendar: flatpickr
      already grays out and disables both (see paymentDatePickerHooks' disable
-     array + maxDate) — this just adds the explicit "Locked" label so it
-     reads as a rule, not a rendering glitch. */
+     array + maxDate) — this just adds the explicit lock icon on locked days
+     so it reads as a rule, not a rendering glitch. */
   .flatpickr-day.flatpickr-day-locked{
     display:flex;
     flex-direction:column;
@@ -177,12 +177,10 @@
     line-height:1.15;
   }
   .flatpickr-day-locked .fp-day-locked-tag{
-    font-size:6px;
-    font-weight:700;
-    letter-spacing:0.02em;
-    text-transform:uppercase;
+    display:block;
     color:#D32F2F;
     margin-top:1px;
+    line-height:0;
   }
   .mode-badge{
     display:inline-block;
@@ -4627,24 +4625,43 @@ function setStayDate(id, isoValue){
 // completely untouched.
 const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate', 'acnCheckinDate'];
 const filterDatePickers = {};
+// Small closed-padlock glyph stamped on locked days in every payment date
+// picker — an SVG rather than an emoji so it renders identically (weight,
+// color) across platforms instead of inheriting whatever padlock emoji a
+// given OS/font ships.
+const LOCK_ICON_SVG = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 // Shared by every calendar that picks a PAYMENT date (Add Payment's dNewDate,
 // and each Payment Detail row below) — a payment can't be dated on a locked
 // day (Day Lock already refuses to save one, see isDateLocked()) or on a day
 // that hasn't happened yet, so both are grayed out and unclickable right in
-// the calendar instead of only failing at save time. Locked days also get an
-// explicit "Locked" label (see .flatpickr-day-locked CSS) so it reads as a
-// rule, not a rendering glitch.
+// the calendar instead of only failing at save time. Locked days also get a
+// lock icon (see .flatpickr-day-locked CSS) so it reads as a rule, not a
+// rendering glitch, and clicking either kind of grayed-out day explains why
+// instead of just silently doing nothing (flatpickr's own disabled-day click
+// handling is a no-op, so this is a separate listener on top of it).
 function paymentDatePickerHooks(){
   return {
     maxDate: todayStr(),
     disable: [ d=> isDateLocked(toKarachiDateStr(d)) ],
     onDayCreate: (dObj, dStr, fp, dayElem)=>{
-      if(!dayElem.dateObj || !isDateLocked(toKarachiDateStr(dayElem.dateObj))) return;
-      dayElem.classList.add('flatpickr-day-locked');
-      const tag = document.createElement('span');
-      tag.className = 'fp-day-locked-tag';
-      tag.textContent = 'Locked';
-      dayElem.appendChild(tag);
+      if(!dayElem.dateObj) return;
+      const iso = toKarachiDateStr(dayElem.dateObj);
+      if(isDateLocked(iso)){
+        dayElem.classList.add('flatpickr-day-locked');
+        const tag = document.createElement('span');
+        tag.className = 'fp-day-locked-tag';
+        tag.innerHTML = LOCK_ICON_SVG;
+        dayElem.appendChild(tag);
+        dayElem.addEventListener('click', e=>{
+          e.preventDefault(); e.stopPropagation();
+          showNotice('This day is locked — ask an admin to unlock it before recording a payment on it.');
+        });
+      } else if(iso > todayStr()){
+        dayElem.addEventListener('click', e=>{
+          e.preventDefault(); e.stopPropagation();
+          showNotice('Future payments can\'t be received today.');
+        });
+      }
     }
   };
 }
@@ -4695,6 +4712,19 @@ function getPickerFor(id){
 // payment rows — there's no fixed id to key a stayDatePickers-style registry
 // off of, so each row's instance is looked up straight off its own input
 // (flatpickr stashes itself on the element as ._flatpickr already).
+// The shared applyPickerDisplay() writes "08 AUGUST 26" (full uppercase
+// month) onto the altInput — right for the full-width single fields
+// elsewhere, but Payment Detail's Date column is only ~88px wide and that
+// string just gets clipped. This writes a much shorter "08 Aug 26" instead.
+function applyPayPickerDisplay(instance){
+  if(!instance.altInput) return;
+  const d = instance.selectedDates && instance.selectedDates[0];
+  if(!d){ instance.altInput.value = ''; return; }
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mon = PICKER_MONTHS[d.getMonth()].slice(0, 3);
+  const yy = String(d.getFullYear()).slice(-2);
+  instance.altInput.value = `${dd} ${mon[0]}${mon.slice(1).toLowerCase()} ${yy}`;
+}
 function initPayDatePicker(tr){
   if(typeof flatpickr === 'undefined') return;
   const el = tr.querySelector('.payDate');
@@ -4714,7 +4744,7 @@ function initPayDatePicker(tr){
     // dispatched-event round trip re-entered onValueUpdate on every
     // instance.set() call, recursing until the stack overflowed.
     onValueUpdate: (selectedDates, dateStr, instance)=>{
-      applyPickerDisplay(instance);
+      applyPayPickerDisplay(instance);
       updatePayRowLockStyle(tr);
     },
     // No syncCalendarWidth here on purpose — that matches the calendar's
@@ -4722,7 +4752,7 @@ function initPayDatePicker(tr){
     // full-width single fields elsewhere but would shrink this one down to
     // the Payment Detail Date column's ~88px, squashing the day grid.
     // Left alone, the calendar just uses flatpickr's own default width.
-    onReady: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance)
+    onReady: (selectedDates, dateStr, instance)=> applyPayPickerDisplay(instance)
   });
 }
 function setPayDate(tr, isoValue){
@@ -4730,7 +4760,7 @@ function setPayDate(tr, isoValue){
   if(!el) return;
   el.value = isoValue || '';
   const fp = el._flatpickr;
-  if(fp){ fp.setDate(isoValue || null, false); applyPickerDisplay(fp); }
+  if(fp){ fp.setDate(isoValue || null, false); applyPayPickerDisplay(fp); }
 }
 // flatpickr appends its calendar popup to <body>, not inside the row —
 // removing a row's markup alone leaves that popup orphaned there forever,
@@ -9587,7 +9617,13 @@ function buildLedgersRecords(){
     // an actual stay — it shouldn't contribute room-nights here (its payment
     // still shows on the Report page, which is status-agnostic by design;
     // this is the one place that isn't).
-    if(isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
+    // Gate is forward-only — only a reservation whose check-in HASN'T
+    // happened yet gets held back for confirmation. Once checkIn is in the
+    // past the stay already happened regardless of whether anyone actually
+    // clicked "confirm arrival" on it (that Arrival-page step is newer than
+    // plenty of existing bookings, and skipping it retroactively wiped real
+    // room-nights out of both reports the first time this was tried).
+    if(entry.checkIn >= todayStr() && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
     const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     if(!startDate) return;
     const guest = entry.guestName || '(no name)';
@@ -9829,7 +9865,13 @@ function buildRevenueReport(fromDate, toDate){
     // an actual stay — it shouldn't contribute rent/collected/due rows here
     // (its payment still shows on the Report page, which is status-agnostic
     // by design; this is the one place that isn't).
-    if(isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
+    // Gate is forward-only — only a reservation whose check-in HASN'T
+    // happened yet gets held back for confirmation. Once checkIn is in the
+    // past the stay already happened regardless of whether anyone actually
+    // clicked "confirm arrival" on it (that Arrival-page step is newer than
+    // plenty of existing bookings, and skipping it retroactively wiped real
+    // room-nights out of both reports the first time this was tried).
+    if(entry.checkIn >= todayStr() && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
     const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     if(!startDate) return;
     const guestId = entry.id;
