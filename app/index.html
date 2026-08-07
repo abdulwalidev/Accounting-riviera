@@ -12093,6 +12093,24 @@ async function autoLockYesterdayIfNeeded(){
     autoLockInFlight = false;
   }
 }
+// autoLockYesterdayIfNeeded() also runs on every background pull (every 5
+// minutes) as a safety net, but that alone means "yesterday" only gets
+// locked whenever the next poll happens to land — up to 5 minutes late.
+// This schedules it to fire right at midnight (Asia/Karachi, the app's one
+// canonical "today") instead, then reschedules itself for the following
+// midnight. Karachi has no DST, so a fixed +5h offset is safe here even
+// though the browser's own timezone is whatever the device is set to.
+function scheduleMidnightAutoLock(){
+  const KARACHI_OFFSET_MS = 5 * 60 * 60 * 1000;
+  const nowKarachiMs = Date.now() + KARACHI_OFFSET_MS;
+  const nowKarachi = new Date(nowKarachiMs);
+  const nextMidnightKarachiMs = Date.UTC(nowKarachi.getUTCFullYear(), nowKarachi.getUTCMonth(), nowKarachi.getUTCDate() + 1, 0, 0, 2);
+  const delay = nextMidnightKarachiMs - nowKarachiMs;
+  setTimeout(()=>{
+    autoLockYesterdayIfNeeded();
+    scheduleMidnightAutoLock();
+  }, delay);
+}
 
 async function pullFreshFromCloud(){
   if(!sb) return;
@@ -12216,6 +12234,7 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && appSt
 // regardless of this interval. Other devices' changes also arrive instantly
 // via the realtime subscription below — this is only a fallback.
 setInterval(()=>{ if(appStarted){ pushPendingNow(); if(!appPaused) pullFreshFromCloud(); } }, 300000);
+scheduleMidnightAutoLock();
 
 // ---- Idle pause: 2 minutes with no activity stops the poll and covers the
 // screen. Once paused, only an actual click proves the user is back —
