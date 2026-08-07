@@ -3663,12 +3663,15 @@
           <button class="btn secondary" onclick="printInhouse()">🖶 Print</button>
           <button class="btn secondary" onclick="showView('breakfast')">🥐 Breakfast Report</button>
         </div>
-        <div id="ihUnitSplit" class="dash-subtiles" style="max-width:220px; margin-top:0;"></div>
+        <div id="ihUnitSplit" class="dash-subtiles" style="max-width:480px; margin-top:0;"></div>
+        <div>
+          <label class="lbl-sm" style="margin-bottom:4px;">In-house Guests</label>
+          <div id="ihGuestSplit" class="dash-subtiles" style="max-width:160px; margin-top:0;"></div>
+        </div>
       </div>
     </div>
 
     <div class="panel accent-report">
-      <div id="ihSummary" style="font-size:15px; font-weight:700; margin-bottom:10px;"></div>
       <div id="ihBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
@@ -5062,6 +5065,12 @@ const MISC_TYPE_OPTIONS_HTML = '<option value="">—</option>' + MISC_TYPES.map(
 // stay categories instead of Room/Apartment.
 const NA_TYPES = ['River View', 'Mountain View', 'Couple Suite', 'VIP Deluxe', '2 Bed Apartment', '3 Bed Apartment'];
 const NA_TYPE_OPTIONS_HTML = '<option value="">—</option>' + NA_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
+// The four room-type stat boxes shown alongside the plain Room/Apartment
+// split — Room Detail and Inhouse Report both break occupied rooms down
+// this way, so both read off the same list instead of two lists drifting
+// apart. Apartment sub-types aren't broken out here; Apartment already
+// covers them as one number.
+const ROOM_TYPE_BUCKETS = ['River View', 'Mountain View', 'Couple Suite', 'VIP Deluxe'];
 
 function updateUnitType(tr){
   const v = tr.querySelector('.roomNo').value.trim().toUpperCase();
@@ -7586,13 +7595,11 @@ function renderRoomDetail(){
     <span><b>${occupiedCount}</b> occupied ${asOfLabel}</span>
     <span><b>${totalRooms - occupiedCount}</b> vacant</span>`;
 
-  // Six finer-grained buckets alongside the plain Room/Apartment split —
-  // same in-house room set, just sorted by the category Room Detail's own
-  // Type column shows (see roomDetailTypeBucket) instead of the master
-  // Room/Apartment list. A '3 Bed Apartment' room can appear in both the
-  // Apartment box above and its own box here; they're two different splits
-  // of the same rooms, not additive.
-  const TYPE_BUCKETS = ['River View', 'Mountain View', 'Couple Suite', 'VIP Deluxe', '2 Bed Apartment', '3 Bed Apartment'];
+  // Room Detail's own Type column decides which bucket an occupied room
+  // falls into (see roomDetailTypeBucket) rather than the master
+  // Room/Apartment list — ROOM_TYPE_BUCKETS is shared with Inhouse Report
+  // so the two pages can't drift apart on what counts as what.
+  const TYPE_BUCKETS = ROOM_TYPE_BUCKETS;
   const bucketCounts = {};
   TYPE_BUCKETS.forEach(b=> bucketCounts[b] = 0);
   occupiedRooms.forEach(rs=>{
@@ -7605,8 +7612,10 @@ function renderRoomDetail(){
       <div style="font-size:18px; font-weight:700; color:var(--ink);">${val}</div>
     </div>`;
   unitBoxesEl.innerHTML = `
-    <div style="display:flex;">${box('Room', roomTypeCount, true, false)}${box('Apartment', apartmentTypeCount, false, true)}</div>
-    <div style="display:flex; flex-wrap:wrap;">${TYPE_BUCKETS.map((label, i)=> box(label, bucketCounts[label], i === 0, i === TYPE_BUCKETS.length - 1)).join('')}</div>`;
+    <div style="display:flex; flex-wrap:wrap; gap:16px;">
+      <div style="display:flex;">${box('Room', roomTypeCount, true, false)}${box('Apartment', apartmentTypeCount, false, true)}</div>
+      <div style="display:flex; flex-wrap:wrap;">${TYPE_BUCKETS.map((label, i)=> box(label, bucketCounts[label], i === 0, i === TYPE_BUCKETS.length - 1)).join('')}</div>
+    </div>`;
 
   if(rooms.length === 0){
     smartBody.innerHTML = '<div class="empty-note">No rooms match.</div>';
@@ -7645,7 +7654,7 @@ function renderRoomDetail(){
       const guestCell = goesToGuest
         ? (r.entry.guestName || '(no name)')
         : (showGuestInfo ? `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>` : '-');
-      const statusLabel = r.arrivalPending ? 'Arrival Due' : isCheckoutPending ? 'Pending' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
+      const statusLabel = r.arrivalPending ? 'Arrival' : isCheckoutPending ? 'Pending' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
       const statusCls = r.arrivalPending ? 'arrivaldue' : isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
       const mainRow = `<tr style="cursor:pointer;" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
@@ -9558,6 +9567,11 @@ function buildLedgersRecords(){
   const all = loadAllEntries();
   const records = [];
   all.forEach(entry=>{
+    // An advance reservation that hasn't been confirmed on Arrival yet isn't
+    // an actual stay — it shouldn't contribute room-nights here (its payment
+    // still shows on the Report page, which is status-agnostic by design;
+    // this is the one place that isn't).
+    if(isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
     const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     if(!startDate) return;
     const guest = entry.guestName || '(no name)';
@@ -9795,6 +9809,11 @@ function buildRevenueReport(fromDate, toDate){
   let totalMisc = 0; // Snooker/BBQ/Bonfire charges only, placed by the guest's check-in date
 
   all.forEach(entry=>{
+    // An advance reservation that hasn't been confirmed on Arrival yet isn't
+    // an actual stay — it shouldn't contribute rent/collected/due rows here
+    // (its payment still shows on the Report page, which is status-agnostic
+    // by design; this is the one place that isn't).
+    if(isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
     const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     if(!startDate) return;
     const guestId = entry.id;
@@ -10513,8 +10532,8 @@ function buildInhouseReport(){
   // more than one entry.rooms row (a mid-stay rate change, or a group's
   // headcount broken out separately) still sums onto its one room-row here
   // rather than appearing twice.
-  const rows = computeRoomStatuses(today)
-    .filter(rs=> (rs.occupied || rs.extended) && rs.entry)
+  const occupiedRs = computeRoomStatuses(today).filter(rs=> (rs.occupied || rs.extended) && rs.entry);
+  const rows = occupiedRs
     .map(rs=>{
       const relevantRooms = (rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo);
       const adultsDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
@@ -10535,28 +10554,37 @@ function buildInhouseReport(){
   const totalPax = rows.reduce((s,r)=> s + r.pax, 0);
   const roomTypeCount = rows.filter(r=> detectUnitType(r.roomNo) !== 'Apartment').length;
   const apartmentTypeCount = rows.filter(r=> detectUnitType(r.roomNo) === 'Apartment').length;
-  return { rows, roomCount, totalAdults, totalChildren, totalPax, roomTypeCount, apartmentTypeCount };
+  // Same four-way room-type split as Room Detail (see roomDetailTypeBucket)
+  const typeBucketCounts = {};
+  ROOM_TYPE_BUCKETS.forEach(b=> typeBucketCounts[b] = 0);
+  occupiedRs.forEach(rs=>{
+    const label = roomDetailTypeBucket(rs);
+    if(Object.prototype.hasOwnProperty.call(typeBucketCounts, label)) typeBucketCounts[label]++;
+  });
+  return { rows, roomCount, totalAdults, totalChildren, totalPax, roomTypeCount, apartmentTypeCount, typeBucketCounts };
 }
 
 function renderInhouse(){
   const body = document.getElementById('ihBody');
-  const summary = document.getElementById('ihSummary');
   const unitSplit = document.getElementById('ihUnitSplit');
+  const guestSplit = document.getElementById('ihGuestSplit');
   if(!initialLoadDone){
     body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
-    summary.innerHTML = '';
     if(unitSplit) unitSplit.innerHTML = '';
+    if(guestSplit) guestSplit.innerHTML = '';
     return;
   }
 
   document.getElementById('ihPrintHeaderSub').textContent = 'As of ' + formatDate(todayStr()) + '  ·  Generated ' + formatDate(todayStr());
 
   const data = buildInhouseReport();
-  summary.textContent = data.roomCount + (data.roomCount === 1 ? ' room' : ' rooms') + ' in-house — ' +
-    data.totalPax + (data.totalPax === 1 ? ' guest' : ' guests') + ' (' + data.totalAdults + ' adults, ' + data.totalChildren + ' children)';
   if(unitSplit) unitSplit.innerHTML = `
     <div class="dash-subtile"><div class="dash-subtile-val">${data.roomTypeCount}</div><div class="dash-subtile-lbl">Room</div></div>
-    <div class="dash-subtile"><div class="dash-subtile-val">${data.apartmentTypeCount}</div><div class="dash-subtile-lbl">Apartment</div></div>`;
+    <div class="dash-subtile"><div class="dash-subtile-val">${data.apartmentTypeCount}</div><div class="dash-subtile-lbl">Apartment</div></div>
+    ${ROOM_TYPE_BUCKETS.map(label=> `<div class="dash-subtile"><div class="dash-subtile-val">${data.typeBucketCounts[label]}</div><div class="dash-subtile-lbl">${label}</div></div>`).join('')}`;
+  if(guestSplit) guestSplit.innerHTML = `
+    <div class="dash-subtile"><div class="dash-subtile-val">${data.totalAdults}</div><div class="dash-subtile-lbl">Adults</div></div>
+    <div class="dash-subtile"><div class="dash-subtile-val">${data.totalChildren}</div><div class="dash-subtile-lbl">Children</div></div>`;
 
   if(data.rows.length === 0){
     body.innerHTML = '<div class="empty-note">Nobody in-house right now.</div>';
