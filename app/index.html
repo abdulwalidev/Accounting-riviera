@@ -7775,7 +7775,6 @@ const RIVIERA_LETTER_CSS = `
   .riviera-letter-header img{ width:100px; display:block; }
   .riviera-letter-header h1{ font-size:26px; letter-spacing:2px; margin:0; }
   .riviera-letter-content{ padding:8mm 20mm 0; font-size:12.5px; line-height:1.75; }
-  .riviera-letter-top-row{ display:flex; justify-content:space-between; margin-bottom:11px; }
   .riviera-letter-content p{ margin:6px 0; }
   .riviera-letter-section-title{ margin-top:18px; font-weight:bold; }
   /* Georgia's old-style figures (uneven digit heights) read as "off" for an
@@ -7795,11 +7794,10 @@ function buildGuestLetterFields(entry){
   const hasBreakfast = realRooms.some(r=> (parseInt(r.breakfastAdults) || 0) + (parseInt(r.breakfastChildren) || 0) > 0);
   const rentPerNight = realRooms.reduce((s,r)=> s + (parseFloat(String(r.rent).replace(/,/g,'')) || 0), 0);
   const roomTypeLine = realRooms.length
-    ? realRooms.map(r=> displayRoomNo(r.roomNo, r.unitType) + ' (' + (r.unitType || detectUnitType(r.roomNo) || 'Room') + ')').join(', ')
+    ? realRooms.map(r=> r.unitType || detectUnitType(r.roomNo) || 'Room').join(', ')
     : '-';
   const checkOutDate = entry.checkOut || computeExpectedCheckoutDate(entry);
   return {
-    confirmationNo: (entry.id || '').replace(/-/g,'').slice(-6).toUpperCase() || '------',
     guestName: entry.guestName || '(no name)',
     fatherName: entry.fatherName && entry.fatherName !== 'N/A' ? entry.fatherName : '',
     reservationDate: entry.savedAt ? formatDate(toKarachiDateStr(entry.savedAt)) : '-',
@@ -7825,10 +7823,7 @@ function buildGuestLetterHtml(entry){
         <h1>RIVIERA RESORT</h1>
       </div>
       <div class="riviera-letter-content">
-        <div class="riviera-letter-top-row">
-          <p><strong>Riviera Resort Naran Hotel.</strong></p>
-          <p><strong>Confirmation No:</strong> <em>${f.confirmationNo}</em></p>
-        </div>
+        <p><strong>Riviera Resort Naran Hotel.</strong></p>
         <p><strong>Ghaar Road Naran, Pakistan</strong></p>
         <p><strong>Guest Name:</strong> ${f.guestName}${f.fatherName ? ' s/o ' + f.fatherName : ''}<br>
         Respected Guest,</p>
