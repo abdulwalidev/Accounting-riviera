@@ -3199,9 +3199,13 @@
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <button class="btn secondary" onclick="clearLedgersFilters()">Clear Filters</button>
           <button class="btn secondary" onclick="setLedgersToday()">Today</button>
+          <div class="checkline">
+            <input type="checkbox" id="lgSimplify" checked onchange="renderLedgers()">
+            <label for="lgSimplify" style="margin:0;">Simplify</label>
+          </div>
         </div>
         <div id="lgRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -8948,6 +8952,11 @@ function renderLedgers(){
     return;
   }
 
+  const simplify = document.getElementById('lgSimplify').checked;
+  const creditLabel = simplify ? 'Received' : 'Credit';
+  const debtLabel = simplify ? 'Room Rent' : 'Debt';
+  const balanceLabel = simplify ? 'Paid' : 'Balance';
+
   let totalDebt = 0, totalCredit = 0, totalBalance = 0;
   let lastGuestId = null;
   const bodyRows = rows.map((r, idx)=>{
@@ -8979,7 +8988,7 @@ function renderLedgers(){
   container.innerHTML = `
     <table>
       <thead>
-        <tr><th style="width:50px;">Sr</th><th style="width:100px;">Date</th><th style="width:110px;">Room No</th><th>Name</th><th style="width:110px;">Credit</th><th style="width:110px;">Debt</th><th style="width:110px;">Balance</th></tr>
+        <tr><th style="width:50px;">Sr</th><th style="width:100px;">Date</th><th style="width:110px;">Room No</th><th>Name</th><th style="width:110px;">${creditLabel}</th><th style="width:110px;">${debtLabel}</th><th style="width:110px;">${balanceLabel}</th></tr>
       </thead>
       <tbody>${bodyRows}</tbody>
       <tfoot>
