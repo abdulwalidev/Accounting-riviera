@@ -4589,6 +4589,14 @@ function isMiscRoomNo(roomNo){
   return (roomNo || '').trim().toUpperCase() === MISC_ROOM_NO.toUpperCase();
 }
 
+// A room booked as "N/A" (undecided which physical unit) never reads to a
+// user as a bare, meaningless "N/A" — every display of a room number runs
+// through this so it shows the picked Type instead, e.g. "River View (N/A)".
+function displayRoomNo(roomNo, unitType){
+  if((roomNo || '').trim().toUpperCase() === 'N/A') return (unitType || 'N/A') + ' (N/A)';
+  return roomNo || '';
+}
+
 // Wherever a guest's rooms are shown as one string, a genuine Change Room
 // (guest moved from X into Y mid-stay) should read as "X → Y", not the
 // same plain "X, Y" a real two-simultaneous-rooms booking gets — otherwise
@@ -4601,17 +4609,17 @@ function formatRoomChain(rooms){
   const list = (rooms || []).filter(r=> r && r.roomNo);
   if(list.length === 0) return '';
   const parts = [];
-  let chain = [list[0].roomNo];
+  let chain = [displayRoomNo(list[0].roomNo, list[0].unitType)];
   for(let i = 1; i < list.length; i++){
     const prev = list[i-1];
     const cur = list[i];
     const chained = !!prev.movedOut && !isMiscRoomNo(prev.roomNo) && !isMiscRoomNo(cur.roomNo) &&
       cur.roomNo.trim().toUpperCase() !== prev.roomNo.trim().toUpperCase();
     if(chained){
-      chain.push(cur.roomNo);
+      chain.push(displayRoomNo(cur.roomNo, cur.unitType));
     } else {
       parts.push(chain.join(' → '));
-      chain = [cur.roomNo];
+      chain = [displayRoomNo(cur.roomNo, cur.unitType)];
     }
   }
   parts.push(chain.join(' → '));
@@ -4633,7 +4641,7 @@ const MISC_TYPE_OPTIONS_HTML = '<option value="">—</option>' + MISC_TYPES.map(
 // A room number picked as "N/A" isn't a known Room/Apartment unit at all
 // (it's undecided), so its Type dropdown offers this separate list of
 // stay categories instead of Room/Apartment.
-const NA_TYPES = ['River View', 'Mountain View', 'Couple Suite', 'VIP Deluxe', '2 Bed', '3 Bed'];
+const NA_TYPES = ['River View', 'Mountain View', 'Couple Suite', 'VIP Deluxe', '2 Bed Apartment', '3 Bed Apartment'];
 const NA_TYPE_OPTIONS_HTML = '<option value="">—</option>' + NA_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
 
 function updateUnitType(tr){
@@ -6042,7 +6050,7 @@ function openConfirmModal(data){
   const box = document.getElementById('confirmBody');
 
   const roomRowsHtml = data.rooms.map(r=>`
-    <tr><td>${r.roomNo}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : ((parseInt(r.breakfastAdults) || parseInt(r.breakfastChildren)) ? 'Yes' : 'No')}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
+    <tr><td>${displayRoomNo(r.roomNo, r.unitType)}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : ((parseInt(r.breakfastAdults) || parseInt(r.breakfastChildren)) ? 'Yes' : 'No')}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
@@ -7363,9 +7371,9 @@ function renderDetail(){
       (r.roomNo || '').trim().toUpperCase() !== (prev.roomNo || '').trim().toUpperCase());
     const leadsToNext = !!(r.movedOut && !isMiscRoomNo(r.roomNo) && next && !isMiscRoomNo(next.roomNo) &&
       (next.roomNo || '').trim().toUpperCase() !== (r.roomNo || '').trim().toUpperCase());
-    const roomNoCell = (isContinuation ? `<span class="room-chain-arrow" title="Continued from Room ${prev.roomNo}">→</span> ` : '') + (r.roomNo || '-');
+    const roomNoCell = (isContinuation ? `<span class="room-chain-arrow" title="Continued from Room ${displayRoomNo(prev.roomNo, prev.unitType)}">→</span> ` : '') + (r.roomNo ? displayRoomNo(r.roomNo, r.unitType) : '-');
     const movedOutCell = (r.movedOut ? formatDate(r.movedOut) : '-') +
-      (leadsToNext ? `<div class="room-change-tag" style="display:block;">→ Moved to Room ${next.roomNo}</div>` : '');
+      (leadsToNext ? `<div class="room-change-tag" style="display:block;">→ Moved to Room ${displayRoomNo(next.roomNo, next.unitType)}</div>` : '');
     return `
     <tr>
       <td>${roomNoCell}</td>
@@ -8354,7 +8362,7 @@ function renderMoneyHandover(){
   const groups = {};
   data.roomRows.forEach(r=>{
     const key = r.guestId + '|' + r.roomNo;
-    if(!groups[key]) groups[key] = { roomNo: r.roomNo, guest: r.guest, guestId: r.guestId, rent: 0, cashOwed: 0, cashOld: 0, oldDates: [] };
+    if(!groups[key]) groups[key] = { roomNo: r.roomNo, unitType: r.unitType, guest: r.guest, guestId: r.guestId, rent: 0, cashOwed: 0, cashOld: 0, oldDates: [] };
     const g = groups[key];
     g.rent += r.rent;
     r.chunks.forEach(c=>{
@@ -8395,7 +8403,7 @@ function renderMoneyHandover(){
     html += `
       <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
         <td>${idx + 1}</td>
-        <td>${r.roomNo}</td>
+        <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
         <td>${r.guest}</td>
         <td>${r.rent.toLocaleString()}</td>
         <td class="cash-amt">${r.cashOwed > 0 ? 'Rs. ' + r.cashOwed.toLocaleString() : '-'}</td>
@@ -8462,7 +8470,7 @@ function renderNPR(){
       <tbody>${rows.map(r=> `
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${formatDate(r.date)}</td>
-          <td>${r.roomNo}</td>
+          <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
           <td>${r.guest}</td>
           <td>${r.rent.toLocaleString()}</td>
         </tr>`).join('')}</tbody>
@@ -8843,7 +8851,7 @@ function buildLedgersRecords(){
       const isMisc = isMiscRoomNo(r.roomNo);
       const rowStart = isMisc ? startDate : (roomCursor[r.roomNo] || startDate);
       for(let i = 0; i < nightsCount; i++){
-        nights.push({ date: addDaysToDateStr(rowStart, i), roomNo: r.roomNo, rent, received: 0, receivedOn: null, guestId: entry.id, guest });
+        nights.push({ date: addDaysToDateStr(rowStart, i), roomNo: r.roomNo, unitType: r.unitType, rent, received: 0, receivedOn: null, guestId: entry.id, guest });
       }
       if(!isMisc) roomCursor[r.roomNo] = addDaysToDateStr(rowStart, nightsCount);
     });
@@ -8960,7 +8968,7 @@ function renderLedgers(){
       <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
         <td>${idx + 1}</td>
         <td>${formatDate(r.date)}</td>
-        <td>${r.roomNo}</td>
+        <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
         <td>${nameCell}</td>
         <td class="cash-amt">${r.received ? r.received.toLocaleString() : '-'}</td>
         <td>${r.rent.toLocaleString()}</td>
@@ -8991,7 +8999,7 @@ function exportLedgersExcel(){
   const data = rows.map(r=> ({
     'Date': formatDate(r.date),
     'Name': r.guest,
-    'Room No': r.roomNo,
+    'Room No': displayRoomNo(r.roomNo, r.unitType),
     'Credit': r.received,
     'Debt': r.rent,
     'Balance': r.rent - r.received
@@ -9075,7 +9083,7 @@ function buildRevenueReport(fromDate, toDate){
       const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
       const rowStart = roomCursor[r.roomNo] || startDate;
       for(let i = 0; i < nightsCount; i++){
-        nights.push({ date: addDaysToDateStr(rowStart, i), roomNo: r.roomNo, rent });
+        nights.push({ date: addDaysToDateStr(rowStart, i), roomNo: r.roomNo, unitType: r.unitType, rent });
       }
       roomCursor[r.roomNo] = addDaysToDateStr(rowStart, nightsCount);
     });
@@ -9096,7 +9104,7 @@ function buildRevenueReport(fromDate, toDate){
       const within = inRange(night.date);
       const key = guestId + '|' + night.roomNo + '|' + night.date;
       if(within){
-        if(!nightsByKey[key]){ nightsByKey[key] = { rent: 0, received: 0 }; rowMeta[key] = { roomNo: night.roomNo, date: night.date, guestId, guest }; }
+        if(!nightsByKey[key]){ nightsByKey[key] = { rent: 0, received: 0 }; rowMeta[key] = { roomNo: night.roomNo, unitType: night.unitType, date: night.date, guestId, guest }; }
         nightsByKey[key].rent += night.rent;
       }
 
@@ -9164,6 +9172,7 @@ function buildRevenueReport(fromDate, toDate){
     return {
       date: meta.date,
       roomNo: meta.roomNo,
+      unitType: meta.unitType,
       guest: meta.guest,
       guestId: meta.guestId,
       rent, collected, chunks,
@@ -9275,7 +9284,7 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${i + 1}</td>
           ${dateTd(r)}
-          <td>${r.roomNo}</td>
+          <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
           <td>${r.guest}</td>
           <td>${r.rent.toLocaleString()}</td>
           ${Array.from({length: maxChunks}, (_,i)=> `<td>${paymentCell(r.chunks[i])}</td>`).join('')}
@@ -9516,7 +9525,7 @@ function exportRevenueExcel(){
   }).join(' | ');
   const roomsData = data.roomRows.map(r=> ({
     ...(isSingleDay ? {} : { 'Date': formatDate(r.date) }),
-    'Room No': r.roomNo, 'Guest': r.guest, 'Room Rent': r.rent,
+    'Room No': displayRoomNo(r.roomNo, r.unitType), 'Guest': r.guest, 'Room Rent': r.rent,
     'Payments': chunkText(r),
     'Cash': r.cashTotal, 'MCB': r.mcbTotal, 'Haji (MCB)': r.hajiTotal, 'Alfalah': r.alfalahTotal,
     'Collected Total': r.collected, 'Due': r.due
@@ -9663,6 +9672,7 @@ function buildNightSummaryReport(asOfDate){
     const childrenDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
     return {
       roomNo: n.roomNo,
+      unitType: n.unitType,
       guest: n.guest,
       guestId: n.guestId,
       rate: n.rent,
@@ -9730,7 +9740,7 @@ function renderNightSummary(){
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${idx + 1}</td>
           <td>${r.guest}</td>
-          <td>${r.roomNo}</td>
+          <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
           <td class="num">${money(r.rate)}</td>
           <td class="num">${money(r.extraBed)}</td>
           <td class="num">${money(r.total)}</td>
