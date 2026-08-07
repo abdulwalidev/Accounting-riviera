@@ -6848,6 +6848,13 @@ function getRoomSection(roomNo){
   return 'NA';
 }
 const ROOM_SECTION_ORDER = ['2ND FLOOR','3RD FLOOR','4TH FLOOR','BLOCK A','BLOCK B','BLOCK C','BLOCK D','NA'];
+// Room numbers start at 2xx (no guest rooms on the ground floor), but guests
+// still count that as the 1st floor they can stay on — so the displayed
+// ordinal is shifted down one from the section key's own room-number digit.
+const ROOM_SECTION_LABELS = { '2ND FLOOR':'1st Floor', '3RD FLOOR':'2nd Floor', '4TH FLOOR':'3rd Floor' };
+function roomSectionLabel(section){
+  return ROOM_SECTION_LABELS[section] || section;
+}
 
 // "Occupied as of a date" is a heuristic: of the bookings for a room, the
 // most recent one that had actually checked in by that date is treated as
@@ -7050,7 +7057,7 @@ function renderRoomDetail(){
     return `
       <div class="day-group">
         <div class="day-head">
-          <span>${section}</span>
+          <span>${roomSectionLabel(section)}</span>
           <span class="day-total">${occ} / ${list.length} occupied ${asOfLabel}</span>
         </div>
         <table>
@@ -7088,7 +7095,7 @@ function renderRoomDetail(){
     }).join('');
     return `
       <div class="smart-panel">
-        <div class="smart-panel-head">${section}</div>
+        <div class="smart-panel-head">${roomSectionLabel(section)}</div>
         <div>${rows}</div>
       </div>`;
   }).join('');
