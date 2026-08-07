@@ -9267,12 +9267,25 @@ function buildRevenueReport(fromDate, toDate){
   unlinkedPayments.sort((a,b)=> b.amount - a.amount);
   const unlinkedTotal = unlinkedPayments.reduce((s,r)=> s + r.amount, 0);
 
-  const distinctRoomCount = new Set(roomRows.map(r=> r.roomNo.toUpperCase())).size;
+  // Room vs Apartment split for the summary line — a known unit goes by its
+  // real type; an N/A unit (undecided, Type picked by hand) falls back to
+  // whether that picked Type reads as an apartment (e.g. "2 Bed Apartment").
+  const distinctUnits = new Map();
+  roomRows.forEach(r=>{
+    const key = r.roomNo.toUpperCase();
+    if(!distinctUnits.has(key)) distinctUnits.set(key, r.unitType || '');
+  });
+  let distinctRoomTypeCount = 0, distinctApartmentTypeCount = 0;
+  distinctUnits.forEach((unitType, roomNo)=>{
+    const detected = detectUnitType(roomNo);
+    const isApartment = detected === 'Apartment' || (!detected && /apartment/i.test(unitType));
+    if(isApartment) distinctApartmentTypeCount++; else distinctRoomTypeCount++;
+  });
 
   return {
     roomRows, totalRent, totalCollected, totalDue,
     totalCash, totalMCB, totalAlfalah, totalHaji,
-    distinctRoomCount,
+    distinctRoomTypeCount, distinctApartmentTypeCount,
     paymentsByDate, paymentsByDateCashTotal, paymentsByDateAccountTotal, paymentsByDateGrandTotal,
     unlinkedPayments, unlinkedTotal, totalMisc
   };
@@ -9443,9 +9456,8 @@ function renderRevenue(){
   document.getElementById('rvStatOccRate').textContent = statOccRate.toFixed(1) + '%';
 
   // ---- Rooms: full-stay rent/collected/due for every room-night in range ----
-  nightlySummary.textContent = isSingleDay
-    ? data.roomRows.length + (data.roomRows.length === 1 ? ' room' : ' rooms') + ' occupied ' + dayWord + ' — Rs. ' + data.totalRent.toLocaleString() + ' rent for ' + dayWord
-    : data.roomRows.length + (data.roomRows.length === 1 ? ' room-night' : ' room-nights') + ' (' + data.distinctRoomCount + (data.distinctRoomCount === 1 ? ' room' : ' rooms') + ') ' + dayWord + ' — Rs. ' + data.totalRent.toLocaleString() + ' total rent';
+  nightlySummary.textContent = data.distinctRoomTypeCount + (data.distinctRoomTypeCount === 1 ? ' room' : ' rooms') + ', ' +
+    data.distinctApartmentTypeCount + (data.distinctApartmentTypeCount === 1 ? ' apartment' : ' apartments') + ', Total Room Rent: Rs. ' + data.totalRent.toLocaleString();
 
   if(data.roomRows.length === 0){
     roomsBody.innerHTML = '<div class="empty-note">No rooms occupied ' + dayWord + '.</div>';
