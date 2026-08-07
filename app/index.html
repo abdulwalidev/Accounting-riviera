@@ -153,6 +153,31 @@
     margin-top:2px;
   }
   tr.pay-row-locked .pay-lock-tag{ display:block; opacity:1; }
+  /* Payment Detail's per-row date picker reuses the app-wide flatpickr
+     look, but the column is only 88px wide — the generic .flatpickr-alt-input
+     rule (307.875px, sized for full-width single fields elsewhere) would
+     blow that out, so this gets its own class instead and just inherits
+     the plain input styling. */
+  .payDate-alt-input{ text-align:center; font-size:11.5px; padding:6px 4px; }
+  /* Locked/future days inside ANY payment date picker's calendar: flatpickr
+     already grays out and disables both (see paymentDatePickerHooks' disable
+     array + maxDate) — this just adds the explicit "Locked" label so it
+     reads as a rule, not a rendering glitch. */
+  .flatpickr-day.flatpickr-day-locked{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    line-height:1.15;
+  }
+  .flatpickr-day-locked .fp-day-locked-tag{
+    font-size:6px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+    color:#D32F2F;
+    margin-top:1px;
+  }
   .mode-badge{
     display:inline-block;
     padding:2px 8px;
@@ -4593,6 +4618,27 @@ function setStayDate(id, isoValue){
 // completely untouched.
 const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate', 'acnCheckinDate'];
 const filterDatePickers = {};
+// Shared by every calendar that picks a PAYMENT date (Add Payment's dNewDate,
+// and each Payment Detail row below) — a payment can't be dated on a locked
+// day (Day Lock already refuses to save one, see isDateLocked()) or on a day
+// that hasn't happened yet, so both are grayed out and unclickable right in
+// the calendar instead of only failing at save time. Locked days also get an
+// explicit "Locked" label (see .flatpickr-day-locked CSS) so it reads as a
+// rule, not a rendering glitch.
+function paymentDatePickerHooks(){
+  return {
+    maxDate: todayStr(),
+    disable: [ d=> isDateLocked(toKarachiDateStr(d)) ],
+    onDayCreate: (dObj, dStr, fp, dayElem)=>{
+      if(!dayElem.dateObj || !isDateLocked(toKarachiDateStr(dayElem.dateObj))) return;
+      dayElem.classList.add('flatpickr-day-locked');
+      const tag = document.createElement('span');
+      tag.className = 'fp-day-locked-tag';
+      tag.textContent = 'Locked';
+      dayElem.appendChild(tag);
+    }
+  };
+}
 function initFilterDatePickers(){
   if(typeof flatpickr === 'undefined') return;
   FILTER_DATE_IDS.forEach(id=>{
@@ -4605,6 +4651,7 @@ function initFilterDatePickers(){
       altFormat: 'D, d M Y',
       allowInput: false,
       disableMobile: true,
+      ...(id === 'dNewDate' ? paymentDatePickerHooks() : {}),
       onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
       onOpen: (selectedDates, dateStr, instance)=> syncCalendarWidth(instance),
       onReady: (selectedDates, dateStr, instance)=>{
@@ -4631,6 +4678,54 @@ function setFilterDate(id, isoValue){
 // this is the single lookup all of those call sites share.
 function getPickerFor(id){
   return stayDatePickers[id] || filterDatePickers[id] || null;
+}
+
+// ---- Payment Detail row date pickers: same flatpickr treatment (and same
+// Day-Lock/no-future rules, via paymentDatePickerHooks) as every other date
+// field in the app, but per-row since Payment Detail can hold any number of
+// payment rows — there's no fixed id to key a stayDatePickers-style registry
+// off of, so each row's instance is looked up straight off its own input
+// (flatpickr stashes itself on the element as ._flatpickr already).
+function initPayDatePicker(tr){
+  if(typeof flatpickr === 'undefined') return;
+  const el = tr.querySelector('.payDate');
+  if(!el || el._flatpickr) return;
+  flatpickr(el, {
+    dateFormat: 'Y-m-d',
+    altInput: true,
+    altInputClass: 'payDate-alt-input',
+    altFormat: 'd M Y',
+    allowInput: false,
+    disableMobile: true,
+    ...paymentDatePickerHooks(),
+    onValueUpdate: (selectedDates, dateStr, instance)=>{
+      applyPickerDisplay(instance);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    },
+    // No syncCalendarWidth here on purpose — that matches the calendar's
+    // width to the altInput's own rendered width, which is right for the
+    // full-width single fields elsewhere but would shrink this one down to
+    // the Payment Detail Date column's ~88px, squashing the day grid.
+    // Left alone, the calendar just uses flatpickr's own default width.
+    onReady: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance)
+  });
+}
+function setPayDate(tr, isoValue){
+  const el = tr.querySelector('.payDate');
+  if(!el) return;
+  el.value = isoValue || '';
+  const fp = el._flatpickr;
+  if(fp){ fp.setDate(isoValue || null, false); applyPickerDisplay(fp); }
+}
+// flatpickr appends its calendar popup to <body>, not inside the row —
+// removing a row's markup alone leaves that popup orphaned there forever,
+// so every place a payment row (or the whole payBody) gets torn down needs
+// to destroy its picker first.
+function destroyPayDatePickers(scopeEl){
+  scopeEl.querySelectorAll('.payDate').forEach(el=>{
+    if(el._flatpickr) el._flatpickr.destroy();
+  });
 }
 
 // ---- Range date pickers: one flatpickr range-mode calendar per From/To
@@ -5140,7 +5235,6 @@ roomBodyEl.addEventListener('change', e=>{
 ['input','change'].forEach(evt=>{
   document.getElementById('payBody').addEventListener(evt, e=>{
     if(!e.target.classList.contains('payDate')) return;
-    updateDateReadout(e.target, e.target.parentElement.querySelector('.payDateReadout'));
     updatePayRowLockStyle(e.target.closest('tr'));
   });
   document.getElementById('extraDetailList').addEventListener(evt, e=>{
@@ -5763,7 +5857,7 @@ function addPayRow(){
   tr.classList.add('mode-cash');
   tr.innerHTML = `
     <td class="rmno">${payCount}</td>
-    <td><input type="date" class="payDate" value="${todayStr()}"><div class="date-readout payDateReadout">${formatDate(todayStr())}</div><div class="pay-lock-tag">Day Locked</div></td>
+    <td><input type="date" class="payDate" value="${todayStr()}"><div class="pay-lock-tag">Day Locked</div></td>
     <td>
       <select class="payType">
         <option value="Reservation">Reservation</option>
@@ -5793,6 +5887,7 @@ function addPayRow(){
     <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'payment')">✕</button></td>
   `;
   tbody.appendChild(tr);
+  initPayDatePicker(tr);
   updatePayRowLockStyle(tr);
 }
 
@@ -5818,14 +5913,17 @@ function updatePayRowLockStyle(tr){
   tr.classList.toggle('pay-row-locked', locked);
   tr.title = locked ? formatDate(dateInput.value) + ' is locked — this payment can\'t be edited, moved, or removed until it\'s unlocked.' : '';
   const delBtn = tr.querySelector('.del button');
+  const fp = dateInput._flatpickr;
   if(locked){
     dateInput.disabled = true;
+    if(fp){ fp.altInput.disabled = true; fp.set('clickOpens', false); }
     ['.payType', '.payMode', '.payBank', '.payRemarks', '.payCash', '.payAccount'].forEach(sel=>{
       tr.querySelector(sel).disabled = true;
     });
     if(delBtn) delBtn.disabled = true;
   } else {
     dateInput.disabled = false;
+    if(fp){ fp.altInput.disabled = false; fp.set('clickOpens', true); }
     tr.querySelector('.payType').disabled = false;
     tr.querySelector('.payMode').disabled = false;
     tr.querySelector('.payRemarks').disabled = false;
@@ -5866,7 +5964,9 @@ function calcPayRow(input){
 }
 
 function deletePayRow(btn){
-  btn.closest('tr').remove();
+  const tr = btn.closest('tr');
+  destroyPayDatePickers(tr);
+  tr.remove();
   renumberPay();
   calcSummary();
 }
@@ -6640,6 +6740,7 @@ function resetEntryForm(){
   updateActualCheckoutDisplay(null);
   document.getElementById('extraDetailList').innerHTML = '';
   document.getElementById('roomBody').innerHTML = '';
+  destroyPayDatePickers(document.getElementById('payBody'));
   document.getElementById('payBody').innerHTML = '';
   rowCount = 0;
   payCount = 0;
@@ -6848,6 +6949,7 @@ function startEditEntry(entry){
   refreshRoomChangeLinks();
   updateExpectedCheckoutDisplay();
 
+  destroyPayDatePickers(document.getElementById('payBody'));
   document.getElementById('payBody').innerHTML = '';
   payCount = 0;
   (entry.payments && entry.payments.length ? entry.payments : [null]).forEach(p=>{
@@ -6865,8 +6967,7 @@ function startEditEntry(entry){
       tr.dataset.origMode = p.mode || 'Cash';
       tr.dataset.origBank = p.bank || '';
     }
-    tr.querySelector('.payDate').value = p.date || todayStr();
-    updateDateReadout(tr.querySelector('.payDate'), tr.querySelector('.payDateReadout'));
+    setPayDate(tr, p.date || todayStr());
     const typeSel = tr.querySelector('.payType');
     const mappedType = p.type === 'Pending' ? 'Due Payment' : (p.type || 'Other');
     // A saved payment may hold a type no longer offered as a fresh choice
