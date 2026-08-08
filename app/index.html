@@ -290,6 +290,63 @@
     animation:searchClearPulse 1.4s ease-in-out infinite;
   }
   .search-clear-wrap input:not(:placeholder-shown) + .search-clear-btn{ display:flex; }
+  /* Small inline-SVG icon button — Payment Report's per-row screenshot
+     download, and Account Payment Record's per-row attach/view icon. Plain
+     and unobtrusive on purpose: it sits in a payment row alongside real
+     data, not a primary action. */
+  .icon-btn{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:24px;
+    height:24px;
+    min-height:0;
+    padding:0;
+    border:1px solid var(--border);
+    border-radius:5px;
+    background:transparent;
+    color:var(--muted);
+    cursor:pointer;
+  }
+  .icon-btn:hover{ color:var(--ink); border-color:var(--ink); }
+  .icon-btn.has-attachment{ color:var(--cash); border-color:var(--cash); }
+  /* A color-only change (border/icon tint) reads too subtle to scan a
+     whole table by — this small green check badge is the actual "yes, a
+     screenshot exists here" signal, on both Account Payment Record's and
+     Revenue Payment Record's icon (Payment Report's own icon doesn't need
+     one — it's already hidden entirely when nothing's attached). */
+  .icon-btn.has-attachment::after{
+    content:'✓';
+    position:absolute;
+    top:-6px;
+    right:-6px;
+    width:13px;
+    height:13px;
+    border-radius:50%;
+    background:var(--cash);
+    color:#fff;
+    font-size:9px;
+    font-weight:900;
+    line-height:13px;
+    text-align:center;
+    box-shadow:0 0 0 1.5px var(--paper);
+  }
+  /* Payment Record modal's clipboard-paste target — a plain focusable div
+     rather than a file input, since the whole point is "paste the
+     screenshot you just took", not browse-and-pick a saved file. */
+  .paste-zone{
+    border:2px dashed var(--border);
+    border-radius:8px;
+    padding:24px 12px;
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    cursor:text;
+    margin:10px 0;
+  }
+  .paste-zone:focus{ outline:none; border-color:var(--accent); color:var(--ink); }
+  .paste-zone img{ max-width:100%; max-height:220px; border-radius:6px; }
   @keyframes searchClearPulse{
     0%, 100%{ transform:translateY(-50%) scale(1); }
     50%{ transform:translateY(-50%) scale(1.3); }
@@ -960,6 +1017,43 @@
   .hdr-search-row b{ color:#1a73e8; }
   .hdr-search-sub{ color:#888; font-size:11.5px; margin-top:1px; }
   .hdr-search-empty{ padding:10px 12px; font-size:12px; color:#888; }
+  /* Payment Proof: a plain two-item dropdown, same idiom as the global
+     search results panel above — just links to the two screenshot pages,
+     nothing to fill in, so a full modal would be overkill. position:fixed
+     (not absolute) is deliberate: its wrapper button lives inside .topnav,
+     which sets overflow-x:auto for small-screen horizontal scrolling — per
+     spec that forces overflow-y to a non-visible value too, so an
+     absolutely-positioned dropdown anchored to that wrapper gets silently
+     clipped away. Fixed positioning escapes that ancestor's clipping
+     entirely; togglePaymentProofMenu() computes its top/right from the
+     button's own getBoundingClientRect() each time it opens.*/
+  .hdr-payment-proof-menu{
+    display:none;
+    position:fixed;
+    background:#fff;
+    color:#111;
+    border-radius:6px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.3);
+    z-index:50;
+    min-width:220px;
+    overflow:hidden;
+  }
+  .hdr-payment-proof-menu.show{ display:block; }
+  .hdr-payment-proof-menu button{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:10px 14px;
+    background:none;
+    border:none;
+    border-bottom:1px solid #eee;
+    font-size:13px;
+    color:#111;
+    cursor:pointer;
+    min-height:0;
+  }
+  .hdr-payment-proof-menu button:last-child{ border-bottom:none; }
+  .hdr-payment-proof-menu button:hover{ background:#F0F6FF; }
   .hdr-right{
     display:flex;
     align-items:center;
@@ -2217,6 +2311,9 @@
   html[data-theme="dark"] .hdr-search-row b{ color:var(--ink-fill); }
   html[data-theme="dark"] .hdr-search-sub,
   html[data-theme="dark"] .hdr-search-empty{ color:#9C9C9C; }
+  html[data-theme="dark"] .hdr-payment-proof-menu{ background:#1A1A1A; color:#fff; box-shadow:0 8px 24px rgba(0,0,0,0.5); }
+  html[data-theme="dark"] .hdr-payment-proof-menu button{ color:#fff; border-bottom-color:rgba(255,255,255,0.12); }
+  html[data-theme="dark"] .hdr-payment-proof-menu button:hover{ background:rgba(255,255,255,0.08); }
   /* typed/selected content (inputs, dates) stays on a light field so the
      text itself can be plain black, instead of following the dark chrome */
   html[data-theme="dark"] input,
@@ -2689,7 +2786,14 @@
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
       <button class="navbtn" id="topNavBreakfast" onclick="showView('breakfast')">Breakfast Report</button>
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
-      <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="margin-left:auto; font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
+      <div class="hdr-payment-proof-wrap" id="topNavPaymentProofWrap" style="display:none; position:relative; margin-left:auto;">
+        <button class="navbtn" id="topNavPaymentProof" onclick="event.stopPropagation(); togglePaymentProofMenu();">Payment Proof</button>
+        <div class="hdr-payment-proof-menu" id="paymentProofMenu">
+          <button type="button" onclick="openPaymentProofPage('paymentrecord')">Account Payment Record</button>
+          <button type="button" onclick="openPaymentProofPage('revenuepaymentrecord')">Revenue Payment Record</button>
+        </div>
+      </div>
+      <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
     </div>
   </div>
   <div class="hdr-row3">
@@ -3358,6 +3462,83 @@
 
   </div>
 
+  <div class="view" id="view-paymentrecord">
+
+    <h1 class="no-print">Account Payment Record</h1>
+    <div class="sub no-print">Bank/Card payments only — attach each one's screenshot, then download a whole day's screenshots as one PDF.</div>
+
+    <div class="print-header">
+      <h1>Account Payment Record</h1>
+      <div class="print-header-sub" id="parPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <h2>Filters</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>Date Range</label>
+          <input type="text" id="parRange" placeholder="Select a date range">
+          <input type="date" id="parFrom" style="display:none">
+          <input type="date" id="parTo" style="display:none">
+        </div>
+        <div style="grid-column:span 2;">
+          <label>Search (name, father name, CNIC, room no, remarks)</label>
+          <div class="search-clear-wrap">
+            <input type="text" id="parSearch" placeholder="Type to search..." autocomplete="off">
+            <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
+          </div>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="clearParFilters()">Clear Filters</button>
+          <button class="btn secondary" onclick="setParFiltersToday()">Today</button>
+        </div>
+        <div id="parRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="paymentRecordBody" style="overflow-x:auto;"><div class="empty-note">No account payments saved yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-revenuepaymentrecord">
+
+    <h1 class="no-print">Revenue Payment Record</h1>
+    <div class="sub no-print">Same screenshots, sorted per room-night — each one auto-captioned with how much of that payment went toward that room.</div>
+
+    <div class="print-header">
+      <h1>Revenue Payment Record</h1>
+      <div class="print-header-sub" id="rprPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <h2>Date Range</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>Date Range</label>
+          <input type="text" id="rprRange" placeholder="Select a date range">
+          <input type="date" id="rprFrom" style="display:none">
+          <input type="date" id="rprTo" style="display:none">
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="setRevenuePaymentRecordToday()">Today</button>
+          <button class="btn secondary" onclick="clearRevenuePaymentRecordFilters()">Clear Filter (All Days)</button>
+        </div>
+        <div id="rprRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="rprBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
   <div class="view" id="view-graphs">
 
     <span class="backlink" onclick="showView('report')">&larr; Back to Report</span>
@@ -3910,6 +4091,20 @@
               </div>
               <span class="settings-row-chevron">›</span>
             </div>
+            <div class="settings-row clickable" id="settingsPaymentRecordBtn" onclick="showView('paymentrecord')" style="display:none;">
+              <div>
+                <div class="settings-row-title">Account Payment Record</div>
+                <div class="settings-row-desc">Attach a bank/card payment's screenshot, and download a day's screenshots as one PDF.</div>
+              </div>
+              <span class="settings-row-chevron">›</span>
+            </div>
+            <div class="settings-row clickable" id="settingsRevenuePaymentRecordBtn" onclick="showView('revenuepaymentrecord')" style="display:none;">
+              <div>
+                <div class="settings-row-title">Revenue Payment Record</div>
+                <div class="settings-row-desc">Same screenshots, sorted per room-night — each with an auto-suggested caption for how much of that payment went toward that room.</div>
+              </div>
+              <span class="settings-row-chevron">›</span>
+            </div>
             <div class="settings-row clickable" onclick="showView('before19')">
               <div>
                 <div class="settings-row-title">Before 19</div>
@@ -4164,6 +4359,17 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="paymentRecordModalBackdrop">
+  <div class="modal" style="width:460px;">
+    <h3>Payment Record</h3>
+    <div class="sub" style="margin-bottom:14px;">This payment's screenshot — attach one, replace it, or download the one already here.</div>
+    <div id="paymentRecordModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closePaymentRecordModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="checkoutConfirmModalBackdrop">
   <div class="modal" style="width:460px;">
     <h3>Confirm Checkout</h3>
@@ -4291,7 +4497,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings','paymentrecord','revenuepaymentrecord'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -4336,6 +4542,16 @@ function showView(view, fromPopState){
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
+  if(view === 'paymentrecord' && !isAdmin()){
+    showNotice('Account Payment Record is only available to admin accounts.');
+    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
+    return;
+  }
+  if(view === 'revenuepaymentrecord' && !isAdmin()){
+    showNotice('Revenue Payment Record is only available to admin accounts.');
+    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
+    return;
+  }
   currentView = view;
   try{
     localStorage.setItem('lastView', view);
@@ -4360,6 +4576,8 @@ function showView(view, fromPopState){
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   document.getElementById('topNavArrival').classList.toggle('active', view === 'arrival');
   document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck');
+  const topNavPaymentProof = document.getElementById('topNavPaymentProof');
+  if(topNavPaymentProof) topNavPaymentProof.classList.toggle('active', view === 'paymentrecord' || view === 'revenuepaymentrecord');
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -4375,6 +4593,8 @@ function showView(view, fromPopState){
   if(view === 'cashcheck') renderCashCheck();
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
+  if(view === 'paymentrecord') renderPaymentRecord();
+  if(view === 'revenuepaymentrecord') renderRevenuePaymentRecord();
   if(view === 'deleteentity') renderDeleteEntityList();
   if(view === 'roomdetail') renderRoomDetail();
   if(view === 'inhouse') renderInhouse();
@@ -4688,6 +4908,14 @@ const filterDatePickers = {};
 // color) across platforms instead of inheriting whatever padlock emoji a
 // given OS/font ships.
 const LOCK_ICON_SVG = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+// Same reasoning/idiom as LOCK_ICON_SVG above — a plain download-tray glyph
+// for Payment Report's per-row screenshot icon (see viewPaymentScreenshot),
+// and a plain camera glyph for Account Payment Record's per-row
+// attach/view icon (see openPaymentRecordModal). SVG, not an emoji, so both
+// render identically across OS/font instead of inheriting whatever glyph a
+// given platform ships for 📥/📷.
+const DOWNLOAD_ICON_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>';
+const CAMERA_ICON_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>';
 // Shared by every calendar that picks a PAYMENT date (Add Payment's dNewDate,
 // and each Payment Detail row below) — a payment can't be dated on a locked
 // day (Day Lock already refuses to save one, see isDateLocked()) or on a day
@@ -4945,6 +5173,18 @@ function setFiltersToday(){
   renderReport();
 }
 
+function clearParFilters(){
+  setRangeDate('parRange', 'parFrom', 'parTo', '', '');
+  document.getElementById('parSearch').value = '';
+  renderPaymentRecord();
+}
+
+function setParFiltersToday(){
+  const t = todayStr();
+  setRangeDate('parRange', 'parFrom', 'parTo', t, t);
+  renderPaymentRecord();
+}
+
 
 document.addEventListener('DOMContentLoaded', ()=>{
   initRouter();
@@ -4952,6 +5192,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initFilterDatePickers();
   initRangeDatePicker('filterRange', 'filterFrom', 'filterTo', renderReport);
   setFiltersToday();
+  initRangeDatePicker('parRange', 'parFrom', 'parTo', renderPaymentRecord);
+  setParFiltersToday();
   setStayDate('checkInDate', checkinTodayStr());
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
   updateSaveEntryButtonLabel();
@@ -4989,6 +5231,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   initRangeDatePicker('rvRange', 'rvFrom', 'rvTo', renderRevenue);
   setRangeDate('rvRange', 'rvFrom', 'rvTo', todayStr(), todayStr());
+  initRangeDatePicker('rprRange', 'rprFrom', 'rprTo', renderRevenuePaymentRecord);
+  setRangeDate('rprRange', 'rprFrom', 'rprTo', todayStr(), todayStr());
   document.getElementById('nsDate').addEventListener('input', renderNightSummary);
   setFilterDate('nsDate', todayStr());
   setFilterDate('b19From', '2026-07-19');
@@ -7360,6 +7604,29 @@ document.addEventListener('click', e=>{
   if(wrap && !wrap.contains(e.target)) document.getElementById('globalSearchResults').classList.remove('show');
 });
 
+// Payment Proof: a plain two-link dropdown to the two screenshot pages —
+// same open/outside-click-close idiom as the global search results above.
+function togglePaymentProofMenu(){
+  const menu = document.getElementById('paymentProofMenu');
+  const willShow = !menu.classList.contains('show');
+  if(willShow){
+    const rect = document.getElementById('topNavPaymentProof').getBoundingClientRect();
+    menu.style.top = (rect.bottom + 6) + 'px';
+    menu.style.right = (window.innerWidth - rect.right) + 'px';
+  }
+  menu.classList.toggle('show', willShow);
+}
+
+function openPaymentProofPage(view){
+  document.getElementById('paymentProofMenu').classList.remove('show');
+  showView(view);
+}
+
+document.addEventListener('click', e=>{
+  const wrap = document.getElementById('topNavPaymentProofWrap');
+  if(wrap && !wrap.contains(e.target)) document.getElementById('paymentProofMenu').classList.remove('show');
+});
+
 document.addEventListener('keydown', e=>{
   if((e.ctrlKey || e.metaKey) && e.key === '/'){
     e.preventDefault();
@@ -8486,6 +8753,91 @@ function renderAuditPage(){
 }
 
 // =========================================================
+// PAYMENT SCREENSHOTS — Storage helpers backing Account Payment Record
+// (admin-only Settings page) and the small download icon on Payment
+// Report. One screenshot per payment, stored at "<payment_id>.png" in the
+// private payment-screenshots bucket (migration/payment_attachments.sql) —
+// upload always passes upsert:true, so re-attaching a screenshot for the
+// same payment just replaces the old file, never leaves an orphan behind.
+//
+// IMPORTANT — image bytes are never fetched except by an explicit, single
+// user action: downloadPaymentScreenshotBlob() is the ONLY function that
+// ever downloads image data, and its only callers are viewPaymentScreenshot
+// (one specific payment, on click), openPaymentRecordModal's own Download
+// button (same, on click), and downloadDayScreenshotsPdf (one specific
+// day's attachments, on click, nothing from any other day). Nothing else —
+// no preload, no hover, no eager fetch on render — ever calls it. This is
+// a real Supabase Storage egress cost concern, confirmed explicitly by
+// whoever's paying the bill, not a style preference.
+// =========================================================
+async function uploadPaymentScreenshot(paymentId, paymentDate, guestId, blob, caption){
+  if(!sb){ showNotice('Not connected to the cloud database — try again once it reconnects.'); return false; }
+  const path = paymentId + '.png';
+  try{
+    const { error: upErr } = await sb.storage.from(PAYMENT_SCREENSHOTS_BUCKET).upload(path, blob, {
+      contentType: blob.type || 'image/png',
+      upsert: true
+    });
+    if(upErr) throw upErr;
+    const { error: dbErr } = await sb.from('payment_attachments').upsert({
+      payment_id: paymentId,
+      payment_date: paymentDate,
+      guest_id: guestId,
+      storage_path: path,
+      caption: caption || '',
+      uploaded_by: currentUser ? currentUser.username : '',
+      uploaded_at: new Date().toISOString()
+    }, { onConflict: 'payment_id' });
+    if(dbErr) throw dbErr;
+    await fetchPaymentAttachmentsOnly();
+    return true;
+  }catch(e){
+    console.error('Uploading payment screenshot failed', e);
+    showNotice(e && e.message && e.message.includes('payment_attachments')
+      ? 'The Payment Screenshots table/bucket doesn\'t exist yet — run migration/payment_attachments.sql in the Supabase SQL Editor first.'
+      : 'Couldn\'t upload the screenshot — check the internet connection and try again.');
+    return false;
+  }
+}
+
+// The one place this whole feature ever pulls image bytes down — see the
+// section comment above. Returns the raw Blob, or null (with a console
+// error) on failure so callers can show their own contextual notice.
+async function downloadPaymentScreenshotBlob(storagePath){
+  if(!sb) return null;
+  const { data, error } = await sb.storage.from(PAYMENT_SCREENSHOTS_BUCKET).download(storagePath);
+  if(error){ console.error('Downloading payment screenshot failed', error); return null; }
+  return data;
+}
+
+async function deletePaymentScreenshot(paymentId, storagePath){
+  if(!sb){ showNotice('Not connected to the cloud database — try again once it reconnects.'); return false; }
+  try{
+    const { error: rmErr } = await sb.storage.from(PAYMENT_SCREENSHOTS_BUCKET).remove([storagePath]);
+    if(rmErr) throw rmErr;
+    const { error: dbErr } = await sb.from('payment_attachments').delete().eq('payment_id', paymentId);
+    if(dbErr) throw dbErr;
+    await fetchPaymentAttachmentsOnly();
+    return true;
+  }catch(e){
+    console.error('Deleting payment screenshot failed', e);
+    showNotice('Couldn\'t remove the screenshot — check the internet connection and try again.');
+    return false;
+  }
+}
+
+// Blob -> base64 data URL, needed because jsPDF's addImage() takes a data
+// URL/base64 string, not a Blob directly.
+function blobToDataUrl(blob){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// =========================================================
 // GUEST LETTER — Download/Print buttons on the Guest Detail page render
 // this guest's stay as a branded confirmation letter (matching the resort's
 // own reference template/logo/background), instead of a plain data dump.
@@ -9168,6 +9520,11 @@ function reportRowsToTableHtml(sectionRows){
     const isCash = r.mode === 'Cash';
     const modeShort = r.mode === 'Bank Transfer' ? 'Transfer' : r.mode;
     const modeLabel = isCash ? modeShort : `${modeShort}${r.bank ? ' (' + r.bank + ')' : ''}`;
+    // Metadata lookup only (paymentAttachments is already in memory, same
+    // as lockedDays/roomStatusMap) — deciding whether to show the icon at
+    // all never fetches the screenshot itself, only viewPaymentScreenshot()
+    // does that, and only on click.
+    const hasAttachment = !!findPaymentAttachment(r.paymentId);
     return `
       <tr class="${isCash ? 'mode-cash' : 'mode-bank'}" style="cursor:pointer;" onclick="openDetail('${r.id}')" title="Open this guest">
         <td>${idx + 1}</td>
@@ -9182,6 +9539,7 @@ function reportRowsToTableHtml(sectionRows){
         <td class="account-amt">${r.bank === 'Haji (MCB)' && r.account ? r.account.toLocaleString() : '-'}</td>
         <td class="account-amt">${r.account ? r.account.toLocaleString() : '-'}</td>
         <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${r.total.toLocaleString()}</td>
+        <td class="no-print" style="text-align:center;">${hasAttachment ? `<button type="button" class="icon-btn" onclick="event.stopPropagation(); viewPaymentScreenshot('${r.paymentId}')" title="Download this payment's screenshot">${DOWNLOAD_ICON_SVG}</button>` : ''}</td>
       </tr>`;
   }).join('');
   const accountTotal = mcb + alfalah + haji;
@@ -9203,6 +9561,7 @@ function reportRowsToTableHtml(sectionRows){
             <th style="width:100px;">Haji (MCB)</th>
             <th style="width:110px;">Account Total</th>
             <th style="width:100px;">Grand</th>
+            <th class="no-print" style="width:36px;">SS</th>
           </tr>
         </thead>
         <tbody>${bodyRows}</tbody>
@@ -9215,10 +9574,483 @@ function reportRowsToTableHtml(sectionRows){
             <td class="account-amt">${haji.toLocaleString()}</td>
             <td class="account-amt">${accountTotal.toLocaleString()}</td>
             <td>${subtotal.toLocaleString()}</td>
+            <td class="no-print"></td>
           </tr>
         </tfoot>
       </table>`
   };
+}
+
+// The per-row download icon's click handler on Payment Report (see the
+// no-print column added inside reportRowsToTableHtml above). Looking up
+// findPaymentAttachment() is free — paymentAttachments metadata is already
+// in memory, synced like every other small cloud table — but the actual
+// image bytes are fetched here and ONLY here for this whole page, and only
+// once this exact button is clicked. See PAYMENT SCREENSHOTS section
+// comment above downloadPaymentScreenshotBlob() for why that matters.
+async function viewPaymentScreenshot(paymentId){
+  const att = findPaymentAttachment(paymentId);
+  if(!att){ showNotice('No screenshot attached to this payment.'); return; }
+  const blob = await downloadPaymentScreenshotBlob(att.storage_path);
+  if(!blob){ showNotice('Couldn\'t load the screenshot — check the internet connection and try again.'); return; }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'payment-' + paymentId + '.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=> URL.revokeObjectURL(url), 10000);
+}
+
+// =========================================================
+// ACCOUNT PAYMENT RECORD — admin-only Settings page. Same day-grouped
+// payment breakdown as Payment Report, but restricted to non-Cash payments
+// (mode !== 'Cash' — Bank Transfer or Card, the only two other payMode
+// values) and with its own row renderer (paymentRecordRowsToTableHtml,
+// NOT the shared reportRowsToTableHtml — Payment Report and Before19/
+// Handover also consume that function, so this stays fully isolated and
+// can never regress them) that swaps the download icon for an attach/view
+// one, and drops the always-empty Cash column (a non-Cash payment's cash
+// field is always 0 — see toggleMode()/applyPayModeEnablement()). Each
+// day's header also gets its own Download PDF button.
+// =========================================================
+function getFilteredPaymentRecordRows(){
+  const all = loadAllEntries();
+  const fromVal = document.getElementById('parFrom').value;
+  const toVal = document.getElementById('parTo').value;
+  const searchVal = document.getElementById('parSearch').value.trim().toLowerCase();
+
+  let rows = [];
+  all.forEach(entry=>{
+    const roomNos = formatRoomChain(entry.rooms);
+    (entry.payments || []).forEach(p=>{
+      if(!p.date || p.mode === 'Cash') return;
+      rows.push({
+        id: entry.id,
+        paymentId: p.id,
+        date: p.date,
+        guest: entry.guestName || '(no name)',
+        father: entry.fatherName || '',
+        cnic: entry.cnic || '',
+        roomNos: roomNos,
+        type: p.type,
+        mode: p.mode,
+        bank: p.bank || '',
+        remarks: p.remarks || '',
+        account: p.account || 0
+      });
+    });
+  });
+
+  if(fromVal) rows = rows.filter(r=> r.date >= fromVal);
+  if(toVal) rows = rows.filter(r=> r.date <= toVal);
+
+  if(searchVal){
+    const searchValNoDash = stripDashes(searchVal);
+    rows = rows.filter(r=>{
+      const haystack = [r.guest, r.father || '', r.cnic || '', r.roomNos, r.type, r.mode, r.bank, r.remarks, r.date].join(' ').toLowerCase();
+      return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
+    });
+  }
+
+  return { rows, fromVal, toVal };
+}
+
+function paymentRecordRowsToTableHtml(sectionRows){
+  let subtotal = 0, mcb = 0, alfalah = 0, haji = 0;
+  const bodyRows = sectionRows.map((r, idx)=>{
+    subtotal += r.account;
+    if(r.bank === 'MCB') mcb += r.account;
+    else if(r.bank === 'Alfalah') alfalah += r.account;
+    else if(r.bank === 'Haji (MCB)') haji += r.account;
+    const modeShort = r.mode === 'Bank Transfer' ? 'Transfer' : r.mode;
+    const modeLabel = `${modeShort}${r.bank ? ' (' + r.bank + ')' : ''}`;
+    const hasAttachment = !!findPaymentAttachment(r.paymentId);
+    return `
+      <tr style="cursor:pointer;" onclick="openDetail('${r.id}')" title="Open this guest">
+        <td>${idx + 1}</td>
+        <td>${r.roomNos || '-'}</td>
+        <td>${r.guest}</td>
+        <td>${r.type}</td>
+        <td><span class="mode-badge bank">${modeLabel}</span></td>
+        <td>${r.remarks || '-'}</td>
+        <td class="account-amt">${r.bank === 'MCB' && r.account ? r.account.toLocaleString() : '-'}</td>
+        <td class="account-amt">${r.bank === 'Alfalah' && r.account ? r.account.toLocaleString() : '-'}</td>
+        <td class="account-amt">${r.bank === 'Haji (MCB)' && r.account ? r.account.toLocaleString() : '-'}</td>
+        <td class="rowtotal account-amt">${r.account.toLocaleString()}</td>
+        <td class="no-print" style="text-align:center;"><button type="button" class="icon-btn${hasAttachment ? ' has-attachment' : ''}" onclick="event.stopPropagation(); openPaymentRecordModal('${r.paymentId}', '${r.date}', '${r.id}')" title="${hasAttachment ? 'View or download this payment\'s screenshot' : 'Attach a screenshot to this payment'}">${CAMERA_ICON_SVG}</button></td>
+      </tr>`;
+  }).join('');
+  const accountTotal = mcb + alfalah + haji;
+  return {
+    subtotal, mcb, alfalah, haji, accountTotal,
+    html: `
+      <table>
+        <thead>
+          <tr>
+            <th style="width:50px;">Sr</th>
+            <th style="width:120px;">Room No</th>
+            <th>Guest</th>
+            <th style="width:100px;">Type</th>
+            <th style="width:110px;">Mode</th>
+            <th style="width:140px;">Remarks</th>
+            <th style="width:100px;">MCB</th>
+            <th style="width:100px;">Alfalah</th>
+            <th style="width:100px;">Haji (MCB)</th>
+            <th style="width:110px;">Total</th>
+            <th class="no-print" style="width:36px;"></th>
+          </tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+        <tfoot>
+          <tr class="day-foot-total">
+            <td colspan="6">Total</td>
+            <td class="account-amt">${mcb.toLocaleString()}</td>
+            <td class="account-amt">${alfalah.toLocaleString()}</td>
+            <td class="account-amt">${haji.toLocaleString()}</td>
+            <td>${subtotal.toLocaleString()}</td>
+            <td class="no-print"></td>
+          </tr>
+        </tfoot>
+      </table>`
+  };
+}
+
+function renderPaymentRecord(){
+  const container = document.getElementById('paymentRecordBody');
+  if(!initialLoadDone){
+    container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const { rows, fromVal, toVal } = getFilteredPaymentRecordRows();
+  document.getElementById('parRangeReadout').textContent = formatIsoRangeDisplay(fromVal, toVal);
+  const subParts = [];
+  subParts.push(fromVal || toVal ? `${fromVal ? formatDate(fromVal) : 'Start'} to ${toVal ? formatDate(toVal) : 'Today'}` : 'All dates');
+  subParts.push('Generated ' + formatDate(todayStr()));
+  document.getElementById('parPrintHeaderSub').textContent = subParts.join('  ·  ');
+
+  if(rows.length === 0){
+    container.innerHTML = '<div class="empty-note">No account (Bank/Card) payments match these filters.</div>';
+    return;
+  }
+
+  const groups = {};
+  rows.forEach(r=>{
+    if(!groups[r.date]) groups[r.date] = [];
+    groups[r.date].push(r);
+  });
+  const dates = Object.keys(groups).sort((a,b)=> b.localeCompare(a));
+  let grandTotal = 0, grandMCB = 0, grandAlfalah = 0, grandHaji = 0;
+  let dayHtml = '';
+  dates.forEach(date=>{
+    const t = paymentRecordRowsToTableHtml(groups[date]);
+    grandTotal += t.subtotal; grandMCB += t.mcb; grandAlfalah += t.alfalah; grandHaji += t.haji;
+    dayHtml += `
+      <div class="day-group rpt-day-group">
+        <div class="day-head">
+          <span>${formatDate(date)}</span>
+          <button type="button" class="btn secondary no-print" style="min-height:28px; padding:3px 10px;" onclick="downloadDayScreenshotsPdf('${date}', this)">⬇ Download PDF</button>
+        </div>
+        ${t.html}
+      </div>`;
+  });
+  if(dates.length > 1){
+    const oldestDate = dates[dates.length - 1];
+    const newestDate = dates[0];
+    const grandAccountTotal = grandMCB + grandAlfalah + grandHaji;
+    dayHtml = `
+      <div class="rpt-grandtotal-box">
+        <div class="rpt-grandtotal-head">
+          <div class="rpt-grandtotal-label">Grand Total</div>
+          <div class="rpt-grandtotal-range">${formatDate(oldestDate)} to ${formatDate(newestDate)}</div>
+        </div>
+        <table>
+          <thead>
+            <tr><th style="width:100px;">MCB</th><th style="width:100px;">Alfalah</th><th style="width:100px;">Haji (MCB)</th><th style="width:110px;">Account Total</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="account-amt">Rs. ${grandMCB.toLocaleString()}</td>
+              <td class="account-amt">Rs. ${grandAlfalah.toLocaleString()}</td>
+              <td class="account-amt">Rs. ${grandHaji.toLocaleString()}</td>
+              <td style="font-weight:700;">Rs. ${grandAccountTotal.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>` + dayHtml;
+  }
+  container.innerHTML = dayHtml;
+}
+
+// ---- Payment Record modal: view an existing screenshot's caption (never
+// its image bytes, until Download is explicitly clicked), or paste in a
+// new one via the clipboard. ----
+let pendingPaymentRecordContext = null; // { paymentId, paymentDate, guestId, suggestedCaption }
+let pendingPaymentRecordPasteBlob = null; // the freshly-pasted image, still unsaved
+let paymentRecordUploadZoneOpen = false;
+// One object URL slot shared by two different moments — the unsaved paste
+// preview, or an already-saved attachment's image once the user has
+// explicitly asked to view it (loadPaymentRecordImagePreview) — only ever
+// one active at a time, so one variable/one revoke is enough for both.
+let paymentRecordPreviewUrl = null;
+let paymentRecordImageLoaded = false; // true once the existing attachment's image has actually been fetched THIS modal session
+
+function revokePaymentRecordPreviewUrl(){
+  if(paymentRecordPreviewUrl){ URL.revokeObjectURL(paymentRecordPreviewUrl); paymentRecordPreviewUrl = null; }
+}
+
+// Revenue Payment Record's auto-caption — a chunk (from
+// buildRevenuePaymentRecordRows) already carries exactly how much of ITS
+// payment landed on this one room-night (chunk.total) and the payment's
+// own full amount (chunk.paymentTotal), so this just turns that into
+// readable text, e.g. "Rs. 20,000 of this Rs. 100,000 payment went toward
+// Room 206 — Asim Ali Khan (07 Aug 2026)". If the whole payment went to
+// this one room (the common case), the "of this Rs. X payment" clause is
+// dropped since it'd just be restating the same number twice.
+// cashTotal (this room-NIGHT row's own cashTotal, not the guest's whole
+// stay) is optional context — a room whose remaining rent was settled in
+// cash rather than another bank transfer gets that spelled out too, since
+// that cash portion will never have a screenshot of its own to point to.
+function buildAutoScreenshotCaption(chunk, roomNo, unitType, guest, cashTotal){
+  const applied = chunk.total;
+  const full = chunk.paymentTotal;
+  const roomLabel = displayRoomNo(roomNo, unitType);
+  const dateLabel = formatDate(chunk.date);
+  let text = Math.abs(applied - full) < 1
+    ? `Rs. ${applied.toLocaleString()} for ${roomLabel} — ${guest} (${dateLabel})`
+    : `Rs. ${applied.toLocaleString()} of this Rs. ${full.toLocaleString()} payment went toward ${roomLabel} — ${guest} (${dateLabel})`;
+  if(cashTotal > 0) text += ` — the rest (Rs. ${cashTotal.toLocaleString()}) for this room was received in cash`;
+  return text;
+}
+
+// suggestedCaption (optional) — Revenue Payment Record passes an
+// auto-generated one (see buildAutoScreenshotCaption) describing how much
+// of this payment applies to a specific room; only ever prefilled for a
+// FRESH upload, never overwrites an existing caption.
+function openPaymentRecordModal(paymentId, paymentDate, guestId, suggestedCaption){
+  pendingPaymentRecordContext = { paymentId, paymentDate, guestId, suggestedCaption: suggestedCaption || '' };
+  pendingPaymentRecordPasteBlob = null;
+  paymentRecordUploadZoneOpen = false;
+  paymentRecordImageLoaded = false;
+  revokePaymentRecordPreviewUrl();
+  renderPaymentRecordModalBody();
+  document.getElementById('paymentRecordModalBackdrop').classList.add('active');
+  // Opening this modal via the camera icon IS the explicit "show me the
+  // screenshot" request — no reason to make the user click twice (once to
+  // open, once to actually see it) when there's already one attached.
+  // Still nothing fetched for a payment with no attachment, and still
+  // nothing fetched for every OTHER row just sitting in the table.
+  if(findPaymentAttachment(paymentId)) loadPaymentRecordImagePreview();
+}
+
+function closePaymentRecordModal(){
+  document.getElementById('paymentRecordModalBackdrop').classList.remove('active');
+  pendingPaymentRecordContext = null;
+  pendingPaymentRecordPasteBlob = null;
+  paymentRecordUploadZoneOpen = false;
+  paymentRecordImageLoaded = false;
+  revokePaymentRecordPreviewUrl();
+}
+
+// Renders whichever of the four states applies — never touches the
+// network itself on its own; the existing-attachment state shows caption/
+// uploader text only until "View Screenshot" is explicitly clicked (see
+// loadPaymentRecordImagePreview), which is the one point that fetches the
+// image, once, and reuses that same already-fetched blob for the Download
+// link that replaces the button afterward — no second fetch.
+function renderPaymentRecordModalBody(){
+  const body = document.getElementById('paymentRecordModalBody');
+  if(!pendingPaymentRecordContext) return;
+  const att = findPaymentAttachment(pendingPaymentRecordContext.paymentId);
+
+  if(pendingPaymentRecordPasteBlob){
+    revokePaymentRecordPreviewUrl();
+    paymentRecordPreviewUrl = URL.createObjectURL(pendingPaymentRecordPasteBlob);
+    body.innerHTML = `
+      <div class="paste-zone" style="cursor:default;"><img src="${paymentRecordPreviewUrl}" alt="Pasted screenshot preview"></div>
+      <label for="paymentRecordCaptionInput">Caption (optional)</label>
+      <input type="text" id="paymentRecordCaptionInput" placeholder="e.g. Bank transfer receipt" value="${att ? (att.caption || '') : (pendingPaymentRecordContext.suggestedCaption || '')}">
+      <div class="modal-actions">
+        <button class="btn secondary" onclick="cancelPaymentRecordUpload()">Cancel</button>
+        <button class="btn" id="paymentRecordSaveBtn" onclick="savePaymentRecordUpload()">Save</button>
+      </div>`;
+    return;
+  }
+
+  if(paymentRecordUploadZoneOpen){
+    body.innerHTML = `
+      <div class="paste-zone" id="paymentRecordPasteZone" tabindex="0">Click here, then paste a screenshot (Ctrl+V)</div>
+      <div class="sub" style="text-align:center; margin:8px 0;">or</div>
+      <input type="file" id="paymentRecordFileInput" accept="image/*" style="display:none;" onchange="handlePaymentRecordFileSelect(this)">
+      <div class="modal-actions">
+        <button class="btn secondary" onclick="cancelPaymentRecordUpload()">Cancel</button>
+        <button class="btn secondary" onclick="document.getElementById('paymentRecordFileInput').click()">Select File</button>
+      </div>`;
+    const zone = document.getElementById('paymentRecordPasteZone');
+    zone.addEventListener('paste', handlePaymentRecordPaste);
+    zone.focus();
+    return;
+  }
+
+  if(att){
+    const imageHtml = paymentRecordImageLoaded
+      ? `<div style="text-align:center; margin-bottom:10px;"><img src="${paymentRecordPreviewUrl}" alt="Payment screenshot" style="max-width:100%; max-height:320px; border-radius:6px;"></div>`
+      : '';
+    const captionHtml = att.caption ? `<div style="margin-bottom:6px;"><strong>Caption:</strong> ${att.caption}</div>` : '';
+    const rightBtn = paymentRecordImageLoaded
+      ? `<a class="btn" href="${paymentRecordPreviewUrl}" download="payment-${att.payment_id}.png">⬇ Download</a>`
+      : `<button class="btn" id="paymentRecordViewBtn" onclick="loadPaymentRecordImagePreview()">👁 View Screenshot</button>`;
+    body.innerHTML = `
+      ${imageHtml}
+      ${captionHtml}
+      <div class="sub" style="margin-bottom:14px;">Attached by ${att.uploaded_by || '-'} on ${formatDate(toKarachiDateStr(att.uploaded_at))}</div>
+      <div class="modal-actions">
+        <button class="btn secondary" onclick="showPaymentRecordUploadZone()">Replace</button>
+        ${rightBtn}
+      </div>`;
+  } else {
+    body.innerHTML = `
+      <div class="sub" style="margin-bottom:14px;">No screenshot attached yet.</div>
+      <div class="modal-actions">
+        <button class="btn" onclick="showPaymentRecordUploadZone()">Upload</button>
+      </div>`;
+  }
+}
+
+function showPaymentRecordUploadZone(){
+  paymentRecordUploadZoneOpen = true;
+  pendingPaymentRecordPasteBlob = null;
+  paymentRecordImageLoaded = false;
+  revokePaymentRecordPreviewUrl();
+  renderPaymentRecordModalBody();
+}
+
+// The only fetch in this whole "has attachment" branch — pulls the image
+// once, on this explicit click, and keeps the resulting object URL around
+// (paymentRecordPreviewUrl) so the Download link that replaces this
+// button doesn't need a second fetch to save the same bytes to disk.
+async function loadPaymentRecordImagePreview(){
+  if(!pendingPaymentRecordContext) return;
+  const att = findPaymentAttachment(pendingPaymentRecordContext.paymentId);
+  if(!att) return;
+  const btn = document.getElementById('paymentRecordViewBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Loading…'; }
+  const blob = await downloadPaymentScreenshotBlob(att.storage_path);
+  if(!blob){
+    showNotice('Couldn\'t load the screenshot — check the internet connection and try again.');
+    if(btn){ btn.disabled = false; btn.textContent = '👁 View Screenshot'; }
+    return;
+  }
+  revokePaymentRecordPreviewUrl();
+  paymentRecordPreviewUrl = URL.createObjectURL(blob);
+  paymentRecordImageLoaded = true;
+  renderPaymentRecordModalBody();
+}
+
+function cancelPaymentRecordUpload(){
+  paymentRecordUploadZoneOpen = false;
+  pendingPaymentRecordPasteBlob = null;
+  revokePaymentRecordPreviewUrl();
+  renderPaymentRecordModalBody();
+}
+
+function handlePaymentRecordPaste(e){
+  e.preventDefault();
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  const imageItem = Array.from(items).find(it=> it.type && it.type.startsWith('image/'));
+  if(!imageItem){
+    showNotice('That paste didn\'t contain an image — copy a screenshot first, then paste here.');
+    return;
+  }
+  pendingPaymentRecordPasteBlob = imageItem.getAsFile();
+  renderPaymentRecordModalBody();
+}
+
+// The Select File alternative to paste — same destination state
+// (pendingPaymentRecordPasteBlob) as handlePaymentRecordPaste above, so
+// the preview/caption/Save step downstream is identical either way.
+function handlePaymentRecordFileSelect(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){
+    showNotice('Please select an image file.');
+    input.value = '';
+    return;
+  }
+  pendingPaymentRecordPasteBlob = file;
+  renderPaymentRecordModalBody();
+}
+
+async function savePaymentRecordUpload(){
+  if(!pendingPaymentRecordContext || !pendingPaymentRecordPasteBlob) return;
+  const { paymentId, paymentDate, guestId } = pendingPaymentRecordContext;
+  const caption = document.getElementById('paymentRecordCaptionInput').value.trim();
+  const btn = document.getElementById('paymentRecordSaveBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  const ok = await uploadPaymentScreenshot(paymentId, paymentDate, guestId, pendingPaymentRecordPasteBlob, caption);
+  if(!ok){
+    if(btn){ btn.disabled = false; btn.textContent = 'Save'; }
+    return;
+  }
+  pendingPaymentRecordPasteBlob = null;
+  paymentRecordUploadZoneOpen = false;
+  revokePaymentRecordPreviewUrl();
+  renderPaymentRecordModalBody();
+  renderPaymentRecord();
+  showNotice('Screenshot saved.', 'success');
+}
+
+// Bundles one specific day's attached screenshots into a single PDF —
+// fetches ONLY that day's images, one at a time, and only now (on this
+// exact click). See the PAYMENT SCREENSHOTS section comment for why that
+// matters. Reuses the jspdf global already loaded for the Guest Letter PDF
+// (downloadGuestPdf) — no html2canvas needed here, this just stacks real
+// images, not rasterized HTML.
+async function downloadDayScreenshotsPdf(date, btn){
+  if(typeof jspdf === 'undefined'){
+    showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
+    return;
+  }
+  const dayAttachments = paymentAttachments.filter(a=> a.payment_date === date); // metadata filter only — no fetch yet
+  if(dayAttachments.length === 0){
+    showNotice('No screenshots attached for this day.');
+    return;
+  }
+  // Fetching each image + assembling the PDF genuinely takes a few seconds
+  // for a handful of screenshots, and this used to leave the button looking
+  // identical the whole time with nothing on screen to show it's working —
+  // this is real per-image progress (not a fake spinner), taken straight
+  // from the loop's own actual position, not a guessed/animated percentage.
+  const originalLabel = btn ? btn.textContent : '';
+  if(btn) btn.disabled = true;
+  const doc = new jspdf.jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+  let pagesAdded = 0;
+  try{
+    for(let i = 0; i < dayAttachments.length; i++){
+      if(btn) btn.textContent = `Fetching ${i + 1} of ${dayAttachments.length}…`;
+      const att = dayAttachments[i];
+      const blob = await downloadPaymentScreenshotBlob(att.storage_path); // fetches ONLY this image, only now
+      if(!blob) continue; // one failed fetch shouldn't abort the rest of the day's PDF
+      const dataUrl = await blobToDataUrl(blob);
+      if(pagesAdded > 0) doc.addPage();
+      pagesAdded++;
+      const props = doc.getImageProperties(dataUrl);
+      const maxW = 190, maxH = 260; // mm — A4 (210x297) minus margins, leaves room for a caption line
+      const scale = Math.min(maxW / props.width, maxH / props.height, 1); // never upscale a small screenshot
+      const w = props.width * scale, h = props.height * scale;
+      doc.addImage(dataUrl, props.fileType || 'PNG', (210 - w) / 2, 15, w, h);
+      if(att.caption) doc.text(att.caption, 105, 15 + h + 8, { align: 'center' });
+    }
+    if(pagesAdded === 0){
+      showNotice('Couldn\'t load any of this day\'s screenshots — check the internet connection and try again.');
+      return;
+    }
+    if(btn) btn.textContent = 'Building PDF…';
+    doc.save(`payment-screenshots-${date}.pdf`);
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = originalLabel; }
+  }
 }
 
 // Normal (default) view hides the Before/After carry-over sections below
@@ -10126,7 +10958,18 @@ function printLedgers(){
 // partly paid off before an older due — only what lands on an in-range
 // night/payment date ever gets recorded here.
 // =========================================================
-function buildRevenueReport(fromDate, toDate){
+// keyChunksById (default false, only Revenue Payment Record passes true):
+// a chunk is normally grouped by the DATE money landed (so two different
+// payments on the same date merge into one "Payment N" cell) — that's the
+// right shape for Revenue Report itself. Revenue Payment Record needs each
+// chunk to map to exactly one real payment_id (to know which payment's
+// screenshot to attach/show), so it asks for chunks keyed by payment id
+// instead — everything else about the FIFO room-night/payment matching
+// below is identical either way. paymentId/paymentTotal are carried on
+// every chunk regardless of the flag (harmless extra fields Revenue
+// Report's own render never reads), so this stays fully backward
+// compatible for the existing renderRevenue() call site.
+function buildRevenueReport(fromDate, toDate, keyChunksById){
   const all = loadAllEntries();
   // Keyed by `${guestId}|${roomNo}|${date}` — one entry per room-night in
   // range, rather than per room, so the same room across several nights in
@@ -10187,7 +11030,7 @@ function buildRevenueReport(fromDate, toDate){
     const payQueue = (entry.payments || [])
       .slice()
       .sort((a,b)=> (a.date || '').localeCompare(b.date || ''))
-      .map(p=> ({ remaining: parseFloat(p.total) || 0, total: parseFloat(p.total) || 0, date: p.date || '', mode: p.mode, bank: p.bank, towardRange: 0 }));
+      .map(p=> ({ id: p.id, remaining: parseFloat(p.total) || 0, total: parseFloat(p.total) || 0, date: p.date || '', mode: p.mode, bank: p.bank, towardRange: 0 }));
 
     // Payments are still walked across the WHOLE stay in date order (a
     // payment can prepay a future night or catch up an older one) — only
@@ -10210,12 +11053,13 @@ function buildRevenueReport(fromDate, toDate){
         if(applied > 0 && within){
           nightsByKey[key].received += applied;
           if(!chunksByKey[key]) chunksByKey[key] = {};
-          if(!chunksByKey[key][pay.date]) chunksByKey[key][pay.date] = { cash: 0, account: 0, banks: {} };
+          const chunkKey = keyChunksById ? pay.id : pay.date;
+          if(!chunksByKey[key][chunkKey]) chunksByKey[key][chunkKey] = { date: pay.date, paymentId: pay.id, paymentTotal: pay.total, cash: 0, account: 0, banks: {} };
           const bucket = pay.mode === 'Cash' ? 'cash' : 'account';
-          chunksByKey[key][pay.date][bucket] += applied;
+          chunksByKey[key][chunkKey][bucket] += applied;
           if(bucket === 'account'){
             const bankName = pay.bank || pay.mode || 'Account';
-            const banks = chunksByKey[key][pay.date].banks;
+            const banks = chunksByKey[key][chunkKey].banks;
             banks[bankName] = (banks[bankName] || 0) + applied;
           }
           pay.towardRange += applied;
@@ -10245,13 +11089,14 @@ function buildRevenueReport(fromDate, toDate){
     const roomData = nightsByKey[key];
     const chunkMap = chunksByKey[key] || {};
     const chunks = Object.keys(chunkMap)
-      .sort((a,b)=> a.localeCompare(b))
-      .map(date=>{
-        const cash = Math.round(chunkMap[date].cash * 100) / 100;
-        const account = Math.round(chunkMap[date].account * 100) / 100;
+      .map(k=> chunkMap[k])
+      .sort((a,b)=> a.date.localeCompare(b.date))
+      .map(c=>{
+        const cash = Math.round(c.cash * 100) / 100;
+        const account = Math.round(c.account * 100) / 100;
         const banks = {};
-        Object.keys(chunkMap[date].banks || {}).forEach(b=>{ banks[b] = Math.round(chunkMap[date].banks[b] * 100) / 100; });
-        return { date, cash, account, banks, total: Math.round((cash + account) * 100) / 100 };
+        Object.keys(c.banks || {}).forEach(b=>{ banks[b] = Math.round(c.banks[b] * 100) / 100; });
+        return { date: c.date, paymentId: c.paymentId, paymentTotal: c.paymentTotal, cash, account, banks, total: Math.round((cash + account) * 100) / 100 };
       });
     const rent = roomData.rent;
     const collected = roomData.received;
@@ -10339,6 +11184,142 @@ function buildRevenueReport(fromDate, toDate){
   };
 }
 
+// Revenue Payment Record's own entry point — same FIFO room-night/payment
+// matching as Revenue Report, just with chunks keyed by payment id (see
+// buildRevenueReport's own comment) so each "Payment N" cell maps to
+// exactly one real payment_id for the screenshot attach/view icon.
+function buildRevenuePaymentRecordRows(fromDate, toDate){
+  return buildRevenueReport(fromDate, toDate, true);
+}
+
+// The SS column's click handler — looks the guest name up itself (rather
+// than having the caller interpolate it into the onclick HTML string,
+// which would break the moment a guest name contains an apostrophe) and
+// builds the room-specific auto-caption before handing off to the same
+// openPaymentRecordModal used everywhere else this session.
+function openRevenuePaymentModal(paymentId, paymentDate, guestId, roomNo, unitType, applied, paymentTotal, cashTotal){
+  const entry = loadAllEntries().find(e=> e.id === guestId);
+  const guest = entry ? (entry.guestName || '(no name)') : '(no name)';
+  const caption = buildAutoScreenshotCaption({ date: paymentDate, total: applied, paymentTotal }, roomNo, unitType, guest, cashTotal);
+  openPaymentRecordModal(paymentId, paymentDate, guestId, caption);
+}
+
+// Same room-night table shape as Revenue Report's own buildRoomsTableHtml
+// (# Room No Guest Rent Payment N... Cash MCB Haji Alfalah Due), written as
+// its own function rather than extending buildRoomsTableHtml directly —
+// that one is Revenue Report's own render path and stays untouched — plus
+// one more column: SS. A room-night can have more than one payment chunk
+// (paid in instalments), so the SS cell holds one icon per chunk that had
+// any non-Cash money in it (a pure-Cash chunk has no screenshot to attach,
+// same "account payments only" rule as the other two screenshot pages) —
+// filled/outlined the same has-attachment styling as Account Payment
+// Record's icon.
+function buildRevenuePaymentRecordTableHtml(roomRows, totals, showDateCol){
+  const maxChunks = Math.max(1, ...roomRows.map(r=> r.chunks.length));
+  const PAYMENT_COL_W = 112;
+  const paymentHeaders = Array.from({length: maxChunks}, (_,i)=> `<th style="width:${PAYMENT_COL_W}px; white-space:nowrap;">Payment ${i + 1}</th>`).join('');
+  const paymentCell = (c)=>{
+    if(!c) return '-';
+    const lines = [];
+    if(c.cash > 0) lines.push(`<span class="cash-amt">Cash: Rs. ${c.cash.toLocaleString()}</span>`);
+    const bankNames = Object.keys(c.banks || {});
+    if(bankNames.length){
+      bankNames.forEach(b=> lines.push(`<span class="account-amt">${b}: Rs. ${c.banks[b].toLocaleString()}</span>`));
+    } else if(c.account > 0){
+      lines.push(`<span class="account-amt">Account: Rs. ${c.account.toLocaleString()}</span>`);
+    }
+    return formatDate(c.date) + '<br>' + lines.join('<br>');
+  };
+  const ssCell = (r)=>{
+    const nonCashChunks = r.chunks.filter(c=> c.account > 0);
+    if(nonCashChunks.length === 0) return '';
+    return nonCashChunks.map(c=>{
+      const hasAttachment = !!findPaymentAttachment(c.paymentId);
+      const roomNoJs = String(r.roomNo).replace(/'/g, "\\'");
+      const unitTypeJs = String(r.unitType || '').replace(/'/g, "\\'");
+      return `<button type="button" class="icon-btn${hasAttachment ? ' has-attachment' : ''}" style="margin:1px;" onclick="event.stopPropagation(); openRevenuePaymentModal('${c.paymentId}', '${c.date}', '${r.guestId}', '${roomNoJs}', '${unitTypeJs}', ${c.total}, ${c.paymentTotal}, ${r.cashTotal})" title="${hasAttachment ? 'View or download this payment\'s screenshot' : 'Attach a screenshot to this payment'}">${CAMERA_ICON_SVG}</button>`;
+    }).join('');
+  };
+  const HASH_W = 30, DATE_W = 92, ROOMNO_W = 44, GUEST_W = 80, RENT_W = 60,
+    CASH_W = 60, MCB_W = 52, HAJI_W = 122, ALFALAH_W = 92, DUE_W = 52, SS_W = 60;
+  const totalW = HASH_W + (showDateCol ? DATE_W : 0) + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W + SS_W;
+  const dateTh = showDateCol ? `<th style="width:${DATE_W}px; white-space:nowrap;">Date</th>` : '';
+  const dateTd = (r)=> showDateCol ? `<td>${formatDate(r.date)}</td>` : '';
+  const leadColspan = showDateCol ? 4 : 3;
+  return `
+    <table style="table-layout:fixed; width:100%; min-width:${totalW}px;">
+      <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th>${dateTh}<th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th><th class="no-print" style="width:${SS_W}px; white-space:nowrap;">SS</th></tr></thead>
+      <tbody>${roomRows.map((r,i)=> `
+        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+          <td>${i + 1}</td>
+          ${dateTd(r)}
+          <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
+          <td>${r.guest}</td>
+          <td>${r.rent.toLocaleString()}</td>
+          ${Array.from({length: maxChunks}, (_,i)=> `<td>${paymentCell(r.chunks[i])}</td>`).join('')}
+          <td class="cash-amt">${r.cashTotal ? r.cashTotal.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
+          <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
+          <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
+          <td class="no-print" style="text-align:center;" onclick="event.stopPropagation();">${ssCell(r)}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="${leadColspan}">Total</td>
+          <td>${totals.totalRent.toLocaleString()}</td>
+          <td class="cash-amt" colspan="${maxChunks}">Collected: ${totals.totalCollected.toLocaleString()}</td>
+          <td class="cash-amt">${totals.totalCash.toLocaleString()}</td>
+          <td class="account-amt">${totals.totalMCB.toLocaleString()}</td>
+          <td class="account-amt">${totals.totalHaji.toLocaleString()}</td>
+          <td class="account-amt">${totals.totalAlfalah.toLocaleString()}</td>
+          <td>${totals.totalDue.toLocaleString()}</td>
+          <td class="no-print"></td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
+function setRevenuePaymentRecordToday(){
+  const t = todayStr();
+  setRangeDate('rprRange', 'rprFrom', 'rprTo', t, t);
+  renderRevenuePaymentRecord();
+}
+
+function clearRevenuePaymentRecordFilters(){
+  setRangeDate('rprRange', 'rprFrom', 'rprTo', '', '');
+  renderRevenuePaymentRecord();
+}
+
+function renderRevenuePaymentRecord(){
+  const container = document.getElementById('rprBody');
+  if(!initialLoadDone){
+    container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const fromVal = document.getElementById('rprFrom').value;
+  const toVal = document.getElementById('rprTo').value;
+  document.getElementById('rprRangeReadout').textContent = formatIsoRangeDisplay(fromVal, toVal);
+  const isSingleDay = !!fromVal && !!toVal && fromVal === toVal;
+  const showDateCol = !isSingleDay;
+  let dayWord;
+  if(isSingleDay) dayWord = fromVal === todayStr() ? 'today' : 'on ' + formatDate(fromVal);
+  else if(!fromVal && !toVal) dayWord = 'across all days';
+  else dayWord = 'from ' + (fromVal ? formatDate(fromVal) : 'the start') + ' to ' + (toVal ? formatDate(toVal) : 'now');
+  document.getElementById('rprPrintHeaderSub').textContent = 'Occupied rooms ' + dayWord + '  ·  Generated ' + formatDate(todayStr());
+
+  const data = buildRevenuePaymentRecordRows(fromVal, toVal);
+  if(data.roomRows.length === 0){
+    container.innerHTML = '<div class="empty-note">No rooms occupied ' + dayWord + '.</div>';
+    return;
+  }
+  container.innerHTML = buildRevenuePaymentRecordTableHtml(data.roomRows, {
+    totalRent: data.totalRent, totalCollected: data.totalCollected, totalCash: data.totalCash,
+    totalMCB: data.totalMCB, totalHaji: data.totalHaji, totalAlfalah: data.totalAlfalah, totalDue: data.totalDue
+  }, showDateCol);
+}
+
 function setRevenueToday(){
   const t = todayStr();
   setRangeDate('rvRange', 'rvFrom', 'rvTo', t, t);
@@ -10372,6 +11353,20 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
     }
     return formatDate(c.date) + '<br>' + lines.join('<br>');
   };
+  // Revenue Report's own chunks are keyed by DATE (not payment id — see
+  // buildRevenueReport's keyChunksById comment), so a chunk still carries
+  // SOME payment's id/total for context, but if two different payments
+  // genuinely landed on the same date for the same room-night, this can
+  // only surface one of them. A rare edge case for a purely read-only
+  // convenience icon — Revenue Payment Record (payment-id-keyed) is the
+  // authoritative place to manage every screenshot correctly.
+  const ssCell = (r)=>{
+    const attached = r.chunks.filter(c=> c.account > 0 && findPaymentAttachment(c.paymentId));
+    if(attached.length === 0) return '';
+    return attached.map(c=>
+      `<button type="button" class="icon-btn has-attachment" style="margin:1px;" onclick="event.stopPropagation(); viewPaymentScreenshot('${c.paymentId}')" title="Download this payment's screenshot">${DOWNLOAD_ICON_SVG}</button>`
+    ).join('');
+  };
   // These columns are sized to just fit their header text on one line —
   // the floor, not a target. If a row's actual value is wider than that,
   // it's fine for it to wrap to a second line rather than force every
@@ -10380,14 +11375,14 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
   // the browser's auto layout algorithm distribute the panel's leftover
   // space across the columns instead of respecting the narrow hints.
   const HASH_W = 30, DATE_W = 92, ROOMNO_W = 44, GUEST_W = 80, RENT_W = 60,
-    CASH_W = 60, MCB_W = 52, HAJI_W = 122, ALFALAH_W = 92, DUE_W = 52;
-  const totalW = HASH_W + (showDateCol ? DATE_W : 0) + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W;
+    CASH_W = 60, MCB_W = 52, HAJI_W = 122, ALFALAH_W = 92, DUE_W = 52, SS_W = 60;
+  const totalW = HASH_W + (showDateCol ? DATE_W : 0) + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W + SS_W;
   const dateTh = showDateCol ? `<th style="width:${DATE_W}px; white-space:nowrap;">Date</th>` : '';
   const dateTd = (r)=> showDateCol ? `<td>${formatDate(r.date)}</td>` : '';
   const leadColspan = showDateCol ? 4 : 3;
   return `
     <table style="table-layout:fixed; width:100%; min-width:${totalW}px;">
-      <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th>${dateTh}<th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th></tr></thead>
+      <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th>${dateTh}<th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th><th class="no-print" style="width:${SS_W}px; white-space:nowrap;">SS</th></tr></thead>
       <tbody>${roomRows.map((r,i)=> `
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${i + 1}</td>
@@ -10401,6 +11396,7 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
           <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
           <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
+          <td class="no-print" style="text-align:center;" onclick="event.stopPropagation();">${ssCell(r)}</td>
         </tr>`).join('')}
       </tbody>
       <tfoot>
@@ -10413,6 +11409,7 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
           <td class="account-amt">${totals.totalHaji.toLocaleString()}</td>
           <td class="account-amt">${totals.totalAlfalah.toLocaleString()}</td>
           <td>${totals.totalDue.toLocaleString()}</td>
+          <td class="no-print"></td>
         </tr>
       </tfoot>
     </table>`;
@@ -11899,6 +12896,17 @@ const sb = (typeof window.supabase !== "undefined" && SUPABASE_URL && SUPABASE_A
 let entries = [];               // the cloud mirror every page reads from
 let lockedDays = [];            // cloud mirror of locked_days — { lock_date, locked_by, locked_at, unlocked_by, unlocked_at }
 let roomStatusMap = {};         // cloud mirror of room_status, keyed by room_no — { status, updated_by, updated_at }
+// cloud mirror of payment_attachments — METADATA ONLY (payment_id,
+// payment_date, guest_id, storage_path, caption, uploaded_by, uploaded_at).
+// The actual screenshot image bytes are never pulled into memory as part of
+// this sync — only fetched on an explicit user action (viewing/downloading
+// one screenshot, or building one specific day's PDF). See
+// downloadPaymentScreenshotBlob()'s own comment.
+let paymentAttachments = [];
+const PAYMENT_SCREENSHOTS_BUCKET = 'payment-screenshots';
+function findPaymentAttachment(paymentId){
+  return paymentAttachments.find(a=> a.payment_id === paymentId) || null;
+}
 let initialLoadDone = false;    // nothing renders as "no data" until the first successful pull
 let appStarted = false;
 
@@ -12410,6 +13418,20 @@ async function fetchLockedDaysOnly(){
   if(!error){ lockedDays = data || []; rerenderActiveView(); redrawLockDependentPickers(); }
 }
 
+// payment_attachments is metadata only (no image bytes — see
+// paymentAttachments' own comment) and small/bounded, same idea as
+// locked_days above — cheap to just refetch in full. Called after every
+// upload/delete instead of relying on pullFreshFromCloud(), which shares
+// one in-flight Promise.all across every caller (including the periodic
+// background poll) and can hand back a pre-write snapshot if a poll was
+// already on the wire — the exact bug this same fix already applied to
+// Day Lock's lockDay()/unlockDay().
+async function fetchPaymentAttachmentsOnly(){
+  if(!sb) return;
+  const { data, error } = await sb.from('payment_attachments').select('*');
+  if(!error){ paymentAttachments = data || []; rerenderActiveView(); }
+}
+
 // Once a calendar day has actually finished, its payments shouldn't stay
 // editable forever waiting for an admin to remember to lock it — so every
 // time the app checks in with the cloud, it also checks whether YESTERDAY
@@ -12464,12 +13486,13 @@ async function pullFreshFromCloud(){
   pullInFlight = (async ()=>{
     const stampAtStart = mutationStamp;
     try{
-      const [gRes, rRes, pRes, lkRes, rsRes] = await Promise.all([
+      const [gRes, rRes, pRes, lkRes, rsRes, paRes] = await Promise.all([
         sb.from('guests_active').select('*'),
         sb.from('booking_rooms_active').select('*'),
         sb.from('guest_payments_active').select('*'),
         sb.from('locked_days').select('*'), // optional table — see catch below, not fatal if the migration hasn't been run yet
-        sb.from('room_status').select('*')  // optional table — see catch below, not fatal if the migration hasn't been run yet
+        sb.from('room_status').select('*'), // optional table — see catch below, not fatal if the migration hasn't been run yet
+        sb.from('payment_attachments').select('*') // optional table — metadata only, see paymentAttachments' own comment; not fatal if the migration hasn't been run yet
       ]);
       if(gRes.error) throw gRes.error;
       if(rRes.error) throw rRes.error;
@@ -12485,7 +13508,7 @@ async function pullFreshFromCloud(){
       // queued, the warning stays up until the push itself succeeds
       if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0) syncProblem = null;
 
-      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data, lkRes.data, rsRes.data]);
+      const hash = JSON.stringify([gRes.data, rRes.data, pRes.data, lkRes.data, rsRes.data, paRes.data]);
       const changed = hash !== lastServerHash;
       lastServerHash = hash;
       if(changed || firstLoad){
@@ -12496,6 +13519,7 @@ async function pullFreshFromCloud(){
           (rsRes.data || []).forEach(r=> { nextRoomStatus[r.room_no] = r; });
           roomStatusMap = nextRoomStatus;
         }
+        if(!paRes.error) paymentAttachments = paRes.data || [];
         rerenderActiveView();
         redrawLockDependentPickers();
         saveCloudSnapshotToCache();
@@ -12646,6 +13670,7 @@ if(sb && typeof sb.channel === 'function'){
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_rooms' }, applyRoomRealtimeEvent)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_payments' }, applyPaymentRealtimeEvent)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'locked_days' }, ()=> fetchLockedDaysOnly())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_attachments' }, ()=> fetchPaymentAttachmentsOnly())
       .subscribe();
   }catch(e){ console.error('Realtime unavailable — the periodic poll covers it', e); }
 }
@@ -12769,6 +13794,10 @@ function renderSettings(){
   if(deleteEntityBtn) deleteEntityBtn.style.display = isAdmin() ? '' : 'none';
   const dayLockBtn = document.getElementById('settingsDayLockBtn');
   if(dayLockBtn) dayLockBtn.style.display = isAdmin() ? '' : 'none';
+  const paymentRecordBtn = document.getElementById('settingsPaymentRecordBtn');
+  if(paymentRecordBtn) paymentRecordBtn.style.display = isAdmin() ? '' : 'none';
+  const revenuePaymentRecordBtn = document.getElementById('settingsRevenuePaymentRecordBtn');
+  if(revenuePaymentRecordBtn) revenuePaymentRecordBtn.style.display = isAdmin() ? '' : 'none';
 }
 
 function applyRolePermissions(){
@@ -12776,12 +13805,18 @@ function applyRolePermissions(){
   if(editBtn) editBtn.style.display = isAdmin() ? '' : 'none';
   const dayLockBtn = document.getElementById('settingsDayLockBtn');
   if(dayLockBtn) dayLockBtn.style.display = isAdmin() ? '' : 'none';
+  const paymentRecordBtn = document.getElementById('settingsPaymentRecordBtn');
+  if(paymentRecordBtn) paymentRecordBtn.style.display = isAdmin() ? '' : 'none';
+  const revenuePaymentRecordBtn = document.getElementById('settingsRevenuePaymentRecordBtn');
+  if(revenuePaymentRecordBtn) revenuePaymentRecordBtn.style.display = isAdmin() ? '' : 'none';
   const deleteEntityBtn = document.getElementById('settingsDeleteEntityBtn');
   if(deleteEntityBtn) deleteEntityBtn.style.display = isAdmin() ? '' : 'none';
   const autoCheckoutNav = document.getElementById('topNavAutoCheckout');
   if(autoCheckoutNav) autoCheckoutNav.style.display = isAdmin() ? '' : 'none';
   const arrivalNav = document.getElementById('topNavArrival');
   if(arrivalNav) arrivalNav.style.display = isAdmin() ? '' : 'none';
+  const paymentProofNav = document.getElementById('topNavPaymentProofWrap');
+  if(paymentProofNav) paymentProofNav.style.display = isAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
   const avatar = document.getElementById('hdrAvatar');
