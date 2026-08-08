@@ -360,6 +360,33 @@
   }
   .paste-zone:focus{ outline:none; border-color:var(--accent); color:var(--ink); }
   .paste-zone img{ max-width:100%; max-height:220px; border-radius:6px; }
+  /* Screenshot-fetch loading state (Payment Record modal, single + multi)
+     — a determinate-LOOKING fill instead of static "Loading…" text; the
+     fetch itself has no real progress events to bind to (one blob
+     download), so this loops rather than tracking an actual percentage. */
+  .loading-bar{
+    width:160px;
+    max-width:70%;
+    height:6px;
+    border-radius:3px;
+    background:rgba(127,127,127,0.25);
+    overflow:hidden;
+    margin:14px auto;
+  }
+  .loading-bar-fill{
+    height:100%;
+    width:100%;
+    background:#1a73e8;
+    border-radius:3px;
+    transform:scaleX(0);
+    transform-origin:left;
+    animation:loadingBarFill 1.15s ease-in-out infinite;
+  }
+  @keyframes loadingBarFill{
+    0%{ transform:scaleX(0); opacity:1; }
+    65%{ transform:scaleX(1); opacity:1; }
+    100%{ transform:scaleX(1); opacity:0; }
+  }
   @keyframes searchClearPulse{
     0%, 100%{ transform:translateY(-50%) scale(1); }
     50%{ transform:translateY(-50%) scale(1.3); }
@@ -480,6 +507,16 @@
     padding:6px 8px;
     font-size:13px;
     min-height:30px;
+  }
+  td input[type="checkbox"]{
+    width:16px;
+    height:16px;
+    min-height:0;
+    padding:0;
+    margin:0;
+    accent-color:#16A34A;
+    cursor:pointer;
+    vertical-align:middle;
   }
   .roomctrl{
     display:flex;
@@ -9704,6 +9741,7 @@ let paymentRecordUploadZoneOpen = false;
 // one active at a time, so one variable/one revoke is enough for both.
 let paymentRecordPreviewUrl = null;
 let paymentRecordImageLoaded = false; // true once the existing attachment's image has actually been fetched THIS modal session
+let paymentRecordImageLoading = false; // true only while that fetch is in flight — drives the loading-bar in imageHtml
 
 function revokePaymentRecordPreviewUrl(){
   if(paymentRecordPreviewUrl){ URL.revokeObjectURL(paymentRecordPreviewUrl); paymentRecordPreviewUrl = null; }
@@ -9838,6 +9876,7 @@ function openPaymentRecordModal(paymentId, paymentDate, guestId, suggestedCaptio
   pendingPaymentRecordPasteBlob = null;
   paymentRecordUploadZoneOpen = false;
   paymentRecordImageLoaded = false;
+  paymentRecordImageLoading = false;
   revokePaymentRecordPreviewUrl();
   renderPaymentRecordModalBody();
   document.getElementById('paymentRecordModalBackdrop').classList.add('active');
@@ -9870,6 +9909,7 @@ function closePaymentRecordModal(){
   pendingPaymentRecordPasteBlob = null;
   paymentRecordUploadZoneOpen = false;
   paymentRecordImageLoaded = false;
+  paymentRecordImageLoading = false;
   revokePaymentRecordPreviewUrl();
   revokeMultiPaymentRecordPreviewUrls();
   pendingMultiPaymentRecordItems = null;
@@ -9891,7 +9931,9 @@ function renderPaymentRecordModalBody(){
       <div style="margin-bottom:16px; padding-bottom:14px;${idx < pendingMultiPaymentRecordItems.length - 1 ? ' border-bottom:1px solid var(--border);' : ''}">
         ${item.previewUrl
           ? `<div style="text-align:center; margin-bottom:8px;"><img src="${item.previewUrl}" alt="Payment screenshot" style="max-width:100%; max-height:260px; border-radius:6px;"></div>`
-          : `<div class="sub" style="text-align:center; margin-bottom:8px;">${item.loading ? 'Loading…' : 'Couldn\'t load this screenshot.'}</div>`}
+          : item.loading
+            ? `<div class="loading-bar"><div class="loading-bar-fill"></div></div>`
+            : `<div class="sub" style="text-align:center; margin-bottom:8px;">Couldn't load this screenshot.</div>`}
         <div style="margin-bottom:6px;"><strong>Caption:</strong> ${item.caption}</div>
         ${item.previewUrl ? `<div style="text-align:center;"><a class="btn secondary" href="${item.previewUrl}" download="${paymentScreenshotFilename({ payment_id: item.paymentId, caption: item.caption })}">⬇ Download</a></div>` : ''}
       </div>`
@@ -9940,7 +9982,9 @@ function renderPaymentRecordModalBody(){
   if(att){
     const imageHtml = paymentRecordImageLoaded
       ? `<div style="text-align:center; margin-bottom:10px;"><img src="${paymentRecordPreviewUrl}" alt="Payment screenshot" style="max-width:100%; max-height:320px; border-radius:6px;"></div>`
-      : '';
+      : paymentRecordImageLoading
+        ? `<div class="loading-bar"><div class="loading-bar-fill"></div></div>`
+        : '';
     // No "suggested, click to accept" state here on purpose — a
     // caption-less attachment gets its caption auto-saved the moment this
     // popup opens (see openPaymentRecordModal's autoSavePaymentRecordCaption
@@ -9949,7 +9993,9 @@ function renderPaymentRecordModalBody(){
     const captionHtml = att.caption ? `<div style="margin-bottom:6px;"><strong>Caption:</strong> ${att.caption}</div>` : '';
     const rightBtn = paymentRecordImageLoaded
       ? `<a class="btn" href="${paymentRecordPreviewUrl}" download="${paymentScreenshotFilename(att)}">⬇ Download</a>`
-      : `<button class="btn" id="paymentRecordViewBtn" onclick="loadPaymentRecordImagePreview()">👁 View Screenshot</button>`;
+      : paymentRecordImageLoading
+        ? '' // the loading bar above is the only loading indicator now — no redundant disabled button text
+        : `<button class="btn" id="paymentRecordViewBtn" onclick="loadPaymentRecordImagePreview()">👁 View Screenshot</button>`;
     body.innerHTML = `
       ${imageHtml}
       ${captionHtml}
@@ -9973,6 +10019,7 @@ function showPaymentRecordUploadZone(){
   paymentRecordUploadZoneOpen = true;
   pendingPaymentRecordPasteBlob = null;
   paymentRecordImageLoaded = false;
+  paymentRecordImageLoading = false;
   revokePaymentRecordPreviewUrl();
   renderPaymentRecordModalBody();
 }
@@ -9985,12 +10032,13 @@ async function loadPaymentRecordImagePreview(){
   if(!pendingPaymentRecordContext) return;
   const att = findPaymentAttachment(pendingPaymentRecordContext.paymentId);
   if(!att) return;
-  const btn = document.getElementById('paymentRecordViewBtn');
-  if(btn){ btn.disabled = true; btn.textContent = 'Loading…'; }
+  paymentRecordImageLoading = true;
+  renderPaymentRecordModalBody();
   const blob = await downloadPaymentScreenshotBlob(att.storage_path);
+  paymentRecordImageLoading = false;
   if(!blob){
     showNotice('Couldn\'t load the screenshot — check the internet connection and try again.');
-    if(btn){ btn.disabled = false; btn.textContent = '👁 View Screenshot'; }
+    renderPaymentRecordModalBody();
     return;
   }
   revokePaymentRecordPreviewUrl();
