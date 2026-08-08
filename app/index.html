@@ -8826,6 +8826,26 @@ async function deletePaymentScreenshot(paymentId, storagePath){
   }
 }
 
+// Fixes/adds just the caption on an already-attached screenshot — no
+// re-upload, no touching the stored image at all. Exists because the
+// caption auto-suggestion only started firing once buildAutoScreenshotCaptionForPayment
+// was wired into Account Payment Record's upload flow; anything attached
+// before that landed with an empty caption and shouldn't need its whole
+// image re-uploaded just to add one now.
+async function updatePaymentScreenshotCaption(paymentId, caption){
+  if(!sb){ showNotice('Not connected to the cloud database — try again once it reconnects.'); return false; }
+  try{
+    const { error } = await sb.from('payment_attachments').update({ caption: caption || '' }).eq('payment_id', paymentId);
+    if(error) throw error;
+    await fetchPaymentAttachmentsOnly();
+    return true;
+  }catch(e){
+    console.error('Updating payment screenshot caption failed', e);
+    showNotice('Couldn\'t save the caption — check the internet connection and try again.');
+    return false;
+  }
+}
+
 // Blob -> base64 data URL, needed because jsPDF's addImage() takes a data
 // URL/base64 string, not a Blob directly.
 function blobToDataUrl(blob){
@@ -9581,6 +9601,17 @@ function reportRowsToTableHtml(sectionRows){
   };
 }
 
+// The saved caption doubles as the downloaded file's name (so a folder of
+// these actually reads as "Rs 18,000 for 206 — Gulzar Ahmed...png" instead
+// of an opaque payment id) — stripped of characters Windows/macOS refuse
+// in a filename, falling back to the old payment-id name when there's no
+// caption to work with (or the caption sanitizes down to nothing).
+function paymentScreenshotFilename(att){
+  const base = (att.caption || '').trim();
+  const safe = base.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  return (safe || ('payment-' + att.payment_id)) + '.png';
+}
+
 // The per-row download icon's click handler on Payment Report (see the
 // no-print column added inside reportRowsToTableHtml above). Looking up
 // findPaymentAttachment() is free — paymentAttachments metadata is already
@@ -9596,7 +9627,7 @@ async function viewPaymentScreenshot(paymentId){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'payment-' + paymentId + '.png';
+  a.download = paymentScreenshotFilename(att);
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -9679,7 +9710,7 @@ function paymentRecordRowsToTableHtml(sectionRows){
         <td class="account-amt">${r.bank === 'Alfalah' && r.account ? r.account.toLocaleString() : '-'}</td>
         <td class="account-amt">${r.bank === 'Haji (MCB)' && r.account ? r.account.toLocaleString() : '-'}</td>
         <td class="rowtotal account-amt">${r.account.toLocaleString()}</td>
-        <td class="no-print" style="text-align:center;"><button type="button" class="icon-btn${hasAttachment ? ' has-attachment' : ''}" onclick="event.stopPropagation(); openPaymentRecordModal('${r.paymentId}', '${r.date}', '${r.id}')" title="${hasAttachment ? 'View or download this payment\'s screenshot' : 'Attach a screenshot to this payment'}">${CAMERA_ICON_SVG}</button></td>
+        <td class="no-print" style="text-align:center;"><button type="button" class="icon-btn${hasAttachment ? ' has-attachment' : ''}" onclick="event.stopPropagation(); openAccountPaymentModal('${r.paymentId}', '${r.date}', '${r.id}')" title="${hasAttachment ? 'View or download this payment\'s screenshot' : 'Attach a screenshot to this payment'}">${CAMERA_ICON_SVG}</button></td>
       </tr>`;
   }).join('');
   const accountTotal = mcb + alfalah + haji;
@@ -9795,6 +9826,7 @@ let paymentRecordUploadZoneOpen = false;
 // one active at a time, so one variable/one revoke is enough for both.
 let paymentRecordPreviewUrl = null;
 let paymentRecordImageLoaded = false; // true once the existing attachment's image has actually been fetched THIS modal session
+let paymentRecordEditingCaption = false; // Edit/Add Caption's own inline text-field state
 
 function revokePaymentRecordPreviewUrl(){
   if(paymentRecordPreviewUrl){ URL.revokeObjectURL(paymentRecordPreviewUrl); paymentRecordPreviewUrl = null; }
@@ -9824,15 +9856,51 @@ function buildAutoScreenshotCaption(chunk, roomNo, unitType, guest, cashTotal){
   return text;
 }
 
-// suggestedCaption (optional) — Revenue Payment Record passes an
-// auto-generated one (see buildAutoScreenshotCaption) describing how much
-// of this payment applies to a specific room; only ever prefilled for a
-// FRESH upload, never overwrites an existing caption.
-function openPaymentRecordModal(paymentId, paymentDate, guestId, suggestedCaption){
-  pendingPaymentRecordContext = { paymentId, paymentDate, guestId, suggestedCaption: suggestedCaption || '' };
+// Account Payment Record is the only place a screenshot ever gets
+// uploaded — but that page only knows a payment as a flat row (guest,
+// mode, amount), not which room-night(s) it actually funded, and the
+// auto-caption needs exactly that room attribution. This runs the SAME
+// FIFO room-night matching Revenue Payment Record uses (buildRevenueReport
+// with keyChunksById), across every date rather than one range, and pulls
+// out just the chunk(s) that trace back to this one payment id — the
+// caption itself is auto-computed and auto-shown on Revenue Payment
+// Record; this just lets Account Payment Record's upload flow offer the
+// identical suggestion without duplicating the room-matching logic.
+// A payment split across several rooms gets every room's share listed.
+function buildAutoScreenshotCaptionForPayment(paymentId){
+  const data = buildRevenueReport('', '', true);
+  const hits = [];
+  data.roomRows.forEach(r=> r.chunks.forEach(c=>{
+    if(c.paymentId === paymentId) hits.push({ chunk: c, roomNo: r.roomNo, unitType: r.unitType, guest: r.guest, cashTotal: r.cashTotal });
+  }));
+  if(hits.length === 0) return '';
+  if(hits.length === 1){
+    const h = hits[0];
+    return buildAutoScreenshotCaption(h.chunk, h.roomNo, h.unitType, h.guest, h.cashTotal);
+  }
+  const parts = hits.map(h=> `Rs. ${h.chunk.total.toLocaleString()} → ${displayRoomNo(h.roomNo, h.unitType)}`);
+  const first = hits[0];
+  return `${parts.join(', ')} (of this Rs. ${first.chunk.paymentTotal.toLocaleString()} payment) — ${first.guest} (${formatDate(first.chunk.date)})`;
+}
+
+function openAccountPaymentModal(paymentId, paymentDate, guestId){
+  openPaymentRecordModal(paymentId, paymentDate, guestId, buildAutoScreenshotCaptionForPayment(paymentId));
+}
+
+// suggestedCaption (optional) — Account Payment Record passes an
+// auto-generated one (see buildAutoScreenshotCaptionForPayment) describing
+// how much of this payment applies to whichever room(s) it funded; only
+// ever prefilled for a FRESH upload, never overwrites an existing caption.
+// readOnly (optional) — Revenue Payment Record's own icon passes this:
+// uploading is only ever possible from Account Payment Record now, so
+// Revenue Payment Record's modal drops Replace/Upload entirely and is
+// just a per-room-night view of whatever's already there.
+function openPaymentRecordModal(paymentId, paymentDate, guestId, suggestedCaption, readOnly){
+  pendingPaymentRecordContext = { paymentId, paymentDate, guestId, suggestedCaption: suggestedCaption || '', readOnly: !!readOnly };
   pendingPaymentRecordPasteBlob = null;
   paymentRecordUploadZoneOpen = false;
   paymentRecordImageLoaded = false;
+  paymentRecordEditingCaption = false;
   revokePaymentRecordPreviewUrl();
   renderPaymentRecordModalBody();
   document.getElementById('paymentRecordModalBackdrop').classList.add('active');
@@ -9850,6 +9918,7 @@ function closePaymentRecordModal(){
   pendingPaymentRecordPasteBlob = null;
   paymentRecordUploadZoneOpen = false;
   paymentRecordImageLoaded = false;
+  paymentRecordEditingCaption = false;
   revokePaymentRecordPreviewUrl();
 }
 
@@ -9893,22 +9962,45 @@ function renderPaymentRecordModalBody(){
     return;
   }
 
+  const readOnly = !!pendingPaymentRecordContext.readOnly;
+
+  if(att && paymentRecordEditingCaption){
+    // Fixes/adds just the caption, no re-upload — see
+    // updatePaymentScreenshotCaption's own comment for why this exists
+    // (screenshots attached before the auto-caption suggestion was wired
+    // up landed with nothing here). Prefilled with the SAME
+    // suggestedCaption the upload flow uses whenever there's no caption
+    // saved yet, so fixing one of those old rows is a single click, not
+    // retyping the whole thing.
+    body.innerHTML = `
+      <label for="paymentRecordCaptionEditInput">Caption</label>
+      <input type="text" id="paymentRecordCaptionEditInput" placeholder="e.g. Bank transfer receipt" value="${att.caption || pendingPaymentRecordContext.suggestedCaption || ''}">
+      <div class="modal-actions">
+        <button class="btn secondary" onclick="cancelEditPaymentRecordCaption()">Cancel</button>
+        <button class="btn" id="paymentRecordCaptionSaveBtn" onclick="saveEditPaymentRecordCaption()">Save</button>
+      </div>`;
+    return;
+  }
+
   if(att){
     const imageHtml = paymentRecordImageLoaded
       ? `<div style="text-align:center; margin-bottom:10px;"><img src="${paymentRecordPreviewUrl}" alt="Payment screenshot" style="max-width:100%; max-height:320px; border-radius:6px;"></div>`
       : '';
     const captionHtml = att.caption ? `<div style="margin-bottom:6px;"><strong>Caption:</strong> ${att.caption}</div>` : '';
     const rightBtn = paymentRecordImageLoaded
-      ? `<a class="btn" href="${paymentRecordPreviewUrl}" download="payment-${att.payment_id}.png">⬇ Download</a>`
+      ? `<a class="btn" href="${paymentRecordPreviewUrl}" download="${paymentScreenshotFilename(att)}">⬇ Download</a>`
       : `<button class="btn" id="paymentRecordViewBtn" onclick="loadPaymentRecordImagePreview()">👁 View Screenshot</button>`;
     body.innerHTML = `
       ${imageHtml}
       ${captionHtml}
       <div class="sub" style="margin-bottom:14px;">Attached by ${att.uploaded_by || '-'} on ${formatDate(toKarachiDateStr(att.uploaded_at))}</div>
       <div class="modal-actions">
-        <button class="btn secondary" onclick="showPaymentRecordUploadZone()">Replace</button>
+        ${readOnly ? '' : `<button class="btn secondary" onclick="showPaymentRecordUploadZone()">Replace</button>
+        <button class="btn secondary" onclick="startEditPaymentRecordCaption()">${att.caption ? 'Edit Caption' : 'Add Caption'}</button>`}
         ${rightBtn}
       </div>`;
+  } else if(readOnly){
+    body.innerHTML = `<div class="sub">No screenshot attached yet — attach one from Account Payment Record.</div>`;
   } else {
     body.innerHTML = `
       <div class="sub" style="margin-bottom:14px;">No screenshot attached yet.</div>
@@ -9922,8 +10014,36 @@ function showPaymentRecordUploadZone(){
   paymentRecordUploadZoneOpen = true;
   pendingPaymentRecordPasteBlob = null;
   paymentRecordImageLoaded = false;
+  paymentRecordEditingCaption = false;
   revokePaymentRecordPreviewUrl();
   renderPaymentRecordModalBody();
+}
+
+function startEditPaymentRecordCaption(){
+  paymentRecordEditingCaption = true;
+  renderPaymentRecordModalBody();
+}
+
+function cancelEditPaymentRecordCaption(){
+  paymentRecordEditingCaption = false;
+  renderPaymentRecordModalBody();
+}
+
+async function saveEditPaymentRecordCaption(){
+  if(!pendingPaymentRecordContext) return;
+  const caption = document.getElementById('paymentRecordCaptionEditInput').value.trim();
+  const btn = document.getElementById('paymentRecordCaptionSaveBtn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  const ok = await updatePaymentScreenshotCaption(pendingPaymentRecordContext.paymentId, caption);
+  if(!ok){
+    if(btn){ btn.disabled = false; btn.textContent = 'Save'; }
+    return;
+  }
+  paymentRecordEditingCaption = false;
+  renderPaymentRecordModalBody();
+  if(currentView === 'paymentrecord') renderPaymentRecord();
+  if(currentView === 'revenuepaymentrecord') renderRevenuePaymentRecord();
+  showNotice('Caption saved.', 'success');
 }
 
 // The only fetch in this whole "has attachment" branch — pulls the image
@@ -11195,13 +11315,17 @@ function buildRevenuePaymentRecordRows(fromDate, toDate){
 // The SS column's click handler — looks the guest name up itself (rather
 // than having the caller interpolate it into the onclick HTML string,
 // which would break the moment a guest name contains an apostrophe) and
-// builds the room-specific auto-caption before handing off to the same
-// openPaymentRecordModal used everywhere else this session.
+// builds the room-specific auto-caption for display purposes (this page is
+// read-only — see below — but the modal still shows this same caption
+// text whenever there IS an attachment, since it was likely generated
+// here or by buildAutoScreenshotCaptionForPayment and saved verbatim).
+// readOnly:true — uploading only ever happens from Account Payment
+// Record now; this page is purely for reviewing screenshots per room.
 function openRevenuePaymentModal(paymentId, paymentDate, guestId, roomNo, unitType, applied, paymentTotal, cashTotal){
   const entry = loadAllEntries().find(e=> e.id === guestId);
   const guest = entry ? (entry.guestName || '(no name)') : '(no name)';
   const caption = buildAutoScreenshotCaption({ date: paymentDate, total: applied, paymentTotal }, roomNo, unitType, guest, cashTotal);
-  openPaymentRecordModal(paymentId, paymentDate, guestId, caption);
+  openPaymentRecordModal(paymentId, paymentDate, guestId, caption, true);
 }
 
 // Same room-night table shape as Revenue Report's own buildRoomsTableHtml
@@ -11230,14 +11354,17 @@ function buildRevenuePaymentRecordTableHtml(roomRows, totals, showDateCol){
     }
     return formatDate(c.date) + '<br>' + lines.join('<br>');
   };
+  // View/download only — uploading only ever happens from Account
+  // Payment Record now (see openAccountPaymentModal), so a chunk with
+  // nothing attached yet just gets no icon at all, same convention as
+  // Payment Report/Revenue Report's own read-only columns.
   const ssCell = (r)=>{
-    const nonCashChunks = r.chunks.filter(c=> c.account > 0);
-    if(nonCashChunks.length === 0) return '';
-    return nonCashChunks.map(c=>{
-      const hasAttachment = !!findPaymentAttachment(c.paymentId);
+    const attachedChunks = r.chunks.filter(c=> c.account > 0 && findPaymentAttachment(c.paymentId));
+    if(attachedChunks.length === 0) return '';
+    return attachedChunks.map(c=>{
       const roomNoJs = String(r.roomNo).replace(/'/g, "\\'");
       const unitTypeJs = String(r.unitType || '').replace(/'/g, "\\'");
-      return `<button type="button" class="icon-btn${hasAttachment ? ' has-attachment' : ''}" style="margin:1px;" onclick="event.stopPropagation(); openRevenuePaymentModal('${c.paymentId}', '${c.date}', '${r.guestId}', '${roomNoJs}', '${unitTypeJs}', ${c.total}, ${c.paymentTotal}, ${r.cashTotal})" title="${hasAttachment ? 'View or download this payment\'s screenshot' : 'Attach a screenshot to this payment'}">${CAMERA_ICON_SVG}</button>`;
+      return `<button type="button" class="icon-btn has-attachment" style="margin:1px;" onclick="event.stopPropagation(); openRevenuePaymentModal('${c.paymentId}', '${c.date}', '${r.guestId}', '${roomNoJs}', '${unitTypeJs}', ${c.total}, ${c.paymentTotal}, ${r.cashTotal})" title="View or download this payment's screenshot">${CAMERA_ICON_SVG}</button>`;
     }).join('');
   };
   const HASH_W = 30, DATE_W = 92, ROOMNO_W = 44, GUEST_W = 80, RENT_W = 60,
