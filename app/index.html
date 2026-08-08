@@ -12308,13 +12308,32 @@ async function fetchSingleGuest(guestId){
   rerenderActiveView();
 }
 
+// Every payment date picker (dNewDate + each Payment Detail row) bakes its
+// grayed-out/lock-icon day cells in ONCE, at the moment flatpickr builds
+// them — disable/onDayCreate aren't re-run later on their own. So a picker
+// that was already open (or built) before `lockedDays` finishes its first
+// cloud fetch, or before a day gets newly locked mid-session (an admin
+// locking it, or the midnight/background auto-lock), keeps showing its
+// stale locked-day state — including letting a now-locked day be clicked
+// and selected — until something forces flatpickr to rebuild the month
+// (changing months, or recreating the picker). Call this after every write
+// to `lockedDays` so any currently-live picker's day cells catch up right
+// away instead of waiting on an unrelated user action.
+function redrawLockDependentPickers(){
+  const dNewFp = filterDatePickers['dNewDate'];
+  if(dNewFp) dNewFp.redraw();
+  document.querySelectorAll('#payBody .payDate').forEach(el=>{
+    if(el._flatpickr) el._flatpickr.redraw();
+  });
+}
+
 // locked_days is small and bounded (one row per locked calendar day) —
 // unlike guests/rooms/payments it's cheap to just refetch in full whenever
 // it changes.
 async function fetchLockedDaysOnly(){
   if(!sb) return;
   const { data, error } = await sb.from('locked_days').select('*');
-  if(!error){ lockedDays = data || []; rerenderActiveView(); }
+  if(!error){ lockedDays = data || []; rerenderActiveView(); redrawLockDependentPickers(); }
 }
 
 // Once a calendar day has actually finished, its payments shouldn't stay
@@ -12404,6 +12423,7 @@ async function pullFreshFromCloud(){
           roomStatusMap = nextRoomStatus;
         }
         rerenderActiveView();
+        redrawLockDependentPickers();
         saveCloudSnapshotToCache();
       }
       if(firstLoad) setLoadingOverlay(false);
