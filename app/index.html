@@ -2908,7 +2908,7 @@
 
     <div class="panel accent-rooms">
       <h2>Room / Apartment Detail</h2>
-      <div class="sub" style="margin-top:-6px;">Pick "Miscellaneous" as the Room No to bill Snooker, BBQ, or Bonfire alongside the rooms</div>
+      <div class="sub" style="margin-top:-6px;">Pick "Miscellaneous" as the Room No to bill Snooker, BBQ, Bonfire, or Mattress alongside the rooms</div>
       <table>
         <thead>
           <tr>
@@ -5122,7 +5122,7 @@ const ALL_UNITS = [
 // row whose Room No is "Miscellaneous" so it never shows up as an
 // occupied room in Ledgers, Revenue Report, Room Detail, or the Dashboard.
 const MISC_ROOM_NO = 'Miscellaneous';
-const MISC_TYPES = ['BBQ', 'Bonfire', 'Snooker'];
+const MISC_TYPES = ['BBQ', 'Bonfire', 'Snooker', 'Mattress'];
 function isMiscRoomNo(roomNo){
   return (roomNo || '').trim().toUpperCase() === MISC_ROOM_NO.toUpperCase();
 }
@@ -5938,6 +5938,15 @@ function handleKarachiMidnightRollover(){
     const fp = getPickerFor(id);
     if(fp) fp.setDate(newToday, false);
   });
+  // dNewDate and every Payment Detail row share paymentDatePickerHooks(),
+  // whose maxDate: todayStr() is a plain value baked in once at picker
+  // construction — unlike the field values just above, nothing else ever
+  // pushes today's actual rollover into it. A tab left open across
+  // midnight would otherwise keep showing the new day itself as a grayed-
+  // out/future date, unpickable, until the picker gets torn down and
+  // rebuilt (e.g. reopening the entry). fp.set() both updates the config
+  // and redraws, so this alone is enough — no separate redraw() call needed.
+  refreshPaymentPickerMaxDate(newToday);
   // Range pairs that default to "today": only roll forward a pair whose
   // From AND To both still sit on yesterday's "today" — anything else was
   // deliberately set to a specific range and shouldn't be touched.
@@ -11200,7 +11209,16 @@ async function lockDay(dateStr){
       unlocked_at: null
     }, { onConflict: 'lock_date' });
     if(error) throw error;
-    await pullFreshFromCloud();
+    // fetchLockedDaysOnly(), not pullFreshFromCloud() — pullFreshFromCloud
+    // shares one in-flight Promise.all across every caller (the periodic
+    // poll included). If a poll's snapshot was already on the wire when
+    // this write landed, it predates the write and doesn't contain it, so
+    // awaiting pullFreshFromCloud() here can silently hand back a stale
+    // "still locked"/"still unlocked" read with nothing to self-correct it
+    // until the next poll — up to 5 minutes later. fetchLockedDaysOnly()
+    // always issues its own fresh request, so this always reflects the
+    // write that was just made.
+    await fetchLockedDaysOnly();
     renderDayLock();
   }catch(e){
     console.error('Locking the day failed', e);
@@ -11218,7 +11236,10 @@ async function unlockDay(dateStr){
       unlocked_at: new Date().toISOString()
     }).eq('lock_date', dateStr);
     if(error) throw error;
-    await pullFreshFromCloud();
+    // See lockDay()'s comment — fetchLockedDaysOnly(), not
+    // pullFreshFromCloud(), so this can't hand back a pre-write snapshot
+    // shared with a concurrent poll.
+    await fetchLockedDaysOnly();
     renderDayLock();
   }catch(e){
     console.error('Unlocking the day failed', e);
@@ -12324,6 +12345,18 @@ function redrawLockDependentPickers(){
   if(dNewFp) dNewFp.redraw();
   document.querySelectorAll('#payBody .payDate').forEach(el=>{
     if(el._flatpickr) el._flatpickr.redraw();
+  });
+}
+
+// See handleKarachiMidnightRollover()'s call site — dNewDate/Payment Detail
+// rows' maxDate: todayStr() is fixed at picker-construction time, so a tab
+// left open across midnight needs this pushed in explicitly or the new day
+// stays wrongly grayed out as "future" until the picker is rebuilt.
+function refreshPaymentPickerMaxDate(newToday){
+  const dNewFp = filterDatePickers['dNewDate'];
+  if(dNewFp) dNewFp.set('maxDate', newToday);
+  document.querySelectorAll('#payBody .payDate').forEach(el=>{
+    if(el._flatpickr) el._flatpickr.set('maxDate', newToday);
   });
 }
 
