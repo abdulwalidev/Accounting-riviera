@@ -4627,10 +4627,29 @@ function initStayDatePickers(){
       // see checkinTodayStr(). allowInvalidPreload keeps this from wiping
       // an EXISTING guest's genuinely-past Check-in date when editing them,
       // or a deliberately-past date NPR pre-fills (startNprAdd) — the same
-      // fix as the payment date picker's locked-day preload issue.
+      // fix as the payment date picker's locked-day preload issue. Reuses
+      // the same grayed-out/lock-icon/click-message treatment as the
+      // payment pickers' locked days (see paymentDatePickerHooks) purely
+      // for the visual idiom — this is a booking rule, not an actual Day
+      // Lock, so the click message doesn't mention an admin unlocking it.
       ...(id === 'checkInDate' ? {
         disable: [ d=> toKarachiDateStr(d) < checkinTodayStr() ],
-        allowInvalidPreload: true
+        allowInvalidPreload: true,
+        onDayCreate: (dObj, dStr, fp, dayElem)=>{
+          if(!dayElem.dateObj) return;
+          const iso = toKarachiDateStr(dayElem.dateObj);
+          if(iso < checkinTodayStr()){
+            dayElem.classList.add('flatpickr-day-locked');
+            const tag = document.createElement('span');
+            tag.className = 'fp-day-locked-tag';
+            tag.innerHTML = LOCK_ICON_SVG;
+            dayElem.appendChild(tag);
+            dayElem.addEventListener('click', e=>{
+              e.preventDefault(); e.stopPropagation();
+              showNotice('A new check-in can\'t be backdated — pick today or a future date.');
+            });
+          }
+        }
       } : {}),
       onValueUpdate: (selectedDates, dateStr, instance)=>{
         applyPickerDisplay(instance);
