@@ -4911,13 +4911,13 @@ const filterDatePickers = {};
 // color) across platforms instead of inheriting whatever padlock emoji a
 // given OS/font ships.
 const LOCK_ICON_SVG = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-// Same reasoning/idiom as LOCK_ICON_SVG above — a plain download-tray glyph
-// for Payment Report's per-row screenshot icon (see viewPaymentScreenshot),
-// and a plain camera glyph for Account Payment Record's per-row
-// attach/view icon (see openPaymentRecordModal). SVG, not an emoji, so both
-// render identically across OS/font instead of inheriting whatever glyph a
-// given platform ships for 📥/📷.
-const DOWNLOAD_ICON_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>';
+// Same reasoning/idiom as LOCK_ICON_SVG above — a plain camera glyph for
+// every page's per-row screenshot icon (Payment Report, Revenue Report,
+// Account/Revenue Payment Record — see openPaymentRecordModal), all of
+// which open the same Payment Record popup rather than downloading
+// straight away. SVG, not an emoji, so it renders identically across
+// OS/font instead of inheriting whatever glyph a given platform ships
+// for 📷.
 const CAMERA_ICON_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>';
 // Shared by every calendar that picks a PAYMENT date (Add Payment's dNewDate,
 // and each Payment Detail row below) — a payment can't be dated on a locked
@@ -8756,19 +8756,22 @@ function renderAuditPage(){
 }
 
 // =========================================================
-// PAYMENT SCREENSHOTS — Storage helpers backing Account Payment Record
-// (admin-only Settings page) and the small download icon on Payment
-// Report. One screenshot per payment, stored at "<payment_id>.png" in the
-// private payment-screenshots bucket (migration/payment_attachments.sql) —
-// upload always passes upsert:true, so re-attaching a screenshot for the
-// same payment just replaces the old file, never leaves an orphan behind.
+// PAYMENT SCREENSHOTS — Storage helpers backing the Payment Record popup
+// (openPaymentRecordModal) used by every page that shows a screenshot
+// icon — Payment Report, Revenue Report, Account Payment Record, Revenue
+// Payment Record. One screenshot per payment, stored at "<payment_id>.png"
+// in the private payment-screenshots bucket
+// (migration/payment_attachments.sql) — upload always passes
+// upsert:true, so re-attaching a screenshot for the same payment just
+// replaces the old file, never leaves an orphan behind.
 //
 // IMPORTANT — image bytes are never fetched except by an explicit, single
 // user action: downloadPaymentScreenshotBlob() is the ONLY function that
-// ever downloads image data, and its only callers are viewPaymentScreenshot
-// (one specific payment, on click), openPaymentRecordModal's own Download
-// button (same, on click), and downloadDayScreenshotsPdf (one specific
-// day's attachments, on click, nothing from any other day). Nothing else —
+// ever downloads image data, and its only callers are
+// loadPaymentRecordImagePreview (fires once, the moment the popup opens
+// for a payment that already has an attachment — that click already is
+// the request) and downloadDayScreenshotsPdf/downloadRangeScreenshotsPdf
+// (only the attachments actually being bundled, on click). Nothing else —
 // no preload, no hover, no eager fetch on render — ever calls it. This is
 // a real Supabase Storage egress cost concern, confirmed explicitly by
 // whoever's paying the bill, not a style preference.
@@ -9545,8 +9548,8 @@ function reportRowsToTableHtml(sectionRows){
     const modeLabel = isCash ? modeShort : `${modeShort}${r.bank ? ' (' + r.bank + ')' : ''}`;
     // Metadata lookup only (paymentAttachments is already in memory, same
     // as lockedDays/roomStatusMap) — deciding whether to show the icon at
-    // all never fetches the screenshot itself, only viewPaymentScreenshot()
-    // does that, and only on click.
+    // all never fetches the screenshot itself, only opening the popup
+    // (loadPaymentRecordImagePreview, on open) does that.
     const hasAttachment = !!findPaymentAttachment(r.paymentId);
     return `
       <tr class="${isCash ? 'mode-cash' : 'mode-bank'}" style="cursor:pointer;" onclick="openDetail('${r.id}')" title="Open this guest">
@@ -9562,7 +9565,7 @@ function reportRowsToTableHtml(sectionRows){
         <td class="account-amt">${r.bank === 'Haji (MCB)' && r.account ? r.account.toLocaleString() : '-'}</td>
         <td class="account-amt">${r.account ? r.account.toLocaleString() : '-'}</td>
         <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${r.total.toLocaleString()}</td>
-        <td class="no-print" style="text-align:center;">${hasAttachment ? `<button type="button" class="icon-btn" onclick="event.stopPropagation(); viewPaymentScreenshot('${r.paymentId}')" title="Download this payment's screenshot">${DOWNLOAD_ICON_SVG}</button>` : ''}</td>
+        <td class="no-print" style="text-align:center;">${hasAttachment ? `<button type="button" class="icon-btn has-attachment" onclick="event.stopPropagation(); openPaymentRecordModal('${r.paymentId}', '${r.date}', '${r.id}', '', true)" title="View or download this payment's screenshot">${CAMERA_ICON_SVG}</button>` : ''}</td>
       </tr>`;
   }).join('');
   const accountTotal = mcb + alfalah + haji;
@@ -9613,28 +9616,6 @@ function paymentScreenshotFilename(att){
   const base = (att.caption || '').trim();
   const safe = base.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
   return (safe || ('payment-' + att.payment_id)) + '.png';
-}
-
-// The per-row download icon's click handler on Payment Report (see the
-// no-print column added inside reportRowsToTableHtml above). Looking up
-// findPaymentAttachment() is free — paymentAttachments metadata is already
-// in memory, synced like every other small cloud table — but the actual
-// image bytes are fetched here and ONLY here for this whole page, and only
-// once this exact button is clicked. See PAYMENT SCREENSHOTS section
-// comment above downloadPaymentScreenshotBlob() for why that matters.
-async function viewPaymentScreenshot(paymentId){
-  const att = findPaymentAttachment(paymentId);
-  if(!att){ showNotice('No screenshot attached to this payment.'); return; }
-  const blob = await downloadPaymentScreenshotBlob(att.storage_path);
-  if(!blob){ showNotice('Couldn\'t load the screenshot — check the internet connection and try again.'); return; }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = paymentScreenshotFilename(att);
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(()=> URL.revokeObjectURL(url), 10000);
 }
 
 // =========================================================
@@ -11531,7 +11512,7 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
     const attached = r.chunks.filter(c=> c.account > 0 && findPaymentAttachment(c.paymentId));
     if(attached.length === 0) return '';
     return attached.map(c=>
-      `<button type="button" class="icon-btn has-attachment" style="margin:1px;" onclick="event.stopPropagation(); viewPaymentScreenshot('${c.paymentId}')" title="Download this payment's screenshot">${DOWNLOAD_ICON_SVG}</button>`
+      `<button type="button" class="icon-btn has-attachment" style="margin:1px;" onclick="event.stopPropagation(); openPaymentRecordModal('${c.paymentId}', '${c.date}', '${r.guestId}', '', true)" title="View or download this payment's screenshot">${CAMERA_ICON_SVG}</button>`
     ).join('');
   };
   // These columns are sized to just fit their header text on one line —
