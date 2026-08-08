@@ -313,9 +313,11 @@
   .icon-btn.has-attachment{ color:var(--cash); border-color:var(--cash); }
   /* A color-only change (border/icon tint) reads too subtle to scan a
      whole table by — this small green check badge is the actual "yes, a
-     screenshot exists here" signal, on both Account Payment Record's and
-     Revenue Payment Record's icon (Payment Report's own icon doesn't need
-     one — it's already hidden entirely when nothing's attached). */
+     screenshot exists here" signal. Only really load-bearing on Report
+     SS, the one page whose icon shows even before anything's attached
+     (it doubles as the "attach one" affordance there); Payment Report/
+     Revenue Report hide the icon entirely until something exists, so the
+     badge is redundant-but-harmless on those two. */
   .icon-btn.has-attachment::after{
     content:'✓';
     position:absolute;
@@ -332,6 +334,17 @@
     text-align:center;
     box-shadow:0 0 0 1.5px var(--paper);
   }
+  /* Revenue Report's SS column — the whole cell is the click target (not
+     a small icon floating inside it), since a room paid in several
+     instalments needs room for a "×N" count next to the camera glyph too.
+     Only ever applied to a cell that actually has something attached
+     (see ssCell) — an empty cell gets neither this class nor a cursor. */
+  .ss-cell-clickable{
+    cursor:pointer;
+    text-align:center;
+    color:var(--muted);
+  }
+  .ss-cell-clickable:hover{ background:rgba(0,0,0,0.05); color:var(--ink); }
   /* Payment Record modal's clipboard-paste target — a plain focusable div
      rather than a file input, since the whole point is "paste the
      screenshot you just took", not browse-and-pick a saved file. */
@@ -1017,43 +1030,6 @@
   .hdr-search-row b{ color:#1a73e8; }
   .hdr-search-sub{ color:#888; font-size:11.5px; margin-top:1px; }
   .hdr-search-empty{ padding:10px 12px; font-size:12px; color:#888; }
-  /* Payment Proof: a plain two-item dropdown, same idiom as the global
-     search results panel above — just links to the two screenshot pages,
-     nothing to fill in, so a full modal would be overkill. position:fixed
-     (not absolute) is deliberate: its wrapper button lives inside .topnav,
-     which sets overflow-x:auto for small-screen horizontal scrolling — per
-     spec that forces overflow-y to a non-visible value too, so an
-     absolutely-positioned dropdown anchored to that wrapper gets silently
-     clipped away. Fixed positioning escapes that ancestor's clipping
-     entirely; togglePaymentProofMenu() computes its top/right from the
-     button's own getBoundingClientRect() each time it opens.*/
-  .hdr-payment-proof-menu{
-    display:none;
-    position:fixed;
-    background:#fff;
-    color:#111;
-    border-radius:6px;
-    box-shadow:0 8px 24px rgba(0,0,0,0.3);
-    z-index:50;
-    min-width:220px;
-    overflow:hidden;
-  }
-  .hdr-payment-proof-menu.show{ display:block; }
-  .hdr-payment-proof-menu button{
-    display:block;
-    width:100%;
-    text-align:left;
-    padding:10px 14px;
-    background:none;
-    border:none;
-    border-bottom:1px solid #eee;
-    font-size:13px;
-    color:#111;
-    cursor:pointer;
-    min-height:0;
-  }
-  .hdr-payment-proof-menu button:last-child{ border-bottom:none; }
-  .hdr-payment-proof-menu button:hover{ background:#F0F6FF; }
   .hdr-right{
     display:flex;
     align-items:center;
@@ -2311,9 +2287,6 @@
   html[data-theme="dark"] .hdr-search-row b{ color:var(--ink-fill); }
   html[data-theme="dark"] .hdr-search-sub,
   html[data-theme="dark"] .hdr-search-empty{ color:#9C9C9C; }
-  html[data-theme="dark"] .hdr-payment-proof-menu{ background:#1A1A1A; color:#fff; box-shadow:0 8px 24px rgba(0,0,0,0.5); }
-  html[data-theme="dark"] .hdr-payment-proof-menu button{ color:#fff; border-bottom-color:rgba(255,255,255,0.12); }
-  html[data-theme="dark"] .hdr-payment-proof-menu button:hover{ background:rgba(255,255,255,0.08); }
   /* typed/selected content (inputs, dates) stays on a light field so the
      text itself can be plain black, instead of following the dark chrome */
   html[data-theme="dark"] input,
@@ -2786,13 +2759,7 @@
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
       <button class="navbtn" id="topNavBreakfast" onclick="showView('breakfast')">Breakfast Report</button>
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
-      <div class="hdr-payment-proof-wrap" id="topNavPaymentProofWrap" style="display:none; position:relative; margin-left:auto;">
-        <button class="navbtn" id="topNavPaymentProof" onclick="event.stopPropagation(); togglePaymentProofMenu();">Payment Proof</button>
-        <div class="hdr-payment-proof-menu" id="paymentProofMenu">
-          <button type="button" onclick="openPaymentProofPage('paymentrecord')">Account Payment Record</button>
-          <button type="button" onclick="openPaymentProofPage('revenuepaymentrecord')">Revenue Payment Record</button>
-        </div>
-      </div>
+      <button class="navbtn" id="topNavPaymentProof" onclick="showView('paymentrecord')" style="display:none; margin-left:auto;">Report SS</button>
       <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
     </div>
   </div>
@@ -3504,41 +3471,6 @@
 
   </div>
 
-  <div class="view" id="view-revenuepaymentrecord">
-
-    <h1 class="no-print">Revenue Payment Record</h1>
-    <div class="sub no-print">Same screenshots, sorted per room-night — each one auto-captioned with how much of that payment went toward that room.</div>
-
-    <div class="print-header">
-      <h1>Revenue Payment Record</h1>
-      <div class="print-header-sub" id="rprPrintHeaderSub"></div>
-    </div>
-
-    <div class="panel no-print accent-filters">
-      <h2>Date Range</h2>
-      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
-        <div>
-          <label>Date Range</label>
-          <input type="text" id="rprRange" placeholder="Select a date range">
-          <input type="date" id="rprFrom" style="display:none">
-          <input type="date" id="rprTo" style="display:none">
-        </div>
-      </div>
-      <div class="actions" style="margin-top:12px;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn secondary" onclick="setRevenuePaymentRecordToday()">Today</button>
-          <button class="btn secondary" onclick="clearRevenuePaymentRecordFilters()">Clear Filter (All Days)</button>
-        </div>
-        <div id="rprRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
-      </div>
-    </div>
-
-    <div class="panel accent-report">
-      <div id="rprBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
-    </div>
-
-  </div>
-
   <div class="view" id="view-graphs">
 
     <span class="backlink" onclick="showView('report')">&larr; Back to Report</span>
@@ -4096,15 +4028,8 @@
             </div>
             <div class="settings-row clickable" id="settingsPaymentRecordBtn" onclick="showView('paymentrecord')" style="display:none;">
               <div>
-                <div class="settings-row-title">Account Payment Record</div>
-                <div class="settings-row-desc">Attach a bank/card payment's screenshot, and download a day's screenshots as one PDF.</div>
-              </div>
-              <span class="settings-row-chevron">›</span>
-            </div>
-            <div class="settings-row clickable" id="settingsRevenuePaymentRecordBtn" onclick="showView('revenuepaymentrecord')" style="display:none;">
-              <div>
-                <div class="settings-row-title">Revenue Payment Record</div>
-                <div class="settings-row-desc">Same screenshots, sorted per room-night — each with an auto-suggested caption for how much of that payment went toward that room.</div>
+                <div class="settings-row-title">Report SS</div>
+                <div class="settings-row-desc">Attach a bank/card payment's screenshot (auto-captioned), and download a day's screenshots as one PDF.</div>
               </div>
               <span class="settings-row-chevron">›</span>
             </div>
@@ -4365,7 +4290,7 @@
 <div class="modal-backdrop" id="paymentRecordModalBackdrop">
   <div class="modal" style="width:460px;">
     <h3>Payment Record</h3>
-    <div class="sub" style="margin-bottom:14px;">This payment's screenshot — attach one, replace it, or download the one already here.</div>
+    <div class="sub" style="margin-bottom:14px;">This payment's screenshot — view, download, or (from Report SS) attach/replace it.</div>
     <div id="paymentRecordModalBody"></div>
     <div class="modal-actions">
       <button class="btn secondary" onclick="closePaymentRecordModal()">Close</button>
@@ -4500,7 +4425,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings','paymentrecord','revenuepaymentrecord'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings','paymentrecord'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -4546,12 +4471,7 @@ function showView(view, fromPopState){
     return;
   }
   if(view === 'paymentrecord' && !isAdmin()){
-    showNotice('Account Payment Record is only available to admin accounts.');
-    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
-    return;
-  }
-  if(view === 'revenuepaymentrecord' && !isAdmin()){
-    showNotice('Revenue Payment Record is only available to admin accounts.');
+    showNotice('Report SS is only available to admin accounts.');
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
@@ -4580,7 +4500,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavArrival').classList.toggle('active', view === 'arrival');
   document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck');
   const topNavPaymentProof = document.getElementById('topNavPaymentProof');
-  if(topNavPaymentProof) topNavPaymentProof.classList.toggle('active', view === 'paymentrecord' || view === 'revenuepaymentrecord');
+  if(topNavPaymentProof) topNavPaymentProof.classList.toggle('active', view === 'paymentrecord');
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -4597,7 +4517,6 @@ function showView(view, fromPopState){
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
   if(view === 'paymentrecord') renderPaymentRecord();
-  if(view === 'revenuepaymentrecord') renderRevenuePaymentRecord();
   if(view === 'deleteentity') renderDeleteEntityList();
   if(view === 'roomdetail') renderRoomDetail();
   if(view === 'inhouse') renderInhouse();
@@ -4913,10 +4832,10 @@ const filterDatePickers = {};
 const LOCK_ICON_SVG = '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 // Same reasoning/idiom as LOCK_ICON_SVG above — a plain camera glyph for
 // every page's per-row screenshot icon (Payment Report, Revenue Report,
-// Account/Revenue Payment Record — see openPaymentRecordModal), all of
-// which open the same Payment Record popup rather than downloading
-// straight away. SVG, not an emoji, so it renders identically across
-// OS/font instead of inheriting whatever glyph a given platform ships
+// Report SS — see openPaymentRecordModal), all of which open the same
+// Payment Record popup rather than downloading straight away. SVG, not
+// an emoji, so it renders identically across OS/font instead of
+// inheriting whatever glyph a given platform ships
 // for 📷.
 const CAMERA_ICON_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>';
 // Shared by every calendar that picks a PAYMENT date (Add Payment's dNewDate,
@@ -5234,8 +5153,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   initRangeDatePicker('rvRange', 'rvFrom', 'rvTo', renderRevenue);
   setRangeDate('rvRange', 'rvFrom', 'rvTo', todayStr(), todayStr());
-  initRangeDatePicker('rprRange', 'rprFrom', 'rprTo', renderRevenuePaymentRecord);
-  setRangeDate('rprRange', 'rprFrom', 'rprTo', todayStr(), todayStr());
   document.getElementById('nsDate').addEventListener('input', renderNightSummary);
   setFilterDate('nsDate', todayStr());
   setFilterDate('b19From', '2026-07-19');
@@ -7607,29 +7524,6 @@ document.addEventListener('click', e=>{
   if(wrap && !wrap.contains(e.target)) document.getElementById('globalSearchResults').classList.remove('show');
 });
 
-// Payment Proof: a plain two-link dropdown to the two screenshot pages —
-// same open/outside-click-close idiom as the global search results above.
-function togglePaymentProofMenu(){
-  const menu = document.getElementById('paymentProofMenu');
-  const willShow = !menu.classList.contains('show');
-  if(willShow){
-    const rect = document.getElementById('topNavPaymentProof').getBoundingClientRect();
-    menu.style.top = (rect.bottom + 6) + 'px';
-    menu.style.right = (window.innerWidth - rect.right) + 'px';
-  }
-  menu.classList.toggle('show', willShow);
-}
-
-function openPaymentProofPage(view){
-  document.getElementById('paymentProofMenu').classList.remove('show');
-  showView(view);
-}
-
-document.addEventListener('click', e=>{
-  const wrap = document.getElementById('topNavPaymentProofWrap');
-  if(wrap && !wrap.contains(e.target)) document.getElementById('paymentProofMenu').classList.remove('show');
-});
-
 document.addEventListener('keydown', e=>{
   if((e.ctrlKey || e.metaKey) && e.key === '/'){
     e.preventDefault();
@@ -9810,20 +9704,35 @@ let paymentRecordUploadZoneOpen = false;
 // one active at a time, so one variable/one revoke is enough for both.
 let paymentRecordPreviewUrl = null;
 let paymentRecordImageLoaded = false; // true once the existing attachment's image has actually been fetched THIS modal session
-let paymentRecordEditingCaption = false; // Edit/Add Caption's own inline text-field state
 
 function revokePaymentRecordPreviewUrl(){
   if(paymentRecordPreviewUrl){ URL.revokeObjectURL(paymentRecordPreviewUrl); paymentRecordPreviewUrl = null; }
 }
 
-// Revenue Payment Record's auto-caption — a chunk (from
-// buildRevenuePaymentRecordRows) already carries exactly how much of ITS
-// payment landed on this one room-night (chunk.total) and the payment's
-// own full amount (chunk.paymentTotal), so this just turns that into
-// readable text, e.g. "Rs. 20,000 of this Rs. 100,000 payment went toward
-// Room 206 — Asim Ali Khan (07 Aug 2026)". If the whole payment went to
-// this one room (the common case), the "of this Rs. X payment" clause is
-// dropped since it'd just be restating the same number twice.
+// A room-night paid in more than one instalment (Payment 1, Payment 2, ...
+// on Revenue Report) shows every attached screenshot for that room AT
+// ONCE in one popup, rather than one icon per chunk each opening its own
+// separate popup one at a time — see openRoomScreenshotsModal. Each item
+// tracks its own fetch/preview state independently since they all load
+// in parallel the moment this opens.
+let pendingMultiPaymentRecordItems = null; // [{ paymentId, caption, previewUrl, loading }] or null when not in multi mode
+
+function revokeMultiPaymentRecordPreviewUrls(){
+  if(pendingMultiPaymentRecordItems){
+    pendingMultiPaymentRecordItems.forEach(item=>{ if(item.previewUrl) URL.revokeObjectURL(item.previewUrl); });
+  }
+}
+
+// Revenue Report's own icon auto-caption — a chunk (from
+// buildRevenueReport's room-night matching) already carries exactly how
+// much of ITS payment landed on this one room-night (chunk.total) and the
+// payment's own full amount (chunk.paymentTotal), so this just turns that
+// into readable text, e.g. "Rs. 20,000 of this Rs. 100,000 payment went
+// toward Room 206 — Asim Ali Khan (sent on: 07 Aug 2026)". If the whole
+// payment went to this one room (the common case), the "of this Rs. X
+// payment" clause is dropped since it'd just be restating the same
+// number twice. Plain ASCII only ("to", not "→") — jsPDF's default font
+// doesn't have that glyph and silently renders it as garbage in the PDF.
 // cashTotal (this room-NIGHT row's own cashTotal, not the guest's whole
 // stay) is optional context — a room whose remaining rent was settled in
 // cash rather than another bank transfer gets that spelled out too, since
@@ -9834,37 +9743,73 @@ function buildAutoScreenshotCaption(chunk, roomNo, unitType, guest, cashTotal){
   const roomLabel = displayRoomNo(roomNo, unitType);
   const dateLabel = formatDate(chunk.date);
   let text = Math.abs(applied - full) < 1
-    ? `Rs. ${applied.toLocaleString()} for ${roomLabel} — ${guest} (${dateLabel})`
-    : `Rs. ${applied.toLocaleString()} of this Rs. ${full.toLocaleString()} payment went toward ${roomLabel} — ${guest} (${dateLabel})`;
+    ? `Rs. ${applied.toLocaleString()} for ${roomLabel} — ${guest} (sent on: ${dateLabel})`
+    : `Rs. ${applied.toLocaleString()} of this Rs. ${full.toLocaleString()} payment went toward ${roomLabel} — ${guest} (sent on: ${dateLabel})`;
   if(cashTotal > 0) text += ` — the rest (Rs. ${cashTotal.toLocaleString()}) for this room was received in cash`;
   return text;
 }
 
-// Account Payment Record is the only place a screenshot ever gets
-// uploaded — but that page only knows a payment as a flat row (guest,
-// mode, amount), not which room-night(s) it actually funded, and the
-// auto-caption needs exactly that room attribution. This runs the SAME
-// FIFO room-night matching Revenue Payment Record uses (buildRevenueReport
-// with keyChunksById), across every date rather than one range, and pulls
-// out just the chunk(s) that trace back to this one payment id — the
-// caption itself is auto-computed and auto-shown on Revenue Payment
-// Record; this just lets Account Payment Record's upload flow offer the
-// identical suggestion without duplicating the room-matching logic.
-// A payment split across several rooms gets every room's share listed.
+// Report SS is the only place a screenshot ever gets uploaded — but that
+// page only knows a payment as a flat row (guest, mode, amount), not
+// which room-night(s) it actually funded, and the auto-caption needs
+// exactly that room attribution. This runs the SAME FIFO room-night
+// matching Revenue Report's own icon uses (buildRevenueReport with
+// keyChunksById), across every date rather than one range, and pulls out
+// just the chunk(s) that trace back to this one payment id.
+// Every payment gets SOME caption, always — never an empty string. A
+// payment against an advance/unconfirmed reservation has no room-night
+// yet (buildRevenueReport only counts CONFIRMED stays), so there's
+// nothing to attribute it to; buildFallbackScreenshotCaption below still
+// produces something from the payment/guest record directly rather than
+// leaving it blank until the guest eventually checks in.
 function buildAutoScreenshotCaptionForPayment(paymentId){
   const data = buildRevenueReport('', '', true);
   const hits = [];
   data.roomRows.forEach(r=> r.chunks.forEach(c=>{
     if(c.paymentId === paymentId) hits.push({ chunk: c, roomNo: r.roomNo, unitType: r.unitType, guest: r.guest, cashTotal: r.cashTotal });
   }));
-  if(hits.length === 0) return '';
+  if(hits.length === 0) return buildFallbackScreenshotCaption(paymentId);
   if(hits.length === 1){
     const h = hits[0];
     return buildAutoScreenshotCaption(h.chunk, h.roomNo, h.unitType, h.guest, h.cashTotal);
   }
-  const parts = hits.map(h=> `Rs. ${h.chunk.total.toLocaleString()} → ${displayRoomNo(h.roomNo, h.unitType)}`);
+  // A payment can fund the SAME room across several nights of a multi-
+  // night stay — each night is its own "hit" (buildRevenueReport is one
+  // row per room-NIGHT, not per room), so without merging, a 2-night
+  // stay in D-201 + D-202 listed "D-201, D-202, D-201, D-202" instead of
+  // each room's own combined total. All hits share one paymentId, so
+  // they all share the same chunk.date/paymentTotal too — safe to just
+  // read those off hits[0] once merged.
+  const byRoom = new Map();
+  hits.forEach(h=>{
+    const key = h.roomNo + '|' + (h.unitType || '');
+    const existing = byRoom.get(key);
+    if(existing) existing.total += h.chunk.total;
+    else byRoom.set(key, { roomNo: h.roomNo, unitType: h.unitType, total: h.chunk.total });
+  });
+  const parts = Array.from(byRoom.values()).map(r=> `Rs. ${r.total.toLocaleString()} to ${displayRoomNo(r.roomNo, r.unitType)}`);
   const first = hits[0];
-  return `${parts.join(', ')} (of this Rs. ${first.chunk.paymentTotal.toLocaleString()} payment) — ${first.guest} (${formatDate(first.chunk.date)})`;
+  return `${parts.join(', ')} (of this Rs. ${first.chunk.paymentTotal.toLocaleString()} payment) — ${first.guest} (sent on: ${formatDate(first.chunk.date)})`;
+}
+
+// Fallback for a payment with no confirmed room-night to attribute it to
+// (an advance/reservation deposit before check-in — the one gap
+// buildRevenueReport's room-night matching can't cover, since it only
+// counts stays that have actually happened/been confirmed). Reads
+// straight off the payment/guest record itself instead — always
+// available, so this always returns real text, never ''.
+function buildFallbackScreenshotCaption(paymentId){
+  const all = loadAllEntries();
+  for(const entry of all){
+    const p = (entry.payments || []).find(pp=> pp.id === paymentId);
+    if(!p) continue;
+    const guest = entry.guestName || '(no name)';
+    const roomChain = formatRoomChain(entry.rooms);
+    const amount = parseFloat(p.total) || 0;
+    const dateLabel = p.date ? formatDate(p.date) : '';
+    return `Rs. ${amount.toLocaleString()}${roomChain ? ' for ' + roomChain : ''} — ${guest}${dateLabel ? ' (sent on: ' + dateLabel + ')' : ''}`;
+  }
+  return '';
 }
 
 function openAccountPaymentModal(paymentId, paymentDate, guestId){
@@ -9873,30 +9818,26 @@ function openAccountPaymentModal(paymentId, paymentDate, guestId){
 
 // Payment Report's own icon — read-only (no Replace/Upload, same as every
 // non-Account-Payment-Record entry point), but still worth computing the
-// same room-attribution caption suggestion so Add Caption has something
-// useful to offer on an old, caption-less screenshot without making the
-// user go find this same payment on Account Payment Record first.
+// same room-attribution caption so a screenshot attached before this
+// feature existed gets it auto-saved the moment it's opened here too.
 function openReadOnlyPaymentModal(paymentId, paymentDate, guestId){
   openPaymentRecordModal(paymentId, paymentDate, guestId, buildAutoScreenshotCaptionForPayment(paymentId), true);
 }
 
-// suggestedCaption (optional) — Account Payment Record passes an
-// auto-generated one (see buildAutoScreenshotCaptionForPayment) describing
-// how much of this payment applies to whichever room(s) it funded; only
-// ever prefilled for a FRESH upload, never overwrites an existing caption.
-// readOnly (optional) — Payment Report/Revenue Report/Revenue Payment
-// Record's icons all pass this: re-uploading/replacing the actual image
-// is only ever possible from Account Payment Record, so this drops the
-// Replace/Upload button. Add/Edit Caption stays available everywhere
-// though — it never touches the image, and there'd be no other way to
-// fix a screenshot that was attached before the caption suggestion
-// existed except bouncing back to Account Payment Record for every one.
+// suggestedCaption — always computed and passed by every caller
+// (buildAutoScreenshotCaptionForPayment never returns '', see its own
+// comment) and always auto-saved below the moment this opens for an
+// attachment with no caption yet. Captions are never hand-typed or
+// hand-edited anywhere in this app — always the computed one, so it's
+// always correct and never goes stale/wrong from a manual edit.
+// readOnly (optional) — Payment Report/Revenue Report's icons pass this:
+// re-uploading/replacing the actual image is only ever possible from
+// Account Payment Record, so this drops the Replace/Upload button.
 function openPaymentRecordModal(paymentId, paymentDate, guestId, suggestedCaption, readOnly){
   pendingPaymentRecordContext = { paymentId, paymentDate, guestId, suggestedCaption: suggestedCaption || '', readOnly: !!readOnly };
   pendingPaymentRecordPasteBlob = null;
   paymentRecordUploadZoneOpen = false;
   paymentRecordImageLoaded = false;
-  paymentRecordEditingCaption = false;
   revokePaymentRecordPreviewUrl();
   renderPaymentRecordModalBody();
   document.getElementById('paymentRecordModalBackdrop').classList.add('active');
@@ -9905,7 +9846,22 @@ function openPaymentRecordModal(paymentId, paymentDate, guestId, suggestedCaptio
   // open, once to actually see it) when there's already one attached.
   // Still nothing fetched for a payment with no attachment, and still
   // nothing fetched for every OTHER row just sitting in the table.
-  if(findPaymentAttachment(paymentId)) loadPaymentRecordImagePreview();
+  const att = findPaymentAttachment(paymentId);
+  if(att){
+    loadPaymentRecordImagePreview();
+    // A screenshot attached before this feature existed has no caption at
+    // all — the (always non-empty) suggestion is computed fresh every
+    // time regardless, so there's nothing to actually decide here: just
+    // save it straight away, no user step at all.
+    if(!att.caption && suggestedCaption) autoSavePaymentRecordCaption(paymentId, suggestedCaption);
+  }
+}
+
+async function autoSavePaymentRecordCaption(paymentId, caption){
+  const ok = await updatePaymentScreenshotCaption(paymentId, caption);
+  if(ok && pendingPaymentRecordContext && pendingPaymentRecordContext.paymentId === paymentId){
+    renderPaymentRecordModalBody();
+  }
 }
 
 function closePaymentRecordModal(){
@@ -9914,28 +9870,49 @@ function closePaymentRecordModal(){
   pendingPaymentRecordPasteBlob = null;
   paymentRecordUploadZoneOpen = false;
   paymentRecordImageLoaded = false;
-  paymentRecordEditingCaption = false;
   revokePaymentRecordPreviewUrl();
+  revokeMultiPaymentRecordPreviewUrls();
+  pendingMultiPaymentRecordItems = null;
 }
 
-// Renders whichever of the four states applies — never touches the
-// network itself on its own; the existing-attachment state shows caption/
-// uploader text only until "View Screenshot" is explicitly clicked (see
+// Renders whichever state applies — never touches the network itself on
+// its own; the existing-attachment state shows caption/uploader text only
+// until "View Screenshot" is explicitly clicked (see
 // loadPaymentRecordImagePreview), which is the one point that fetches the
 // image, once, and reuses that same already-fetched blob for the Download
-// link that replaces the button afterward — no second fetch.
+// link that replaces the button afterward — no second fetch. The multi-
+// item state (openMultiPaymentRecordModal) is checked first since it's a
+// completely separate mode — every attached screenshot for one room-night
+// shown together, each with its own independent fetch/render.
 function renderPaymentRecordModalBody(){
   const body = document.getElementById('paymentRecordModalBody');
+  if(pendingMultiPaymentRecordItems){
+    body.innerHTML = pendingMultiPaymentRecordItems.map((item, idx)=> `
+      <div style="margin-bottom:16px; padding-bottom:14px;${idx < pendingMultiPaymentRecordItems.length - 1 ? ' border-bottom:1px solid var(--border);' : ''}">
+        ${item.previewUrl
+          ? `<div style="text-align:center; margin-bottom:8px;"><img src="${item.previewUrl}" alt="Payment screenshot" style="max-width:100%; max-height:260px; border-radius:6px;"></div>`
+          : `<div class="sub" style="text-align:center; margin-bottom:8px;">${item.loading ? 'Loading…' : 'Couldn\'t load this screenshot.'}</div>`}
+        <div style="margin-bottom:6px;"><strong>Caption:</strong> ${item.caption}</div>
+        ${item.previewUrl ? `<div style="text-align:center;"><a class="btn secondary" href="${item.previewUrl}" download="${paymentScreenshotFilename({ payment_id: item.paymentId, caption: item.caption })}">⬇ Download</a></div>` : ''}
+      </div>`
+    ).join('');
+    // No Close button in this generated HTML — the modal shell already has
+    // its own, right below #paymentRecordModalBody (see the static markup).
+    return;
+  }
   if(!pendingPaymentRecordContext) return;
   const att = findPaymentAttachment(pendingPaymentRecordContext.paymentId);
 
   if(pendingPaymentRecordPasteBlob){
     revokePaymentRecordPreviewUrl();
     paymentRecordPreviewUrl = URL.createObjectURL(pendingPaymentRecordPasteBlob);
+    // Caption is shown, never typed — always the computed one (see
+    // buildAutoScreenshotCaptionForPayment), saved exactly as-is the
+    // moment this upload is saved. No text field to edit it in.
+    const uploadCaption = pendingPaymentRecordContext.suggestedCaption || '';
     body.innerHTML = `
       <div class="paste-zone" style="cursor:default;"><img src="${paymentRecordPreviewUrl}" alt="Pasted screenshot preview"></div>
-      <label for="paymentRecordCaptionInput">Caption (optional)</label>
-      <input type="text" id="paymentRecordCaptionInput" placeholder="e.g. Bank transfer receipt" value="${att ? (att.caption || '') : (pendingPaymentRecordContext.suggestedCaption || '')}">
+      ${uploadCaption ? `<div style="margin-bottom:6px;"><strong>Caption:</strong> ${uploadCaption}</div>` : ''}
       <div class="modal-actions">
         <button class="btn secondary" onclick="cancelPaymentRecordUpload()">Cancel</button>
         <button class="btn" id="paymentRecordSaveBtn" onclick="savePaymentRecordUpload()">Save</button>
@@ -9960,28 +9937,15 @@ function renderPaymentRecordModalBody(){
 
   const readOnly = !!pendingPaymentRecordContext.readOnly;
 
-  if(att && paymentRecordEditingCaption){
-    // Fixes/adds just the caption, no re-upload — see
-    // updatePaymentScreenshotCaption's own comment for why this exists
-    // (screenshots attached before the auto-caption suggestion was wired
-    // up landed with nothing here). Prefilled with the SAME
-    // suggestedCaption the upload flow uses whenever there's no caption
-    // saved yet, so fixing one of those old rows is a single click, not
-    // retyping the whole thing.
-    body.innerHTML = `
-      <label for="paymentRecordCaptionEditInput">Caption</label>
-      <input type="text" id="paymentRecordCaptionEditInput" placeholder="e.g. Bank transfer receipt" value="${att.caption || pendingPaymentRecordContext.suggestedCaption || ''}">
-      <div class="modal-actions">
-        <button class="btn secondary" onclick="cancelEditPaymentRecordCaption()">Cancel</button>
-        <button class="btn" id="paymentRecordCaptionSaveBtn" onclick="saveEditPaymentRecordCaption()">Save</button>
-      </div>`;
-    return;
-  }
-
   if(att){
     const imageHtml = paymentRecordImageLoaded
       ? `<div style="text-align:center; margin-bottom:10px;"><img src="${paymentRecordPreviewUrl}" alt="Payment screenshot" style="max-width:100%; max-height:320px; border-radius:6px;"></div>`
       : '';
+    // No "suggested, click to accept" state here on purpose — a
+    // caption-less attachment gets its caption auto-saved the moment this
+    // popup opens (see openPaymentRecordModal's autoSavePaymentRecordCaption
+    // call), so by the time this actually renders, att.caption is already
+    // populated for any attachment where a suggestion existed at all.
     const captionHtml = att.caption ? `<div style="margin-bottom:6px;"><strong>Caption:</strong> ${att.caption}</div>` : '';
     const rightBtn = paymentRecordImageLoaded
       ? `<a class="btn" href="${paymentRecordPreviewUrl}" download="${paymentScreenshotFilename(att)}">⬇ Download</a>`
@@ -9992,7 +9956,6 @@ function renderPaymentRecordModalBody(){
       <div class="sub" style="margin-bottom:14px;">Attached by ${att.uploaded_by || '-'} on ${formatDate(toKarachiDateStr(att.uploaded_at))}</div>
       <div class="modal-actions">
         ${readOnly ? '' : '<button class="btn secondary" onclick="showPaymentRecordUploadZone()">Replace</button>'}
-        <button class="btn secondary" onclick="startEditPaymentRecordCaption()">${att.caption ? 'Edit Caption' : 'Add Caption'}</button>
         ${rightBtn}
       </div>`;
   } else if(readOnly){
@@ -10010,36 +9973,8 @@ function showPaymentRecordUploadZone(){
   paymentRecordUploadZoneOpen = true;
   pendingPaymentRecordPasteBlob = null;
   paymentRecordImageLoaded = false;
-  paymentRecordEditingCaption = false;
   revokePaymentRecordPreviewUrl();
   renderPaymentRecordModalBody();
-}
-
-function startEditPaymentRecordCaption(){
-  paymentRecordEditingCaption = true;
-  renderPaymentRecordModalBody();
-}
-
-function cancelEditPaymentRecordCaption(){
-  paymentRecordEditingCaption = false;
-  renderPaymentRecordModalBody();
-}
-
-async function saveEditPaymentRecordCaption(){
-  if(!pendingPaymentRecordContext) return;
-  const caption = document.getElementById('paymentRecordCaptionEditInput').value.trim();
-  const btn = document.getElementById('paymentRecordCaptionSaveBtn');
-  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
-  const ok = await updatePaymentScreenshotCaption(pendingPaymentRecordContext.paymentId, caption);
-  if(!ok){
-    if(btn){ btn.disabled = false; btn.textContent = 'Save'; }
-    return;
-  }
-  paymentRecordEditingCaption = false;
-  renderPaymentRecordModalBody();
-  if(currentView === 'paymentrecord') renderPaymentRecord();
-  if(currentView === 'revenuepaymentrecord') renderRevenuePaymentRecord();
-  showNotice('Caption saved.', 'success');
 }
 
 // The only fetch in this whole "has attachment" branch — pulls the image
@@ -10100,8 +10035,8 @@ function handlePaymentRecordFileSelect(input){
 
 async function savePaymentRecordUpload(){
   if(!pendingPaymentRecordContext || !pendingPaymentRecordPasteBlob) return;
-  const { paymentId, paymentDate, guestId } = pendingPaymentRecordContext;
-  const caption = document.getElementById('paymentRecordCaptionInput').value.trim();
+  const { paymentId, paymentDate, guestId, suggestedCaption } = pendingPaymentRecordContext;
+  const caption = suggestedCaption || '';
   const btn = document.getElementById('paymentRecordSaveBtn');
   if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
   const ok = await uploadPaymentScreenshot(paymentId, paymentDate, guestId, pendingPaymentRecordPasteBlob, caption);
@@ -10124,14 +10059,18 @@ async function savePaymentRecordUpload(){
 // (downloadGuestPdf) — no html2canvas needed here, this just stacks real
 // images, not rasterized HTML.
 // Shared PDF-building core for both the per-day button (Payment Report,
-// Account Payment Record) and the per-range button (Revenue Report) —
-// fetches each of the given attachments' images (one at a time, only
-// these, only now — see PAYMENT SCREENSHOTS section comment) and stacks
-// them into one jsPDF doc, each image followed by its own caption printed
-// underneath as a plain explanation line. Real per-image progress on the
-// triggering button, not a fake spinner. Returns the built doc plus how
-// many pages actually made it in, so callers decide the filename/whether
-// there's anything worth saving.
+// Report SS) and the per-range button (Revenue Report — its own Charges
+// Summary table's Download Screenshots PDF) — fetches each of the given
+// attachments' images (one at a time, only these, only now — see PAYMENT
+// SCREENSHOTS section comment) and stacks them into one jsPDF doc: each
+// image gets its own full page, immediately followed by its own SEPARATE
+// page holding just that payment's caption as the explanation (not a
+// small line squeezed under the image — its own page, large and legible,
+// same as being asked for explicitly). A caption-less attachment just
+// doesn't get an explanation page, nothing blank inserted. Real per-image
+// progress on the triggering button, not a fake spinner. Returns the
+// built doc plus how many pages actually made it in, so callers decide
+// the filename/whether there's anything worth saving.
 async function buildScreenshotsPdfDoc(attachments, btn){
   const originalLabel = btn ? btn.textContent : '';
   if(btn) btn.disabled = true;
@@ -10147,11 +10086,20 @@ async function buildScreenshotsPdfDoc(attachments, btn){
       if(pagesAdded > 0) doc.addPage();
       pagesAdded++;
       const props = doc.getImageProperties(dataUrl);
-      const maxW = 190, maxH = 260; // mm — A4 (210x297) minus margins, leaves room for a caption line
+      const maxW = 190, maxH = 267; // mm — A4 (210x297) minus margins, the whole page since the caption now lives on its own page after this one
       const scale = Math.min(maxW / props.width, maxH / props.height, 1); // never upscale a small screenshot
       const w = props.width * scale, h = props.height * scale;
       doc.addImage(dataUrl, props.fileType || 'PNG', (210 - w) / 2, 15, w, h);
-      if(att.caption) doc.text(att.caption, 105, 15 + h + 8, { align: 'center' });
+      if(att.caption){
+        doc.addPage();
+        pagesAdded++;
+        doc.setFontSize(11);
+        doc.setTextColor(120);
+        doc.text('EXPLANATION', 105, 40, { align: 'center' });
+        doc.setFontSize(16);
+        doc.setTextColor(20);
+        doc.text(att.caption, 105, 55, { align: 'center', maxWidth: 170 });
+      }
     }
     if(btn) btn.textContent = 'Building PDF…';
   }finally{
@@ -10181,15 +10129,37 @@ async function downloadDayScreenshotsPdf(date, btn){
 // Revenue Report has no day-groups to hang a per-day button off (a single
 // table, Date column only shown for a multi-day range) — this bundles
 // every attached screenshot in the CURRENTLY FILTERED range into one PDF
-// instead, same image+caption-underneath shape as the per-day version.
+// instead, same image-page-then-explanation-page shape as the per-day
+// version (buildScreenshotsPdfDoc).
+//
+// Deliberately NOT "every attachment whose own payment_date falls in
+// range" — a payment's OWN date and the room-night date(s) its money
+// actually funds are different things (that's the whole point of the
+// FIFO matching below), so filtering by payment_date let a payment whose
+// money funded a room-night OUTSIDE this range (or a payment that never
+// funded anything shown in this table at all) leak into the PDF. This
+// instead walks the exact same room-night rows/chunks the table itself
+// renders for [fromDate, toDate] and only includes a screenshot if it's
+// actually attached to one of THOSE chunks — the PDF can only ever
+// contain screenshots for rooms genuinely visible in the current view.
+// A payment split across several rooms in range (Gulzar Ahmed-style)
+// only goes in once, not once per room it touched.
 async function downloadRangeScreenshotsPdf(fromDate, toDate, btn){
   if(typeof jspdf === 'undefined'){
     showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
     return;
   }
-  const rangeAttachments = paymentAttachments
-    .filter(a=> (!fromDate || a.payment_date >= fromDate) && (!toDate || a.payment_date <= toDate))
-    .sort((a,b)=> a.payment_date.localeCompare(b.payment_date));
+  const data = buildRevenueReport(fromDate, toDate, true);
+  const seen = new Set();
+  const rangeAttachments = [];
+  data.roomRows.forEach(r=> r.chunks.forEach(c=>{
+    if(c.account <= 0) return;
+    const att = findPaymentAttachment(c.paymentId);
+    if(!att || seen.has(att.payment_id)) return;
+    seen.add(att.payment_id);
+    rangeAttachments.push(att);
+  }));
+  rangeAttachments.sort((a,b)=> a.payment_date.localeCompare(b.payment_date));
   if(rangeAttachments.length === 0){
     showNotice('No screenshots attached in this range.');
     return;
@@ -11111,17 +11081,17 @@ function printLedgers(){
 // partly paid off before an older due — only what lands on an in-range
 // night/payment date ever gets recorded here.
 // =========================================================
-// keyChunksById (default false, only Revenue Payment Record passes true):
-// a chunk is normally grouped by the DATE money landed (so two different
-// payments on the same date merge into one "Payment N" cell) — that's the
-// right shape for Revenue Report itself. Revenue Payment Record needs each
-// chunk to map to exactly one real payment_id (to know which payment's
-// screenshot to attach/show), so it asks for chunks keyed by payment id
-// instead — everything else about the FIFO room-night/payment matching
-// below is identical either way. paymentId/paymentTotal are carried on
-// every chunk regardless of the flag (harmless extra fields Revenue
-// Report's own render never reads), so this stays fully backward
-// compatible for the existing renderRevenue() call site.
+// keyChunksById (default false, only buildAutoScreenshotCaptionForPayment
+// passes true): a chunk is normally grouped by the DATE money landed (so
+// two different payments on the same date merge into one "Payment N"
+// cell) — that's the right shape for Revenue Report's own table. Finding
+// every room a SPECIFIC payment id funded (Report SS's upload flow, to
+// suggest a caption) needs each chunk to map to exactly one real
+// payment_id instead — everything else about the FIFO room-night/payment
+// matching below is identical either way. paymentId/paymentTotal are
+// carried on every chunk regardless of the flag (harmless extra fields
+// Revenue Report's own render never reads), so this stays fully backward
+// compatible for the default renderRevenue() call site.
 function buildRevenueReport(fromDate, toDate, keyChunksById){
   const all = loadAllEntries();
   // Keyed by `${guestId}|${roomNo}|${date}` — one entry per room-night in
@@ -11337,147 +11307,59 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
   };
 }
 
-// Revenue Payment Record's own entry point — same FIFO room-night/payment
-// matching as Revenue Report, just with chunks keyed by payment id (see
-// buildRevenueReport's own comment) so each "Payment N" cell maps to
-// exactly one real payment_id for the screenshot attach/view icon.
-function buildRevenuePaymentRecordRows(fromDate, toDate){
-  return buildRevenueReport(fromDate, toDate, true);
-}
-
-// The SS column's click handler — looks the guest name up itself (rather
-// than having the caller interpolate it into the onclick HTML string,
-// which would break the moment a guest name contains an apostrophe) and
-// builds the room-specific auto-caption for display purposes (this page is
-// read-only — see below — but the modal still shows this same caption
-// text whenever there IS an attachment, since it was likely generated
-// here or by buildAutoScreenshotCaptionForPayment and saved verbatim).
-// readOnly:true — uploading only ever happens from Account Payment
-// Record now; this page is purely for reviewing screenshots per room.
-function openRevenuePaymentModal(paymentId, paymentDate, guestId, roomNo, unitType, applied, paymentTotal, cashTotal){
+// Revenue Report's own click handler — one whole cell, one click, shows
+// EVERY attached screenshot for this room-night at once (not one icon per
+// instalment each opened separately). Re-derives the room's chunks fresh
+// from the exact same FIFO matching the table itself uses (rather than
+// having the caller serialize the whole chunk list through the onclick
+// HTML string — same "recompute, don't serialize" pattern as
+// buildAutoScreenshotCaptionForPayment) using guestId+date+roomNo, which
+// together uniquely identify one room-night row.
+function openRoomScreenshotsModal(guestId, date, roomNo){
+  const data = buildRevenueReport('', '', true);
+  const row = data.roomRows.find(r=> r.guestId === guestId && r.date === date && r.roomNo === roomNo);
+  if(!row) return;
+  const attachedChunks = row.chunks.filter(c=> c.account > 0 && findPaymentAttachment(c.paymentId));
+  if(attachedChunks.length === 0) return;
   const entry = loadAllEntries().find(e=> e.id === guestId);
   const guest = entry ? (entry.guestName || '(no name)') : '(no name)';
-  const caption = buildAutoScreenshotCaption({ date: paymentDate, total: applied, paymentTotal }, roomNo, unitType, guest, cashTotal);
-  openPaymentRecordModal(paymentId, paymentDate, guestId, caption, true);
+  const items = attachedChunks.map(c=> ({
+    paymentId: c.paymentId,
+    caption: buildAutoScreenshotCaption(c, row.roomNo, row.unitType, guest, row.cashTotal),
+    previewUrl: null,
+    loading: true
+  }));
+  openMultiPaymentRecordModal(items);
 }
 
-// Same room-night table shape as Revenue Report's own buildRoomsTableHtml
-// (# Room No Guest Rent Payment N... Cash MCB Haji Alfalah Due), written as
-// its own function rather than extending buildRoomsTableHtml directly —
-// that one is Revenue Report's own render path and stays untouched — plus
-// one more column: SS. A room-night can have more than one payment chunk
-// (paid in instalments), so the SS cell holds one icon per chunk that had
-// any non-Cash money in it (a pure-Cash chunk has no screenshot to attach,
-// same "account payments only" rule as the other two screenshot pages) —
-// filled/outlined the same has-attachment styling as Account Payment
-// Record's icon.
-function buildRevenuePaymentRecordTableHtml(roomRows, totals, showDateCol){
-  const maxChunks = Math.max(1, ...roomRows.map(r=> r.chunks.length));
-  const PAYMENT_COL_W = 112;
-  const paymentHeaders = Array.from({length: maxChunks}, (_,i)=> `<th style="width:${PAYMENT_COL_W}px; white-space:nowrap;">Payment ${i + 1}</th>`).join('');
-  const paymentCell = (c)=>{
-    if(!c) return '-';
-    const lines = [];
-    if(c.cash > 0) lines.push(`<span class="cash-amt">Cash: Rs. ${c.cash.toLocaleString()}</span>`);
-    const bankNames = Object.keys(c.banks || {});
-    if(bankNames.length){
-      bankNames.forEach(b=> lines.push(`<span class="account-amt">${b}: Rs. ${c.banks[b].toLocaleString()}</span>`));
-    } else if(c.account > 0){
-      lines.push(`<span class="account-amt">Account: Rs. ${c.account.toLocaleString()}</span>`);
-    }
-    return formatDate(c.date) + '<br>' + lines.join('<br>');
-  };
-  // View/download only — uploading only ever happens from Account
-  // Payment Record now (see openAccountPaymentModal), so a chunk with
-  // nothing attached yet just gets no icon at all, same convention as
-  // Payment Report/Revenue Report's own read-only columns.
-  const ssCell = (r)=>{
-    const attachedChunks = r.chunks.filter(c=> c.account > 0 && findPaymentAttachment(c.paymentId));
-    if(attachedChunks.length === 0) return '';
-    return attachedChunks.map(c=>{
-      const roomNoJs = String(r.roomNo).replace(/'/g, "\\'");
-      const unitTypeJs = String(r.unitType || '').replace(/'/g, "\\'");
-      return `<button type="button" class="icon-btn has-attachment" style="margin:1px;" onclick="event.stopPropagation(); openRevenuePaymentModal('${c.paymentId}', '${c.date}', '${r.guestId}', '${roomNoJs}', '${unitTypeJs}', ${c.total}, ${c.paymentTotal}, ${r.cashTotal})" title="View or download this payment's screenshot">${CAMERA_ICON_SVG}</button>`;
-    }).join('');
-  };
-  const HASH_W = 30, DATE_W = 92, ROOMNO_W = 44, GUEST_W = 80, RENT_W = 60,
-    CASH_W = 60, MCB_W = 52, HAJI_W = 122, ALFALAH_W = 92, DUE_W = 52, SS_W = 60;
-  const totalW = HASH_W + (showDateCol ? DATE_W : 0) + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W + SS_W;
-  const dateTh = showDateCol ? `<th style="width:${DATE_W}px; white-space:nowrap;">Date</th>` : '';
-  const dateTd = (r)=> showDateCol ? `<td>${formatDate(r.date)}</td>` : '';
-  const leadColspan = showDateCol ? 4 : 3;
-  return `
-    <table style="table-layout:fixed; width:100%; min-width:${totalW}px;">
-      <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th>${dateTh}<th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th><th class="no-print" style="width:${SS_W}px; white-space:nowrap;">SS</th></tr></thead>
-      <tbody>${roomRows.map((r,i)=> `
-        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
-          <td>${i + 1}</td>
-          ${dateTd(r)}
-          <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
-          <td>${r.guest}</td>
-          <td>${r.rent.toLocaleString()}</td>
-          ${Array.from({length: maxChunks}, (_,i)=> `<td>${paymentCell(r.chunks[i])}</td>`).join('')}
-          <td class="cash-amt">${r.cashTotal ? r.cashTotal.toLocaleString() : '-'}</td>
-          <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
-          <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
-          <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
-          <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
-          <td class="no-print" style="text-align:center;" onclick="event.stopPropagation();">${ssCell(r)}</td>
-        </tr>`).join('')}
-      </tbody>
-      <tfoot>
-        <tr class="day-foot-total">
-          <td colspan="${leadColspan}">Total</td>
-          <td>${totals.totalRent.toLocaleString()}</td>
-          <td class="cash-amt" colspan="${maxChunks}">Collected: ${totals.totalCollected.toLocaleString()}</td>
-          <td class="cash-amt">${totals.totalCash.toLocaleString()}</td>
-          <td class="account-amt">${totals.totalMCB.toLocaleString()}</td>
-          <td class="account-amt">${totals.totalHaji.toLocaleString()}</td>
-          <td class="account-amt">${totals.totalAlfalah.toLocaleString()}</td>
-          <td>${totals.totalDue.toLocaleString()}</td>
-          <td class="no-print"></td>
-        </tr>
-      </tfoot>
-    </table>`;
-}
-
-function setRevenuePaymentRecordToday(){
-  const t = todayStr();
-  setRangeDate('rprRange', 'rprFrom', 'rprTo', t, t);
-  renderRevenuePaymentRecord();
-}
-
-function clearRevenuePaymentRecordFilters(){
-  setRangeDate('rprRange', 'rprFrom', 'rprTo', '', '');
-  renderRevenuePaymentRecord();
-}
-
-function renderRevenuePaymentRecord(){
-  const container = document.getElementById('rprBody');
-  if(!initialLoadDone){
-    container.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
-    return;
-  }
-  const fromVal = document.getElementById('rprFrom').value;
-  const toVal = document.getElementById('rprTo').value;
-  document.getElementById('rprRangeReadout').textContent = formatIsoRangeDisplay(fromVal, toVal);
-  const isSingleDay = !!fromVal && !!toVal && fromVal === toVal;
-  const showDateCol = !isSingleDay;
-  let dayWord;
-  if(isSingleDay) dayWord = fromVal === todayStr() ? 'today' : 'on ' + formatDate(fromVal);
-  else if(!fromVal && !toVal) dayWord = 'across all days';
-  else dayWord = 'from ' + (fromVal ? formatDate(fromVal) : 'the start') + ' to ' + (toVal ? formatDate(toVal) : 'now');
-  document.getElementById('rprPrintHeaderSub').textContent = 'Occupied rooms ' + dayWord + '  ·  Generated ' + formatDate(todayStr());
-
-  const data = buildRevenuePaymentRecordRows(fromVal, toVal);
-  if(data.roomRows.length === 0){
-    container.innerHTML = '<div class="empty-note">No rooms occupied ' + dayWord + '.</div>';
-    return;
-  }
-  container.innerHTML = buildRevenuePaymentRecordTableHtml(data.roomRows, {
-    totalRent: data.totalRent, totalCollected: data.totalCollected, totalCash: data.totalCash,
-    totalMCB: data.totalMCB, totalHaji: data.totalHaji, totalAlfalah: data.totalAlfalah, totalDue: data.totalDue
-  }, showDateCol);
+// readOnly always, same reasoning as the single-item modal — uploading
+// only ever happens from Report SS (Account Payment Record), this is a
+// pure view (+ auto-caption-backfill) entry point.
+function openMultiPaymentRecordModal(items){
+  pendingPaymentRecordContext = null;
+  pendingPaymentRecordPasteBlob = null;
+  paymentRecordUploadZoneOpen = false;
+  paymentRecordImageLoaded = false;
+  revokePaymentRecordPreviewUrl();
+  revokeMultiPaymentRecordPreviewUrls();
+  pendingMultiPaymentRecordItems = items;
+  renderPaymentRecordModalBody();
+  document.getElementById('paymentRecordModalBackdrop').classList.add('active');
+  // Opening this via the cell click IS the explicit "show me these"
+  // request — for exactly these attachments, nothing else in the table.
+  // Backfills any still-missing caption (captions are always
+  // auto-generated, never left blank — see buildAutoScreenshotCaptionForPayment),
+  // then fetches every item's image in parallel, each re-rendering the
+  // instant its own fetch resolves rather than waiting on the slowest one.
+  items.forEach(async (item)=>{
+    const att = findPaymentAttachment(item.paymentId);
+    if(!att) return;
+    if(!att.caption && item.caption) await updatePaymentScreenshotCaption(item.paymentId, item.caption);
+    const blob = await downloadPaymentScreenshotBlob(att.storage_path);
+    item.loading = false;
+    if(blob) item.previewUrl = URL.createObjectURL(blob);
+    if(pendingMultiPaymentRecordItems === items) renderPaymentRecordModalBody();
+  });
 }
 
 function setRevenueToday(){
@@ -11518,22 +11400,21 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
   // SOME payment's id/total for context, but if two different payments
   // genuinely landed on the same date for the same room-night, this can
   // only surface one of them. A rare edge case for a purely read-only
-  // convenience icon — Revenue Payment Record (payment-id-keyed) is the
-  // authoritative place to manage every screenshot correctly.
+  // convenience icon.
+  //
+  // The WHOLE cell is the button, not a tiny icon inside it — a room paid
+  // in two (or three, or more) separate instalments has that many entries
+  // in r.chunks, and clicking this cell shows every one of them AT ONCE
+  // in one popup (openRoomScreenshotsModal), instead of several
+  // individually-tiny icons each opened one at a time. Empty/inert (no
+  // "×N" badge, not clickable) when nothing's attached — same
+  // hidden-when-empty rule as every other read-only screenshot column.
   const ssCell = (r)=>{
-    const attached = r.chunks.filter(c=> c.account > 0 && findPaymentAttachment(c.paymentId));
-    if(attached.length === 0) return '';
-    return attached.map(c=>{
-      const roomNoJs = String(r.roomNo).replace(/'/g, "\\'");
-      const unitTypeJs = String(r.unitType || '').replace(/'/g, "\\'");
-      // Routed through openRevenuePaymentModal (not openPaymentRecordModal
-      // directly) purely to reuse its caption computation — same room
-      // attribution data (roomNo/unitType/applied/paymentTotal/cashTotal)
-      // is already sitting right here, so Add Caption on an old,
-      // caption-less screenshot has something useful to suggest even
-      // when opened from Revenue Report instead of Revenue Payment Record.
-      return `<button type="button" class="icon-btn has-attachment" style="margin:1px;" onclick="event.stopPropagation(); openRevenuePaymentModal('${c.paymentId}', '${c.date}', '${r.guestId}', '${roomNoJs}', '${unitTypeJs}', ${c.total}, ${c.paymentTotal}, ${r.cashTotal})" title="View or download this payment's screenshot">${CAMERA_ICON_SVG}</button>`;
-    }).join('');
+    const attachedCount = r.chunks.filter(c=> c.account > 0 && findPaymentAttachment(c.paymentId)).length;
+    if(attachedCount === 0) return '<td class="no-print"></td>';
+    const roomNoJs = String(r.roomNo).replace(/'/g, "\\'");
+    const label = attachedCount > 1 ? `all ${attachedCount} screenshots` : 'this screenshot';
+    return `<td class="no-print ss-cell-clickable" onclick="event.stopPropagation(); openRoomScreenshotsModal('${r.guestId}', '${r.date}', '${roomNoJs}')" title="View ${label} for this room">${CAMERA_ICON_SVG}${attachedCount > 1 ? `<span style="font-size:10px; font-weight:700; margin-left:2px;">×${attachedCount}</span>` : ''}</td>`;
   };
   // These columns are sized to just fit their header text on one line —
   // the floor, not a target. If a row's actual value is wider than that,
@@ -11564,7 +11445,7 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
           <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
           <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
-          <td class="no-print" style="text-align:center;" onclick="event.stopPropagation();">${ssCell(r)}</td>
+          ${ssCell(r)}
         </tr>`).join('')}
       </tbody>
       <tfoot>
@@ -13760,6 +13641,7 @@ function rerenderActiveView(){
   else if(currentView === 'breakfast'){ renderBreakfastReport(); }
   else if(currentView === 'autocheckout'){ renderAutoCheckout(); }
   else if(currentView === 'arrival'){ renderArrival(); }
+  else if(currentView === 'paymentrecord'){ renderPaymentRecord(); }
 }
 
 window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); resumeAppFromIdle(); });
@@ -13964,8 +13846,6 @@ function renderSettings(){
   if(dayLockBtn) dayLockBtn.style.display = isAdmin() ? '' : 'none';
   const paymentRecordBtn = document.getElementById('settingsPaymentRecordBtn');
   if(paymentRecordBtn) paymentRecordBtn.style.display = isAdmin() ? '' : 'none';
-  const revenuePaymentRecordBtn = document.getElementById('settingsRevenuePaymentRecordBtn');
-  if(revenuePaymentRecordBtn) revenuePaymentRecordBtn.style.display = isAdmin() ? '' : 'none';
 }
 
 function applyRolePermissions(){
@@ -13975,15 +13855,13 @@ function applyRolePermissions(){
   if(dayLockBtn) dayLockBtn.style.display = isAdmin() ? '' : 'none';
   const paymentRecordBtn = document.getElementById('settingsPaymentRecordBtn');
   if(paymentRecordBtn) paymentRecordBtn.style.display = isAdmin() ? '' : 'none';
-  const revenuePaymentRecordBtn = document.getElementById('settingsRevenuePaymentRecordBtn');
-  if(revenuePaymentRecordBtn) revenuePaymentRecordBtn.style.display = isAdmin() ? '' : 'none';
   const deleteEntityBtn = document.getElementById('settingsDeleteEntityBtn');
   if(deleteEntityBtn) deleteEntityBtn.style.display = isAdmin() ? '' : 'none';
   const autoCheckoutNav = document.getElementById('topNavAutoCheckout');
   if(autoCheckoutNav) autoCheckoutNav.style.display = isAdmin() ? '' : 'none';
   const arrivalNav = document.getElementById('topNavArrival');
   if(arrivalNav) arrivalNav.style.display = isAdmin() ? '' : 'none';
-  const paymentProofNav = document.getElementById('topNavPaymentProofWrap');
+  const paymentProofNav = document.getElementById('topNavPaymentProof');
   if(paymentProofNav) paymentProofNav.style.display = isAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
