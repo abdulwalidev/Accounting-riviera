@@ -3780,7 +3780,10 @@
     </div>
 
     <div class="panel accent-report">
-      <h2 class="no-print">CHARGES SUMMARY : <span id="rvNightlyDateLabel"></span></h2>
+      <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin:0;">CHARGES SUMMARY : <span id="rvNightlyDateLabel"></span></h2>
+        <button type="button" class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="downloadRangeScreenshotsPdf(document.getElementById('rvFrom').value, document.getElementById('rvTo').value, this)">⬇ Download Screenshots PDF</button>
+      </div>
       <div id="rvNightlySummary" style="font-size:15px; font-weight:700; margin:10px 0;"></div>
       <div id="rvRoomsBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
@@ -10127,31 +10130,26 @@ async function savePaymentRecordUpload(){
 // matters. Reuses the jspdf global already loaded for the Guest Letter PDF
 // (downloadGuestPdf) — no html2canvas needed here, this just stacks real
 // images, not rasterized HTML.
-async function downloadDayScreenshotsPdf(date, btn){
-  if(typeof jspdf === 'undefined'){
-    showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
-    return;
-  }
-  const dayAttachments = paymentAttachments.filter(a=> a.payment_date === date); // metadata filter only — no fetch yet
-  if(dayAttachments.length === 0){
-    showNotice('No screenshots attached for this day.');
-    return;
-  }
-  // Fetching each image + assembling the PDF genuinely takes a few seconds
-  // for a handful of screenshots, and this used to leave the button looking
-  // identical the whole time with nothing on screen to show it's working —
-  // this is real per-image progress (not a fake spinner), taken straight
-  // from the loop's own actual position, not a guessed/animated percentage.
+// Shared PDF-building core for both the per-day button (Payment Report,
+// Account Payment Record) and the per-range button (Revenue Report) —
+// fetches each of the given attachments' images (one at a time, only
+// these, only now — see PAYMENT SCREENSHOTS section comment) and stacks
+// them into one jsPDF doc, each image followed by its own caption printed
+// underneath as a plain explanation line. Real per-image progress on the
+// triggering button, not a fake spinner. Returns the built doc plus how
+// many pages actually made it in, so callers decide the filename/whether
+// there's anything worth saving.
+async function buildScreenshotsPdfDoc(attachments, btn){
   const originalLabel = btn ? btn.textContent : '';
   if(btn) btn.disabled = true;
   const doc = new jspdf.jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
   let pagesAdded = 0;
   try{
-    for(let i = 0; i < dayAttachments.length; i++){
-      if(btn) btn.textContent = `Fetching ${i + 1} of ${dayAttachments.length}…`;
-      const att = dayAttachments[i];
+    for(let i = 0; i < attachments.length; i++){
+      if(btn) btn.textContent = `Fetching ${i + 1} of ${attachments.length}…`;
+      const att = attachments[i];
       const blob = await downloadPaymentScreenshotBlob(att.storage_path); // fetches ONLY this image, only now
-      if(!blob) continue; // one failed fetch shouldn't abort the rest of the day's PDF
+      if(!blob) continue; // one failed fetch shouldn't abort the rest of the PDF
       const dataUrl = await blobToDataUrl(blob);
       if(pagesAdded > 0) doc.addPage();
       pagesAdded++;
@@ -10162,15 +10160,54 @@ async function downloadDayScreenshotsPdf(date, btn){
       doc.addImage(dataUrl, props.fileType || 'PNG', (210 - w) / 2, 15, w, h);
       if(att.caption) doc.text(att.caption, 105, 15 + h + 8, { align: 'center' });
     }
-    if(pagesAdded === 0){
-      showNotice('Couldn\'t load any of this day\'s screenshots — check the internet connection and try again.');
-      return;
-    }
     if(btn) btn.textContent = 'Building PDF…';
-    doc.save(`payment-screenshots-${date}.pdf`);
   }finally{
     if(btn){ btn.disabled = false; btn.textContent = originalLabel; }
   }
+  return { doc, pagesAdded };
+}
+
+async function downloadDayScreenshotsPdf(date, btn){
+  if(typeof jspdf === 'undefined'){
+    showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
+    return;
+  }
+  const dayAttachments = paymentAttachments.filter(a=> a.payment_date === date); // metadata filter only — no fetch yet
+  if(dayAttachments.length === 0){
+    showNotice('No screenshots attached for this day.');
+    return;
+  }
+  const { doc, pagesAdded } = await buildScreenshotsPdfDoc(dayAttachments, btn);
+  if(pagesAdded === 0){
+    showNotice('Couldn\'t load any of this day\'s screenshots — check the internet connection and try again.');
+    return;
+  }
+  doc.save(`payment-screenshots-${date}.pdf`);
+}
+
+// Revenue Report has no day-groups to hang a per-day button off (a single
+// table, Date column only shown for a multi-day range) — this bundles
+// every attached screenshot in the CURRENTLY FILTERED range into one PDF
+// instead, same image+caption-underneath shape as the per-day version.
+async function downloadRangeScreenshotsPdf(fromDate, toDate, btn){
+  if(typeof jspdf === 'undefined'){
+    showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
+    return;
+  }
+  const rangeAttachments = paymentAttachments
+    .filter(a=> (!fromDate || a.payment_date >= fromDate) && (!toDate || a.payment_date <= toDate))
+    .sort((a,b)=> a.payment_date.localeCompare(b.payment_date));
+  if(rangeAttachments.length === 0){
+    showNotice('No screenshots attached in this range.');
+    return;
+  }
+  const { doc, pagesAdded } = await buildScreenshotsPdfDoc(rangeAttachments, btn);
+  if(pagesAdded === 0){
+    showNotice('Couldn\'t load any screenshots for this range — check the internet connection and try again.');
+    return;
+  }
+  const label = fromDate && toDate ? `${fromDate}_to_${toDate}` : (fromDate || toDate || 'all-dates');
+  doc.save(`payment-screenshots-${label}.pdf`);
 }
 
 // Normal (default) view hides the Before/After carry-over sections below
@@ -10243,7 +10280,10 @@ function renderReport(){
       mainGrandTotal += t.subtotal; mainCash += t.cash; mainMCB += t.mcb; mainAlfalah += t.alfalah; mainHaji += t.haji;
       dayHtml += `
         <div class="day-group rpt-day-group">
-          <div class="day-head rpt-day-head"><span>${formatDate(date)}</span></div>
+          <div class="day-head">
+            <span>${formatDate(date)}</span>
+            <button type="button" class="btn secondary no-print" style="min-height:28px; padding:3px 10px;" onclick="downloadDayScreenshotsPdf('${date}', this)">⬇ Download PDF</button>
+          </div>
           ${t.html}
         </div>`;
     });
