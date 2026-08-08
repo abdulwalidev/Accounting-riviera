@@ -2810,6 +2810,7 @@
   <div class="hdr-row2">
     <div class="topnav">
       <button class="navbtn" id="topNavDashboard" onclick="showView('dashboard')">Dashboard</button>
+      <button class="navbtn" id="topNavFrontOffice" onclick="showView('frontoffice')" style="display:none;">Front Office</button>
       <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail</button>
       <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
@@ -3918,6 +3919,35 @@
 
   </div>
 
+  <div class="view" id="view-frontoffice">
+
+    <h1>Front Office</h1>
+    <div class="sub">Restaurant charges sent from the POS for in-house guests — collect-and-acknowledge only. This never touches any guest's balance or checkout total in this system; it is a separate list, see the POS's own "Front Office Pending" page for the restaurant side.</div>
+
+    <div class="panel accent-filters">
+      <h2>Pending <span id="foPendingCount"></span></h2>
+      <div id="foPendingBody" style="overflow-x:auto; margin-top:14px;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2>Collected <span id="foCollectedCount"></span></h2>
+      <div id="foCollectedBody" style="overflow-x:auto; margin-top:14px;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div id="foCollectBackdrop" onclick="foCancelCollect()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
+  <div id="foCollectModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:var(--paper); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
+    <div style="font-weight:700; font-size:14.5px; margin-bottom:12px;">Mark as collected?</div>
+    <div id="foCollectDetails" style="font-size:12.5px; color:var(--muted); line-height:1.7; margin-bottom:14px; background:var(--panel); border-radius:6px; padding:10px 12px;"></div>
+    <div style="font-size:12.5px; margin-bottom:6px;">Type <b>collected</b> below to confirm:</div>
+    <input type="text" id="foCollectConfirmInput" autocomplete="off" oninput="foCollectConfirmCheck()" onkeydown="if(event.key==='Enter'){ event.preventDefault(); foCollectConfirmed(); } if(event.key==='Escape'){ event.preventDefault(); foCancelCollect(); }" style="width:100%; border:1px solid var(--line); border-radius:6px; padding:8px 10px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button type="button" class="btn secondary" onclick="foCancelCollect()">Cancel</button>
+      <button type="button" class="btn" id="foCollectConfirmBtn" disabled onclick="foCollectConfirmed()">Collect</button>
+    </div>
+  </div>
+
   <div class="view" id="view-daylock">
 
     <h1>Day Lock</h1>
@@ -4086,6 +4116,13 @@
               <div>
                 <div class="settings-row-title">Report SS</div>
                 <div class="settings-row-desc">Attach a bank/card payment's screenshot (auto-captioned), and download a day's screenshots as one PDF.</div>
+              </div>
+              <span class="settings-row-chevron">›</span>
+            </div>
+            <div class="settings-row clickable" id="settingsFrontOfficeBtn" onclick="showView('frontoffice')" style="display:none;">
+              <div>
+                <div class="settings-row-title">Front Office</div>
+                <div class="settings-row-desc">Restaurant charges sent from the POS, pending collection.</div>
               </div>
               <span class="settings-row-chevron">›</span>
             </div>
@@ -4481,7 +4518,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings','paymentrecord'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings','paymentrecord','frontoffice'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -4531,6 +4568,11 @@ function showView(view, fromPopState){
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
+  if(view === 'frontoffice' && !isAdmin()){
+    showNotice('Front Office is only available to admin accounts.');
+    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
+    return;
+  }
   currentView = view;
   try{
     localStorage.setItem('lastView', view);
@@ -4557,6 +4599,9 @@ function showView(view, fromPopState){
   document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck');
   const topNavPaymentProof = document.getElementById('topNavPaymentProof');
   if(topNavPaymentProof) topNavPaymentProof.classList.toggle('active', view === 'paymentrecord');
+  const topNavFrontOffice = document.getElementById('topNavFrontOffice');
+  if(topNavFrontOffice) topNavFrontOffice.classList.toggle('active', view === 'frontoffice');
+  if(view === 'frontoffice') renderFrontOffice();
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -4709,7 +4754,7 @@ function restoreLastView(){
   let saved = null;
   try{ saved = localStorage.getItem('lastView'); }catch(e){ return; }
   if(!saved || saved === currentView || !ROUTABLE_VIEWS.includes(saved)) return;
-  if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout' || saved === 'arrival') && !isAdmin()) return;
+  if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout' || saved === 'arrival' || saved === 'frontoffice') && !isAdmin()) return;
   if(saved === 'detail'){
     let savedId = null;
     try{ savedId = localStorage.getItem('lastDetailId'); }catch(e){ /* ignore */ }
@@ -13555,6 +13600,176 @@ async function fetchPaymentAttachmentsOnly(){
   if(!error){ paymentAttachments = data || []; rerenderActiveView(); }
 }
 
+// ---------- FRONT OFFICE (restaurant module — pos_* tables only) ----------
+// Same isolation rule as migration/pos_module.sql: this reads/writes
+// pos_invoices/pos_invoice_items and nothing else — no guest, room, or
+// payment table is ever touched from here.
+let foInvoices = []; // in-memory mirror, each with an .items[] array
+let foMutationStamp = 0;
+let foPullInFlight = null;
+
+function foEscapeHtml(s){
+  const div = document.createElement('div');
+  div.textContent = s == null ? '' : String(s);
+  return div.innerHTML;
+}
+
+function foRowFromDb(row, items){
+  return {
+    id: row.id,
+    no: row.invoice_no,
+    dept: row.dept,
+    date: row.date_text,
+    roomNo: row.room_no || '',
+    customer: row.customer,
+    amount: Number(row.grand_total) || 0,
+    paid: Number(row.paid) || 0,
+    sentToFrontOffice: !!row.sent_to_front_office,
+    collected: !!row.collected,
+    collectedBy: row.collected_by,
+    collectedAt: row.collected_at,
+    deleted: !!row.deleted,
+    items: items
+  };
+}
+
+async function fetchFrontOfficeOnly(){
+  if(!sb) return;
+  const stampAtStart = foMutationStamp;
+  try{
+    const [invRes, itemsRes] = await Promise.all([
+      sb.from('pos_invoices').select('*').eq('deleted', false).eq('sent_to_front_office', true),
+      sb.from('pos_invoice_items').select('*')
+    ]);
+    if(invRes.error || itemsRes.error) throw (invRes.error || itemsRes.error);
+    if(foMutationStamp !== stampAtStart) return; // a write landed mid-flight — next poll/realtime event covers it
+    const itemsByInvoice = {};
+    (itemsRes.data || []).forEach(it=>{ (itemsByInvoice[it.invoice_id] = itemsByInvoice[it.invoice_id] || []).push(it); });
+    foInvoices = (invRes.data || []).map(row=> foRowFromDb(row, itemsByInvoice[row.id] || []));
+    rerenderActiveView();
+  }catch(e){
+    console.error('Front Office fetch failed', e);
+  }
+}
+
+function renderFrontOffice(){
+  const pendingBody = document.getElementById('foPendingBody');
+  const collectedBody = document.getElementById('foCollectedBody');
+  const pendingCount = document.getElementById('foPendingCount');
+  const collectedCount = document.getElementById('foCollectedCount');
+  if(!pendingBody || !collectedBody) return;
+
+  if(!initialLoadDone){
+    pendingBody.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    collectedBody.innerHTML = '';
+    return;
+  }
+
+  const pending = foInvoices.filter(r=> !r.collected).sort((a,b)=> (b.id || '').localeCompare(a.id || ''));
+  const collected = foInvoices.filter(r=> r.collected).sort((a,b)=> (b.collectedAt || '').localeCompare(a.collectedAt || ''));
+
+  if(pendingCount) pendingCount.textContent = '(' + pending.length + ')';
+  if(collectedCount) collectedCount.textContent = '(' + collected.length + ')';
+
+  pendingBody.innerHTML = pending.length === 0 ? '<div class="empty-note">Nothing pending.</div>' : `
+    <table>
+      <thead><tr><th>Invoice #</th><th>Date</th><th>Room</th><th>Customer</th><th style="text-align:right;">Amount</th><th style="width:110px;"></th></tr></thead>
+      <tbody>${pending.map(r=> `
+        <tr>
+          <td>${foEscapeHtml(r.no)}</td>
+          <td>${foEscapeHtml(r.date)}</td>
+          <td>${foEscapeHtml(r.roomNo)}</td>
+          <td>${foEscapeHtml(r.customer)}</td>
+          <td style="text-align:right;">${r.amount.toFixed(2)}</td>
+          <td><button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="foRequestCollect('${r.id}')">Collect</button></td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+
+  collectedBody.innerHTML = collected.length === 0 ? '<div class="empty-note">Nothing collected yet.</div>' : `
+    <table>
+      <thead><tr><th>Invoice #</th><th>Date</th><th>Room</th><th>Customer</th><th style="text-align:right;">Amount</th><th>Collected</th></tr></thead>
+      <tbody>${collected.map(r=> `
+        <tr>
+          <td>${foEscapeHtml(r.no)}</td>
+          <td>${foEscapeHtml(r.date)}</td>
+          <td>${foEscapeHtml(r.roomNo)}</td>
+          <td>${foEscapeHtml(r.customer)}</td>
+          <td style="text-align:right;">${r.amount.toFixed(2)}</td>
+          <td>${foEscapeHtml(r.collectedBy)} · ${r.collectedAt ? new Date(r.collectedAt).toLocaleString() : ''}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+// Collect confirmation — same type-to-confirm pattern as app/POS/index.html's
+// delete modal, sentinel word changed to "collected". Confirming sets
+// collected/collected_by/collected_at on pos_invoices; nothing else ever
+// flips those fields back once set (the POS side locks the row once
+// collected — see posMakeActionsCell/posToggleFrontOffice).
+let foPendingCollect = null;
+
+function foRequestCollect(id){
+  const record = foInvoices.filter(r=> r.id === id)[0];
+  if(!record) return;
+  foPendingCollect = record;
+  const details = document.getElementById('foCollectDetails');
+  if(details){
+    details.innerHTML =
+      'Invoice #: <b>' + foEscapeHtml(record.no) + '</b><br>' +
+      'Room: ' + foEscapeHtml(record.roomNo) + '<br>' +
+      'Customer: ' + foEscapeHtml(record.customer) + '<br>' +
+      'Amount: ' + record.amount.toFixed(2);
+  }
+  const input = document.getElementById('foCollectConfirmInput');
+  if(input) input.value = '';
+  foCollectConfirmCheck();
+  const modal = document.getElementById('foCollectModal');
+  const backdrop = document.getElementById('foCollectBackdrop');
+  if(modal) modal.style.display = '';
+  if(backdrop) backdrop.style.display = '';
+  if(input) input.focus();
+}
+
+function foCollectConfirmCheck(){
+  const input = document.getElementById('foCollectConfirmInput');
+  const confirmBtn = document.getElementById('foCollectConfirmBtn');
+  if(!input || !confirmBtn) return;
+  const ok = input.value.trim().toLowerCase() === 'collected';
+  confirmBtn.disabled = !ok;
+  confirmBtn.style.opacity = ok ? '1' : '.5';
+}
+
+function foCancelCollect(){
+  foPendingCollect = null;
+  const modal = document.getElementById('foCollectModal');
+  const backdrop = document.getElementById('foCollectBackdrop');
+  if(modal) modal.style.display = 'none';
+  if(backdrop) backdrop.style.display = 'none';
+}
+
+async function foCollectConfirmed(){
+  if(!foPendingCollect) return;
+  const record = foPendingCollect;
+  if(!sb){ showNotice('Not connected to the cloud — try again.'); return; }
+  const collectedAt = new Date().toISOString();
+  const collectedBy = currentUser ? currentUser.username : '';
+  const { error } = await sb.from('pos_invoices').update({
+    collected: true,
+    collected_by: collectedBy,
+    collected_at: collectedAt
+  }).eq('id', record.id);
+  if(error){
+    console.error('Collect failed', error);
+    showNotice('Could not mark as collected — check your connection and try again.');
+    return;
+  }
+  foMutationStamp++;
+  record.collected = true;
+  record.collectedBy = collectedBy;
+  record.collectedAt = collectedAt;
+  foCancelCollect();
+  renderFrontOffice();
+}
+
 // Once a calendar day has actually finished, its payments shouldn't stay
 // editable forever waiting for an admin to remember to lock it — so every
 // time the app checks in with the cloud, it also checks whether YESTERDAY
@@ -13716,6 +13931,7 @@ function rerenderActiveView(){
   else if(currentView === 'autocheckout'){ renderAutoCheckout(); }
   else if(currentView === 'arrival'){ renderArrival(); }
   else if(currentView === 'paymentrecord'){ renderPaymentRecord(); }
+  else if(currentView === 'frontoffice'){ renderFrontOffice(); }
 }
 
 window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); resumeAppFromIdle(); });
@@ -13728,7 +13944,7 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && appSt
 // background pull right after, so your own changes round-trip instantly
 // regardless of this interval. Other devices' changes also arrive instantly
 // via the realtime subscription below — this is only a fallback.
-setInterval(()=>{ if(appStarted){ pushPendingNow(); if(!appPaused) pullFreshFromCloud(); } }, 300000);
+setInterval(()=>{ if(appStarted){ pushPendingNow(); if(!appPaused){ pullFreshFromCloud(); fetchFrontOfficeOnly(); } } }, 300000);
 scheduleMidnightAutoLock();
 
 // ---- Idle pause: 2 minutes with no activity stops the poll and covers the
@@ -13795,6 +14011,8 @@ if(sb && typeof sb.channel === 'function'){
       .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_payments' }, applyPaymentRealtimeEvent)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'locked_days' }, ()=> fetchLockedDaysOnly())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_attachments' }, ()=> fetchPaymentAttachmentsOnly())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_invoices' }, ()=> fetchFrontOfficeOnly())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_invoice_items' }, ()=> fetchFrontOfficeOnly())
       .subscribe();
   }catch(e){ console.error('Realtime unavailable — the periodic poll covers it', e); }
 }
@@ -13900,7 +14118,15 @@ const LOGIN_SESSION_KEY = 'guest_system_logged_in_v1';
 let currentUser = null; // { username, role }
 
 function isAdmin(){
-  return !!currentUser && currentUser.role === 'admin';
+  return !!currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+}
+
+// 'superadmin' — everything an admin can do, plus the Front Office view
+// (restaurant charges awaiting collection) surfaced in the top nav instead
+// of tucked in Settings. See migration/pos_module.sql — this role exists
+// only so one account can see the separate restaurant module's data.
+function isSuperAdmin(){
+  return !!currentUser && currentUser.role === 'superadmin';
 }
 
 // 'viewer' — read-only, stricter than 'staff': can look at every page and
@@ -13920,6 +14146,8 @@ function renderSettings(){
   if(dayLockBtn) dayLockBtn.style.display = isAdmin() ? '' : 'none';
   const paymentRecordBtn = document.getElementById('settingsPaymentRecordBtn');
   if(paymentRecordBtn) paymentRecordBtn.style.display = isAdmin() ? '' : 'none';
+  const frontOfficeBtn = document.getElementById('settingsFrontOfficeBtn');
+  if(frontOfficeBtn) frontOfficeBtn.style.display = isAdmin() ? '' : 'none';
 }
 
 function applyRolePermissions(){
@@ -13937,6 +14165,10 @@ function applyRolePermissions(){
   if(arrivalNav) arrivalNav.style.display = isAdmin() ? '' : 'none';
   const paymentProofNav = document.getElementById('topNavPaymentProof');
   if(paymentProofNav) paymentProofNav.style.display = isAdmin() ? '' : 'none';
+  const settingsFrontOfficeBtn = document.getElementById('settingsFrontOfficeBtn');
+  if(settingsFrontOfficeBtn) settingsFrontOfficeBtn.style.display = isAdmin() ? '' : 'none';
+  const frontOfficeNav = document.getElementById('topNavFrontOffice');
+  if(frontOfficeNav) frontOfficeNav.style.display = isSuperAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
   const avatar = document.getElementById('hdrAvatar');
@@ -13999,6 +14231,7 @@ async function startApp(){
   rerenderActiveView(); // paints cached data, or the "Loading…" state behind the overlay
   await migrateLegacyLocalData();
   pullFreshFromCloud();
+  fetchFrontOfficeOnly();
 }
 
 function showApp(){
@@ -14052,7 +14285,7 @@ addPayRow();
     const raw = sessionStorage.getItem(LOGIN_SESSION_KEY);
     if(raw){
       const parsed = JSON.parse(raw);
-      if(parsed && parsed.username && (parsed.role === 'admin' || parsed.role === 'staff' || parsed.role === 'viewer')){
+      if(parsed && parsed.username && (parsed.role === 'admin' || parsed.role === 'staff' || parsed.role === 'viewer' || parsed.role === 'superadmin')){
         currentUser = parsed;
       } else {
         sessionStorage.removeItem(LOGIN_SESSION_KEY);
