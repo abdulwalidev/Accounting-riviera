@@ -518,6 +518,35 @@
     cursor:pointer;
     vertical-align:middle;
   }
+  /* Inc. Breakfast: staff kept missing the plain checkbox, so give it its
+     own outlined/tinted box plus a pulsing glow — obvious even unchecked. */
+  .bf-check-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+  }
+  .bf-check-emoji{
+    font-size:15px;
+    line-height:1;
+  }
+  td input.roomIncBreakfast[type="checkbox"]{
+    width:22px;
+    height:22px;
+    outline:2px solid #16A34A;
+    outline-offset:2px;
+    border-radius:4px;
+    background:#DCFCE7;
+    animation:bfCheckShine 1.8s ease-in-out infinite;
+  }
+  td input.roomIncBreakfast[type="checkbox"]:checked{
+    animation:none;
+    box-shadow:0 0 5px 2px rgba(22,163,74,0.55);
+  }
+  @keyframes bfCheckShine{
+    0%, 100%{ box-shadow:0 0 0 0 rgba(22,163,74,0.55); }
+    50%{ box-shadow:0 0 7px 3px rgba(22,163,74,0.65); }
+  }
   .roomctrl{
     display:flex;
     align-items:center;
@@ -3026,7 +3055,7 @@
             <th style="width:130px;">Rent Per Day / Amount (Other)</th>
             <th style="width:90px;">Adults</th>
             <th style="width:90px;">Children</th>
-            <th style="width:100px;">Inc. Breakfast</th>
+            <th style="width:100px;">🥐 Inc. Breakfast</th>
             <th style="width:120px;">No of Days</th>
             <th style="width:130px;" class="edit-only">Moved Out</th>
             <th style="width:120px;">Total</th>
@@ -5661,7 +5690,12 @@ function addRow(){
     <td><input type="text" inputmode="decimal" placeholder="0 or Guest" class="rent" oninput="calcRow(this)"></td>
     <td><input type="text" inputmode="numeric" placeholder="Adults" class="roomAdults" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
     <td><input type="text" inputmode="numeric" placeholder="Children" class="roomChildren" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
-    <td style="text-align:center;"><input type="checkbox" class="roomIncBreakfast" title="Whole room's Adults+Children are having breakfast"></td>
+    <td style="text-align:center;">
+      <div class="bf-check-wrap">
+        <span class="bf-check-emoji" aria-hidden="true">🥐</span>
+        <input type="checkbox" class="roomIncBreakfast" title="Whole room's Adults+Children are having breakfast">
+      </div>
+    </td>
     <td>
       <div class="roomctrl">
         <button onclick="changeRooms(this,-1)">-</button>
