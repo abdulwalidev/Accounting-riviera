@@ -9565,7 +9565,7 @@ function reportRowsToTableHtml(sectionRows){
         <td class="account-amt">${r.bank === 'Haji (MCB)' && r.account ? r.account.toLocaleString() : '-'}</td>
         <td class="account-amt">${r.account ? r.account.toLocaleString() : '-'}</td>
         <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${r.total.toLocaleString()}</td>
-        <td class="no-print" style="text-align:center;">${hasAttachment ? `<button type="button" class="icon-btn has-attachment" onclick="event.stopPropagation(); openPaymentRecordModal('${r.paymentId}', '${r.date}', '${r.id}', '', true)" title="View or download this payment's screenshot">${CAMERA_ICON_SVG}</button>` : ''}</td>
+        <td class="no-print" style="text-align:center;">${hasAttachment ? `<button type="button" class="icon-btn has-attachment" onclick="event.stopPropagation(); openReadOnlyPaymentModal('${r.paymentId}', '${r.date}', '${r.id}')" title="View or download this payment's screenshot">${CAMERA_ICON_SVG}</button>` : ''}</td>
       </tr>`;
   }).join('');
   const accountTotal = mcb + alfalah + haji;
@@ -9871,14 +9871,26 @@ function openAccountPaymentModal(paymentId, paymentDate, guestId){
   openPaymentRecordModal(paymentId, paymentDate, guestId, buildAutoScreenshotCaptionForPayment(paymentId));
 }
 
+// Payment Report's own icon — read-only (no Replace/Upload, same as every
+// non-Account-Payment-Record entry point), but still worth computing the
+// same room-attribution caption suggestion so Add Caption has something
+// useful to offer on an old, caption-less screenshot without making the
+// user go find this same payment on Account Payment Record first.
+function openReadOnlyPaymentModal(paymentId, paymentDate, guestId){
+  openPaymentRecordModal(paymentId, paymentDate, guestId, buildAutoScreenshotCaptionForPayment(paymentId), true);
+}
+
 // suggestedCaption (optional) — Account Payment Record passes an
 // auto-generated one (see buildAutoScreenshotCaptionForPayment) describing
 // how much of this payment applies to whichever room(s) it funded; only
 // ever prefilled for a FRESH upload, never overwrites an existing caption.
-// readOnly (optional) — Revenue Payment Record's own icon passes this:
-// uploading is only ever possible from Account Payment Record now, so
-// Revenue Payment Record's modal drops Replace/Upload entirely and is
-// just a per-room-night view of whatever's already there.
+// readOnly (optional) — Payment Report/Revenue Report/Revenue Payment
+// Record's icons all pass this: re-uploading/replacing the actual image
+// is only ever possible from Account Payment Record, so this drops the
+// Replace/Upload button. Add/Edit Caption stays available everywhere
+// though — it never touches the image, and there'd be no other way to
+// fix a screenshot that was attached before the caption suggestion
+// existed except bouncing back to Account Payment Record for every one.
 function openPaymentRecordModal(paymentId, paymentDate, guestId, suggestedCaption, readOnly){
   pendingPaymentRecordContext = { paymentId, paymentDate, guestId, suggestedCaption: suggestedCaption || '', readOnly: !!readOnly };
   pendingPaymentRecordPasteBlob = null;
@@ -9979,8 +9991,8 @@ function renderPaymentRecordModalBody(){
       ${captionHtml}
       <div class="sub" style="margin-bottom:14px;">Attached by ${att.uploaded_by || '-'} on ${formatDate(toKarachiDateStr(att.uploaded_at))}</div>
       <div class="modal-actions">
-        ${readOnly ? '' : `<button class="btn secondary" onclick="showPaymentRecordUploadZone()">Replace</button>
-        <button class="btn secondary" onclick="startEditPaymentRecordCaption()">${att.caption ? 'Edit Caption' : 'Add Caption'}</button>`}
+        ${readOnly ? '' : '<button class="btn secondary" onclick="showPaymentRecordUploadZone()">Replace</button>'}
+        <button class="btn secondary" onclick="startEditPaymentRecordCaption()">${att.caption ? 'Edit Caption' : 'Add Caption'}</button>
         ${rightBtn}
       </div>`;
   } else if(readOnly){
@@ -11511,9 +11523,17 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
   const ssCell = (r)=>{
     const attached = r.chunks.filter(c=> c.account > 0 && findPaymentAttachment(c.paymentId));
     if(attached.length === 0) return '';
-    return attached.map(c=>
-      `<button type="button" class="icon-btn has-attachment" style="margin:1px;" onclick="event.stopPropagation(); openPaymentRecordModal('${c.paymentId}', '${c.date}', '${r.guestId}', '', true)" title="View or download this payment's screenshot">${CAMERA_ICON_SVG}</button>`
-    ).join('');
+    return attached.map(c=>{
+      const roomNoJs = String(r.roomNo).replace(/'/g, "\\'");
+      const unitTypeJs = String(r.unitType || '').replace(/'/g, "\\'");
+      // Routed through openRevenuePaymentModal (not openPaymentRecordModal
+      // directly) purely to reuse its caption computation — same room
+      // attribution data (roomNo/unitType/applied/paymentTotal/cashTotal)
+      // is already sitting right here, so Add Caption on an old,
+      // caption-less screenshot has something useful to suggest even
+      // when opened from Revenue Report instead of Revenue Payment Record.
+      return `<button type="button" class="icon-btn has-attachment" style="margin:1px;" onclick="event.stopPropagation(); openRevenuePaymentModal('${c.paymentId}', '${c.date}', '${r.guestId}', '${roomNoJs}', '${unitTypeJs}', ${c.total}, ${c.paymentTotal}, ${r.cashTotal})" title="View or download this payment's screenshot">${CAMERA_ICON_SVG}</button>`;
+    }).join('');
   };
   // These columns are sized to just fit their header text on one line —
   // the floor, not a target. If a row's actual value is wider than that,
