@@ -4701,6 +4701,15 @@ function paymentDatePickerHooks(){
   return {
     maxDate: todayStr(),
     disable: [ d=> isDateLocked(toKarachiDateStr(d)) ],
+    // Any programmatic setDate() onto a day that fails the disable check
+    // above (e.g. the footer's own Today shortcut running before a fresh
+    // lock takes effect, or a value getting reapplied after Day Lock state
+    // changes) runs flatpickr's OWN clear() and wipes the field to '' with
+    // no error shown, leaving the date picker looking stuck/dead — this is
+    // the exact bug that used to hit Payment Detail rows on a locked day,
+    // now guarded everywhere this config is used (dNewDate here, and every
+    // Payment Detail row via initPayDatePicker).
+    allowInvalidPreload: true,
     onDayCreate: (dObj, dStr, fp, dayElem)=>{
       if(!dayElem.dateObj) return;
       const iso = toKarachiDateStr(dayElem.dateObj);
@@ -4796,15 +4805,9 @@ function initPayDatePicker(tr){
     disableMobile: true,
     // A saved payment can already be dated on a day that's since been
     // locked (Day Lock runs after the fact, on a day that used to be
-    // pickable). Without this, setPayDate()'s fp.setDate() call runs the
-    // date through the same `disable` filter used to block NEW picks,
-    // finds it disabled, and flatpickr clears its own selectedDates AND
-    // the real input value — the date silently vanishes and, since
-    // updatePayRowLockStyle reads that same now-blanked input, the row
-    // also stops looking locked. This keeps a preloaded date visible (and
-    // still gray/locked-looking) even when it fails the disable check;
-    // it does not let a user newly pick a disabled day.
-    allowInvalidPreload: true,
+    // pickable). paymentDatePickerHooks()'s allowInvalidPreload keeps
+    // setPayDate()'s fp.setDate() call from wiping that date + the row's
+    // locked styling out from under us — see its own comment for detail.
     ...paymentDatePickerHooks(),
     // Calls updatePayRowLockStyle directly rather than dispatching a
     // synthetic input/change event for the delegated #payBody listener to
