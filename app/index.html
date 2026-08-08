@@ -11359,7 +11359,7 @@ function buildAutoCheckoutRows(asOfDate){
       };
     });
 
-  return due.concat(checkedOut).sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+  return due.concat(checkedOut).sort((a,b)=> a.guest.localeCompare(b.guest, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
 function renderAutoCheckout(){
