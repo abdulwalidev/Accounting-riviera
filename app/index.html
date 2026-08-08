@@ -10063,14 +10063,14 @@ async function savePaymentRecordUpload(){
 // Summary table's Download Screenshots PDF) — fetches each of the given
 // attachments' images (one at a time, only these, only now — see PAYMENT
 // SCREENSHOTS section comment) and stacks them into one jsPDF doc: each
-// image gets its own full page, immediately followed by its own SEPARATE
-// page holding just that payment's caption as the explanation (not a
-// small line squeezed under the image — its own page, large and legible,
-// same as being asked for explicitly). A caption-less attachment just
-// doesn't get an explanation page, nothing blank inserted. Real per-image
-// progress on the triggering button, not a fake spinner. Returns the
-// built doc plus how many pages actually made it in, so callers decide
-// the filename/whether there's anything worth saving.
+// attachment gets exactly ONE page — the image sized to leave room
+// underneath, with its caption printed directly below it on that SAME
+// page — so the PDF's page count always equals the number of screenshots/
+// payments, never double. A caption-less attachment's page is just the
+// image with nothing below it. Real per-image progress on the triggering
+// button, not a fake spinner. Returns the built doc plus how many pages
+// actually made it in, so callers decide the filename/whether there's
+// anything worth saving.
 async function buildScreenshotsPdfDoc(attachments, btn){
   const originalLabel = btn ? btn.textContent : '';
   if(btn) btn.disabled = true;
@@ -10086,19 +10086,21 @@ async function buildScreenshotsPdfDoc(attachments, btn){
       if(pagesAdded > 0) doc.addPage();
       pagesAdded++;
       const props = doc.getImageProperties(dataUrl);
-      const maxW = 190, maxH = 267; // mm — A4 (210x297) minus margins, the whole page since the caption now lives on its own page after this one
+      // Image gets the top portion of the page only — smaller than a
+      // full-page render — leaving guaranteed room below it for the
+      // caption on this same page instead of a separate one.
+      const imgY = 15, maxW = 170, maxH = 175; // mm
       const scale = Math.min(maxW / props.width, maxH / props.height, 1); // never upscale a small screenshot
       const w = props.width * scale, h = props.height * scale;
-      doc.addImage(dataUrl, props.fileType || 'PNG', (210 - w) / 2, 15, w, h);
+      doc.addImage(dataUrl, props.fileType || 'PNG', (210 - w) / 2, imgY, w, h);
       if(att.caption){
-        doc.addPage();
-        pagesAdded++;
-        doc.setFontSize(11);
-        doc.setTextColor(120);
-        doc.text('EXPLANATION', 105, 40, { align: 'center' });
-        doc.setFontSize(16);
+        const capY = imgY + h + 14;
+        doc.setFontSize(9);
+        doc.setTextColor(140);
+        doc.text('EXPLANATION', 105, capY, { align: 'center' });
+        doc.setFontSize(10.5);
         doc.setTextColor(20);
-        doc.text(att.caption, 105, 55, { align: 'center', maxWidth: 170 });
+        doc.text(att.caption, 105, capY + 7, { align: 'center', maxWidth: 175 });
       }
     }
     if(btn) btn.textContent = 'Building PDF…';
@@ -10129,8 +10131,8 @@ async function downloadDayScreenshotsPdf(date, btn){
 // Revenue Report has no day-groups to hang a per-day button off (a single
 // table, Date column only shown for a multi-day range) — this bundles
 // every attached screenshot in the CURRENTLY FILTERED range into one PDF
-// instead, same image-page-then-explanation-page shape as the per-day
-// version (buildScreenshotsPdfDoc).
+// instead, same one-page-per-screenshot shape as the per-day version
+// (buildScreenshotsPdfDoc).
 //
 // Deliberately NOT "every attachment whose own payment_date falls in
 // range" — a payment's OWN date and the room-night date(s) its money
