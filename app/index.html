@@ -5543,20 +5543,33 @@ async function confirmRoomStatusChange(){
 // A second, detail-bearing confirmation before the actual checkout runs —
 // staff sees exactly who they're about to check out (name, CNIC, room,
 // nights, money) and has to type CHECKOUT, so a stray click on the room
-// list can't silently check someone out.
+// list can't silently check someone out. Room No here can be more than one
+// room (a guest holding several rooms checks out of all of them together —
+// see buildAutoCheckoutRows' per-guest grouping), so this whole chain
+// (openCheckoutConfirmModal/confirmCheckoutConfirmModal/confirmRoomCheckout)
+// works off pendingCheckoutRoomNos, an array, always — never the single-
+// room pendingRoomStatusRoomNo Room Detail's own housekeeping modal uses.
+let pendingCheckoutRoomNos = [];
 function openCheckoutConfirmModal(){
-  const roomNo = pendingRoomStatusRoomNo;
-  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNo);
+  const roomNos = pendingCheckoutRoomNos;
+  if(!roomNos.length) return;
+  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNos[0]);
   if(!rs || !rs.entry) return;
   const entry = loadAllEntries().find(e=> e.id === rs.entry.id);
   if(!entry) return;
   const t = computeTotals(entry);
-  const roomRow = (entry.rooms || []).find(r=> (r.roomNo || '').trim().toUpperCase() === roomNo.trim().toUpperCase());
-  const nights = roomRow ? (parseInt(roomRow.count) || 1) : '-';
+  // Nights Booked only reads cleanly for a single room — a guest holding
+  // several rooms can have a different night count per room, so this just
+  // shows '-' rather than picking one room's count and implying it speaks
+  // for all of them.
+  const roomRow = roomNos.length === 1
+    ? (entry.rooms || []).find(r=> (r.roomNo || '').trim().toUpperCase() === roomNos[0].trim().toUpperCase())
+    : null;
+  const nights = roomNos.length === 1 ? (roomRow ? (parseInt(roomRow.count) || 1) : '-') : '-';
   document.getElementById('ccModalBody').innerHTML = `
     <div><div class="confirm-lbl">Guest Name</div><div class="confirm-val">${entry.guestName || '(no name)'}</div></div>
     <div><div class="confirm-lbl">CNIC</div><div class="confirm-val">${entry.cnic || '-'}</div></div>
-    <div><div class="confirm-lbl">Room No</div><div class="confirm-val">${roomNo}</div></div>
+    <div><div class="confirm-lbl">Room No</div><div class="confirm-val">${roomNos.join(', ')}</div></div>
     <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${entry.checkIn ? formatDate(entry.checkIn) : '-'}</div></div>
     <div><div class="confirm-lbl">Nights Booked</div><div class="confirm-val">${nights}</div></div>
     <div><div class="confirm-lbl">Booking Total</div><div class="confirm-val">${t.bookingTotal.toLocaleString()}</div></div>
@@ -5588,10 +5601,14 @@ async function confirmCheckoutConfirmModal(){
 
 // Marks a guest's Actual Checkout (today, unless the Confirm Checkout
 // modal's Checkout Date field was set to something else — backdating a
-// checkout nobody got around to confirming yesterday, say) and the room
+// checkout nobody got around to confirming yesterday, say) and the room(s)
 // Dirty (never straight to Ready — whoever cleans it marks it Ready
-// themselves via the room-status modal).
-async function checkOutEntryRoom(entryId, roomNo, logAction, checkoutDate){
+// themselves via the room-status modal). roomNos may be a single room
+// string (Room Detail's one-click Extended resolution) or an array (a
+// guest holding several rooms, checking out of all of them together) —
+// Actual Checkout is one guest-level field either way, so it's written
+// once; only the Dirty status is applied per room.
+async function checkOutEntryRoom(entryId, roomNos, logAction, checkoutDate){
   const entry = loadAllEntries().find(e=> e.id === entryId);
   if(!entry) return false;
   const extraDetails = (entry.extraDetails || []).filter(d=> d.kind !== 'Actual Checkout');
@@ -5601,13 +5618,15 @@ async function checkOutEntryRoom(entryId, roomNo, logAction, checkoutDate){
   entry.editedBy = currentUser ? currentUser.username : '';
   logGuestAction(entry.id, logAction || 'checked_out');
   queueEntryPush(entry.id);
-  await upsertRoomStatus(roomNo, 'Dirty');
+  const rooms = Array.isArray(roomNos) ? roomNos : [roomNos];
+  await Promise.all(rooms.map(rn=> upsertRoomStatus(rn, 'Dirty')));
   return entry;
 }
 
 async function confirmRoomCheckout(){
-  const roomNo = pendingRoomStatusRoomNo;
-  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNo);
+  const roomNos = pendingCheckoutRoomNos;
+  if(!roomNos.length) return;
+  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNos[0]);
   if(!rs || !rs.entry) return;
   // Last line of defense — never write a checkout for a guest whose
   // balance isn't settled at exactly 0, no matter what UI path got here.
@@ -5616,11 +5635,12 @@ async function confirmRoomCheckout(){
     return;
   }
   const checkoutDate = document.getElementById('ccCheckoutDate').value || todayStr();
-  const entry = await checkOutEntryRoom(rs.entry.id, roomNo, undefined, checkoutDate);
+  const entry = await checkOutEntryRoom(rs.entry.id, roomNos, undefined, checkoutDate);
   if(!entry) return;
-  closeRoomStatusModal();
+  closeCheckoutConfirmModal();
+  pendingCheckoutRoomNos = [];
   rerenderActiveView();
-  showNotice((entry.guestName || 'Guest') + ' checked out (' + formatDate(checkoutDate) + ') — room ' + roomNo + ' marked Dirty.', 'success');
+  showNotice((entry.guestName || 'Guest') + ' checked out (' + formatDate(checkoutDate) + ') — room ' + roomNos.join(', ') + ' marked Dirty.', 'success');
 }
 
 function openChangeRoomModal(){
@@ -11322,23 +11342,41 @@ function buildAutoCheckoutRows(asOfDate){
   // Checkout/Pending touch them; just show it as "Extended" so they don't
   // silently vanish from the list with no explanation.
   const activeGuestIds = new Set(statuses.filter(rs=> rs.occupied && rs.entry).map(rs=> rs.entry.id));
-  const due = statuses
-    .filter(rs=> rs.extended && rs.entry)
-    .map(rs=>{
-      if(activeGuestIds.has(rs.entry.id)){
-        return {
-          roomNo: rs.roomNo, guestId: rs.entry.id, guest: rs.entry.guestName || '(no name)',
-          checkIn: rs.entry.checkIn || '', checkoutDate: rs.actualCheckout || '', due: 0,
-          status: 'extended'
-        };
-      }
-      const d = computeTotals(rs.entry).due;
-      return {
-        roomNo: rs.roomNo, guestId: rs.entry.id, guest: rs.entry.guestName || '(no name)',
+  // computeRoomStatuses returns one status per ROOM, so a guest holding
+  // several rooms (Gulzar Ahmed: 206-209 above) produces one `extended`
+  // entry per room here. due/status/checkIn are all guest-level facts
+  // (computeTotals(rs.entry).due is the guest's WHOLE balance, not a
+  // per-room split), so mapping straight to a row per status used to repeat
+  // the same "2,000 due" on every one of their rooms — reading as 4
+  // separate 2,000 debts instead of one. Grouped by guestId into a single
+  // row instead, with every extended room number folded into one chain
+  // (same idiom as formatRoomChain elsewhere) and the latest of their
+  // per-room checkout dates shown (the date the LAST room's occupancy
+  // actually ends — the point at which the whole guest is done).
+  const dueByGuest = new Map();
+  statuses.filter(rs=> rs.extended && rs.entry).forEach(rs=>{
+    const guestId = rs.entry.id;
+    const isExtendedStatus = activeGuestIds.has(guestId);
+    const d = isExtendedStatus ? 0 : computeTotals(rs.entry).due;
+    const existing = dueByGuest.get(guestId);
+    if(existing){
+      existing.roomNos.push(rs.roomNo);
+      if((rs.actualCheckout || '') > existing.checkoutDate) existing.checkoutDate = rs.actualCheckout || '';
+    } else {
+      dueByGuest.set(guestId, {
+        roomNos: [rs.roomNo], guestId, guest: rs.entry.guestName || '(no name)',
         checkIn: rs.entry.checkIn || '', checkoutDate: rs.actualCheckout || '', due: d,
-        status: d === 0 ? 'ready' : 'pending'
-      };
-    });
+        status: isExtendedStatus ? 'extended' : (d === 0 ? 'ready' : 'pending')
+      });
+    }
+  });
+  const due = Array.from(dueByGuest.values()).map(r=>{
+    const sortedRoomNos = r.roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    return {
+      roomNo: sortedRoomNos.join(', '), roomNos: sortedRoomNos,
+      guestId: r.guestId, guest: r.guest, checkIn: r.checkIn, checkoutDate: r.checkoutDate, due: r.due, status: r.status
+    };
+  });
 
   // Checked out on asOfDate stays listed here too, with an Undo, instead of
   // quietly vanishing. Driven off each guest's own Actual Checkout field —
@@ -11397,7 +11435,7 @@ function renderAutoCheckout(){
           const action = !isToday ? ''
             : r.status === 'checked_out' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoAutoCheckout('${r.guestId}')">Undo</button>`
             : r.status === 'extended' ? ''
-            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout('${r.roomNo}', ${r.due})">Checkout</button>`;
+            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout([${r.roomNos.map(rn=> "'" + String(rn).replace(/'/g, "\\'") + "'").join(',')}], ${r.due})">Checkout</button>`;
           return `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${r.roomNo}</td>
@@ -11664,12 +11702,15 @@ async function undoArrivalCheckin(guestId){
 // The per-row manual button — never opens the checkout-confirm modal for a
 // guest whose balance isn't settled at exactly 0. This is the same rule
 // Run Checkout/Pending applies in bulk; there is no manual override.
-function startManualCheckout(roomNo, due){
+// roomNos is always an array here — buildAutoCheckoutRows groups a guest
+// holding several rooms into one due-list row, so checking them out means
+// checking out of every one of those rooms together, not just the first.
+function startManualCheckout(roomNos, due){
   if(due !== 0){
     showNotice('This guest\'s balance isn\'t settled at exactly 0 (owed money, or paid ahead of what\'s booked) — Checkout/Pending never checks out a guest like this, even manually. Settle the balance first.');
     return;
   }
-  pendingRoomStatusRoomNo = roomNo;
+  pendingCheckoutRoomNos = roomNos;
   openCheckoutConfirmModal();
 }
 
