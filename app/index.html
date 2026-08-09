@@ -2717,6 +2717,14 @@
     margin-bottom:14px;
   }
   .role-viewer .viewer-lock-note{ display:block; }
+
+  /* Restaurant role: only the Restaurant and Front Office tabs exist for
+     this account — every other nav button (including the Settings gear)
+     is hidden, regardless of whatever per-button display rule
+     applyRolePermissions() would otherwise set. See isRestaurantRole(). */
+  .role-restaurant .topnav .navbtn:not(#topNavFrontOffice):not(#topNavRestaurant){
+    display:none !important;
+  }
 </style>
 <script>
   (function(){
@@ -2753,7 +2761,6 @@
       <div class="login-error" id="loginError"></div>
       <button class="login-signin-btn" id="loginBtn">Sign In</button>
       <button type="button" class="login-forgot" onclick="showNotice('Contact your admin to reset your password.')">Forgot password?</button>
-      <a href="/app/POS/index.html" class="login-forgot" style="display:block; margin-top:6px;">Restaurant staff login →</a>
     </div>
 
     <div class="login-footer">Riviera Resort &middot; Guest Register</div>
@@ -4581,12 +4588,12 @@ function showView(view, fromPopState){
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
-  if(view === 'frontoffice' && !isAdmin()){
+  if(view === 'frontoffice' && !isAdmin() && !isRestaurantRole()){
     showNotice('Front Office is only available to admin accounts.');
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
-  if(view === 'restaurant' && !isSuperAdmin()){
+  if(view === 'restaurant' && !isSuperAdmin() && !isRestaurantRole()){
     showNotice('Restaurant is only available to the super admin account.');
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
@@ -4775,8 +4782,9 @@ function restoreLastView(){
   let saved = null;
   try{ saved = localStorage.getItem('lastView'); }catch(e){ return; }
   if(!saved || saved === currentView || !ROUTABLE_VIEWS.includes(saved)) return;
-  if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout' || saved === 'arrival' || saved === 'frontoffice') && !isAdmin()) return;
-  if(saved === 'restaurant' && !isSuperAdmin()) return;
+  if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout' || saved === 'arrival') && !isAdmin()) return;
+  if(saved === 'frontoffice' && !isAdmin() && !isRestaurantRole()) return;
+  if(saved === 'restaurant' && !isSuperAdmin() && !isRestaurantRole()) return;
   if(saved === 'detail'){
     let savedId = null;
     try{ savedId = localStorage.getItem('lastDetailId'); }catch(e){ /* ignore */ }
@@ -14160,6 +14168,12 @@ function isSuperAdmin(){
   return !!currentUser && currentUser.role === 'superadmin';
 }
 
+// 'restaurant' — sees only the Restaurant tab and Front Office, nothing
+// else in the hotel app. See migration/pos_restaurant_role.sql.
+function isRestaurantRole(){
+  return !!currentUser && currentUser.role === 'restaurant';
+}
+
 // 'viewer' — read-only, stricter than 'staff': can look at every page and
 // report, but can never create/edit/delete anything anywhere (no new
 // guest entries, no payments, no housekeeping status changes). Guarded
@@ -14199,9 +14213,10 @@ function applyRolePermissions(){
   const settingsFrontOfficeBtn = document.getElementById('settingsFrontOfficeBtn');
   if(settingsFrontOfficeBtn) settingsFrontOfficeBtn.style.display = isAdmin() ? '' : 'none';
   const frontOfficeNav = document.getElementById('topNavFrontOffice');
-  if(frontOfficeNav) frontOfficeNav.style.display = isSuperAdmin() ? '' : 'none';
+  if(frontOfficeNav) frontOfficeNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
-  if(restaurantNav) restaurantNav.style.display = isSuperAdmin() ? '' : 'none';
+  if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
+  document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
   const avatar = document.getElementById('hdrAvatar');
@@ -14223,6 +14238,21 @@ async function checkLogin(username, password){
   }
 }
 
+// Silently signs the same person into the embedded POS (separate
+// pos_users table/login, see migration/pos_module.sql) right after they
+// sign into the hotel app, so there's only one visible login screen. The
+// typed password is used once here, then never kept. If this fails for
+// any reason the embedded Restaurant tab just falls back to showing its
+// own login screen — nothing else about hotel login breaks.
+async function silentPosLogin(username, password){
+  if(!sb) return;
+  try{
+    const { data, error } = await sb.rpc('check_pos_login_role', { p_username: username, p_password: password });
+    if(error || typeof data !== 'string' || !data) return;
+    try{ sessionStorage.setItem('pos_logged_in_v1', JSON.stringify({ username, role: data })); }catch(e){ /* best effort */ }
+  }catch(e){ console.error('Silent POS login failed', e); }
+}
+
 async function attemptLogin(){
   const loginError = document.getElementById('loginError');
   const loginBtn = document.getElementById('loginBtn');
@@ -14232,6 +14262,9 @@ async function attemptLogin(){
   loginBtn.disabled = true;
   loginBtn.textContent = 'Checking…';
   const role = await checkLogin(username, password);
+  if(typeof role === 'string' && (role === 'restaurant' || role === 'superadmin')){
+    await silentPosLogin(username, password); // must land before showApp() can ever load the embedded iframe
+  }
   loginBtn.disabled = false;
   loginBtn.textContent = 'Sign In';
   if(typeof role === 'string'){
@@ -14270,6 +14303,10 @@ async function startApp(){
 function showApp(){
   applyRolePermissions();
   restoreLastView();
+  // restaurant accounts have nothing to see on the default 'entry' view
+  // (their nav only has Front Office/Restaurant) — land them on Restaurant
+  // instead, unless restoreLastView already sent them to Front Office.
+  if(isRestaurantRole() && currentView === 'entry') showView('restaurant');
   document.getElementById('loginOverlay').classList.add('hidden');
   document.getElementById('appRoot').style.display = '';
   startApp();
@@ -14318,7 +14355,7 @@ addPayRow();
     const raw = sessionStorage.getItem(LOGIN_SESSION_KEY);
     if(raw){
       const parsed = JSON.parse(raw);
-      if(parsed && parsed.username && (parsed.role === 'admin' || parsed.role === 'staff' || parsed.role === 'viewer' || parsed.role === 'superadmin')){
+      if(parsed && parsed.username && (parsed.role === 'admin' || parsed.role === 'staff' || parsed.role === 'viewer' || parsed.role === 'superadmin' || parsed.role === 'restaurant')){
         currentUser = parsed;
       } else {
         sessionStorage.removeItem(LOGIN_SESSION_KEY);
