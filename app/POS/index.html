@@ -3,9 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <title>Riviera Resort - POS</title>
+<script>
+  // Embedded inside the hotel app's Restaurant tab (an <iframe>) — hide
+  // this page's own topbar so there isn't a header sitting inside a
+  // header; the hotel app's outer header is the only one shown. Runs
+  // before first paint (synchronous <script> in <head>, before <body>)
+  // so the topbar never flashes visible first.
+  if(window.self !== window.top) document.documentElement.classList.add('pos-embedded');
+</script>
 <style>
   html,body{margin:0; height:100%; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:#f4f5f7;}
   *{box-sizing:border-box;}
+  .pos-embedded .topbar{display:none;}
 
   .pos-toast{background:#1f2430; color:#fff; padding:12px 18px; border-radius:8px; font-size:13.5px; box-shadow:0 8px 24px rgba(0,0,0,.25); max-width:420px; display:flex; align-items:center; gap:12px;}
   .pos-toast.error{background:#7a2020;}
@@ -409,6 +418,7 @@
   justify-content:space-between;
   padding:14px 24px;
 }
+.pos-embedded .pos-login-topbar{display:none;}
 .pos-login-topbar-left{ font-size:20px; font-weight:bold; }
 .pos-login-topbar-right{ font-size:14px; }
 .pos-login-container{
