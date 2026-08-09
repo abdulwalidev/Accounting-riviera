@@ -16231,9 +16231,15 @@ function posAddPayment(){
   if (!tbody) return;
   var rows = tbody.querySelectorAll('tr');
   var newRow = rows[rows.length - 1].cloneNode(true);
-  newRow.querySelectorAll('input').forEach(function(inp){ inp.value = inp.type === 'date' ? posTodayISO() : ''; });
+  newRow.querySelectorAll('input').forEach(function(inp){ if (inp.type !== 'date') inp.value = ''; });
   newRow.querySelectorAll('select').forEach(function(sel){ sel.selectedIndex = 0; });
+  // Cloning a flatpickr-enhanced date cell copies its stale altInput/hidden
+  // markup, not a working picker — rebuild that cell clean instead of
+  // trying to strip flatpickr's artifacts back out of the clone.
+  if (newRow.children[0]) newRow.children[0].innerHTML = '<input type="date" class="pay-date-input" onchange="posRecalcAll()">';
   tbody.appendChild(newRow);
+  var newDateInput = newRow.children[0] ? newRow.children[0].querySelector('.pay-date-input') : null;
+  if (newDateInput) { newDateInput.value = posTodayISO(); posInitDatePicker(newDateInput); }
   posRecalcAll();
 }
 
@@ -16867,7 +16873,10 @@ function posResetForm(){
     var prows = Array.prototype.slice.call(payBody.querySelectorAll('tr'));
     prows.forEach(function(row, i){ if (i > 0) row.remove(); });
     var pfirst = payBody.querySelector('tr');
-    if (pfirst) pfirst.querySelectorAll('input').forEach(function(inp){ inp.value = inp.type === 'date' ? posTodayISO() : ''; });
+    if (pfirst) pfirst.querySelectorAll('input').forEach(function(inp){
+      if (inp.type !== 'date') { inp.value = ''; return; }
+      if (inp._flatpickr) inp._flatpickr.setDate(posTodayISO(), true); else inp.value = posTodayISO();
+    });
   }
   var discInput = document.querySelector('#page-pos-invoice .disc-card input');
   if (discInput) discInput.value = '0';
@@ -17004,6 +17013,32 @@ function posAddLine(){
   posRecalcAll();
 }
 
+// Same flatpickr treatment (alt-input display, Clear/Today footer) as
+// every other date field in the app — mirrors initFilterDatePickers()/
+// initPayDatePicker() above, just not keyed into either of their
+// registries since POS's fields aren't fixed ids present at page load
+// (lazy-booted) or are per-row and re-created (see posAddPayment()).
+function posInitDatePicker(el){
+  if (typeof flatpickr === 'undefined' || !el || el._flatpickr) return null;
+  return flatpickr(el, {
+    dateFormat: 'Y-m-d',
+    altInput: true,
+    altInputClass: 'flatpickr-alt-input',
+    altFormat: 'D, d M Y',
+    allowInput: false,
+    disableMobile: true,
+    onValueUpdate: function(selectedDates, dateStr, instance){ applyPickerDisplay(instance); },
+    onOpen: function(selectedDates, dateStr, instance){ syncCalendarWidth(instance); },
+    onReady: function(selectedDates, dateStr, instance){
+      applyPickerDisplay(instance);
+      addPickerFooter(instance,
+        function(){ instance.setDate(posTodayISO(), true); },
+        function(){ instance.setDate(null, true); }
+      );
+    }
+  });
+}
+
 var posAppBooted = false;
 function posBootApp(){
   if (posAppBooted) return; // showView('restaurant') can fire many times — only boot once
@@ -17012,17 +17047,21 @@ function posBootApp(){
   document.querySelectorAll('#page-pos-invoice .pos-item-input').forEach(function(inp){ posSetupAutocomplete(inp); });
   posBuildRoomOptions();
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
-  if (posInitDateInput) posInitDateInput.value = posTodayISO();
+  if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
   posLoadDraft();
   posRecalcAll();
   var receiptsDateInitEl = document.getElementById('receiptsDateFilter');
-  if (receiptsDateInitEl) receiptsDateInitEl.value = posTodayISO();
+  if (receiptsDateInitEl) { receiptsDateInitEl.value = posTodayISO(); posInitDatePicker(receiptsDateInitEl); }
   var printedOnlyDateInitEl = document.getElementById('printedOnlyDateFilter');
-  if (printedOnlyDateInitEl) printedOnlyDateInitEl.value = posTodayISO();
+  if (printedOnlyDateInitEl) { printedOnlyDateInitEl.value = posTodayISO(); posInitDatePicker(printedOnlyDateInitEl); }
   var frontOfficeDateInitEl = document.getElementById('frontOfficeDateFilter');
-  if (frontOfficeDateInitEl) frontOfficeDateInitEl.value = posTodayISO();
+  if (frontOfficeDateInitEl) { frontOfficeDateInitEl.value = posTodayISO(); posInitDatePicker(frontOfficeDateInitEl); }
+  // These stay blank on purpose (show everything until filtered) — just
+  // get the same picker UI, no default date.
+  ['deletedDateFilter', 'csFromDate', 'csToDate', 'qsFromDate', 'qsToDate'].forEach(function(id){
+    posInitDatePicker(document.getElementById(id));
+  });
   posPullFromCloud();
-
 
   // show first page by default
   document.getElementById('page-pos-invoice').classList.add('visible');
