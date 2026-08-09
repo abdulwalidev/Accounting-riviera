@@ -2861,7 +2861,7 @@
 #page-pos-invoice .tax-card, #page-pos-invoice .totals-card {padding:16px 20px;}
 #page-pos-invoice .section-title {font-size:11px; letter-spacing:.04em; color:var(--muted); font-weight:700; margin-bottom:12px;}
 #page-pos-invoice table.tax-tbl {width:100%; table-layout:fixed; border-collapse:collapse; font-size:13px;}
-#page-pos-invoice table.tax-tbl th {text-align:left; color:var(--text); font-weight:600; font-size:12.5px; padding:6px 8px 6px 0; border-bottom:1px solid var(--border-strong); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+#page-pos-invoice table.tax-tbl th {text-align:left; color:var(--muted); font-weight:700; font-size:10.5px; letter-spacing:.03em; text-transform:uppercase; padding:6px 8px 6px 0; border-bottom:1px solid var(--border-strong); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 #page-pos-invoice table.tax-tbl th.num, #page-pos-invoice table.tax-tbl td.num {text-align:right;}
 #page-pos-invoice table.tax-tbl td {padding:8px 8px 8px 0; border-bottom:1px solid #f0f1f3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 #page-pos-invoice table.tax-tbl tr.total-row td {font-weight:700; border-bottom:none;}
@@ -3130,6 +3130,40 @@
 #page-pos-daylock table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
 #page-pos-daylock .empty-note {color:var(--muted); font-size:12.5px;}
 
+/* ===== POS Settings — less-frequently-used pages moved here to keep the
+   main sidebar short ===== */
+#page-pos-settings {
+    --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
+    --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff;
+  }
+#page-pos-settings * {box-sizing:border-box;}
+#page-pos-settings .wrap {max-width:1280px; margin:0 auto;}
+#page-pos-settings .h-title {font-size:24px; font-weight:600; margin:0 0 4px;}
+#page-pos-settings .h-sub {color:var(--muted); font-size:13px; margin-bottom:16px;}
+#page-pos-settings .card {background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px;}
+#page-pos-settings .settings-row {display:flex; align-items:center; justify-content:space-between; padding:14px 12px; border-bottom:1px solid #f0f1f3; cursor:pointer;}
+#page-pos-settings .settings-row:last-child {border-bottom:none;}
+#page-pos-settings .settings-row:hover {background:var(--bg);}
+#page-pos-settings .settings-row .label {font-size:14px; color:var(--text); font-weight:500;}
+#page-pos-settings .settings-row .sub {font-size:12px; color:var(--muted); margin-top:2px;}
+#page-pos-settings .settings-row .arrow {color:var(--muted);}
+
+/* The shared .flatpickr-alt-input box (hotel-wide, near the top of this
+   stylesheet) is a fixed 307.875px — sized for a single date. POS's range
+   pickers (Charges/Qty Summary, "09 Aug 2026 to 16 Aug 2026") and some of
+   its longer single-date formats overflow that and get clipped. Scoped to
+   [id^="page-"] (every POS page uses that id prefix, no hotel view does)
+   so the hotel's own date pickers keep their original fixed width. */
+[id^="page-"] .flatpickr-alt-input{ width:auto !important; min-width:307.875px; white-space:nowrap; padding-left:10px; padding-right:10px; }
+
+/* ===== POS receipt print area — see posPrintRecord ===== */
+#posReceiptPrintArea{ display:none; background:#fff; }
+@page pos-receipt{ size:80mm auto; margin:0; }
+@media print{
+  body.pos-printing-receipt > *:not(#posReceiptPrintArea){ display:none !important; }
+  body.pos-printing-receipt #posReceiptPrintArea{ display:block !important; page:pos-receipt; }
+}
+
 /* ===== Manage Menu (POS Menu) ===== */
 #page-manage-parts {
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
@@ -3183,6 +3217,7 @@ html[data-theme="dark"] #page-deleted,
 html[data-theme="dark"] #page-pending-payments,
 html[data-theme="dark"] #page-previous-day,
 html[data-theme="dark"] #page-pos-daylock,
+html[data-theme="dark"] #page-pos-settings,
 html[data-theme="dark"] #page-manage-parts{
   --border:#2a2e35; --border-strong:#3a3f47; --blue:#5b9dff; --blue-dark:#3b7de0;
   --text:#e8eaed; --muted:#b8bec8; --bg:#0A0A0A; --panel:#14161a;
@@ -3202,32 +3237,28 @@ html[data-theme="dark"] #page-pos-invoice .lbl-input.disabled button.pick-btn{ b
    near-black dark background to read comfortably. */
 html[data-theme="dark"] #page-pos-invoice .lbl-input label{ color:#c7cdd6 !important; }
 html[data-theme="dark"] #page-pos-invoice .info-card .info-title{ color:#5b9dff !important; }
-/* The four confirm modals (Delete/Post/Edit/Order-dupe) are inline-styled
-   with light-mode colors baked directly into their style="" attributes —
-   CSS can't win against inline styles without !important, so this is the
-   one place that's unavoidable rather than a shortcut. */
+/* The confirm modals (Delete/Post/Order-dupe) are inline-styled with
+   light-mode colors baked directly into their style="" attributes — CSS
+   can't win against inline styles without !important, so this is the one
+   place that's unavoidable rather than a shortcut. */
 html[data-theme="dark"] #posDeleteModal,
 html[data-theme="dark"] #posPostModal,
-html[data-theme="dark"] #posEditModal,
 html[data-theme="dark"] #posOrderDupeModal,
 html[data-theme="dark"] #posDayLockModal{ background:#14161a !important; }
 html[data-theme="dark"] #posDeleteModal > div,
 html[data-theme="dark"] #posPostModal > div,
-html[data-theme="dark"] #posEditModal > div,
 html[data-theme="dark"] #posOrderDupeModal > div,
 html[data-theme="dark"] #posDayLockModal > div,
 html[data-theme="dark"] #posDayLockModal > label{ color:#e8eaed !important; }
 html[data-theme="dark"] #posDayLockTypeInput{ background:#0A0A0A !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 html[data-theme="dark"] #posDeleteDetails,
-html[data-theme="dark"] #posPostDetails,
-html[data-theme="dark"] #posEditDetails{ background:#1a1c20 !important; color:#c7ccd6 !important; }
+html[data-theme="dark"] #posPostDetails{ background:#1a1c20 !important; color:#c7ccd6 !important; }
 html[data-theme="dark"] #posOrderDupeDetails{ background:#2a1616 !important; color:#f0b8b8 !important; }
 html[data-theme="dark"] #posDeleteConfirmInput,
-html[data-theme="dark"] #posEditConfirmInput,
+html[data-theme="dark"] #posPostEditConfirmInput,
 html[data-theme="dark"] #posOrderDupeConfirmInput{ background:#0A0A0A !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 html[data-theme="dark"] #posDeleteModal button[onclick="posCancelDelete()"],
 html[data-theme="dark"] #posPostModal button[onclick="posCancelPost()"],
-html[data-theme="dark"] #posEditModal button[onclick="posCancelEdit()"],
 html[data-theme="dark"] #posOrderDupeModal button[onclick="posCancelOrderDupe()"],
 html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm()"]{ background:#1a1c20 !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 </style>
@@ -4469,24 +4500,16 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 </div>
 
 <div id="posPostBackdrop" onclick="posCancelPost()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
-<div id="posPostModal" onkeydown="if(event.key==='Enter'){ event.preventDefault(); posConfirmPost(); } if(event.key==='Escape'){ event.preventDefault(); posCancelPost(); }" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
+<div id="posPostModal" onkeydown="if(event.key==='Enter' && !document.getElementById('posPostConfirmBtn').disabled){ event.preventDefault(); posConfirmPost(); } if(event.key==='Escape'){ event.preventDefault(); posCancelPost(); }" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
   <div style="font-weight:700; font-size:14.5px; margin-bottom:12px; color:#1f2430;" id="posPostTitle">Post this invoice?</div>
   <div id="posPostDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:16px; background:#f7f8fa; border-radius:6px; padding:10px 12px;"></div>
+  <div id="posPostEditConfirmWrap" style="display:none;">
+    <div style="font-size:12.5px; color:#1f2430; margin-bottom:6px;">Type <b>edit</b> below to confirm updating this existing invoice:</div>
+    <input type="text" id="posPostEditConfirmInput" autocomplete="off" oninput="posPostEditConfirmCheck()" style="width:100%; border:1px solid #d7dae0; border-radius:6px; padding:8px 10px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
+  </div>
   <div style="display:flex; gap:10px; justify-content:flex-end;">
     <button type="button" onclick="posCancelPost()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
     <button type="button" id="posPostConfirmBtn" onclick="posConfirmPost()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;" autofocus>Confirm (Enter)</button>
-  </div>
-</div>
-
-<div id="posEditBackdrop" onclick="posCancelEdit()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
-<div id="posEditModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
-  <div style="font-weight:700; font-size:14.5px; margin-bottom:12px; color:#1f2430;">Edit this invoice?</div>
-  <div id="posEditDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:14px; background:#f7f8fa; border-radius:6px; padding:10px 12px;"></div>
-  <div style="font-size:12.5px; color:#1f2430; margin-bottom:6px;">Type <b>edit</b> below to confirm:</div>
-  <input type="text" id="posEditConfirmInput" autocomplete="off" oninput="posEditConfirmCheck()" onkeydown="if(event.key==='Enter' && !document.getElementById('posEditConfirmBtn').disabled){ event.preventDefault(); posEditConfirmed(); } if(event.key==='Escape'){ event.preventDefault(); posCancelEdit(); }" style="width:100%; border:1px solid #d7dae0; border-radius:6px; padding:8px 10px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
-  <div style="display:flex; gap:10px; justify-content:flex-end;">
-    <button type="button" onclick="posCancelEdit()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
-    <button type="button" id="posEditConfirmBtn" disabled onclick="posEditConfirmed()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; opacity:.5;">Edit</button>
   </div>
 </div>
 
@@ -4520,16 +4543,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 <nav class="sidebar" id="appSidebar">
   <div class="sidebar-label">MODULES</div>
   <button class="active" onclick="posShowApp('page-pos-invoice', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg><span class="sb-text">Point of Sale</span></button>
-  <button onclick="posShowApp('page-receipts', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg><span class="sb-text">All Receipts</span></button>
   <button onclick="posShowApp('page-charges-summary', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><span class="sb-text">Charges Summary</span></button>
   <button onclick="posShowApp('page-qty-summary', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><span class="sb-text">Quantity Summary</span></button>
   <button onclick="posShowApp('page-printed-only', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg><span class="sb-text">Printed-Only</span></button>
-  <button onclick="posShowApp('page-front-office', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span class="sb-text">Front Office Pending</span></button>
-  <button onclick="posShowApp('page-pending-payments', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><span class="sb-text">Pending Payments</span></button>
-  <button onclick="posShowApp('page-previous-day', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span class="sb-text">Previous Day (Locked)</span></button>
-  <div class="sidebar-spacer"></div>
-  <button onclick="posShowApp('page-manage-parts', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1a2 2 0 0 0 2-2V2"></path><path d="M6 11v11"></path><path d="M18 2v20"></path><path d="M14 2a4 4 0 0 0-4 4v2a4 4 0 0 0 4 4"></path></svg><span class="sb-text">Manage Menu</span></button>
   <button onclick="posShowApp('page-deleted', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg><span class="sb-text">Deleted</span></button>
+  <div class="sidebar-spacer"></div>
+  <button onclick="posShowApp('page-pos-settings', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span class="sb-text">Settings</span></button>
 </nav>
 <div class="app-wrap" style="padding:18px;">
 <div id="page-pos-invoice" class="app-page visible">
@@ -4538,7 +4557,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="page-head">
     <h1>Point of Sale <span id="posEditingBadge" style="display:none; font-size:12px; font-weight:600; color:#dc2626; vertical-align:middle;">— editing</span></h1>
-    <button type="button" id="posEditBtn" onclick="posRequestEdit()" style="display:none; background:#fff; color:var(--blue); border:1px solid var(--blue); border-radius:6px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">✎ Edit</button>
   </div>
 
   <div id="posMenuBackdrop" onclick="posCloseMenuPanel()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:999;"></div>
@@ -4569,6 +4587,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <div class="lbl-input" style="flex:0 0 170px;"><label>ORDER NO(QT)</label><div class="with-pick"><input type="text" id="posOrderNo"><button type="button" class="pick-btn" onclick="posAutoNextOrderNo()" title="Fill in previous Order No(QT) + 1">+1</button></div></div>
       <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><input type="text" id="posRoomNoField" list="posRoomOptions" autocomplete="off" oninput="posRoomNoChanged(this)" onclick="posOpenDatalist(this)"><datalist id="posRoomOptions"></datalist></div>
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>Discription(extra notes)</label><input type="text" id="posLineDescription"></div>
+      <div class="lbl-input" style="flex:0 0 170px;"><label>Invoice Date</label><input type="date" id="posInvoiceDate"></div>
     </div>
 
     <!-- The rest of this generic invoicing template's fields (Room/Address/
@@ -4739,7 +4758,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="pay-totals">
       <div class="taxes-list">
         <label class="tax-item" data-code="23221"><input type="checkbox" checked onchange="posRecalcAll()"><span class="name">Service Charges 10%</span></label>
-        <label class="tax-item" data-code="23222"><input type="checkbox" onchange="posRecalcAll()"><span class="name">GST 10% on Food</span></label>
+        <label class="tax-item" data-code="23222"><input type="checkbox" checked onchange="posRecalcAll()"><span class="name">GST 10% on Food</span></label>
       </div>
       <div class="totals-right">
         <div><div class="lbl">PAYMENTS</div><div class="val" style="font-size:14px; font-weight:600;">0.00</div></div>
@@ -4841,7 +4860,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 <div class="wrap">
 
   <div class="h-title">Charges Summary</div>
-  <div class="h-sub">Every posted invoice's charges for the selected period — leave both dates blank to see everything.</div>
 
   <div class="card filters-card">
     <div class="filters-grid" style="grid-template-columns:220px;">
@@ -4855,8 +4873,45 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   </div>
 
   <div class="card results-card">
+    <table class="rep">
+      <thead>
+        <tr><th>TOTAL SALE</th><th class="num">SERVICE CHARGE</th><th class="num">RECEIVED</th><th class="num">BALANCE</th></tr>
+      </thead>
+      <tbody id="csSummaryBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card results-card" style="margin-top:16px;">
+    <table class="rep">
+      <thead>
+        <tr><th>FOOD SALE</th><th class="num">BEVERAGE SALE</th></tr>
+      </thead>
+      <tbody id="csFoodBevBody"></tbody>
+    </table>
+  </div>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-top:16px;">
+    <div class="card results-card">
+      <div class="results-head"><span class="rh-title">SERVICE CHARGE</span></div>
+      <div class="rh-count" id="csServiceChargeTotal" style="font-size:20px; font-weight:700;">0.00</div>
+    </div>
+    <div class="card results-card">
+      <div class="results-head"><span class="rh-title">CASH</span></div>
+      <div class="rh-count" id="csCashTotal" style="font-size:20px; font-weight:700;">0.00</div>
+    </div>
+    <div class="card results-card">
+      <div class="results-head"><span class="rh-title">ACCOUNT TRANSFER</span></div>
+      <div class="rh-count" id="csAccountTransferTotal" style="font-size:20px; font-weight:700;">0.00</div>
+    </div>
+    <div class="card results-card">
+      <div class="results-head"><span class="rh-title">CARD</span></div>
+      <div class="rh-count" id="csCardTotal" style="font-size:20px; font-weight:700;">0.00</div>
+    </div>
+  </div>
+
+  <div class="card results-card" style="margin-top:16px;">
     <div class="results-head">
-      <span class="rh-title">TOTAL SALE</span>
+      <span class="rh-title">ALL INVOICES</span>
       <span class="rh-count" id="csCount">0 invoices</span>
     </div>
     <table class="rep">
@@ -4873,22 +4928,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="card results-card" style="margin-top:16px;">
     <div class="results-head">
-      <span class="rh-title">PAYMENT METHOD BREAKDOWN</span>
-    </div>
-    <table class="rep">
-      <thead>
-        <tr><th>METHOD</th><th class="num">AMOUNT</th></tr>
-      </thead>
-      <tbody id="csPaymentBreakdownBody"></tbody>
-    </table>
-  </div>
-
-  <div class="card results-card" style="margin-top:16px;">
-    <div class="results-head">
       <span class="rh-title">PENDING PAYMENTS</span>
       <span class="rh-count" id="csPendingCount">0 pending</span>
     </div>
-    <div class="h-sub" style="margin:-6px 0 12px;">Same list as the Pending Payments module — invoices from Total Sale above that still owe a balance.</div>
     <table class="rep">
       <thead>
         <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th></tr>
@@ -4899,34 +4941,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="card results-card" style="margin-top:16px;">
     <div class="results-head">
-      <span class="rh-title">SERVICE CHARGE (ESTIMATED)</span>
-      <span class="rh-count" id="csServiceChargeTotal">0.00</span>
-    </div>
-    <div class="h-sub" style="margin:-6px 0 12px;">Estimated at the default 10% rate on each invoice's subtotal — invoices aren't stored with which specific taxes were checked, so this is a computed estimate, not a stored fact. Cross-check against Point of Sale's own Tax Summary if you need an exact figure for a single invoice.</div>
-    <table class="rep">
-      <thead>
-        <tr><th>INVOICE #</th><th>DATE</th><th class="num">SUBTOTAL</th><th class="num">EST. SERVICE CHARGE (10%)</th></tr>
-      </thead>
-      <tbody id="csServiceChargeBody"></tbody>
-    </table>
-  </div>
-
-  <div class="card results-card" style="margin-top:16px;">
-    <div class="results-head">
-      <span class="rh-title">RECONCILIATION</span>
-    </div>
-    <div class="h-sub" style="margin:-6px 0 12px;">Total Sale should always equal Total Credit (paid) plus Total Debt (still owed) — this is a sanity check, not something that should ever actually be off.</div>
-    <table class="rep">
-      <tbody id="csReconBody"></tbody>
-    </table>
-  </div>
-
-  <div class="card results-card" style="margin-top:16px;">
-    <div class="results-head">
       <span class="rh-title">GUEST SUMMARY</span>
       <span class="rh-count" id="csGuestCount">0 guest invoices</span>
     </div>
-    <div class="h-sub" style="margin:-6px 0 12px;">Haji Sahab Guest invoices — items served, no payment, not counted in any of the totals above.</div>
     <table class="rep">
       <thead>
         <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th></tr>
@@ -5180,6 +5197,39 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <span class="rh-title">CURRENTLY LOCKED DAYS</span>
     </div>
     <div id="posDlList"></div>
+  </div>
+
+</div>
+
+</div>
+<div id="page-pos-settings" class="app-page">
+
+<div class="wrap">
+
+  <div class="h-title">Settings</div>
+  <div class="h-sub">Less-frequently-used pages, moved here to keep the main sidebar short.</div>
+
+  <div class="card">
+    <div class="settings-row" onclick="posShowApp('page-receipts', this)">
+      <div><div class="label">All Receipts</div><div class="sub">Every posted invoice, filterable by status</div></div>
+      <span class="arrow">›</span>
+    </div>
+    <div class="settings-row" onclick="posShowApp('page-front-office', this)">
+      <div><div class="label">Front Office Pending</div><div class="sub">Invoices sent to Front Office</div></div>
+      <span class="arrow">›</span>
+    </div>
+    <div class="settings-row" onclick="posShowApp('page-pending-payments', this)">
+      <div><div class="label">Pending Payments</div><div class="sub">Posted invoices with an outstanding balance</div></div>
+      <span class="arrow">›</span>
+    </div>
+    <div class="settings-row" onclick="posShowApp('page-previous-day', this)">
+      <div><div class="label">Previous Day (Locked)</div><div class="sub">The most recently finished business day</div></div>
+      <span class="arrow">›</span>
+    </div>
+    <div class="settings-row" onclick="posShowApp('page-manage-parts', this)">
+      <div><div class="label">Manage Menu</div><div class="sub">Full restaurant menu — prices and categories</div></div>
+      <span class="arrow">›</span>
+    </div>
   </div>
 
 </div>
@@ -16092,6 +16142,43 @@ document.getElementById('loginThemeToggle').addEventListener('click', toggleThem
 addRow();
 addPayRow();
 
+// ---------------------------------------------------------------
+// POS module-scope state that MUST exist before init() below runs, moved
+// up from their original spots further down in the POS section. init()
+// can call posBootApp() SYNCHRONOUSLY — an already-logged-in session
+// restored from sessionStorage triggers showApp() -> showView('restaurant')
+// -> posBootApp() immediately, before the rest of this script has even
+// executed. Since `var` only hoists the NAME (not the assigned value),
+// anything still declared further down was read as `undefined` the very
+// first time a signed-in user refreshed the page: posBuildRoomOptions()
+// crashed outright (POS_ROOMS.map on undefined), and posMutationStamp/
+// posInvoices being undefined meant the async cloud pull's own staleness
+// check discarded its results — either way, nothing ever synced after a
+// refresh, with an empty Network tab (posBootApp's crash meant it never
+// even reached posPullFromCloud) or silently-dropped results.
+// ---------------------------------------------------------------
+var posInvoices = []; // in-memory mirror, each with an .items[] array
+var posMutationStamp = 0;
+var posPullInFlight = null;
+var posAppBooted = false;
+// Room numbers only — no guest names. This module never reads hotel guest
+// data (see migration/pos_module.sql header): reception matches a charge
+// to a guest by room number, not by a name carried over from here.
+var POS_ROOMS = (function(){
+  var rooms = [];
+  for (var r1 = 201; r1 <= 214; r1++) rooms.push({no:String(r1), floor:'1st Floor'});
+  for (var r2 = 301; r2 <= 314; r2++) rooms.push({no:String(r2), floor:'2nd Floor'});
+  for (var r3 = 401; r3 <= 414; r3++) rooms.push({no:String(r3), floor:'3rd Floor'});
+  [
+    'A-101','A-102','A-201','A-202','A-301','A-302','A-401','A-402',
+    'B-101','B-102','B-201','B-202','B-301','B-303','B-401','B-402',
+    'C-01','C-02','C-21','C-22','C-31','C-32','C-41','C-42','C-101','C-102','C-201','C-202','C-301','C-302','C-401','C-402',
+    'D-01','D-02','D-21','D-22','D-31','D-32','D-41','D-42','D-101','D-102','D-201','D-202','D-301','D-302','D-401','D-402',
+    'N/A'
+  ].forEach(function(no){ rooms.push({no:no, floor:'Block Rooms'}); });
+  return rooms;
+})();
+
 // ---------- INITIAL LOAD ----------
 (function init(){
   // the remembered session must carry a server-issued role — anything
@@ -16136,9 +16223,9 @@ addPayRow();
 // POS CLOUD DATA LAYER — pos_invoices / pos_invoice_items only. Nothing
 // here ever reads or writes any hotel table.
 // =========================================================
-var posInvoices = []; // in-memory mirror, each with an .items[] array
-var posMutationStamp = 0;
-var posPullInFlight = null;
+console.log('[POS] script section loading. typeof window.supabase =', typeof window.supabase, '| sb =', sb, '| SUPABASE_URL =', typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '(not defined)');
+// posInvoices/posMutationStamp/posPullInFlight/posAppBooted/POS_ROOMS now
+// declared earlier, right before init() — see the comment there.
 
 function posFormatDateTimeFromIso(iso){
   if (!iso) return '';
@@ -16313,17 +16400,74 @@ async function posFlushPendingPosWrites(){
 setInterval(posFlushPendingPosWrites, 20000);
 window.addEventListener('online', posFlushPendingPosWrites);
 
+// posPendingInvoiceSaves/posPendingInvoiceUpdates/posPendingLockActions only
+// ever live in memory — a refresh or closed tab before the 20s retry timer
+// (or an 'online' event) gets a chance to fire would silently wipe out
+// anything still queued, with zero warning that it never reached the
+// server. Same mitigation the hotel side already uses for its own
+// pendingPushIds (see flushPendingKeepalive/beforeunload above): a
+// best-effort keepalive fetch straight to PostgREST (outlives the page
+// unload) plus a native "leave site?" prompt so a refresh is never silent.
+function posPendingWriteCount(){
+  return posPendingInvoiceSaves.size + posPendingInvoiceUpdates.size + posPendingLockActions.length;
+}
+function posFlushPendingKeepalive(){
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  var send = function(path, body, method, extraHeaders){
+    if (!body || (Array.isArray(body) && !body.length)) return;
+    try{
+      fetch(SUPABASE_URL + '/rest/v1/' + path, {
+        method: method,
+        keepalive: true,
+        headers: Object.assign({
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json'
+        }, extraHeaders || {}),
+        body: JSON.stringify(body)
+      });
+    }catch(e){ /* best effort — the leave prompt below still warns */ }
+  };
+  var invoiceRows = Array.from(posPendingInvoiceSaves.values()).map(posInvoicePayload);
+  send('pos_invoices?on_conflict=id', invoiceRows, 'POST', { 'Prefer': 'resolution=merge-duplicates' });
+  Array.from(posPendingInvoiceSaves.values()).forEach(function(record){
+    var items = posItemPayload(record);
+    if (items.length) send('pos_invoice_items?on_conflict=id', items, 'POST', { 'Prefer': 'resolution=merge-duplicates' });
+  });
+  Array.from(posPendingInvoiceUpdates.values()).forEach(function(pending){
+    send('pos_invoices?id=eq.' + pending.record.id, pending.fields, 'PATCH', {});
+  });
+  posPendingLockActions.forEach(function(action){
+    var body = action.mode === 'lock'
+      ? { lock_date: action.dateStr, locked_by: currentUser ? currentUser.username : '', locked_at: new Date().toISOString(), unlocked_by: null, unlocked_at: null }
+      : { lock_date: action.dateStr, unlocked_by: currentUser ? currentUser.username : '', unlocked_at: new Date().toISOString() };
+    send('pos_locked_days?on_conflict=lock_date', [body], 'POST', { 'Prefer': 'resolution=merge-duplicates' });
+  });
+}
+window.addEventListener('pagehide', posFlushPendingKeepalive);
+window.addEventListener('beforeunload', function(ev){
+  if (posPendingWriteCount() === 0) return;
+  posFlushPendingKeepalive();
+  ev.preventDefault();
+  ev.returnValue = '';
+});
+
 async function posPullFromCloud(){
-  if (!sb) return;
+  console.log('[POS] posPullFromCloud() called. sb =', sb, '| posPullInFlight =', !!posPullInFlight);
+  if (!sb) { console.log('[POS] posPullFromCloud() aborting: sb is falsy, nothing will be fetched'); return; }
   if (posPullInFlight) return posPullInFlight;
   var stampAtStart = posMutationStamp;
   posPullInFlight = (async function(){
     try{
+      console.log('[POS] fetching pos_invoices...');
       var invRes = await sb.from('pos_invoices').select('*').order('created_at', { ascending: false });
+      console.log('[POS] pos_invoices result:', invRes);
       if (invRes.error) throw invRes.error;
+      console.log('[POS] fetching pos_invoice_items...');
       var itemsRes = await sb.from('pos_invoice_items').select('*');
+      console.log('[POS] pos_invoice_items result:', itemsRes);
       if (itemsRes.error) throw itemsRes.error;
-      if (posMutationStamp !== stampAtStart) return; // a write landed mid-flight — stale, next poll/realtime event covers it
+      if (posMutationStamp !== stampAtStart) { console.log('[POS] pull discarded — a write landed mid-flight, stale'); return; } // a write landed mid-flight — stale, next poll/realtime event covers it
 
       var itemsByInvoice = {};
       (itemsRes.data || []).forEach(function(it){
@@ -16352,8 +16496,9 @@ async function posPullFromCloud(){
       renderQuantitySummary();
       posRenderDayLockPage();
       posFlushPendingPosWrites(); // a successful pull is a strong signal the connection is back — retry queued writes right away instead of waiting for the next interval tick
+      console.log('[POS] pull complete. posInvoices.length =', posInvoices.length);
     }catch(e){
-      console.error('POS cloud pull failed', e);
+      console.error('[POS] cloud pull failed', e);
       posShowToast('Could not load restaurant data — check your connection and try again.', 'error');
     }finally{
       posPullInFlight = null;
@@ -16371,8 +16516,8 @@ function posRenderRecentInvoices(){
   if (guestBody) guestBody.innerHTML = '';
   var hasGuest = false;
   posInvoices.forEach(function(record){
-    if (record.deleted) return;
-    var row = posBuildInvoiceRow(record, true);
+    if (record.deleted || !record.posted) return; // print-only drafts don't belong in Recent Invoices — only actually posted ones
+    var row = posBuildInvoiceRow(record);
     if (/guest/i.test(record.customer || '') && guestBody) { guestBody.appendChild(row); hasGuest = true; }
     else recentBody.appendChild(row);
   });
@@ -16569,23 +16714,7 @@ function posValidateItemInput(input){
   }
 }
 
-// Room numbers only — no guest names. This module never reads hotel guest
-// data (see migration/pos_module.sql header): reception matches a charge
-// to a guest by room number, not by a name carried over from here.
-var POS_ROOMS = (function(){
-  var rooms = [];
-  for (var r1 = 201; r1 <= 214; r1++) rooms.push({no:String(r1), floor:'1st Floor'});
-  for (var r2 = 301; r2 <= 314; r2++) rooms.push({no:String(r2), floor:'2nd Floor'});
-  for (var r3 = 401; r3 <= 414; r3++) rooms.push({no:String(r3), floor:'3rd Floor'});
-  [
-    'A-101','A-102','A-201','A-202','A-301','A-302','A-401','A-402',
-    'B-101','B-102','B-201','B-202','B-301','B-303','B-401','B-402',
-    'C-01','C-02','C-21','C-22','C-31','C-32','C-41','C-42','C-101','C-102','C-201','C-202','C-301','C-302','C-401','C-402',
-    'D-01','D-02','D-21','D-22','D-31','D-32','D-41','D-42','D-101','D-102','D-201','D-202','D-301','D-302','D-401','D-402',
-    'N/A'
-  ].forEach(function(no){ rooms.push({no:no, floor:'Block Rooms'}); });
-  return rooms;
-})();
+// POS_ROOMS now declared earlier, right before init() — see the comment there.
 
 function posBuildRoomOptions(){
   // <datalist> has no <optgroup> support (unlike <select>) — flat list,
@@ -16904,7 +17033,7 @@ async function posNextInvoiceNo(){
   }catch(e){ console.error('POS invoice numbering failed', e); return null; }
 }
 
-function posBuildInvoiceRow(record, showFo, showStatus){
+function posBuildInvoiceRow(record, showStatus){
   var tr = document.createElement('tr');
   tr.dataset.invoiceId = record.id;
   tr.className = 'fo-row';
@@ -16916,7 +17045,7 @@ function posBuildInvoiceRow(record, showFo, showStatus){
     '<td class="num">' + record.amount.toFixed(2) + '</td>' +
     '<td class="num">' + record.paid.toFixed(2) + '</td>' +
     (showStatus ? '<td><span class="status-badge ' + (record.posted ? 'posted' : 'not-posted') + '">' + (record.posted ? 'Posted' : 'Not Posted') + '</span></td>' : '');
-  if (!record.deleted) tr.appendChild(posMakeActionsCell(record, showFo));
+  if (!record.deleted) tr.appendChild(posMakeActionsCell(record));
   tr.addEventListener('click', function(e){
     if (e.target.closest('button')) return;
     e.preventDefault();
@@ -17162,38 +17291,28 @@ function posOpenDayLockPage(){
   posShowApp('page-pos-daylock', document.getElementById('topNavPosUnlock'));
 }
 
-function posMakeActionsCell(record, showFo){
+function posMakeActionsCell(record){
   var td = document.createElement('td');
   td.className = 'del-col';
   var wrap = document.createElement('div');
   wrap.style.cssText = 'display:flex; gap:6px; justify-content:flex-end; align-items:center;';
 
-  var isGuest = /guest/i.test(record.customer || '');
   var locked = posIsLocked(record);
   if (record.collected) {
     var collectedTag = document.createElement('span');
     collectedTag.style.cssText = 'font-size:11px; color:#0f7a3d; white-space:nowrap;';
     collectedTag.textContent = 'Collected · ' + (record.collectedBy || '');
     wrap.appendChild(collectedTag);
-  } else if (showFo && record.posted && !isGuest && !locked) {
-    var foBtn = document.createElement('button');
-    foBtn.type = 'button';
-    foBtn.className = 'fo-toggle-btn';
-    foBtn.dataset.foId = record.id;
-    foBtn.style.cssText = 'border:1px solid #d7dae0; background:#fff; border-radius:5px; padding:4px 8px; font-size:11px; font-weight:600; cursor:pointer; color:#2563eb; white-space:nowrap;';
-    foBtn.textContent = record.sentToFrontOffice ? 'Undo' : '→ FO';
-    foBtn.title = record.sentToFrontOffice ? 'Undo Send to Front Office' : 'Send to Front Office';
-    foBtn.onclick = function(){ posToggleFrontOffice(record.id); };
-    wrap.appendChild(foBtn);
   }
 
-  if (locked && !record.collected) {
+  // Deletable regardless of collected status — only a locked day blocks it.
+  if (locked) {
     var lockTag = document.createElement('span');
     lockTag.title = 'From a locked day — read-only';
     lockTag.style.cssText = 'opacity:.6; display:inline-flex;';
     lockTag.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
     wrap.appendChild(lockTag);
-  } else if (!record.collected) {
+  } else {
     var delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'row-del-btn';
@@ -17321,7 +17440,7 @@ function receiptsRefresh(){
     if (statusFilter === 'posted' && !record.posted) return;
     if (statusFilter === 'notposted' && record.posted) return;
     if (filterDMY && record.date !== filterDMY) return;
-    var row = posBuildInvoiceRow(record, false, true);
+    var row = posBuildInvoiceRow(record, true);
     shown++;
     if (/guest/i.test(record.customer || '')) guestBody.appendChild(row);
     else if (record.sentToFrontOffice && foBody) foBody.appendChild(row);
@@ -17365,14 +17484,15 @@ function frontOfficeRefresh(){
 }
 
 // Set once a posted record is opened for viewing — the Edit button shows
-// whenever this is non-null. Separate from posEditingRecord (only set
-// once "edit" has actually been typed to confirm) so opening a record
-// doesn't silently unlock editing on its own.
+// whenever this is non-null.
 var posViewingRecord = null;
-// Set only after the type-"edit"-to-confirm modal is confirmed — posting
-// while this is set reuses the SAME invoice id/number (an update) instead
-// of minting a new one. Cleared on successful save, on New, or when a
-// different record is opened.
+// Opening a record for viewing arms it for editing right away (see
+// posOpenRecordInForm) unless it's collected or from a locked day —
+// posting while this is set reuses the SAME invoice id/number (an update)
+// instead of minting a new one. The actual "are you sure" gate is the
+// type-"edit"-to-confirm input inside the normal Post/Print confirm modal
+// (see posRequestPost/posConfirmPost), not a separate upfront step.
+// Cleared on successful save, on New, or when a different record is opened.
 var posEditingRecord = null;
 // [mode] while the duplicate-order-no modal is up — re-runs posRequestPost
 // with skipDupeCheck once "confirm" is typed.
@@ -17380,11 +17500,9 @@ var posPendingDupeArgs = null;
 
 function posOpenRecordInForm(record){
   posViewingRecord = record;
-  posEditingRecord = null;
-  var editBtn = document.getElementById('posEditBtn');
-  if (editBtn) editBtn.style.display = (record.collected || posIsLocked(record)) ? 'none' : '';
+  posEditingRecord = (record.collected || posIsLocked(record)) ? null : record;
   var editBadge = document.getElementById('posEditingBadge');
-  if (editBadge) editBadge.style.display = 'none';
+  if (editBadge) editBadge.style.display = posEditingRecord ? '' : 'none';
 
   var posBtn = document.querySelector('.sidebar button[onclick*="page-pos-invoice"]');
   if (posBtn) posShowApp('page-pos-invoice', posBtn);
@@ -17425,60 +17543,28 @@ function posOpenRecordInForm(record){
   if (orderInput) orderInput.value = record.orderNo || '';
   var roomNoInput = document.getElementById('posRoomNoField');
   if (roomNoInput) { roomNoInput.value = record.roomNo || ''; posRoomNoChanged(roomNoInput); }
+  var invoiceDateInput = document.getElementById('posInvoiceDate');
+  if (invoiceDateInput) {
+    var openIso = record.isoDate || posTodayISO();
+    if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(openIso, true); else invoiceDateInput.value = openIso;
+  }
 
   posRecalcAll();
   posShowToast('Opened ' + record.no + ' in Point of Sale');
 }
 
-// Edit-in-place: type "edit" to confirm, same pattern as Delete/Post.
-// Once confirmed, posting reuses the SAME invoice id + number (an
-// update, via the existing upsert) instead of minting a new invoice —
-// see posPostInvoice/posSaveInvoiceRecord.
-function posRequestEdit(){
-  if (!posViewingRecord || posViewingRecord.collected) return;
-  if (posIsLocked(posViewingRecord)) { posShowToast('This invoice is from a locked day and can no longer be edited.', 'error'); return; }
-  var record = posViewingRecord;
-  var details = document.getElementById('posEditDetails');
-  if (details) {
-    details.innerHTML =
-      'Invoice #: <b>' + posEscapeHtml(record.no) + '</b><br>' +
-      'Customer: ' + posEscapeHtml(record.customer) + '<br>' +
-      'Room: ' + posEscapeHtml(record.room || '') + '<br>' +
-      'Posting after this will update this SAME invoice instead of creating a new one.';
-  }
-  var input = document.getElementById('posEditConfirmInput');
-  if (input) input.value = '';
-  posEditConfirmCheck();
-  var modal = document.getElementById('posEditModal');
-  var backdrop = document.getElementById('posEditBackdrop');
-  if (modal) modal.style.display = '';
-  if (backdrop) backdrop.style.display = '';
-  if (input) input.focus();
-}
-
-function posEditConfirmCheck(){
-  var input = document.getElementById('posEditConfirmInput');
-  var confirmBtn = document.getElementById('posEditConfirmBtn');
+// Type "edit" to confirm — lives inside the normal Post/Print confirm
+// modal (see posRequestPost/posConfirmPost), shown only when
+// posEditingRecord is set. Confirming posts as normal, reusing the SAME
+// invoice id + number (an update, via the existing upsert) instead of
+// minting a new invoice — see posPostInvoice/posSaveInvoiceRecord.
+function posPostEditConfirmCheck(){
+  var input = document.getElementById('posPostEditConfirmInput');
+  var confirmBtn = document.getElementById('posPostConfirmBtn');
   if (!input || !confirmBtn) return;
   var ok = input.value.trim().toLowerCase() === 'edit';
   confirmBtn.disabled = !ok;
   confirmBtn.style.opacity = ok ? '1' : '.5';
-}
-
-function posCancelEdit(){
-  var modal = document.getElementById('posEditModal');
-  var backdrop = document.getElementById('posEditBackdrop');
-  if (modal) modal.style.display = 'none';
-  if (backdrop) backdrop.style.display = 'none';
-}
-
-function posEditConfirmed(){
-  if (!posViewingRecord) return;
-  posEditingRecord = posViewingRecord;
-  posCancelEdit();
-  var editBadge = document.getElementById('posEditingBadge');
-  if (editBadge) editBadge.style.display = '';
-  posShowToast('Editing ' + posEditingRecord.no + ' — posting will update this invoice.');
 }
 
 // Duplicate Order No(QT) — a harder stop than the plain post-confirm:
@@ -17631,6 +17717,24 @@ function prevDayRefresh(){
 // Money view: one row per posted invoice, plus a totals row. No fake GL
 // account numbers here — that data doesn't exist in this schema, so this
 // shows the real invoice charges instead of a mocked-up ledger.
+// Best-effort classification — invoice line items aren't stored with a
+// category, so this matches against the actual drink names in
+// POS_MENU_ITEMS (Beverages/BAR/Coffee groups). Not in this set = Food.
+// Flagged as a first pass to refine once real data is in.
+var POS_BEVERAGE_ITEM_NAMES = (function(){
+  var names = ['Spanish Latte Cold','Spanish Latte Hot','Hazelnut Latte Cold','Hazelnut Latte Hot','Caramel Latte Cold','Caramel Latte Hot',
+    'Cortado Hot','Cortado Cold','Apple Cinnamon Cold','Apple Cinnamon Hot','Moca Latte Hot','Moca Latte Cold','Americano Cold','Americano Hot',
+    'Blueberry Fizz','Strawberry Fizz','Pineapple Fizz','Lemon Ginger Fizz','Mineral Water Small','Mineral Water Large','Soft Drink Can','Diet Can',
+    'Mix Tea','Separate Tea','Green Tea','Ice Tea (Peach, Lemon)','Mint Margarita','Pina Colada','Fruit Smoothies','Riviera Resort Special Shake',
+    'Kit Kat Shake','Fresh Seasonal Juice','Milk Shake','Latte','Cappuccino','Espresso','Single','Double','Hot Chocolate'];
+  var set = {};
+  names.forEach(function(n){ set[n.toLowerCase()] = true; });
+  return set;
+})();
+function posIsBeverageItem(name){
+  return !!POS_BEVERAGE_ITEM_NAMES[(name || '').trim().toLowerCase()];
+}
+
 function renderChargesSummary(){
   var body = document.getElementById('chargesSummaryBody');
   var countEl = document.getElementById('csCount');
@@ -17669,10 +17773,16 @@ function renderChargesSummary(){
   body.innerHTML = '';
   var totSub = 0, totTax = 0, totAmt = 0, totPaid = 0, totBal = 0;
   var totCash = 0, totAccountTransfer = 0, totCard = 0;
+  var totFood = 0, totBeverage = 0, totServiceCharge = 0;
   rows.forEach(function(r){
     var bal = r.balance != null ? r.balance : (r.amount - r.paid);
     totSub += r.subtotal || 0; totTax += r.taxTotal || 0; totAmt += r.amount || 0; totPaid += r.paid || 0; totBal += bal;
     totCash += r.paidCash || 0; totAccountTransfer += r.paidAccountTransfer || 0; totCard += r.paidCard || 0;
+    totServiceCharge += (r.subtotal || 0) * 0.10; // estimated — see POS_BEVERAGE_ITEM_NAMES note
+    (r.items || []).forEach(function(it){
+      var ext = (it.qty || 0) * (it.price || 0) * (1 - (it.pct || 0) / 100);
+      if (posIsBeverageItem(it.name)) totBeverage += ext; else totFood += ext;
+    });
     var tr = document.createElement('tr');
     tr.innerHTML = '<td>' + posEscapeHtml(r.no) + '</td>' +
       '<td>' + posEscapeHtml(r.date) + '</td>' +
@@ -17698,17 +17808,28 @@ function renderChargesSummary(){
   }
   if (countEl) countEl.textContent = rows.length + ' invoices';
 
-  // Payment Method Breakdown — same rows as Total Sale above, split by
-  // each payment row's own type (posRecalcAll's paidCash/paidAccountTransfer/
-  // paidCard) instead of the single lump "paid" figure.
-  var pmBody = document.getElementById('csPaymentBreakdownBody');
-  if (pmBody) {
-    pmBody.innerHTML =
-      '<tr><td>Cash</td><td class="num">' + totCash.toFixed(2) + '</td></tr>' +
-      '<tr><td>Account Transfer</td><td class="num">' + totAccountTransfer.toFixed(2) + '</td></tr>' +
-      '<tr><td>Card</td><td class="num">' + totCard.toFixed(2) + '</td></tr>' +
-      '<tr style="font-weight:700;"><td>Total Paid</td><td class="num">' + (totCash + totAccountTransfer + totCard).toFixed(2) + '</td></tr>';
+  var summaryBody = document.getElementById('csSummaryBody');
+  if (summaryBody) {
+    summaryBody.innerHTML = '<tr style="font-weight:700;">' +
+      '<td>' + totAmt.toFixed(2) + '</td>' +
+      '<td class="num">' + totServiceCharge.toFixed(2) + '</td>' +
+      '<td class="num">' + totPaid.toFixed(2) + '</td>' +
+      '<td class="num">' + totBal.toFixed(2) + '</td></tr>';
   }
+
+  var foodBevBody = document.getElementById('csFoodBevBody');
+  if (foodBevBody) {
+    foodBevBody.innerHTML = '<tr><td>' + totFood.toFixed(2) + '</td><td class="num">' + totBeverage.toFixed(2) + '</td></tr>';
+  }
+
+  var scTotalEl = document.getElementById('csServiceChargeTotal');
+  if (scTotalEl) scTotalEl.textContent = totServiceCharge.toFixed(2);
+  var cashTotalEl = document.getElementById('csCashTotal');
+  if (cashTotalEl) cashTotalEl.textContent = totCash.toFixed(2);
+  var atTotalEl = document.getElementById('csAccountTransferTotal');
+  if (atTotalEl) atTotalEl.textContent = totAccountTransfer.toFixed(2);
+  var cardTotalEl = document.getElementById('csCardTotal');
+  if (cardTotalEl) cardTotalEl.textContent = totCard.toFixed(2);
 
   // Pending Payments — same rows as the dedicated module, just scoped to
   // this page's date filter and excluding guests (they never owe anything).
@@ -17737,42 +17858,6 @@ function renderChargesSummary(){
       pendingBody.appendChild(ptr);
     });
     if (pendingCountEl) pendingCountEl.textContent = pendingRows.length + ' pending';
-  }
-
-  // Service Charge — estimated at the default 10% rate on subtotal (see
-  // the page's own note on why this can't be exact from stored data).
-  var scBody = document.getElementById('csServiceChargeBody');
-  var scTotalEl = document.getElementById('csServiceChargeTotal');
-  if (scBody) {
-    scBody.innerHTML = '';
-    var scTotal = 0;
-    rows.forEach(function(r){
-      var est = (r.subtotal || 0) * 0.10;
-      scTotal += est;
-      var sctr = document.createElement('tr');
-      sctr.innerHTML = '<td>' + posEscapeHtml(r.no) + '</td>' +
-        '<td>' + posEscapeHtml(r.date) + '</td>' +
-        '<td class="num">' + (r.subtotal || 0).toFixed(2) + '</td>' +
-        '<td class="num">' + est.toFixed(2) + '</td>';
-      scBody.appendChild(sctr);
-    });
-    if (scTotalEl) scTotalEl.textContent = scTotal.toFixed(2);
-  }
-
-  // Reconciliation — Total Sale = Total Credit (paid) + Total Debt
-  // (balance) by definition (balance IS total minus paid), so this is a
-  // sanity display more than something that could genuinely fail — but
-  // if it ever does show a mismatch, that itself is a real bug worth
-  // catching immediately.
-  var reconBody = document.getElementById('csReconBody');
-  if (reconBody) {
-    var checkOk = Math.abs(totAmt - (totPaid + totBal)) < 0.01;
-    reconBody.innerHTML =
-      '<tr><td>Total Sale</td><td class="num" style="font-weight:700;">' + totAmt.toFixed(2) + '</td></tr>' +
-      '<tr><td>Total Credit (Paid)</td><td class="num">' + totPaid.toFixed(2) + '</td></tr>' +
-      '<tr><td>Total Debt (Balance)</td><td class="num">' + totBal.toFixed(2) + '</td></tr>' +
-      '<tr><td>Credit + Debt</td><td class="num" style="font-weight:700;">' + (totPaid + totBal).toFixed(2) + '</td></tr>' +
-      '<tr><td>' + (checkOk ? '✓ Balances' : '⚠ Does not balance') + '</td><td class="num" style="color:' + (checkOk ? '#15803d' : '#dc2626') + '; font-weight:700;">' + (checkOk ? 'OK' : (totAmt - (totPaid + totBal)).toFixed(2)) + '</td></tr>';
   }
 }
 
@@ -17818,22 +17903,6 @@ function renderQuantitySummary(){
   if (countEl) countEl.textContent = list.length + ' items';
 }
 
-async function posToggleFrontOffice(id){
-  var record = posInvoices.filter(function(r){ return r.id === id; })[0];
-  if (!record) return;
-  if (record.collected) { posShowToast('Already collected by Front Office — cannot modify.', 'error'); return; }
-  var next = !record.sentToFrontOffice;
-  record.sentToFrontOffice = next;
-  posQueueInvoiceUpdate(record, { sent_to_front_office: next });
-  receiptsRefresh();
-  printedOnlyRefresh();
-  frontOfficeRefresh();
-  document.querySelectorAll('.fo-toggle-btn[data-fo-id="' + id + '"]').forEach(function(btn){
-    btn.textContent = record.sentToFrontOffice ? 'Undo' : '→ FO';
-    btn.title = record.sentToFrontOffice ? 'Undo Send to Front Office' : 'Send to Front Office';
-  });
-  posShowToast(record.sentToFrontOffice ? 'Sent to Front Office: ' + record.no : 'Removed from Front Office: ' + record.no);
-}
 
 function posShowToast(message, type){
   var stack = document.getElementById('posToastStack');
@@ -17902,57 +17971,48 @@ function posBuildReceiptHtml(record){
     '<div class="rc-foot">Riviera Resort · Restaurant</div>';
 }
 
-var POS_RECEIPT_PRINT_CSS = 'body{font-family:"Courier New",monospace; font-size:12px; width:74mm; margin:0 auto; padding:3mm 3mm 6mm; color:#000;} ' +
-  '@page{size:80mm auto; margin:0;} ' +
-  '.rc-brand{text-align:center; font-size:17px; font-weight:700; letter-spacing:.04em; margin-bottom:1mm;} ' +
-  '.rc-sub{text-align:center; font-size:11px; letter-spacing:.06em; color:#000; margin-bottom:3mm;} ' +
-  '.rc-center{text-align:center;} ' +
-  '.rc-line{border-top:1px dashed #000; margin:2.5mm 0;} ' +
-  '.rc-line.dbl{border-top:1px solid #000;} ' +
-  '.rc-fields{width:100%; border-collapse:collapse; font-size:11.5px; margin-bottom:1mm;} ' +
-  '.rc-fields td{padding:1px 0; vertical-align:top;} ' +
-  '.rc-fields td:first-child{color:#333; white-space:nowrap; padding-right:6px;} ' +
-  '.rc-fields td:last-child{text-align:right; font-weight:600;} ' +
-  'table.rc-items{width:100%; border-collapse:collapse; font-size:11.5px; margin-top:1mm;} ' +
-  'table.rc-items th{text-align:left; font-size:10px; letter-spacing:.03em; border-bottom:1px solid #000; padding:0 0 1.5mm; font-weight:700;} ' +
-  'table.rc-items th.rc-num{text-align:right;} ' +
-  'table.rc-items td{padding:1.2mm 0; vertical-align:top;} ' +
-  '.rc-num{text-align:right;} ' +
-  'table.rc-totals{width:100%; border-collapse:collapse; font-size:12px; margin-top:1mm;} ' +
-  'table.rc-totals td{padding:1px 0;} ' +
-  'table.rc-totals tr.rc-grand td{font-size:14px; font-weight:700; padding-top:1.5mm;} ' +
-  '.rc-thanks{text-align:center; font-size:13px; font-weight:700; margin-top:4mm; letter-spacing:.03em;} ' +
-  '.rc-foot{text-align:center; font-size:9.5px; color:#333; margin-top:1mm;}';
+var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:"Courier New",monospace; font-size:12px; width:74mm; margin:0 auto; padding:3mm 3mm 6mm; color:#000;} ' +
+  '#posReceiptPrintArea .rc-brand{text-align:center; font-size:17px; font-weight:700; letter-spacing:.04em; margin-bottom:1mm;} ' +
+  '#posReceiptPrintArea .rc-sub{text-align:center; font-size:11px; letter-spacing:.06em; color:#000; margin-bottom:3mm;} ' +
+  '#posReceiptPrintArea .rc-center{text-align:center;} ' +
+  '#posReceiptPrintArea .rc-line{border-top:1px dashed #000; margin:2.5mm 0;} ' +
+  '#posReceiptPrintArea .rc-line.dbl{border-top:1px solid #000;} ' +
+  '#posReceiptPrintArea .rc-fields{width:100%; border-collapse:collapse; font-size:11.5px; margin-bottom:1mm;} ' +
+  '#posReceiptPrintArea .rc-fields td{padding:1px 0; vertical-align:top;} ' +
+  '#posReceiptPrintArea .rc-fields td:first-child{color:#333; white-space:nowrap; padding-right:6px;} ' +
+  '#posReceiptPrintArea .rc-fields td:last-child{text-align:right; font-weight:600;} ' +
+  '#posReceiptPrintArea table.rc-items{width:100%; border-collapse:collapse; font-size:11.5px; margin-top:1mm;} ' +
+  '#posReceiptPrintArea table.rc-items th{text-align:left; font-size:10px; letter-spacing:.03em; border-bottom:1px solid #000; padding:0 0 1.5mm; font-weight:700;} ' +
+  '#posReceiptPrintArea table.rc-items th.rc-num{text-align:right;} ' +
+  '#posReceiptPrintArea table.rc-items td{padding:1.2mm 0; vertical-align:top;} ' +
+  '#posReceiptPrintArea .rc-num{text-align:right;} ' +
+  '#posReceiptPrintArea table.rc-totals{width:100%; border-collapse:collapse; font-size:12px; margin-top:1mm;} ' +
+  '#posReceiptPrintArea table.rc-totals td{padding:1px 0;} ' +
+  '#posReceiptPrintArea table.rc-totals tr.rc-grand td{font-size:14px; font-weight:700; padding-top:1.5mm;} ' +
+  '#posReceiptPrintArea .rc-thanks{text-align:center; font-size:13px; font-weight:700; margin-top:4mm; letter-spacing:.03em;} ' +
+  '#posReceiptPrintArea .rc-foot{text-align:center; font-size:9.5px; color:#333; margin-top:1mm;}';
 
-// Printing opens an isolated document with its own receipt CSS — no
-// width/height passed to window.open, so it's a normal tab rather than a
-// cramped little chrome-less popup. Deliberately NOT sharing the hotel
-// page's @media print rules (those stay untouched for every other hotel
-// print flow: breakfast report, checkout, etc.) — the receipt needs its
-// own 80mm page size, which can't coexist with the hotel's A4 @page rule
-// in the same document.
-// existingWin: a window already opened synchronously at the original
-// click (see posConfirmPost) — opening it HERE instead would happen
-// after posPostInvoice's awaits (invoice numbering, the DB save), and by
-// then the browser no longer trusts it as "came from a real click", so
-// popup blockers silently kill it (or half-render it) more often than
-// not. Falls back to opening it here for any other caller.
-function posPrintRecord(record, existingWin){
-  var html = posBuildReceiptHtml(record);
-  var w = existingWin || window.open('', '_blank');
-  if (!w) { posShowToast('Enable pop-ups to print receipts.', 'error'); return; }
-  w.document.write('<!DOCTYPE html><html><head><title>Receipt ' + posEscapeHtml(record.no) + '</title><style>' + POS_RECEIPT_PRINT_CSS + '</style></head><body>' + html + '</body></html>');
-  w.document.close();
-  w.focus();
-  setTimeout(function(){ try{ w.print(); }catch(e){} }, 250);
+// Printing renders straight into #posReceiptPrintArea (a hidden div at the
+// end of <body>) and calls window.print() on the current page — no popup,
+// no new tab. body.pos-printing-receipt (@media print) hides every other
+// top-level element while it's set, and #posReceiptPrintArea is tagged
+// with the named page "pos-receipt" (defined near the div, size:80mm) so
+// its page size doesn't fight with the hotel's own A4 @page rule, which
+// still governs everything else that ever gets printed (breakfast report,
+// checkout, etc.) since that rule is untouched.
+function posPrintRecord(record){
+  var area = document.getElementById('posReceiptPrintArea');
+  if (!area) return;
+  area.innerHTML = '<style>' + POS_RECEIPT_PRINT_CSS + '</style>' + posBuildReceiptHtml(record);
+  document.body.classList.add('pos-printing-receipt');
+  window.print();
 }
+window.addEventListener('afterprint', function(){
+  document.body.classList.remove('pos-printing-receipt');
+});
 
-async function posPostInvoice(mode, printWin){
-  // If a print popup was already opened synchronously at click time (see
-  // posConfirmPost) and posting fails validation after all, don't leave
-  // it sitting open and blank.
+async function posPostInvoice(mode){
   function abort(msg){
-    if (printWin) { try{ printWin.close(); }catch(e){} }
     if (msg) posShowToast(msg, 'error');
   }
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
@@ -18004,8 +18064,10 @@ async function posPostInvoice(mode, printWin){
     var invNo = await posNextInvoiceNo();
     if (invNo == null) { abort('Could not get an invoice number — check your connection and try again.'); return; }
     invLabel = 'SI-' + String(invNo).padStart(6, '0');
-    recDate = posFormatDate();
-    recIsoDate = posTodayISO();
+    var invoiceDateInputEl = document.getElementById('posInvoiceDate');
+    var pickedIso = invoiceDateInputEl && invoiceDateInputEl.value ? invoiceDateInputEl.value : posTodayISO();
+    recIsoDate = pickedIso;
+    recDate = receiptsDateToDMY(pickedIso) || posFormatDate();
   }
 
   var record = {
@@ -18039,7 +18101,7 @@ async function posPostInvoice(mode, printWin){
   if (!saved) { abort(); return; }
 
   if (mode === 'printpost' || mode === 'printonly') {
-    posPrintRecord(record, printWin);
+    posPrintRecord(record);
   }
 
   var msg = editing ? 'Updated: ' :
@@ -18048,8 +18110,6 @@ async function posPostInvoice(mode, printWin){
   posShowToast(msg + invLabel);
   posEditingRecord = null;
   posViewingRecord = null;
-  var editBtn = document.getElementById('posEditBtn');
-  if (editBtn) editBtn.style.display = 'none';
   var editBadge = document.getElementById('posEditingBadge');
   if (editBadge) editBadge.style.display = 'none';
   posResetForm();
@@ -18114,13 +18174,9 @@ function posRequestPost(mode, skipDupeCheck){
 
   // Print-only skips the confirm dialog entirely — it's not final like a
   // real post (no accounting effect until it's actually posted later), so
-  // there's nothing here worth double-checking. Opened synchronously,
-  // right in this click handler — see posConfirmPost's comment on why that
-  // matters for popup blockers.
+  // there's nothing here worth double-checking.
   if (mode === 'printonly') {
-    var printWin = window.open('', '_blank');
-    if (!printWin) posShowToast('Enable pop-ups to print receipts.', 'error');
-    posPostInvoice(mode, printWin);
+    posPostInvoice(mode);
     return;
   }
 
@@ -18136,12 +18192,22 @@ function posRequestPost(mode, skipDupeCheck){
       'Room: ' + posEscapeHtml(roomNoVal) + '<br>' +
       'Total: ' + totals.grandTotal.toFixed(2) + ' &nbsp;·&nbsp; Paid: ' + totals.paid.toFixed(2);
   }
+  var editWrap = document.getElementById('posPostEditConfirmWrap');
+  var editInput = document.getElementById('posPostEditConfirmInput');
+  var confirmBtn = document.getElementById('posPostConfirmBtn');
+  if (posEditingRecord) {
+    if (editWrap) editWrap.style.display = '';
+    if (editInput) editInput.value = '';
+    posPostEditConfirmCheck();
+  } else {
+    if (editWrap) editWrap.style.display = 'none';
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.style.opacity = '1'; }
+  }
   var modal = document.getElementById('posPostModal');
   var backdrop = document.getElementById('posPostBackdrop');
   if (modal) modal.style.display = '';
   if (backdrop) backdrop.style.display = '';
-  var confirmBtn = document.getElementById('posPostConfirmBtn');
-  if (confirmBtn) confirmBtn.focus();
+  if (posEditingRecord && editInput) editInput.focus(); else if (confirmBtn) confirmBtn.focus();
 }
 
 function posCancelPost(){
@@ -18154,19 +18220,17 @@ function posCancelPost(){
 
 function posConfirmPost(){
   if (!posPendingPostMode) return;
+  if (posEditingRecord) {
+    var editInput = document.getElementById('posPostEditConfirmInput');
+    if (!editInput || editInput.value.trim().toLowerCase() !== 'edit') {
+      posShowToast('Type "edit" to confirm updating this invoice.', 'error');
+      if (editInput) editInput.focus();
+      return;
+    }
+  }
   var mode = posPendingPostMode;
   posCancelPost();
-  // Opened HERE, synchronously inside the real click/Enter that triggered
-  // this — posPostInvoice awaits an RPC + a DB write before it would ever
-  // reach the print step, and browsers stop trusting window.open() as
-  // "came from a click" the moment any await happens first, silently
-  // blocking or half-rendering it. See posPrintRecord.
-  var printWin = null;
-  if (mode === 'printpost' || mode === 'printonly') {
-    printWin = window.open('', '_blank');
-    if (!printWin) posShowToast('Enable pop-ups to print receipts.', 'error');
-  }
-  posPostInvoice(mode, printWin);
+  posPostInvoice(mode);
 }
 
 // "New" wipes whatever's in the form — if that's real unsaved data (an
@@ -18194,6 +18258,10 @@ function posRequestNewForm(){
 }
 
 function posResetForm(){
+  posEditingRecord = null;
+  posViewingRecord = null;
+  var editBadge = document.getElementById('posEditingBadge');
+  if (editBadge) editBadge.style.display = 'none';
   posFullPaymentReset();
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (tbody) {
@@ -18226,6 +18294,8 @@ function posResetForm(){
   if (custInput) custInput.value = 'Walkin Customer';
   var roomNoInput = document.getElementById('posRoomNoField');
   if (roomNoInput) { roomNoInput.value = ''; posRoomNoChanged(roomNoInput); }
+  var invoiceDateInput = document.getElementById('posInvoiceDate');
+  if (invoiceDateInput) { if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(posTodayISO(), true); else invoiceDateInput.value = posTodayISO(); }
   try { localStorage.removeItem('pos_invoice_draft'); } catch(e) {}
   posRecalcAll();
 }
@@ -18381,7 +18451,7 @@ function posInitDatePicker(el){
   });
 }
 
-var posAppBooted = false;
+// posAppBooted now declared earlier, right before init() — see the comment there.
 // Measures the hotel header's real rendered height instead of guessing a
 // fixed px offset for the sidebar — closes any gap/overlap between the
 // two regardless of how tall the 3-row header actually turns out to be
@@ -18402,7 +18472,8 @@ function posSyncSidebarOffset(){
 posSyncSidebarOffset();
 
 function posBootApp(){
-  if (posAppBooted) return; // showView('restaurant') can fire many times — only boot once
+  console.log('[POS] posBootApp() called. posAppBooted =', posAppBooted, '| sb =', sb);
+  if (posAppBooted) { console.log('[POS] already booted, skipping'); return; } // showView('restaurant') can fire many times — only boot once
   posAppBooted = true;
 
   posSyncSidebarOffset();
@@ -18417,6 +18488,8 @@ function posBootApp(){
   posBuildRoomOptions();
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
   if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
+  var posInvoiceDateEl = document.getElementById('posInvoiceDate');
+  if (posInvoiceDateEl) { posInvoiceDateEl.value = posTodayISO(); posInitDatePicker(posInvoiceDateEl); }
   posLoadDraft();
   posRecalcAll();
   var receiptsDateInitEl = document.getElementById('receiptsDateFilter');
@@ -18443,10 +18516,13 @@ function posBootApp(){
   if (qsToEl) qsToEl.value = posTodayISO();
   initRangeDatePicker('csRange', 'csFromDate', 'csToDate', renderChargesSummary);
   initRangeDatePicker('qsRange', 'qsFromDate', 'qsToDate', renderQuantitySummary);
+  console.log('[POS] posBootApp() finished setup, calling posPullFromCloud() now. sb =', sb);
   posPullFromCloud();
 }
 
 </script>
+
+<div id="posReceiptPrintArea"></div>
 
 </body>
 </html>
