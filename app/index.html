@@ -2719,12 +2719,49 @@
   .role-viewer .viewer-lock-note{ display:block; }
 
   /* Restaurant role: only the Restaurant and Front Office tabs exist for
-     this account — every other nav button (including the Settings gear)
-     is hidden, regardless of whatever per-button display rule
-     applyRolePermissions() would otherwise set. See isRestaurantRole(). */
-  .role-restaurant .topnav .navbtn:not(#topNavFrontOffice):not(#topNavRestaurant){
+     this account — every top-nav button (including the Settings gear) is
+     hidden, regardless of whatever per-button display rule
+     applyRolePermissions() would otherwise set. Front Office/Restaurant
+     themselves live outside .topnav entirely now (see #restaurantSidebar
+     below), so nothing here needs excluding anymore. See isRestaurantRole(). */
+  .role-restaurant .topnav .navbtn{
     display:none !important;
   }
+
+  /* Front Office/Restaurant quick-access — deliberately NOT part of the
+     regular .topnav row: a small floating panel pinned to the screen
+     edge, visible (superadmin/restaurant roles only, see
+     applyRolePermissions) regardless of which view or how far down the
+     page you've scrolled. */
+  #restaurantSidebar{
+    position:fixed;
+    right:16px;
+    bottom:20px;
+    z-index:35;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    background:#1f2430;
+    border-radius:10px;
+    padding:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.3);
+  }
+  #restaurantSidebar .navbtn{
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    border:none;
+    border-left:3px solid transparent;
+    background:transparent;
+    color:#c7ccd6;
+    padding:8px 14px;
+    cursor:pointer;
+    white-space:nowrap;
+    text-align:left;
+    border-radius:6px;
+  }
+  #restaurantSidebar .navbtn:hover{ color:#fff; background:rgba(255,255,255,.08); }
+  #restaurantSidebar .navbtn.active{ color:#fff; background:rgba(59,130,246,.18); border-left-color:#3b82f6; }
 
 
   /* ===== Restaurant (native, ported from app/POS/index.html — no
@@ -3191,6 +3228,11 @@
     </div>
   </div>
 </div>
+
+<nav id="restaurantSidebar" style="display:none;">
+  <button class="navbtn" id="topNavFrontOffice" onclick="showView('frontoffice')" style="display:none;">Front Office</button>
+  <button class="navbtn" id="topNavRestaurant" onclick="showView('restaurant')" style="display:none;">Restaurant</button>
+</nav>
 
 <div class="main">
 
@@ -15586,6 +15628,8 @@ function applyRolePermissions(){
   if(frontOfficeNav) frontOfficeNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
+  const restaurantSidebarEl = document.getElementById('restaurantSidebar');
+  if(restaurantSidebarEl) restaurantSidebarEl.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
