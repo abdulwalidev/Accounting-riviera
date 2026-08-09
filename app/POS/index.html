@@ -339,31 +339,31 @@
 #page-printed-only .badge-warn {background:#fdf1dc; color:var(--amber); border-radius:12px; padding:3px 10px; font-size:11.5px; font-weight:600; display:inline-block;}
 
 /* ===== Front Office Pending ===== */
-#page-front-office {
+#page-front-office, #page-deleted, #page-qty-summary {
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
     --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff;
   }
-#page-front-office * {box-sizing:border-box;}
-#page-front-office .wrap {max-width:1280px; margin:0 auto;}
-#page-front-office .h-title {font-size:24px; font-weight:600; margin:0 0 4px;}
-#page-front-office .h-sub {color:var(--muted); font-size:13px; margin-bottom:16px;}
-#page-front-office .card {background:var(--panel); border:1px solid var(--border); border-radius:8px;}
-#page-front-office .filters-card {padding:20px; margin-bottom:16px;}
-#page-front-office .filters-label {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700; margin-bottom:14px;}
-#page-front-office .filters-grid {display:grid; gap:24px;}
-#page-front-office .filters-grid label {display:block; font-size:12.5px; color:var(--text); margin-bottom:6px;}
-#page-front-office .filters-grid select, #page-front-office .filters-grid input {width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px; color:var(--text);}
-#page-front-office .date-input {color:var(--blue);}
-#page-front-office .results-card {padding:20px;}
-#page-front-office .results-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
-#page-front-office .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
-#page-front-office .results-head .rh-count {font-size:12px; color:var(--blue);}
-#page-front-office table.rep {width:100%; border-collapse:collapse; font-size:13px;}
-#page-front-office table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
-#page-front-office table.rep th.num {text-align:right;}
-#page-front-office table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
-#page-front-office table.rep td.num {text-align:right;}
-#page-front-office table.rep td a {color:var(--blue); text-decoration:none;}
+#page-front-office *, #page-deleted *, #page-qty-summary * {box-sizing:border-box;}
+#page-front-office .wrap, #page-deleted .wrap, #page-qty-summary .wrap {max-width:1280px; margin:0 auto;}
+#page-front-office .h-title, #page-deleted .h-title, #page-qty-summary .h-title {font-size:24px; font-weight:600; margin:0 0 4px;}
+#page-front-office .h-sub, #page-deleted .h-sub, #page-qty-summary .h-sub {color:var(--muted); font-size:13px; margin-bottom:16px;}
+#page-front-office .card, #page-deleted .card, #page-qty-summary .card {background:var(--panel); border:1px solid var(--border); border-radius:8px;}
+#page-front-office .filters-card, #page-deleted .filters-card, #page-qty-summary .filters-card {padding:20px; margin-bottom:16px;}
+#page-front-office .filters-label, #page-deleted .filters-label, #page-qty-summary .filters-label {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700; margin-bottom:14px;}
+#page-front-office .filters-grid, #page-deleted .filters-grid, #page-qty-summary .filters-grid {display:grid; gap:24px;}
+#page-front-office .filters-grid label, #page-deleted .filters-grid label, #page-qty-summary .filters-grid label {display:block; font-size:12.5px; color:var(--text); margin-bottom:6px;}
+#page-front-office .filters-grid select, #page-front-office .filters-grid input, #page-deleted .filters-grid select, #page-deleted .filters-grid input, #page-qty-summary .filters-grid select, #page-qty-summary .filters-grid input {width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px; color:var(--text);}
+#page-front-office .date-input, #page-deleted .date-input, #page-qty-summary .date-input {color:var(--blue);}
+#page-front-office .results-card, #page-deleted .results-card, #page-qty-summary .results-card {padding:20px;}
+#page-front-office .results-head, #page-deleted .results-head, #page-qty-summary .results-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+#page-front-office .results-head .rh-title, #page-deleted .results-head .rh-title, #page-qty-summary .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
+#page-front-office .results-head .rh-count, #page-deleted .results-head .rh-count, #page-qty-summary .results-head .rh-count {font-size:12px; color:var(--blue);}
+#page-front-office table.rep, #page-deleted table.rep, #page-qty-summary table.rep {width:100%; border-collapse:collapse; font-size:13px;}
+#page-front-office table.rep th, #page-deleted table.rep th, #page-qty-summary table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
+#page-front-office table.rep th.num, #page-deleted table.rep th.num, #page-qty-summary table.rep th.num {text-align:right;}
+#page-front-office table.rep td, #page-deleted table.rep td, #page-qty-summary table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
+#page-front-office table.rep td.num, #page-deleted table.rep td.num, #page-qty-summary table.rep td.num {text-align:right;}
+#page-front-office table.rep td a, #page-deleted table.rep td a, #page-qty-summary table.rep td a {color:var(--blue); text-decoration:none;}
 
 /* ===== Manage Menu (POS Menu) ===== */
 #page-manage-parts {
@@ -537,6 +537,7 @@
   <button onclick="showApp('page-printed-only', this)"><span class="sb-icon">🖨️</span><span class="sb-text">Printed-Only</span></button>
   <button onclick="showApp('page-front-office', this)"><span class="sb-icon">🛎️</span><span class="sb-text">Front Office Pending</span></button>
   <button onclick="showApp('page-manage-parts', this)"><span class="sb-icon">🍽️</span><span class="sb-text">Manage Menu</span></button>
+  <button onclick="showApp('page-deleted', this)"><span class="sb-icon">🗑️</span><span class="sb-text">Deleted</span></button>
   <div class="sidebar-spacer"></div>
 </nav>
 <div class="app-wrap" style="padding:18px;">
@@ -824,33 +825,29 @@
 <div class="wrap">
 
   <div class="h-title">Charges Summary</div>
-  <div class="h-sub">Aggregated debits and credits by GL account for the selected period</div>
+  <div class="h-sub">Every posted invoice's charges for the selected period — leave both dates blank to see everything.</div>
 
   <div class="card filters-card">
     <div class="filters-grid" style="grid-template-columns:220px 220px;">
-      <div><label>From date</label><input type="date" value="2026-08-06"></div>
-      <div><label>To date</label><input type="date" value="2026-08-06"></div>
+      <div><label>From date</label><input type="date" id="csFromDate" onchange="renderChargesSummary()"></div>
+      <div><label>To date</label><input type="date" id="csToDate" onchange="renderChargesSummary()"></div>
     </div>
-  </div>
-
-  <div class="actions-row">
-    <button class="btn-outline">🖶 Print</button>
-    <button class="btn-outline excel">▤ Excel</button>
   </div>
 
   <div class="card results-card">
     <div class="results-head">
       <span class="rh-title">RESULTS</span>
-      <span class="rh-count">0 accounts</span>
+      <span class="rh-count" id="csCount">0 invoices</span>
     </div>
     <table class="rep">
       <thead>
         <tr>
-          <th>TYPE ▲</th><th>ACCOUNT #</th><th>DESCRIPTION</th>
-          <th class="num">DEBIT</th><th class="num">CREDIT</th><th class="num">BALANCE</th>
+          <th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
+          <th class="num">SUBTOTAL</th><th class="num">TAX</th><th class="num">TOTAL</th>
+          <th class="num">PAID</th><th class="num">BALANCE</th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="chargesSummaryBody"></tbody>
     </table>
   </div>
 
@@ -863,97 +860,27 @@
 <div class="wrap">
 
   <div class="h-title">Quantity Summary</div>
-  <div class="h-sub">Inventory quantities and values per item, filterable by warehouse, group, and department</div>
+  <div class="h-sub">How many of each menu item were sold in the selected period, and for how much — leave both dates blank to see everything.</div>
 
-  <div class="card">
-    <div class="filters-label">FILTERS</div>
-
-    <div class="filters-grid2">
-      <div><label>From date</label><input type="date" value="2026-08-06"></div>
-      <div><label>To date</label><input type="date" value="2026-08-06"></div>
+  <div class="card filters-card">
+    <div class="filters-grid" style="grid-template-columns:220px 220px;">
+      <div><label>From date</label><input type="date" id="qsFromDate" onchange="renderQuantitySummary()"></div>
+      <div><label>To date</label><input type="date" id="qsToDate" onchange="renderQuantitySummary()"></div>
     </div>
-
-    <div class="filters-grid3">
-      <div><label>Warehouse</label><select>
-        <option value="">All</option>
-        <option value="13326--MAIN STORE">MAIN STORE</option>
-      </select></div>
-      <div><label>Group</label><select>
-        <option value="">All</option>
-        <option value="14128--Restaurant" selected>Restaurant</option>
-        <option value="14046--Restaurant:Appetizers">Restaurant:Appetizers</option>
-        <option value="15727--Restaurant:BAR">Restaurant:BAR</option>
-        <option value="15720--Restaurant:BBQ">Restaurant:BBQ</option>
-        <option value="14526--Restaurant:Beverages">Restaurant:Beverages</option>
-        <option value="14029--Restaurant:Breakfast">Restaurant:Breakfast</option>
-        <option value="14113--Restaurant:Chinese Cuisine">Restaurant:Chinese Cuisine</option>
-        <option value="14549--Restaurant:Coffee">Restaurant:Coffee</option>
-        <option value="14070--Restaurant:Continental Italian">Restaurant:Continental Italian</option>
-        <option value="14500--Restaurant:Desi Cuisine">Restaurant:Desi Cuisine</option>
-        <option value="15722--Restaurant:Dessert">Restaurant:Dessert</option>
-        <option value="14085--Restaurant:Pasta">Restaurant:Pasta</option>
-        <option value="14100--Restaurant:Pizza">Restaurant:Pizza</option>
-        <option value="14063--Restaurant:Salads">Restaurant:Salads</option>
-        <option value="15723--Restaurant:Shinwari">Restaurant:Shinwari</option>
-        <option value="14054--Restaurant:Soups">Restaurant:Soups</option>
-        <option value="14093--Restaurant:Steaks">Restaurant:Steaks</option>
-        <option value="14541--Restaurant:Tandoor">Restaurant:Tandoor</option>
-      </select></div>
-    </div>
-
-    <div class="filters-grid3" style="margin-bottom:16px;">
-      <div><label>Name</label><input type="text"></div>
-      <div><label>Item #</label><input type="text"></div>
-      <div><label>Item description</label><input type="text"></div>
-    </div>
-
-    <div class="filters-label">COLUMNS</div>
-    <div class="cols-box">
-      <div class="cols-row">
-        <label class="chk"><input type="checkbox" checked> No</label>
-        <label class="chk"><input type="checkbox" checked> Warehouse</label>
-        <label class="chk"><input type="checkbox" checked> Department</label>
-        <label class="chk"><input type="checkbox" checked> Transdate</label>
-        <label class="chk"><input type="checkbox" checked> Name</label>
-        <label class="chk"><input type="checkbox" checked> Partsgroup</label>
-        <label class="chk"><input type="checkbox" checked> Partnumber</label>
-        <label class="chk"><input type="checkbox" checked> Description</label>
-        <label class="chk"><input type="checkbox" checked> Unit</label>
-        <label class="chk"><input type="checkbox" checked> Qty</label>
-        <label class="chk"><input type="checkbox" checked> Weight</label>
-        <label class="chk"><input type="checkbox" checked> Amount</label>
-        <label class="chk"><input type="checkbox" checked> Cogs</label>
-      </div>
-    </div>
-
   </div>
 
-  <div class="card bottom">
-    <button class="btn-outline">🖶 Print</button>
-    <button class="btn-outline excel">▤ Excel</button>
-  </div>
-
-  <div class="card" style="border-radius:8px; border-bottom:1px solid var(--border); margin-top:16px; padding:20px; overflow-x:auto;">
-    <div class="filters-label">RESULTS</div>
-    <table style="width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap;">
+  <div class="card results-card">
+    <div class="results-head">
+      <span class="rh-title">RESULTS</span>
+      <span class="rh-count" id="qsCount">0 items</span>
+    </div>
+    <table class="rep">
       <thead>
-        <tr style="border-bottom:1px solid var(--border-strong);">
-          <th style="text-align:left; padding:8px 10px; color:var(--muted); font-weight:700;">No</th>
-          <th style="text-align:left; padding:8px 10px; color:var(--muted); font-weight:700;">Warehouse</th>
-          <th style="text-align:left; padding:8px 10px; color:var(--muted); font-weight:700;">Department</th>
-          <th style="text-align:left; padding:8px 10px; color:var(--muted); font-weight:700;">Transdate</th>
-          <th style="text-align:left; padding:8px 10px; color:var(--muted); font-weight:700;">Name</th>
-          <th style="text-align:left; padding:8px 10px; color:var(--muted); font-weight:700;">Partsgroup</th>
-          <th style="text-align:left; padding:8px 10px; color:var(--muted); font-weight:700;">Partnumber</th>
-          <th style="text-align:left; padding:8px 10px; color:var(--muted); font-weight:700;">Description</th>
-          <th style="text-align:left; padding:8px 10px; color:var(--muted); font-weight:700;">Unit</th>
-          <th style="text-align:right; padding:8px 10px; color:var(--muted); font-weight:700;">Qty</th>
-          <th style="text-align:right; padding:8px 10px; color:var(--muted); font-weight:700;">Weight</th>
-          <th style="text-align:right; padding:8px 10px; color:var(--muted); font-weight:700;">Amount</th>
-          <th style="text-align:right; padding:8px 10px; color:var(--muted); font-weight:700;">Cogs</th>
+        <tr>
+          <th>ITEM</th><th class="num">QTY</th><th class="num">AMOUNT</th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="qtySummaryBody"></tbody>
     </table>
   </div>
 
@@ -1047,6 +974,36 @@
         <tr><th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:200px;">COLLECTED</th></tr>
       </thead>
       <tbody id="frontOfficeCollectedBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+</div>
+<div id="page-deleted" class="app-page">
+
+<div class="wrap">
+
+  <div class="h-title">Deleted</div>
+  <div class="h-sub">Invoices deleted after being posted (post/print &amp; post/sent to front office) — a deleted print-only draft never counted as a real invoice, so it never shows here.</div>
+
+  <div class="card filters-card">
+    <div class="filters-label">DATE</div>
+    <div class="filters-grid" style="grid-template-columns:220px;">
+      <div><label>Date</label><input type="date" id="deletedDateFilter" onchange="deletedRefresh()"></div>
+    </div>
+  </div>
+
+  <div class="card results-card">
+    <div class="results-head">
+      <span class="rh-title">DELETED</span>
+      <span class="rh-count" id="deletedCount">0 deleted</span>
+    </div>
+    <table class="rep">
+      <thead>
+        <tr><th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th></tr>
+      </thead>
+      <tbody id="deletedBody"></tbody>
     </table>
   </div>
 
@@ -1758,7 +1715,7 @@ async function posPullFromCloud(){
   var stampAtStart = posMutationStamp;
   posPullInFlight = (async function(){
     try{
-      var invRes = await posSb.from('pos_invoices').select('*').eq('deleted', false).order('created_at', { ascending: false });
+      var invRes = await posSb.from('pos_invoices').select('*').order('created_at', { ascending: false });
       if (invRes.error) throw invRes.error;
       var itemsRes = await posSb.from('pos_invoice_items').select('*');
       if (itemsRes.error) throw itemsRes.error;
@@ -1778,6 +1735,9 @@ async function posPullFromCloud(){
       receiptsRefresh();
       printedOnlyRefresh();
       frontOfficeRefresh();
+      deletedRefresh();
+      renderChargesSummary();
+      renderQuantitySummary();
     }catch(e){
       console.error('POS cloud pull failed', e);
     }finally{
@@ -1797,7 +1757,7 @@ function posRenderRecentInvoices(){
   var hasGuest = false;
   posInvoices.forEach(function(record){
     if (record.deleted) return;
-    var row = posBuildInvoiceRow(record);
+    var row = posBuildInvoiceRow(record, true);
     if (/guest/i.test(record.customer || '') && guestBody) { guestBody.appendChild(row); hasGuest = true; }
     else recentBody.appendChild(row);
   });
@@ -1812,6 +1772,9 @@ function showApp(id, btn){
   if (id === 'page-receipts') receiptsRefresh();
   if (id === 'page-printed-only') printedOnlyRefresh();
   if (id === 'page-front-office') frontOfficeRefresh();
+  if (id === 'page-deleted') deletedRefresh();
+  if (id === 'page-charges-summary') renderChargesSummary();
+  if (id === 'page-qty-summary') renderQuantitySummary();
 }
 
 function mpFilterCat(grp, btn){
@@ -2212,7 +2175,7 @@ async function posNextInvoiceNo(){
   }catch(e){ console.error('POS invoice numbering failed', e); return null; }
 }
 
-function posBuildInvoiceRow(record){
+function posBuildInvoiceRow(record, showFo){
   var tr = document.createElement('tr');
   tr.dataset.invoiceId = record.id;
   tr.className = 'fo-row';
@@ -2224,7 +2187,7 @@ function posBuildInvoiceRow(record){
     '<td>' + posEscapeHtml(record.customer) + '</td>' +
     '<td class="num">' + record.amount.toFixed(2) + '</td>' +
     '<td class="num">' + record.paid.toFixed(2) + '</td>';
-  tr.appendChild(posMakeActionsCell(record));
+  if (!record.deleted) tr.appendChild(posMakeActionsCell(record, showFo));
   tr.addEventListener('click', function(e){
     if (e.target.closest('button')) return;
     e.preventDefault();
@@ -2233,7 +2196,10 @@ function posBuildInvoiceRow(record){
   return tr;
 }
 
-function posMakeActionsCell(record){
+// showFo: the →FO/Undo toggle only ever shows on Recent Invoices (the
+// row right after posting) — everywhere else (Receipts, Printed-Only,
+// Front Office Pending) just shows delete/collected status.
+function posMakeActionsCell(record, showFo){
   var td = document.createElement('td');
   td.className = 'del-col';
   var wrap = document.createElement('div');
@@ -2245,7 +2211,7 @@ function posMakeActionsCell(record){
     collectedTag.style.cssText = 'font-size:11px; color:#0f7a3d; white-space:nowrap;';
     collectedTag.textContent = 'Collected · ' + (record.collectedBy || '');
     wrap.appendChild(collectedTag);
-  } else if (record.posted && !isGuest) {
+  } else if (showFo && record.posted && !isGuest) {
     var foBtn = document.createElement('button');
     foBtn.type = 'button';
     foBtn.className = 'fo-toggle-btn';
@@ -2316,12 +2282,16 @@ async function posDeleteConfirmed(){
   var record = posPendingDelete;
   var ok = await posPushInvoiceUpdate(record, { deleted: true });
   if (!ok) return;
-  posInvoices = posInvoices.filter(function(r){ return r.id !== record.id; });
+  record.deleted = true; // same object reference as in posInvoices — stays in memory so it can show on the Deleted page
   document.querySelectorAll('[data-invoice-id="' + record.id + '"]').forEach(function(tr){ tr.remove(); });
   posCancelDelete();
+  posRenderRecentInvoices();
   receiptsRefresh();
   printedOnlyRefresh();
   frontOfficeRefresh();
+  deletedRefresh();
+  renderChargesSummary();
+  renderQuantitySummary();
   posShowToast('Deleted: ' + record.no);
 }
 
@@ -2471,6 +2441,116 @@ function printedOnlyRefresh(){
   });
   if (countEl) countEl.textContent = shown + ' unposted';
   if (guestCard) guestCard.style.display = hasGuest ? '' : 'none';
+}
+
+// Only invoices that were actually posted (post/printpost/frontoffice)
+// show up here once deleted — a deleted print-only draft was never a
+// real invoice, so it's just gone, not listed as "deleted".
+function deletedRefresh(){
+  var body = document.getElementById('deletedBody');
+  var countEl = document.getElementById('deletedCount');
+  if (!body) return;
+  body.innerHTML = '';
+  var dateInput = document.getElementById('deletedDateFilter');
+  var filterDMY = dateInput && dateInput.value ? receiptsDateToDMY(dateInput.value) : null;
+  var shown = 0;
+  posInvoices.forEach(function(record){
+    if (!record.deleted || !record.posted) return;
+    if (filterDMY && record.date !== filterDMY) return;
+    body.appendChild(posBuildInvoiceRow(record));
+    shown++;
+  });
+  if (countEl) countEl.textContent = shown + ' deleted';
+}
+
+// Money view: one row per posted invoice, plus a totals row. No fake GL
+// account numbers here — that data doesn't exist in this schema, so this
+// shows the real invoice charges instead of a mocked-up ledger.
+function renderChargesSummary(){
+  var body = document.getElementById('chargesSummaryBody');
+  var countEl = document.getElementById('csCount');
+  if (!body) return;
+  var fromEl = document.getElementById('csFromDate');
+  var toEl = document.getElementById('csToDate');
+  var fromIso = fromEl && fromEl.value ? fromEl.value : null;
+  var toIso = toEl && toEl.value ? toEl.value : null;
+  var rows = posInvoices.filter(function(r){
+    if (r.deleted || !r.posted) return false;
+    if (fromIso && (!r.isoDate || r.isoDate < fromIso)) return false;
+    if (toIso && (!r.isoDate || r.isoDate > toIso)) return false;
+    return true;
+  });
+  body.innerHTML = '';
+  var totSub = 0, totTax = 0, totAmt = 0, totPaid = 0, totBal = 0;
+  rows.forEach(function(r){
+    var bal = r.balance != null ? r.balance : (r.amount - r.paid);
+    totSub += r.subtotal || 0; totTax += r.taxTotal || 0; totAmt += r.amount || 0; totPaid += r.paid || 0; totBal += bal;
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + posEscapeHtml(r.no) + '</td>' +
+      '<td>' + posEscapeHtml(r.date) + '</td>' +
+      '<td>' + posEscapeHtml(r.room) + '</td>' +
+      '<td>' + posEscapeHtml(r.customer) + '</td>' +
+      '<td class="num">' + (r.subtotal || 0).toFixed(2) + '</td>' +
+      '<td class="num">' + (r.taxTotal || 0).toFixed(2) + '</td>' +
+      '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
+      '<td class="num">' + (r.paid || 0).toFixed(2) + '</td>' +
+      '<td class="num">' + bal.toFixed(2) + '</td>';
+    body.appendChild(tr);
+  });
+  if (rows.length) {
+    var totalTr = document.createElement('tr');
+    totalTr.style.fontWeight = '700';
+    totalTr.innerHTML = '<td colspan="4">Total</td>' +
+      '<td class="num">' + totSub.toFixed(2) + '</td>' +
+      '<td class="num">' + totTax.toFixed(2) + '</td>' +
+      '<td class="num">' + totAmt.toFixed(2) + '</td>' +
+      '<td class="num">' + totPaid.toFixed(2) + '</td>' +
+      '<td class="num">' + totBal.toFixed(2) + '</td>';
+    body.appendChild(totalTr);
+  }
+  if (countEl) countEl.textContent = rows.length + ' invoices';
+}
+
+// Items view: every line item across posted invoices, grouped by name —
+// how many of each thing sold, and for how much.
+function renderQuantitySummary(){
+  var body = document.getElementById('qtySummaryBody');
+  var countEl = document.getElementById('qsCount');
+  if (!body) return;
+  var fromEl = document.getElementById('qsFromDate');
+  var toEl = document.getElementById('qsToDate');
+  var fromIso = fromEl && fromEl.value ? fromEl.value : null;
+  var toIso = toEl && toEl.value ? toEl.value : null;
+  var byItem = {};
+  posInvoices.forEach(function(r){
+    if (r.deleted || !r.posted) return;
+    if (fromIso && (!r.isoDate || r.isoDate < fromIso)) return;
+    if (toIso && (!r.isoDate || r.isoDate > toIso)) return;
+    (r.items || []).forEach(function(it){
+      var key = it.name || '(unnamed)';
+      if (!byItem[key]) byItem[key] = { name: key, qty: 0, amount: 0 };
+      byItem[key].qty += it.qty || 0;
+      byItem[key].amount += (it.qty || 0) * (it.price || 0) * (1 - (it.pct || 0) / 100);
+    });
+  });
+  var list = Object.keys(byItem).map(function(k){ return byItem[k]; }).sort(function(a, b){ return b.amount - a.amount; });
+  body.innerHTML = '';
+  var totQty = 0, totAmt = 0;
+  list.forEach(function(row){
+    totQty += row.qty; totAmt += row.amount;
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + posEscapeHtml(row.name) + '</td>' +
+      '<td class="num">' + row.qty + '</td>' +
+      '<td class="num">' + row.amount.toFixed(2) + '</td>';
+    body.appendChild(tr);
+  });
+  if (list.length) {
+    var totalTr = document.createElement('tr');
+    totalTr.style.fontWeight = '700';
+    totalTr.innerHTML = '<td>Total</td><td class="num">' + totQty + '</td><td class="num">' + totAmt.toFixed(2) + '</td>';
+    body.appendChild(totalTr);
+  }
+  if (countEl) countEl.textContent = list.length + ' items';
 }
 
 async function posToggleFrontOffice(id){
@@ -2633,6 +2713,7 @@ async function posPostInvoice(mode){
   var msg = mode === 'printonly' ? 'Saved as print-only: ' :
     mode === 'frontoffice' ? 'Sent to Front Office: ' : 'Posted: ';
   posShowToast(msg + invLabel);
+  posResetForm();
 }
 
 function posSendToFrontOffice(){
