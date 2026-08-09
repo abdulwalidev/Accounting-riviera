@@ -2878,6 +2878,9 @@
 #page-pos-invoice .pay-col-date {flex:0 0 200px;}
 #page-pos-invoice .pay-col-amt {flex:1; min-width:0;}
 #page-pos-invoice .pay-col-type {flex:0 0 220px;}
+#page-pos-invoice .pay-col-remove {flex:0 0 40px; text-align:center; padding:10px 4px !important;}
+#page-pos-invoice .pay-row-remove-btn {background:none; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:4px; line-height:1;}
+#page-pos-invoice .pay-row-remove-btn:hover {color:#c53030;}
 #page-pos-invoice .pay-row input, #page-pos-invoice .pay-row select {width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px;}
 #page-pos-invoice .add-payment-row {padding:0 16px 14px; display:flex; gap:10px;}
 #page-pos-invoice .add-payment-btn {background:#fff; color:var(--green); border:1px solid var(--green); border-radius:6px; padding:7px 14px; font-size:13px; cursor:pointer;}
@@ -3257,8 +3260,7 @@ html[data-theme="dark"] #posDeleteDetails,
 html[data-theme="dark"] #posPostDetails{ background:#1a1c20 !important; color:#c7ccd6 !important; }
 html[data-theme="dark"] #posOrderDupeDetails{ background:#2a1616 !important; color:#f0b8b8 !important; }
 html[data-theme="dark"] #posDeleteConfirmInput,
-html[data-theme="dark"] #posPostEditConfirmInput,
-html[data-theme="dark"] #posOrderDupeConfirmInput{ background:#0A0A0A !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
+html[data-theme="dark"] #posPostEditConfirmInput{ background:#0A0A0A !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 html[data-theme="dark"] #posDeleteModal button[onclick="posCancelDelete()"],
 html[data-theme="dark"] #posPostModal button[onclick="posCancelPost()"],
 html[data-theme="dark"] #posOrderDupeModal button[onclick="posCancelOrderDupe()"],
@@ -4518,12 +4520,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 <div id="posOrderDupeBackdrop" onclick="posCancelOrderDupe()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
 <div id="posOrderDupeModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
   <div style="font-weight:700; font-size:14.5px; margin-bottom:12px; color:#c53030;">Duplicate Order No(QT)</div>
-  <div id="posOrderDupeDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:14px; background:#fdecec; border-radius:6px; padding:10px 12px;"></div>
-  <div style="font-size:12.5px; color:#1f2430; margin-bottom:6px;">Type <b>confirm</b> below to post it anyway:</div>
-  <input type="text" id="posOrderDupeConfirmInput" autocomplete="off" oninput="posOrderDupeConfirmCheck()" onkeydown="if(event.key==='Enter' && !document.getElementById('posOrderDupeConfirmBtn').disabled){ event.preventDefault(); posOrderDupeConfirmed(); } if(event.key==='Escape'){ event.preventDefault(); posCancelOrderDupe(); }" style="width:100%; border:1px solid #d7dae0; border-radius:6px; padding:8px 10px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
+  <div id="posOrderDupeDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:16px; background:#fdecec; border-radius:6px; padding:10px 12px;"></div>
   <div style="display:flex; gap:10px; justify-content:flex-end;">
-    <button type="button" onclick="posCancelOrderDupe()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
-    <button type="button" id="posOrderDupeConfirmBtn" disabled onclick="posOrderDupeConfirmed()" style="background:#c53030; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; opacity:.5;">Post Anyway</button>
+    <button type="button" onclick="posCancelOrderDupe()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;" autofocus>OK</button>
   </div>
 </div>
 
@@ -4735,6 +4734,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         <div class="pay-col-date">DATE</div>
         <div class="pay-col-amt">AMOUNT</div>
         <div class="pay-col-type">TYPE</div>
+        <div class="pay-col-remove"></div>
       </div>
       <div class="pay-rows">
         <div class="pay-row">
@@ -4745,6 +4745,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
             <option value="account_transfer">Account Transfer</option>
             <option value="card">Card</option>
           </select></div>
+          <div class="pay-col-remove"><button type="button" class="pay-row-remove-btn" onclick="posRemovePaymentRow(this)" title="Remove this payment">✕</button></div>
         </div>
       </div>
     </div>
@@ -4822,7 +4823,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsPaidBody"></tbody>
     </table>
@@ -4832,7 +4833,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="results-head">AT FRONT OFFICE</div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsFrontOfficeBody"></tbody>
     </table>
@@ -4842,7 +4843,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="results-head">GUESTS (NON-PAYING)</div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsGuestBody"></tbody>
     </table>
@@ -5016,7 +5017,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <table class="rep">
       <thead>
         <tr>
-          <th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
+          <th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
           <th class="num">AMOUNT</th><th class="num">PAID</th><th>ACTION</th>
         </tr>
       </thead>
@@ -5031,7 +5032,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <table class="rep">
       <thead>
         <tr>
-          <th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
+          <th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
           <th class="num">AMOUNT</th><th class="num">PAID</th><th>ACTION</th>
         </tr>
       </thead>
@@ -5064,7 +5065,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="frontOfficeBody"></tbody>
     </table>
@@ -5077,7 +5078,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:200px;">COLLECTED</th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:200px;">COLLECTED</th></tr>
       </thead>
       <tbody id="frontOfficeCollectedBody"></tbody>
     </table>
@@ -5107,7 +5108,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th></tr>
       </thead>
       <tbody id="deletedBody"></tbody>
     </table>
@@ -5137,7 +5138,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="pendingPaymentsBody"></tbody>
     </table>
@@ -17126,6 +17127,25 @@ function posAddPayment(){
   posRecalcAll();
 }
 
+// Undo an accidentally-added payment row. If it's the only row left,
+// there's nothing to remove — just clear it back to blank instead.
+function posRemovePaymentRow(btn){
+  var row = btn.closest('.pay-row');
+  var container = document.querySelector('#page-pos-invoice .pay-rows');
+  if (!row || !container) return;
+  var rows = container.querySelectorAll('.pay-row');
+  if (rows.length <= 1) {
+    row.querySelectorAll('input').forEach(function(inp){
+      if (inp.type !== 'date') { inp.value = ''; return; }
+      if (inp._flatpickr) inp._flatpickr.setDate(posTodayISO(), true); else inp.value = posTodayISO();
+    });
+    row.querySelectorAll('select').forEach(function(sel){ sel.selectedIndex = 0; });
+  } else {
+    row.remove();
+  }
+  posRecalcAll();
+}
+
 // Fills whichever payment row still has no amount (or the last row, if
 // every row already has one) with exactly what's left to bring the
 // balance to zero — no manual subtraction needed for the common case of
@@ -17617,7 +17637,7 @@ function receiptsRefresh(){
     if (statusFilter === 'posted' && !record.posted) return;
     if (statusFilter === 'notposted' && record.posted) return;
     if (filterDMY && record.date !== filterDMY) return;
-    var row = posBuildInvoiceRow(record, true);
+    var row = posBuildInvoiceRow(record, true, true);
     shown++;
     if (/guest/i.test(record.customer || '')) guestBody.appendChild(row);
     else if (record.sentToFrontOffice && foBody) foBody.appendChild(row);
@@ -17646,13 +17666,13 @@ function frontOfficeRefresh(){
     if (filterDMY && record.date !== filterDMY) return;
     if (record.collected) {
       if (!collectedBody) return;
-      var crow = posBuildInvoiceRow(record);
+      var crow = posBuildInvoiceRow(record, false, true);
       var stampTd = crow.lastElementChild;
       if (stampTd) stampTd.textContent = (record.collectedBy || '') + ' · ' + (record.collectedAt ? posFormatDateTimeFromIso(record.collectedAt) : '');
       collectedBody.appendChild(crow);
       shownCollected++;
     } else {
-      body.appendChild(posBuildInvoiceRow(record));
+      body.appendChild(posBuildInvoiceRow(record, false, true));
       shown++;
     }
   });
@@ -17671,9 +17691,6 @@ var posViewingRecord = null;
 // (see posRequestPost/posConfirmPost), not a separate upfront step.
 // Cleared on successful save, on New, or when a different record is opened.
 var posEditingRecord = null;
-// [mode] while the duplicate-order-no modal is up — re-runs posRequestPost
-// with skipDupeCheck once "confirm" is typed.
-var posPendingDupeArgs = null;
 
 function posOpenRecordInForm(record){
   posViewingRecord = record;
@@ -17744,30 +17761,13 @@ function posPostEditConfirmCheck(){
   confirmBtn.style.opacity = ok ? '1' : '.5';
 }
 
-// Duplicate Order No(QT) — a harder stop than the plain post-confirm:
-// typing "confirm" is required, not just Enter.
-function posOrderDupeConfirmCheck(){
-  var input = document.getElementById('posOrderDupeConfirmInput');
-  var confirmBtn = document.getElementById('posOrderDupeConfirmBtn');
-  if (!input || !confirmBtn) return;
-  var ok = input.value.trim().toLowerCase() === 'confirm';
-  confirmBtn.disabled = !ok;
-  confirmBtn.style.opacity = ok ? '1' : '.5';
-}
-
+// Duplicate Order No(QT) is a hard block — no override, just acknowledge
+// and pick a different number.
 function posCancelOrderDupe(){
-  posPendingDupeArgs = null;
   var modal = document.getElementById('posOrderDupeModal');
   var backdrop = document.getElementById('posOrderDupeBackdrop');
   if (modal) modal.style.display = 'none';
   if (backdrop) backdrop.style.display = 'none';
-}
-
-function posOrderDupeConfirmed(){
-  if (!posPendingDupeArgs) return;
-  var args = posPendingDupeArgs;
-  posCancelOrderDupe();
-  posRequestPost(args[0], true); // skipDupeCheck — already confirmed
 }
 
 function printedOnlyRefresh(){
@@ -17785,7 +17785,7 @@ function printedOnlyRefresh(){
   posInvoices.forEach(function(record){
     if (record.deleted || record.posted) return;
     if (filterDMY && record.date !== filterDMY) return;
-    var row = posBuildInvoiceRow(record);
+    var row = posBuildInvoiceRow(record, false, true);
     if (/guest/i.test(record.customer || '')) { guestBody.appendChild(row); hasGuest = true; }
     else { body.appendChild(row); shown++; }
   });
@@ -17807,7 +17807,7 @@ function deletedRefresh(){
   posInvoices.forEach(function(record){
     if (!record.deleted || !record.posted) return;
     if (filterDMY && record.date !== filterDMY) return;
-    body.appendChild(posBuildInvoiceRow(record));
+    body.appendChild(posBuildInvoiceRow(record, false, true));
     shown++;
   });
   if (countEl) countEl.textContent = shown + ' deleted';
@@ -17835,7 +17835,7 @@ function pendingPaymentsRefresh(){
   });
   rows.forEach(function(r){
     var bal = r.balance != null ? r.balance : (r.amount - r.paid);
-    var tr = posBuildInvoiceRow(r);
+    var tr = posBuildInvoiceRow(r, false, true);
     var balTd = document.createElement('td');
     balTd.className = 'num';
     balTd.style.fontWeight = '700';
@@ -18322,7 +18322,7 @@ var POS_POST_MODE_LABELS = { post: 'Post this invoice?', printpost: 'Print & pos
 // checked here first so the confirm dialog never appears for something
 // that's just going to fail anyway. Can still be deleted afterward from
 // any of the invoice lists — this is a speed bump, not a lock.
-function posRequestPost(mode, skipDupeCheck){
+function posRequestPost(mode){
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (!tbody) return;
   var hasItem = false;
@@ -18342,25 +18342,21 @@ function posRequestPost(mode, skipDupeCheck){
   var orderInput = document.getElementById('posOrderNo');
   var orderNoVal = orderInput ? orderInput.value.trim() : '';
 
-  // Same order no already used on another live invoice — a harder stop
-  // than the plain post-confirm below: typing "confirm" is required, not
-  // just Enter, before we'll even show the normal post dialog.
-  if (!skipDupeCheck && orderNoVal) {
+  // Same order no ever used on any invoice — including deleted ones — is
+  // a hard block, no override. A deleted invoice's QT number is retired
+  // for good, not freed up for reuse.
+  if (orderNoVal) {
     var dupe = posInvoices.some(function(r){
-      return !r.deleted && (!posEditingRecord || r.id !== posEditingRecord.id) && (r.orderNo || '').trim().toLowerCase() === orderNoVal.toLowerCase();
+      return (!posEditingRecord || r.id !== posEditingRecord.id) && (r.orderNo || '').trim().toLowerCase() === orderNoVal.toLowerCase();
     });
     if (dupe) {
-      posPendingDupeArgs = [mode];
       var dupeDetails = document.getElementById('posOrderDupeDetails');
-      if (dupeDetails) dupeDetails.textContent = 'Order No(QT) "' + orderNoVal + '" is already used on another invoice.';
-      var dupeInput = document.getElementById('posOrderDupeConfirmInput');
-      if (dupeInput) dupeInput.value = '';
-      posOrderDupeConfirmCheck();
+      if (dupeDetails) dupeDetails.textContent = 'Order No(QT) "' + orderNoVal + '" has already been used (even if that invoice was later deleted) — pick a different number.';
       var dupeModal = document.getElementById('posOrderDupeModal');
       var dupeBackdrop = document.getElementById('posOrderDupeBackdrop');
       if (dupeModal) dupeModal.style.display = '';
       if (dupeBackdrop) dupeBackdrop.style.display = '';
-      if (dupeInput) dupeInput.focus();
+      if (orderInput) orderInput.focus();
       return;
     }
   }
@@ -18502,6 +18498,10 @@ function posResetForm(){
   if (roomNoInput) { roomNoInput.value = ''; posRoomNoChanged(roomNoInput); }
   var invoiceDateInput = document.getElementById('posInvoiceDate');
   if (invoiceDateInput) { if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(posTodayISO(), true); else invoiceDateInput.value = posTodayISO(); }
+  var orderNoInput = document.getElementById('posOrderNo');
+  if (orderNoInput) orderNoInput.value = '';
+  var lineDescInput = document.getElementById('posLineDescription');
+  if (lineDescInput) lineDescInput.value = '';
   try { localStorage.removeItem('pos_invoice_draft'); } catch(e) {}
   posRecalcAll();
 }
