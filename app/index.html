@@ -2719,49 +2719,12 @@
   .role-viewer .viewer-lock-note{ display:block; }
 
   /* Restaurant role: only the Restaurant and Front Office tabs exist for
-     this account — every top-nav button (including the Settings gear) is
-     hidden, regardless of whatever per-button display rule
-     applyRolePermissions() would otherwise set. Front Office/Restaurant
-     themselves live outside .topnav entirely now (see #restaurantSidebar
-     below), so nothing here needs excluding anymore. See isRestaurantRole(). */
-  .role-restaurant .topnav .navbtn{
+     this account — every other nav button (including the Settings gear)
+     is hidden, regardless of whatever per-button display rule
+     applyRolePermissions() would otherwise set. See isRestaurantRole(). */
+  .role-restaurant .topnav .navbtn:not(#topNavFrontOffice):not(#topNavRestaurant){
     display:none !important;
   }
-
-  /* Front Office/Restaurant quick-access — deliberately NOT part of the
-     regular .topnav row: a small floating panel pinned to the screen
-     edge, visible (superadmin/restaurant roles only, see
-     applyRolePermissions) regardless of which view or how far down the
-     page you've scrolled. */
-  #restaurantSidebar{
-    position:fixed;
-    left:16px;
-    top:130px;
-    z-index:35;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    background:#1f2430;
-    border-radius:10px;
-    padding:10px;
-    box-shadow:0 8px 24px rgba(0,0,0,.3);
-  }
-  #restaurantSidebar .navbtn{
-    font-family:'Inter',sans-serif;
-    font-size:13px;
-    font-weight:600;
-    border:none;
-    border-left:3px solid transparent;
-    background:transparent;
-    color:#c7ccd6;
-    padding:8px 14px;
-    cursor:pointer;
-    white-space:nowrap;
-    text-align:left;
-    border-radius:6px;
-  }
-  #restaurantSidebar .navbtn:hover{ color:#fff; background:rgba(255,255,255,.08); }
-  #restaurantSidebar .navbtn.active{ color:#fff; background:rgba(59,130,246,.18); border-left-color:#3b82f6; }
 
 
   /* ===== Restaurant (native, ported from app/POS/index.html — no
@@ -2785,7 +2748,7 @@
   #restaurantNative tr.fo-row:hover{background:rgba(37,99,235,.07);}
 
   #restaurantNative .body-shell{display:flex; align-items:stretch;}
-  #restaurantNative .sidebar{width:216px; flex-shrink:0; background:#0f1115; display:flex; flex-direction:column; padding:10px 0;}
+  #restaurantNative .sidebar{width:216px; flex-shrink:0; background:#0f1115; display:flex; flex-direction:column; padding:10px 0; position:sticky; top:130px; align-self:flex-start; max-height:calc(100vh - 150px); overflow-y:auto;}
   #restaurantNative .sidebar-label{color:#5b6270; font-size:10.5px; font-weight:700; letter-spacing:.08em; padding:8px 18px 6px;}
   #restaurantNative .sidebar button{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:transparent; border:none; border-left:3px solid transparent; color:#9aa1ab; font-size:13.5px; font-weight:600; padding:11px 16px; cursor:pointer; white-space:nowrap;}
   #restaurantNative .sidebar button:hover{color:#fff; background:rgba(255,255,255,.05);}
@@ -2880,12 +2843,16 @@
 #page-pos-invoice .totals-card .row.big {font-weight:700; font-size:20px; padding-top:10px; border-top:1px solid var(--border-strong); margin-top:6px;}
 #page-pos-invoice .totals-card .row.small {color:var(--muted); font-size:12px;}
 #page-pos-invoice .totals-card .row.note {color:var(--muted); font-size:11px; font-style:italic; justify-content:flex-start;}
-#page-pos-invoice /* payments */
-  .pay-table {width:100%; border-collapse:collapse;}
-#page-pos-invoice .pay-table thead th {background:var(--headbg); color:#2c3e50; font-size:11px; font-weight:700; letter-spacing:.03em; text-align:left; padding:10px 14px;}
-#page-pos-invoice .pay-table tbody td {padding:10px 14px;}
-#page-pos-invoice .pay-table input, #page-pos-invoice .pay-table select {width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px;}
-#page-pos-invoice .add-payment-row {padding:0 16px 14px;}
+#page-pos-invoice /* payments — plain flex rows, not a table */
+  .pay-list {width:100%;}
+#page-pos-invoice .pay-row-head, #page-pos-invoice .pay-row {display:flex; align-items:center;}
+#page-pos-invoice .pay-row-head {background:var(--headbg); color:#2c3e50; font-size:11px; font-weight:700; letter-spacing:.03em;}
+#page-pos-invoice .pay-row-head > div, #page-pos-invoice .pay-row > div {padding:10px 14px; box-sizing:border-box;}
+#page-pos-invoice .pay-col-date {flex:0 0 200px;}
+#page-pos-invoice .pay-col-amt {flex:1; min-width:0;}
+#page-pos-invoice .pay-col-type {flex:0 0 220px;}
+#page-pos-invoice .pay-row input, #page-pos-invoice .pay-row select {width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px;}
+#page-pos-invoice .add-payment-row {padding:0 16px 14px; display:flex; gap:10px;}
 #page-pos-invoice .add-payment-btn {background:#fff; color:var(--green); border:1px solid var(--green); border-radius:6px; padding:7px 14px; font-size:13px; cursor:pointer;}
 #page-pos-invoice .pay-totals {display:flex; justify-content:space-between; align-items:flex-start; gap:24px; padding:0 20px 16px; flex-wrap:wrap;}
 #page-pos-invoice .pay-totals .totals-right {display:flex; gap:60px;}
@@ -2893,9 +2860,8 @@
 #page-pos-invoice .pay-totals .lbl {font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.03em;}
 #page-pos-invoice .pay-totals .val {font-size:20px; font-weight:700; margin-top:2px;}
 #page-pos-invoice .taxes-list {display:grid; grid-template-columns:1fr 1fr; gap:2px 28px; max-width:520px;}
-#page-pos-invoice .tax-item {display:flex; align-items:center; gap:8px; padding:5px 0; font-size:12.5px; cursor:pointer;}
+#page-pos-invoice .tax-item {display:flex; align-items:center; gap:8px; padding:5px 0; font-size:11px; cursor:pointer;}
 #page-pos-invoice .tax-item input[type="checkbox"] {accent-color:var(--blue); width:14px !important; height:14px !important; min-height:0; padding:0; margin:0; flex-shrink:0;}
-#page-pos-invoice .tax-item .code {font-weight:700; color:var(--text);}
 #page-pos-invoice .tax-item .name {color:var(--blue);}
 #page-pos-invoice .action-bar {display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px;}
 #page-pos-invoice .action-bar button {border:none; border-radius:6px; padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer;}
@@ -3206,6 +3172,8 @@
   <div class="hdr-row2">
     <div class="topnav">
       <button class="navbtn" id="topNavDashboard" onclick="showView('dashboard')">Dashboard</button>
+      <button class="navbtn" id="topNavFrontOffice" onclick="showView('frontoffice')" style="display:none;">Front Office</button>
+      <button class="navbtn" id="topNavRestaurant" onclick="showView('restaurant')" style="display:none;">Restaurant</button>
       <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail</button>
       <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
@@ -3228,11 +3196,6 @@
     </div>
   </div>
 </div>
-
-<nav id="restaurantSidebar" style="display:none;">
-  <button class="navbtn" id="topNavFrontOffice" onclick="showView('frontoffice')" style="display:none;">Front Office</button>
-  <button class="navbtn" id="topNavRestaurant" onclick="showView('restaurant')" style="display:none;">Restaurant</button>
-</nav>
 
 <div class="main">
 
@@ -4405,15 +4368,12 @@
     <div class="top-fields">
       <div class="col">
         <div class="lbl-input"><label>CUSTOMER 🔍</label>
-          <div class="with-pick">
-            <input type="text" id="posCustomer" value="Walkin Customer" oninput="posRecalcAll()">
-            <select id="posCustomerQuickPick" onchange="posCustomerQuickPick(this)" title="Quick pick" style="flex:0 0 auto; width:110px; border:1px solid var(--border-strong); border-radius:6px; padding:8px 6px; font-size:12px; background:#fff; color:var(--text);">
-              <option value="">Quick pick…</option>
-              <option value="Walkin Customer">Walkin Customer</option>
-              <option value="Room Service">Room Service</option>
-              <option value="Haji Sahab Guest">Haji Sahab Guest</option>
-            </select>
-          </div>
+          <input type="text" id="posCustomer" list="posCustomerOptions" value="Walkin Customer" oninput="posRecalcAll()">
+          <datalist id="posCustomerOptions">
+            <option value="Walkin Customer">
+            <option value="Room Service">
+            <option value="Haji Sahab Guest">
+          </datalist>
         </div>
         <div class="lbl-input disabled"><label>ROOM 🔍</label>
           <div class="with-pick"><input type="text" id="posRoom" value="209--1450" disabled><button class="pick-btn" disabled>Pick</button></div>
@@ -4554,28 +4514,33 @@
 
   <!-- Payments -->
   <div class="card">
-    <table class="pay-table">
-      <thead>
-        <tr><th>DATE</th><th>AMOUNT</th><th>TYPE</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><input type="date" class="pay-date-input" onchange="posRecalcAll()"></td>
-          <td><input type="text" inputmode="decimal" oninput="posRecalcAll()"></td>
-          <td><select>
+    <div class="pay-list">
+      <div class="pay-row-head">
+        <div class="pay-col-date">DATE</div>
+        <div class="pay-col-amt">AMOUNT</div>
+        <div class="pay-col-type">TYPE</div>
+      </div>
+      <div class="pay-rows">
+        <div class="pay-row">
+          <div class="pay-col-date"><input type="date" class="pay-date-input" onchange="posRecalcAll()"></div>
+          <div class="pay-col-amt"><input type="text" inputmode="decimal" class="pay-amount-input" oninput="posRecalcAll()"></div>
+          <div class="pay-col-type"><select class="pay-type-select">
             <option value="account_transfer">Account Transfer</option>
             <option value="card">Card</option>
             <option value="cash">Cash</option>
-          </select></td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="add-payment-row"><button type="button" class="add-payment-btn" onclick="posAddPayment()">+ Add payment</button></div>
+          </select></div>
+        </div>
+      </div>
+    </div>
+    <div class="add-payment-row">
+      <button type="button" class="add-payment-btn" onclick="posAddPayment()">+ Add payment</button>
+      <button type="button" class="add-payment-btn" onclick="posFullPayment()">Full Payment</button>
+    </div>
     <div class="pay-totals">
       <div class="taxes-list">
-        <label class="tax-item"><input type="checkbox" checked onchange="posRecalcAll()"><span class="code">23220</span> — <span class="name">GST 10%</span></label>
-        <label class="tax-item"><input type="checkbox" checked onchange="posRecalcAll()"><span class="code">23221</span> — <span class="name">Service Charges 10%</span></label>
-        <label class="tax-item"><input type="checkbox" onchange="posRecalcAll()"><span class="code">23222</span> — <span class="name">GST 10% on Food</span></label>
+        <label class="tax-item" data-code="23220"><input type="checkbox" checked onchange="posRecalcAll()"><span class="name">GST 10%</span></label>
+        <label class="tax-item" data-code="23221"><input type="checkbox" checked onchange="posRecalcAll()"><span class="name">Service Charges 10%</span></label>
+        <label class="tax-item" data-code="23222"><input type="checkbox" onchange="posRecalcAll()"><span class="name">GST 10% on Food</span></label>
       </div>
       <div class="totals-right">
         <div><div class="lbl">PAYMENTS</div><div class="val" style="font-size:14px; font-weight:600;">0.00</div></div>
@@ -15628,8 +15593,6 @@ function applyRolePermissions(){
   if(frontOfficeNav) frontOfficeNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
-  const restaurantSidebarEl = document.getElementById('restaurantSidebar');
-  if(restaurantSidebarEl) restaurantSidebarEl.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
@@ -16156,16 +16119,6 @@ function posRoomNoChanged(sel){
   posRecalcAll();
 }
 
-// Quick-pick shortcut for the two common customer types — still leaves the
-// text field free to type any other name, this just fills it.
-function posCustomerQuickPick(sel){
-  var val = sel.value;
-  sel.value = '';
-  if (!val) return;
-  var custInput = document.getElementById('posCustomer');
-  if (custInput) { custInput.value = val; posRecalcAll(); }
-}
-
 function posOpenMenuGroup(groupKey, title, pillEl){
   var src = document.querySelector('#page-manage-parts .cat-group[data-group="' + groupKey + '"] .parts tbody');
   var body = document.getElementById('posMenuPanelBody');
@@ -16292,7 +16245,7 @@ function posRecalcAll(){
   var taxRows = [];
   document.querySelectorAll('#page-pos-invoice .tax-item input[type=checkbox]:checked').forEach(function(cb){
     var item = cb.closest('.tax-item');
-    var code = item.querySelector('.code').textContent.trim();
+    var code = item.dataset.code || '';
     var name = item.querySelector('.name').textContent.trim();
     var m = name.match(/(\d+(\.\d+)?)%/);
     var rate = m ? parseFloat(m[1]) : 0;
@@ -16327,8 +16280,8 @@ function posRecalcAll(){
   if (totalsRows[3]) totalsRows[3].children[1].textContent = (discTotal + manualDiscAmt).toFixed(2);
 
   var paid = 0;
-  document.querySelectorAll('#page-pos-invoice .pay-table tbody tr').forEach(function(tr){
-    var amtInput = tr.children[1] ? tr.children[1].querySelector('input') : null;
+  document.querySelectorAll('#page-pos-invoice .pay-rows .pay-row').forEach(function(row){
+    var amtInput = row.querySelector('.pay-amount-input');
     paid += parseFloat((amtInput && amtInput.value || '').replace(/,/g, '')) || 0;
   });
   var balance = grandTotal - paid;
@@ -16356,19 +16309,45 @@ function posRecalcAll(){
 }
 
 function posAddPayment(){
-  var tbody = document.querySelector('#page-pos-invoice .pay-table tbody');
-  if (!tbody) return;
-  var rows = tbody.querySelectorAll('tr');
+  var container = document.querySelector('#page-pos-invoice .pay-rows');
+  if (!container) return;
+  var rows = container.querySelectorAll('.pay-row');
   var newRow = rows[rows.length - 1].cloneNode(true);
   newRow.querySelectorAll('input').forEach(function(inp){ if (inp.type !== 'date') inp.value = ''; });
   newRow.querySelectorAll('select').forEach(function(sel){ sel.selectedIndex = 0; });
   // Cloning a flatpickr-enhanced date cell copies its stale altInput/hidden
   // markup, not a working picker — rebuild that cell clean instead of
   // trying to strip flatpickr's artifacts back out of the clone.
-  if (newRow.children[0]) newRow.children[0].innerHTML = '<input type="date" class="pay-date-input" onchange="posRecalcAll()">';
-  tbody.appendChild(newRow);
-  var newDateInput = newRow.children[0] ? newRow.children[0].querySelector('.pay-date-input') : null;
+  var dateCell = newRow.querySelector('.pay-col-date');
+  if (dateCell) dateCell.innerHTML = '<input type="date" class="pay-date-input" onchange="posRecalcAll()">';
+  container.appendChild(newRow);
+  var newDateInput = newRow.querySelector('.pay-date-input');
   if (newDateInput) { newDateInput.value = posTodayISO(); posInitDatePicker(newDateInput); }
+  posRecalcAll();
+}
+
+// Fills whichever payment row still has no amount (or the last row, if
+// every row already has one) with exactly what's left to bring the
+// balance to zero — no manual subtraction needed for the common case of
+// paying the whole bill in one go.
+function posFullPayment(){
+  var totals = posRecalcAll();
+  var rows = document.querySelectorAll('#page-pos-invoice .pay-rows .pay-row');
+  if (!rows.length) return;
+  var targetRow = null;
+  rows.forEach(function(row){
+    if (targetRow) return;
+    var amtInput = row.querySelector('.pay-amount-input');
+    var val = parseFloat((amtInput && amtInput.value || '').replace(/,/g, '')) || 0;
+    if (!val) targetRow = row;
+  });
+  if (!targetRow) targetRow = rows[rows.length - 1];
+  var targetInput = targetRow.querySelector('.pay-amount-input');
+  if (!targetInput) return;
+  var currentVal = parseFloat((targetInput.value || '').replace(/,/g, '')) || 0;
+  var otherPaid = totals.paid - currentVal;
+  var needed = totals.grandTotal - otherPaid;
+  targetInput.value = (needed > 0 ? needed : 0).toFixed(2);
   posRecalcAll();
 }
 
@@ -16909,9 +16888,15 @@ var POS_RECEIPT_PRINT_CSS = 'body{font-family:"Courier New",monospace; font-size
 // deliberately NOT sharing the hotel page's @media print rules (those
 // stay untouched for every other hotel print flow: breakfast report,
 // checkout, etc.).
-function posPrintRecord(record){
+// existingWin: a window already opened synchronously at the original
+// click (see posConfirmPost) — opening it HERE instead would happen
+// after posPostInvoice's awaits (invoice numbering, the DB save), and by
+// then the browser no longer trusts it as "came from a real click", so
+// popup blockers silently kill it (or half-render it) more often than
+// not. Falls back to opening it here for any other caller.
+function posPrintRecord(record, existingWin){
   var html = posBuildReceiptHtml(record);
-  var w = window.open('', '_blank', 'width=340,height=640');
+  var w = existingWin || window.open('', '_blank', 'width=340,height=640');
   if (!w) { posShowToast('Enable pop-ups to print receipts.', 'error'); return; }
   w.document.write('<!DOCTYPE html><html><head><title>Receipt ' + posEscapeHtml(record.no) + '</title><style>' + POS_RECEIPT_PRINT_CSS + '</style></head><body>' + html + '</body></html>');
   w.document.close();
@@ -16919,7 +16904,14 @@ function posPrintRecord(record){
   setTimeout(function(){ try{ w.print(); }catch(e){} }, 250);
 }
 
-async function posPostInvoice(mode){
+async function posPostInvoice(mode, printWin){
+  // If a print popup was already opened synchronously at click time (see
+  // posConfirmPost) and posting fails validation after all, don't leave
+  // it sitting open and blank.
+  function abort(msg){
+    if (printWin) { try{ printWin.close(); }catch(e){} }
+    if (msg) posShowToast(msg, 'error');
+  }
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (!tbody) return;
   var items = [];
@@ -16937,14 +16929,14 @@ async function posPostInvoice(mode){
       pct: parseFloat(f.pct && f.pct.value) || 0
     });
   });
-  if (!items.length) { posShowToast('Add at least one item before posting.', 'error'); return; }
+  if (!items.length) { abort('Add at least one item before posting.'); return; }
 
   var custInput = document.getElementById('posCustomer');
   var customer = custInput ? custInput.value.trim() : '';
-  if (!customer) { posShowToast('Enter a customer name before posting.', 'error'); if (custInput) custInput.focus(); return; }
+  if (!customer) { abort('Enter a customer name before posting.'); if (custInput) custInput.focus(); return; }
 
   var totals = posRecalcAll();
-  if (totals.balance < -0.004) { posShowToast('Payments (' + totals.paid.toFixed(2) + ') exceed the total (' + totals.grandTotal.toFixed(2) + ') — fix the payment amount before posting.', 'error'); return; }
+  if (totals.balance < -0.004) { abort('Payments (' + totals.paid.toFixed(2) + ') exceed the total (' + totals.grandTotal.toFixed(2) + ') — fix the payment amount before posting.'); return; }
   var deptSel = document.getElementById('deptSelect');
   var deptText = (deptSel && deptSel.options[deptSel.selectedIndex] && deptSel.options[deptSel.selectedIndex].textContent.trim()) || 'FO';
   var tableInput = document.getElementById('posTable');
@@ -16956,7 +16948,7 @@ async function posPostInvoice(mode){
   var locationText = roomNoVal ? 'Restaurant' : 'Dining';
 
   var invNo = await posNextInvoiceNo();
-  if (invNo == null) { posShowToast('Could not get an invoice number — check your connection and try again.', 'error'); return; }
+  if (invNo == null) { abort('Could not get an invoice number — check your connection and try again.'); return; }
   var invLabel = 'SI-' + String(invNo).padStart(6, '0');
 
   var record = {
@@ -16981,10 +16973,10 @@ async function posPostInvoice(mode){
   };
 
   var saved = await posSaveInvoiceRecord(record, mode);
-  if (!saved) return;
+  if (!saved) { abort(); return; }
 
   if (mode === 'printpost' || mode === 'printonly') {
-    posPrintRecord(record);
+    posPrintRecord(record, printWin);
   }
 
   var msg = mode === 'printonly' ? 'Saved as print-only: ' :
@@ -17054,7 +17046,17 @@ function posConfirmPost(){
   if (!posPendingPostMode) return;
   var mode = posPendingPostMode;
   posCancelPost();
-  posPostInvoice(mode);
+  // Opened HERE, synchronously inside the real click/Enter that triggered
+  // this — posPostInvoice awaits an RPC + a DB write before it would ever
+  // reach the print step, and browsers stop trusting window.open() as
+  // "came from a click" the moment any await happens first, silently
+  // blocking or half-rendering it. See posPrintRecord.
+  var printWin = null;
+  if (mode === 'printpost' || mode === 'printonly') {
+    printWin = window.open('', '_blank', 'width=340,height=640');
+    if (!printWin) posShowToast('Enable pop-ups to print receipts.', 'error');
+  }
+  posPostInvoice(mode, printWin);
 }
 
 function posResetForm(){
@@ -17073,11 +17075,11 @@ function posResetForm(){
       if (menu) { menu.innerHTML = ''; menu.classList.remove('show'); }
     }
   }
-  var payBody = document.querySelector('#page-pos-invoice .pay-table tbody');
-  if (payBody) {
-    var prows = Array.prototype.slice.call(payBody.querySelectorAll('tr'));
+  var payContainer = document.querySelector('#page-pos-invoice .pay-rows');
+  if (payContainer) {
+    var prows = Array.prototype.slice.call(payContainer.querySelectorAll('.pay-row'));
     prows.forEach(function(row, i){ if (i > 0) row.remove(); });
-    var pfirst = payBody.querySelector('tr');
+    var pfirst = payContainer.querySelector('.pay-row');
     if (pfirst) pfirst.querySelectorAll('input').forEach(function(inp){
       if (inp.type !== 'date') { inp.value = ''; return; }
       if (inp._flatpickr) inp._flatpickr.setDate(posTodayISO(), true); else inp.value = posTodayISO();
