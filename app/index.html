@@ -2731,6 +2731,7 @@
      iframe, same page/session as the rest of the hotel app) ===== */
   #restaurantNative{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:#f4f5f7;
     border:1px solid var(--line);
     border-left:4px solid var(--ink);
     border-radius:6px;
@@ -2746,7 +2747,7 @@
   #restaurantNative tr.fo-row{cursor:pointer;}
   #restaurantNative tr.fo-row:hover{background:rgba(37,99,235,.07);}
 
-  #restaurantNative .body-shell{display:flex; align-items:stretch;}
+  #restaurantNative .body-shell{display:flex; align-items:stretch; flex-direction:row-reverse;}
   #restaurantNative .sidebar{width:216px; flex-shrink:0; background:#0f1115; display:flex; flex-direction:column; padding:10px 0;}
   #restaurantNative .sidebar-label{color:#5b6270; font-size:10.5px; font-weight:700; letter-spacing:.08em; padding:8px 18px 6px;}
   #restaurantNative .sidebar button{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:transparent; border:none; border-left:3px solid transparent; color:#9aa1ab; font-size:13.5px; font-weight:600; padding:11px 16px; cursor:pointer; white-space:nowrap;}
@@ -2856,7 +2857,7 @@
 #page-pos-invoice .pay-totals .val {font-size:20px; font-weight:700; margin-top:2px;}
 #page-pos-invoice .taxes-list {display:grid; grid-template-columns:1fr 1fr; gap:2px 28px; max-width:520px;}
 #page-pos-invoice .tax-item {display:flex; align-items:center; gap:8px; padding:5px 0; font-size:12.5px; cursor:pointer;}
-#page-pos-invoice .tax-item input {accent-color:var(--blue); width:14px; height:14px;}
+#page-pos-invoice .tax-item input[type="checkbox"] {accent-color:var(--blue); width:14px !important; height:14px !important; min-height:0; padding:0; margin:0; flex-shrink:0;}
 #page-pos-invoice .tax-item .code {font-weight:700; color:var(--text);}
 #page-pos-invoice .tax-item .name {color:var(--blue);}
 #page-pos-invoice .action-bar {display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px;}
@@ -4337,7 +4338,7 @@
   <div class="sidebar-spacer"></div>
 </nav>
 <div class="app-wrap" style="padding:18px;">
-<div id="page-pos-invoice" class="app-page">
+<div id="page-pos-invoice" class="app-page visible">
 
 <div class="wrap">
 
@@ -4370,6 +4371,7 @@
               <option value="">Quick pick…</option>
               <option value="Walkin Customer">Walkin Customer</option>
               <option value="Room Service">Room Service</option>
+              <option value="Haji Sahab Guest">Haji Sahab Guest</option>
             </select>
           </div>
         </div>
@@ -4531,11 +4533,6 @@
     <div class="add-payment-row"><button type="button" class="add-payment-btn" onclick="posAddPayment()">+ Add payment</button></div>
     <div class="pay-totals">
       <div class="taxes-list">
-        <label class="tax-item"><input type="checkbox" onchange="posRecalcAll()"><span class="code">19500</span> — <span class="name">Sales Tax Input</span></label>
-        <label class="tax-item"><input type="checkbox" onchange="posRecalcAll()"><span class="code">19501</span> — <span class="name">GST 17% on Goods</span></label>
-        <label class="tax-item"><input type="checkbox" onchange="posRecalcAll()"><span class="code">19502</span> — <span class="name">GST 8% on Goods</span></label>
-        <label class="tax-item"><input type="checkbox" onchange="posRecalcAll()"><span class="code">19503</span> — <span class="name">GST 5% on Goods</span></label>
-        <label class="tax-item"><input type="checkbox" onchange="posRecalcAll()"><span class="code">19504</span> — <span class="name">GST 10% on Goods</span></label>
         <label class="tax-item"><input type="checkbox" checked onchange="posRecalcAll()"><span class="code">23220</span> — <span class="name">GST 10%</span></label>
         <label class="tax-item"><input type="checkbox" checked onchange="posRecalcAll()"><span class="code">23221</span> — <span class="name">Service Charges 10%</span></label>
         <label class="tax-item"><input type="checkbox" onchange="posRecalcAll()"><span class="code">23222</span> — <span class="name">GST 10% on Food</span></label>
@@ -4549,7 +4546,7 @@
 
   <!-- Action buttons -->
   <div class="action-bar">
-    <button type="button" class="ab-blue" onclick="posRequestPost('post')">Post</button>
+    <button type="button" class="ab-blue" id="posPostBtn" onclick="posRequestPost('post')">Post</button>
     <button type="button" class="ab-blue" onclick="posRequestPost('printpost')">Print & Post</button>
     <button type="button" class="ab-gray-outline" onclick="posRequestPost('printonly')">Print-Only</button>
     <button type="button" class="ab-blue-outline" onclick="posSendToFrontOffice()">Send to Front Office</button>
@@ -4653,6 +4650,20 @@
         </tr>
       </thead>
       <tbody id="chargesSummaryBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card results-card" style="margin-top:16px;">
+    <div class="results-head">
+      <span class="rh-title">GUEST SUMMARY</span>
+      <span class="rh-count" id="csGuestCount">0 guest invoices</span>
+    </div>
+    <div class="h-sub" style="margin:-6px 0 12px;">Haji Sahab Guest invoices — items served, no payment, not counted in the totals above.</div>
+    <table class="rep">
+      <thead>
+        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th></tr>
+      </thead>
+      <tbody id="csGuestBody"></tbody>
     </table>
   </div>
 
@@ -16280,6 +16291,16 @@ function posRecalcAll(){
   var dueNote = document.querySelector('#page-pos-invoice .due');
   if (dueNote) dueNote.textContent = balance.toFixed(2);
 
+  // "Guest" customers (same /guest/i convention Receipts/Printed-Only
+  // already split into their own non-paying section) never count toward
+  // real revenue — the Post button says so up front instead of only
+  // showing up later in Charges Summary's Guest Summary section.
+  var postBtn = document.getElementById('posPostBtn');
+  if (postBtn) {
+    var custEl = document.getElementById('posCustomer');
+    postBtn.textContent = /guest/i.test((custEl && custEl.value) || '') ? 'Post Guest' : 'Post';
+  }
+
   posSaveDraft();
 
   return { subtotal: subtotal, taxTotal: taxTotal, grandTotal: grandTotal, discTotal: discTotal + manualDiscAmt, paid: paid, balance: balance };
@@ -16622,17 +16643,38 @@ function deletedRefresh(){
 function renderChargesSummary(){
   var body = document.getElementById('chargesSummaryBody');
   var countEl = document.getElementById('csCount');
+  var guestBody = document.getElementById('csGuestBody');
+  var guestCountEl = document.getElementById('csGuestCount');
   if (!body) return;
   var fromEl = document.getElementById('csFromDate');
   var toEl = document.getElementById('csToDate');
   var fromIso = fromEl && fromEl.value ? fromEl.value : null;
   var toIso = toEl && toEl.value ? toEl.value : null;
-  var rows = posInvoices.filter(function(r){
+  var inRange = posInvoices.filter(function(r){
     if (r.deleted || !r.posted) return false;
     if (fromIso && (!r.isoDate || r.isoDate < fromIso)) return false;
     if (toIso && (!r.isoDate || r.isoDate > toIso)) return false;
     return true;
   });
+  // Guest invoices (same /guest/i convention as Receipts/Printed-Only)
+  // never counted as real revenue — they get their own no-payment section
+  // instead of skewing the totals above.
+  var rows = inRange.filter(function(r){ return !/guest/i.test(r.customer || ''); });
+  var guestRows = inRange.filter(function(r){ return /guest/i.test(r.customer || ''); });
+
+  if (guestBody) {
+    guestBody.innerHTML = '';
+    guestRows.forEach(function(r){
+      var gtr = document.createElement('tr');
+      gtr.innerHTML = '<td>' + posEscapeHtml(r.no) + '</td>' +
+        '<td>' + posEscapeHtml(r.date) + '</td>' +
+        '<td>' + posEscapeHtml(r.room) + '</td>' +
+        '<td>' + posEscapeHtml(r.customer) + '</td>';
+      guestBody.appendChild(gtr);
+    });
+  }
+  if (guestCountEl) guestCountEl.textContent = guestRows.length + ' guest invoices';
+
   body.innerHTML = '';
   var totSub = 0, totTax = 0, totAmt = 0, totPaid = 0, totBal = 0;
   rows.forEach(function(r){
@@ -17176,9 +17218,6 @@ function posBootApp(){
     posInitDatePicker(document.getElementById(id));
   });
   posPullFromCloud();
-
-  // show first page by default
-  document.getElementById('page-pos-invoice').classList.add('visible');
 }
 
 </script>
