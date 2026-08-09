@@ -2725,6 +2725,21 @@
   .role-restaurant .topnav .navbtn:not(#topNavFrontOffice):not(#topNavRestaurant){
     display:none !important;
   }
+
+  /* Restaurant view: a true full-viewport takeover, not a boxed card
+     inside .main (which caps at 1280px with padding) — the embedded POS
+     needs the whole screen, same as opening it in its own tab would.
+     Covers the hotel app's own sticky header too (higher z-index); the
+     "Exit Restaurant" button in the markup is the only way back. */
+  #view-restaurant{
+    position:fixed;
+    inset:0;
+    z-index:500;
+    background:var(--paper);
+    max-width:none;
+    margin:0;
+    padding:0;
+  }
 </style>
 <script>
   (function(){
@@ -3946,14 +3961,8 @@
   </div>
 
   <div class="view" id="view-restaurant">
-
-    <h1>Restaurant</h1>
-    <div class="sub">The full restaurant POS, embedded — same separate app and data as /app/POS/index.html. Sign in here once per session with your restaurant account.</div>
-
-    <div class="panel accent-filters" style="padding:0; overflow:hidden;">
-      <iframe id="restaurantFrame" title="Restaurant POS" style="width:100%; height:80vh; border:0; display:block;"></iframe>
-    </div>
-
+    <button type="button" onclick="showView('frontoffice')" title="Back to the hotel app" style="position:fixed; top:12px; right:12px; z-index:501; background:#1f2430; color:#fff; border:none; border-radius:6px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.35);">✕ Exit Restaurant</button>
+    <iframe id="restaurantFrame" title="Restaurant POS" style="width:100%; height:100%; border:0; display:block;"></iframe>
   </div>
 
   <div id="foCollectBackdrop" onclick="foCancelCollect()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
