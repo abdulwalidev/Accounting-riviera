@@ -2752,7 +2752,7 @@
      independent of the Restaurant card's own (centered, max-width) box,
      not just "sticky within it". .app-wrap below reserves matching space
      so real content never renders underneath it. */
-  #restaurantNative .sidebar{width:216px; background:#0f1115; display:flex; flex-direction:column; padding:10px 0; position:fixed; left:0; top:130px; bottom:0; z-index:20; overflow-y:auto;}
+  #restaurantNative .sidebar{width:216px; background:#0f1115; display:flex; flex-direction:column; padding:10px 0; position:fixed; left:0; top:var(--restaurant-sidebar-top, 130px); bottom:0; z-index:45; overflow-y:auto;}
   #restaurantNative .sidebar-label{color:#5b6270; font-size:10.5px; font-weight:700; letter-spacing:.08em; padding:8px 18px 6px;}
   #restaurantNative .sidebar button{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:transparent; border:none; border-left:3px solid transparent; color:#9aa1ab; font-size:13.5px; font-weight:600; padding:11px 16px; cursor:pointer; white-space:nowrap;}
   #restaurantNative .sidebar button:hover{color:#fff; background:rgba(255,255,255,.05);}
@@ -2777,6 +2777,9 @@
 #page-pos-invoice .page-head h1 {font-size:24px; font-weight:600; margin:0;}
 #page-pos-invoice .card {background:var(--panel); border:1px solid var(--border); border-radius:8px; margin-bottom:16px;}
 #page-pos-invoice .top-fields {padding:16px 20px; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:14px 28px;}
+#page-pos-invoice .top-fields-live {display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px 24px; padding:16px 20px;}
+#page-pos-invoice .top-fields-live .lbl-input {flex-direction:column; align-items:stretch; gap:5px;}
+#page-pos-invoice .top-fields-live .lbl-input label {width:auto; text-align:left;}
 #page-pos-invoice .field label {display:block; font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.02em; margin-bottom:5px; text-align:right;}
 #page-pos-invoice .field-row {display:grid; grid-template-columns:110px 1fr; align-items:start; gap:0;}
 #page-pos-invoice .field-row label {grid-column:1; padding-top:8px;}
@@ -4340,9 +4343,9 @@
   <button onclick="posShowApp('page-qty-summary', this)"><span class="sb-icon">📦</span><span class="sb-text">Quantity Summary</span></button>
   <button onclick="posShowApp('page-printed-only', this)"><span class="sb-icon">🖨️</span><span class="sb-text">Printed-Only</span></button>
   <button onclick="posShowApp('page-front-office', this)"><span class="sb-icon">🛎️</span><span class="sb-text">Front Office Pending</span></button>
+  <div class="sidebar-spacer"></div>
   <button onclick="posShowApp('page-manage-parts', this)"><span class="sb-icon">🍽️</span><span class="sb-text">Manage Menu</span></button>
   <button onclick="posShowApp('page-deleted', this)"><span class="sb-icon">🗑️</span><span class="sb-text">Deleted</span></button>
-  <div class="sidebar-spacer"></div>
 </nav>
 <div class="app-wrap" style="padding:18px;">
 <div id="page-pos-invoice" class="app-page visible">
@@ -4369,16 +4372,27 @@
 
   <!-- Top field block -->
   <div class="card">
-    <div class="top-fields">
+    <div class="top-fields-live">
+      <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>CUSTOMER 🔍</label>
+        <input type="text" id="posCustomer" list="posCustomerOptions" value="Walkin Customer" oninput="posRecalcAll()">
+        <datalist id="posCustomerOptions">
+          <option value="Walkin Customer">
+          <option value="Room Service">
+          <option value="Haji Sahab Guest">
+        </datalist>
+      </div>
+      <div class="lbl-input" style="flex:0 0 170px;"><label>ORDER #</label><input type="text" id="posOrderNo"></div>
+      <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><input type="text" id="posRoomNoField" list="posRoomOptions" autocomplete="off" oninput="posRoomNoChanged(this)"><datalist id="posRoomOptions"></datalist></div>
+      <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>Discription(extra notes)</label><input type="text" id="posLineDescription"></div>
+    </div>
+
+    <!-- The rest of this generic invoicing template's fields (Room/Address/
+         Company/Due Amount/Department/Warehouse/Tax Inv#/TR Type/Folio/
+         Table/Officer/Disc%/Mobile, etc.) don't apply to this restaurant
+         and are all disabled — kept in markup for possible future use,
+         hidden as a whole block rather than fighting layout with them. -->
+    <div class="top-fields" style="display:none;">
       <div class="col">
-        <div class="lbl-input"><label>CUSTOMER 🔍</label>
-          <input type="text" id="posCustomer" list="posCustomerOptions" value="Walkin Customer" oninput="posRecalcAll()">
-          <datalist id="posCustomerOptions">
-            <option value="Walkin Customer">
-            <option value="Room Service">
-            <option value="Haji Sahab Guest">
-          </datalist>
-        </div>
         <div class="lbl-input disabled"><label>ROOM 🔍</label>
           <div class="with-pick"><input type="text" id="posRoom" value="209--1450" disabled><button class="pick-btn" disabled>Pick</button></div>
         </div>
@@ -4413,13 +4427,11 @@
         </select></div>
         <div class="lbl-input disabled"><label>INVOICE DATE</label><input type="text" value="06-08-2026" title="dd-mm-yy" disabled></div>
         <div class="lbl-input disabled"><label>PAX</label><input type="number" disabled></div>
-        <div class="lbl-input"><label>ORDER #</label><input type="text" id="posOrderNo"></div>
         <div class="lbl-input disabled"><label>FOLIO</label><select disabled>
           <option value="1">BTC Folio</option>
           <option value="2" selected>Folio 2</option>
           <option value="3">Folio 3</option>
         </select></div>
-        <div class="lbl-input"><label>Room no</label><select id="posRoomNoField" onchange="posRoomNoChanged(this)"><option value="">— Select room —</option></select></div>
       </div>
 
       <div class="col">
@@ -4430,7 +4442,6 @@
           <option value="GM">GM</option>
         </select></div>
         <div class="lbl-input disabled"><label>DISC %</label><input type="text" disabled></div>
-        <div class="lbl-input"><label>Discription(extra notes)</label><input type="text"></div>
         <div class="lbl-input disabled"><label>MOBILE</label><input type="tel" disabled></div>
       </div>
     </div>
@@ -4448,13 +4459,13 @@
           <th style="width:120px;">PRICE</th>
           <th style="width:100px;">%</th>
           <th class="num" style="width:110px;">EXTENDED</th>
-          <th style="width:36px;"></th>
+          <th style="width:36px;">🗑️</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td class="num-col">1.</td>
-          <td><div class="search-wrap"><input type="text" class="pos-item-input" placeholder="Type to search 213 menu items…" autocomplete="off" oninput="posRecalcAll()"><span class="icon" onclick="posClearItemInput(this)" title="Clear">✕</span><div class="ac-menu"></div></div></td>
+          <td><div class="search-wrap"><input type="text" class="pos-item-input" autocomplete="off" oninput="posRecalcAll()"><span class="icon" onclick="posClearItemInput(this)" title="Clear">✕</span><div class="ac-menu"></div></div></td>
           <td><input type="text" oninput="posRecalcAll()" onkeydown="posRowFieldEnter(event,this)"></td>
           <td>
             <div class="qty-cell">
@@ -4559,7 +4570,7 @@
     <button type="button" class="ab-blue" onclick="posRequestPost('printpost')">Print & Post</button>
     <button type="button" class="ab-gray-outline" onclick="posRequestPost('printonly')">Print-Only</button>
     <button type="button" class="ab-blue-outline" onclick="posSendToFrontOffice()">Send to Front Office</button>
-    <button type="button" class="ab-yellow" onclick="posResetForm()">New</button>
+    <button type="button" class="ab-yellow" onclick="posRequestNewForm()">New</button>
   </div>
 
   <!-- Recent invoices -->
@@ -15904,6 +15915,7 @@ async function posPullFromCloud(){
       renderQuantitySummary();
     }catch(e){
       console.error('POS cloud pull failed', e);
+      posShowToast('Could not load restaurant data — check your connection and try again.', 'error');
     }finally{
       posPullInFlight = null;
     }
@@ -16104,22 +16116,19 @@ var POS_ROOMS = (function(){
 })();
 
 function posBuildRoomOptions(){
-  var sel = document.getElementById('posRoomNoField');
-  if (!sel) return;
-  var html = '<option value="">— Select room —</option>';
-  var floors = [];
-  POS_ROOMS.forEach(function(r){ if (floors.indexOf(r.floor) === -1) floors.push(r.floor); });
-  floors.forEach(function(floor){
-    html += '<optgroup label="' + posEscapeHtml(floor) + '">';
-    POS_ROOMS.filter(function(r){ return r.floor === floor; }).forEach(function(r){
-      html += '<option value="' + posEscapeHtml(r.no) + '">' + posEscapeHtml(r.no) + '</option>';
-    });
-    html += '</optgroup>';
-  });
-  sel.innerHTML = html;
+  // <datalist> has no <optgroup> support (unlike <select>) — flat list,
+  // grouping is lost, but the field is typeable now so that matters less.
+  var list = document.getElementById('posRoomOptions');
+  if (!list) return;
+  list.innerHTML = POS_ROOMS.map(function(r){ return '<option value="' + posEscapeHtml(r.no) + '">'; }).join('');
 }
 
-function posRoomNoChanged(sel){
+function posRoomNoChanged(input){
+  var val = (input.value || '').trim();
+  var isValid = !val || POS_ROOMS.some(function(r){ return r.no.toLowerCase() === val.toLowerCase(); });
+  input.style.borderColor = isValid ? '' : '#dc2626';
+  input.style.background = isValid ? '' : '#fdecec';
+  input.style.color = isValid ? '' : '#7a1d1d';
   posRecalcAll();
 }
 
@@ -16336,6 +16345,7 @@ function posAddPayment(){
 // paying the whole bill in one go.
 function posFullPayment(){
   var totals = posRecalcAll();
+  if (totals.grandTotal <= 0) { posShowToast('Add at least one item before setting a full payment — there\'s nothing to pay yet.', 'error'); return; }
   var rows = document.querySelectorAll('#page-pos-invoice .pay-rows .pay-row');
   if (!rows.length) return;
   var targetRow = null;
@@ -17063,6 +17073,30 @@ function posConfirmPost(){
   posPostInvoice(mode, printWin);
 }
 
+// "New" wipes whatever's in the form — if that's real unsaved data (an
+// item typed, a non-default customer, or a payment amount) that never
+// got posted/printed/sent anywhere, confirm first instead of silently
+// losing it.
+function posRequestNewForm(){
+  var hasData = false;
+  var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
+  if (tbody) {
+    tbody.querySelectorAll('.pos-item-input').forEach(function(inp){ if (inp.value.trim()) hasData = true; });
+  }
+  var custInput = document.getElementById('posCustomer');
+  if (custInput && custInput.value.trim() && custInput.value.trim() !== 'Walkin Customer') hasData = true;
+  document.querySelectorAll('#page-pos-invoice .pay-amount-input').forEach(function(inp){
+    if ((parseFloat((inp.value || '').replace(/,/g, '')) || 0) > 0) hasData = true;
+  });
+
+  if (!hasData) { posResetForm(); return; }
+
+  showConfirmModal(
+    'This invoice has data that hasn\'t been posted, printed, or sent anywhere yet. Clear it and start a new one?',
+    { title: 'Discard unsaved invoice?', okText: 'Discard', cancelText: 'Keep editing', danger: true }
+  ).then(function(proceed){ if (proceed) posResetForm(); });
+}
+
 function posResetForm(){
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (tbody) {
@@ -17094,7 +17128,7 @@ function posResetForm(){
   var custInput = document.getElementById('posCustomer');
   if (custInput) custInput.value = 'Walkin Customer';
   var roomNoInput = document.getElementById('posRoomNoField');
-  if (roomNoInput) roomNoInput.value = '';
+  if (roomNoInput) { roomNoInput.value = ''; posRoomNoChanged(roomNoInput); }
   try { localStorage.removeItem('pos_invoice_draft'); } catch(e) {}
   posRecalcAll();
 }
@@ -17251,10 +17285,28 @@ function posInitDatePicker(el){
 }
 
 var posAppBooted = false;
+// Measures the hotel header's real rendered height instead of guessing a
+// fixed px offset for the sidebar — closes any gap/overlap between the
+// two regardless of how tall the 3-row header actually turns out to be
+// (theme, font-loading, window width can all shift it slightly).
+function posSyncSidebarOffset(){
+  var header = document.querySelector('.app-header');
+  if (!header) return;
+  document.documentElement.style.setProperty('--restaurant-sidebar-top', header.getBoundingClientRect().height + 'px');
+}
+
 function posBootApp(){
   if (posAppBooted) return; // showView('restaurant') can fire many times — only boot once
   posAppBooted = true;
 
+  posSyncSidebarOffset();
+  // Re-measure a moment later too — web fonts/late layout shifts can change
+  // the header's real height slightly after the very first measurement,
+  // which would otherwise leave the sidebar starting a few px too high
+  // (rendering under the header) until something else triggered a resize.
+  setTimeout(posSyncSidebarOffset, 400);
+  setTimeout(posSyncSidebarOffset, 1500);
+  window.addEventListener('resize', posSyncSidebarOffset);
   document.querySelectorAll('#page-pos-invoice .pos-item-input').forEach(function(inp){ posSetupAutocomplete(inp); });
   posBuildRoomOptions();
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
