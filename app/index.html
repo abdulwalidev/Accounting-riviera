@@ -2834,13 +2834,14 @@
 #page-pos-invoice .search-wrap input {padding-right:34px;}
 #page-pos-invoice .search-wrap .icon {position:absolute; right:8px; color:var(--muted); font-size:13px; cursor:pointer;}
 #page-pos-invoice .search-wrap .icon:hover {color:#c53030;}
-#page-pos-invoice .ac-menu {position:absolute; top:100%; left:0; right:0; margin-top:4px; background:#fff; border:1px solid var(--border-strong); border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,.14); max-height:260px; overflow-y:auto; z-index:60; display:none;}
+#page-pos-invoice .ac-menu {position:absolute; top:100%; left:0; right:0; margin-top:6px; background:#fff; border:1px solid var(--border-strong); border-radius:8px; box-shadow:0 10px 28px rgba(0,0,0,.18); max-height:320px; overflow-y:auto; z-index:60; display:none; padding:6px;}
 #page-pos-invoice .ac-menu.show {display:block;}
-#page-pos-invoice .ac-item {padding:8px 12px; font-size:12.5px; cursor:pointer; display:flex; justify-content:space-between; gap:10px;}
+#page-pos-invoice .ac-item {padding:10px 12px; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; gap:10px; border-radius:6px;}
 #page-pos-invoice .ac-item:hover, #page-pos-invoice .ac-item.active {background:var(--blue); color:#fff;}
 #page-pos-invoice .ac-item .ac-price {color:var(--muted); font-variant-numeric:tabular-nums; flex-shrink:0;}
 #page-pos-invoice .ac-item:hover .ac-price, #page-pos-invoice .ac-item.active .ac-price {color:#fff;}
-#page-pos-invoice .ac-empty {padding:10px 12px; font-size:12.5px; color:var(--muted);}
+#page-pos-invoice .ac-empty {padding:12px; font-size:12.5px; color:var(--muted);}
+#page-pos-invoice .pos-item-input.pos-item-violation {background:#fef2f2; border-color:#c53030 !important; color:#c53030;}
 #page-pos-invoice .ext-col {text-align:right; padding-right:16px !important; font-weight:600;}
 #page-pos-invoice .del-col {text-align:center;}
 #page-pos-invoice .row-del-btn {background:transparent; border:none; color:#c53030; font-size:14px; font-weight:700; cursor:pointer; padding:4px 8px; border-radius:4px;}
@@ -2987,12 +2988,12 @@
 #page-charges-summary .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
 #page-charges-summary .results-head .rh-count {font-size:12px; color:var(--blue);}
 #page-charges-summary table.rep {width:100%; border-collapse:collapse; font-size:13px;}
-#page-charges-summary table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 6px; border-bottom:1px solid var(--border);}
+#page-charges-summary table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 6px; border-bottom:none;}
 #page-charges-summary table.rep th.num, #page-charges-summary table.rep td.num {text-align:right;}
-#page-charges-summary table.rep td {padding:9px 6px; border-bottom:1px solid #f0f1f3;}
+#page-charges-summary table.rep td {padding:9px 6px; border-bottom:none;}
 #page-charges-summary table.rep td a {color:var(--blue); text-decoration:none;}
-#page-charges-summary table.rep tr.subtotal td {font-weight:700; border-bottom:1px solid var(--border-strong);}
-#page-charges-summary table.rep tr.subtotal.grand td {border-top:1px solid var(--border-strong); border-bottom:2px solid var(--border-strong);}
+#page-charges-summary table.rep tr.subtotal td {font-weight:700; border-bottom:none;}
+#page-charges-summary table.rep tr.subtotal.grand td {border-top:none; border-bottom:none;}
 #page-charges-summary .footnote {display:flex; justify-content:space-between; margin-top:14px; font-size:11.5px; color:var(--muted); align-items:flex-start; gap:20px;}
 
 /* ===== Quantity Summary ===== */
@@ -3075,6 +3076,7 @@
 #page-front-office table.rep td, #page-deleted table.rep td, #page-qty-summary table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
 #page-front-office table.rep td.num, #page-deleted table.rep td.num, #page-qty-summary table.rep td.num {text-align:right;}
 #page-front-office table.rep td a, #page-deleted table.rep td a, #page-qty-summary table.rep td a {color:var(--blue); text-decoration:none;}
+#page-qty-summary table.rep th, #page-qty-summary table.rep td {border-bottom:none;}
 
 /* ===== Pending Payments / Previous Day — these two never got their own
    themed block (unlike every other ported page above), so .card/.rep/etc.
@@ -4577,12 +4579,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card">
     <div class="top-fields-live">
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>CUSTOMER 🔍</label>
-        <input type="text" id="posCustomer" list="posCustomerOptions" value="Walkin Customer" oninput="posRecalcAll()" onclick="posOpenDatalist(this)">
-        <datalist id="posCustomerOptions">
-          <option value="Walkin Customer">
-          <option value="Room Service">
-          <option value="Haji Sahab Guest">
-        </datalist>
+        <div class="search-wrap" style="flex:1;"><input type="text" id="posCustomer" value="Walkin Customer" autocomplete="off" oninput="posRecalcAll()" style="width:100%;"><div class="ac-menu"></div></div>
       </div>
       <div class="lbl-input" style="flex:0 0 170px;"><label>ORDER NO(QT)</label><div class="with-pick"><input type="text" id="posOrderNo"><button type="button" class="pick-btn" onclick="posAutoNextOrderNo()" title="Fill in previous Order No(QT) + 1">+1</button></div></div>
       <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><input type="text" id="posRoomNoField" list="posRoomOptions" autocomplete="off" oninput="posRoomNoChanged(this)" onclick="posOpenDatalist(this)"><datalist id="posRoomOptions"></datalist></div>
@@ -4780,7 +4777,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card">
     <div class="lc-title">Recent Invoices</div>
     <table class="simple">
-      <thead><tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
       <tbody id="recentInvoicesBody"></tbody>
     </table>
   </div>
@@ -4788,7 +4785,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card" id="guestInvoicesCard" style="display:none; margin-top:14px;">
     <div class="lc-title">Guests (Non-Paying)</div>
     <table class="simple">
-      <thead><tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
       <tbody id="guestInvoicesBody"></tbody>
     </table>
   </div>
@@ -4979,10 +4976,14 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <span class="rh-title">RESULTS</span>
       <span class="rh-count" id="qsCount">0 items</span>
     </div>
+    <div style="display:flex; gap:10px; margin-bottom:14px;">
+      <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">FOOD SALE</div><div id="qsFoodSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
+      <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">BEVERAGE SALE</div><div id="qsBevSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
+    </div>
     <table class="rep">
       <thead>
         <tr>
-          <th>ITEM</th><th class="num">QTY</th><th class="num">AMOUNT</th>
+          <th>ITEM</th><th class="num">QTY</th><th class="num">AMOUNT</th><th class="num">TAX</th>
         </tr>
       </thead>
       <tbody id="qtySummaryBody"></tbody>
@@ -5261,6 +5262,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <button onclick="mpFilterCat('Restaurant:Soups', this)">Soups (8)</button>
     <button onclick="mpFilterCat('Restaurant:Steaks', this)">Steaks (6)</button>
     <button onclick="mpFilterCat('Restaurant:Tandoor', this)">Tandoor (8)</button>
+    <button id="mpExtrasTabBtn" onclick="mpFilterCat('Restaurant:Extras', this)">Extras (0)</button>
   </div>
 
   <div class="card filters-card">
@@ -5699,10 +5701,27 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
   </details>
 
-  <div class="new-note">ⓘ 10 blank placeholder slots and 1 item with an unreadable name in the source spreadsheet (Pasta, T-059, Rs. 1,099.00) were left out — check the original file for that one.</div>
+  <details class="cat-group card" data-group="Restaurant:Extras" open style="margin-bottom:12px; padding:0;">
+    <summary style="cursor:pointer; padding:12px 16px; font-weight:600; font-size:13.5px; display:flex; justify-content:space-between; align-items:center;">
+      <span>Extras</span><span class="cnt" id="mpExtrasCount" style="color:var(--muted); font-weight:400; font-size:12px;">0 items</span>
+    </summary>
+    <div style="padding:0 16px 14px; display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+      <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12px; color:var(--muted); margin-bottom:4px;">Item name</label><input type="text" id="mpExtraNameInput" placeholder="e.g. Special Combo Platter" style="width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;"></div>
+      <div style="width:140px;"><label style="display:block; font-size:12px; color:var(--muted); margin-bottom:4px;">Price</label><input type="text" inputmode="decimal" id="mpExtraPriceInput" placeholder="0.00" style="width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;"></div>
+      <button class="btn-primary" onclick="posAddManualExtraItem()">＋ Add</button>
+    </div>
+    <div class="table-wrap" style="padding:0 4px 8px;">
+      <table class="parts">
+        <thead><tr><th style="width:90px;">Part #</th><th>Item</th><th class="num" style="width:120px;">Price</th></tr></thead>
+        <tbody id="mpExtrasBody"></tbody>
+      </table>
+    </div>
+  </details>
+
+  <div class="new-note">ⓘ 10 blank placeholder slots and 1 item with an unreadable name in the source spreadsheet (Pasta, T-059, Rs. 1,099.00) were left out — check the original file for that one. Items typed at the till that aren't on the menu land in <b>Extras</b> above automatically — or add one directly here.</div>
 
   <div class="save-row">
-    <button class="btn-primary">＋ Add new item</button>
+    <button class="btn-primary" onclick="posOpenAddItemForm()">＋ Add new item</button>
   </div>
 
 </div>
@@ -16517,7 +16536,7 @@ function posRenderRecentInvoices(){
   var hasGuest = false;
   posInvoices.forEach(function(record){
     if (record.deleted || !record.posted) return; // print-only drafts don't belong in Recent Invoices — only actually posted ones
-    var row = posBuildInvoiceRow(record);
+    var row = posBuildInvoiceRow(record, false, true);
     if (/guest/i.test(record.customer || '') && guestBody) { guestBody.appendChild(row); hasGuest = true; }
     else recentBody.appendChild(row);
   });
@@ -16575,6 +16594,82 @@ var mpCurCat = 'all';
 var mpSearchBox = document.getElementById('mpSearch');
 if (mpSearchBox) mpSearchBox.addEventListener('input', mpRefresh);
 
+// Items typed that aren't in POS_MENU_ITEMS get added here on posting, so
+// next time they're recognized as real menu items instead of violations.
+var POS_EXTRA_ITEMS = (function(){
+  try {
+    var raw = localStorage.getItem('pos_extra_menu_items');
+    var parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch(e) { return []; }
+})();
+
+function posSaveExtraItems(){
+  try { localStorage.setItem('pos_extra_menu_items', JSON.stringify(POS_EXTRA_ITEMS)); } catch(e) {}
+}
+
+function posAllMenuItems(){
+  return POS_MENU_ITEMS.concat(POS_EXTRA_ITEMS);
+}
+
+function posAddExtraMenuItems(items){
+  var added = false;
+  items.forEach(function(it){
+    var name = (it.name || '').trim();
+    if (!name) return;
+    var exists = posAllMenuItems().some(function(m){ return m[0].toLowerCase() === name.toLowerCase(); });
+    if (exists) return;
+    POS_EXTRA_ITEMS.push([name, it.price || 0]);
+    added = true;
+  });
+  if (added) posRenderExtrasMenu();
+}
+
+function posRenderExtrasMenu(){
+  posSaveExtraItems();
+  var body = document.getElementById('mpExtrasBody');
+  var countEl = document.getElementById('mpExtrasCount');
+  var tabBtn = document.getElementById('mpExtrasTabBtn');
+  var n = POS_EXTRA_ITEMS.length;
+  if (body) {
+    body.innerHTML = '';
+    POS_EXTRA_ITEMS.forEach(function(it, i){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>EX-' + String(i + 1).padStart(3, '0') + '</td><td>' + posEscapeHtml(it[0]) + '</td><td class="num">' + (it[1] || 0).toFixed(2) + '</td>';
+      body.appendChild(tr);
+    });
+  }
+  if (countEl) countEl.textContent = n + ' item' + (n === 1 ? '' : 's');
+  if (tabBtn) tabBtn.textContent = 'Extras (' + n + ')';
+  if (typeof mpRefresh === 'function') mpRefresh();
+}
+
+function posAddManualExtraItem(){
+  var nameInput = document.getElementById('mpExtraNameInput');
+  var priceInput = document.getElementById('mpExtraPriceInput');
+  if (!nameInput) return;
+  var name = nameInput.value.trim();
+  var price = parseFloat(priceInput && priceInput.value) || 0;
+  if (!name) { posShowToast('Enter an item name first.', 'error'); return; }
+  var exists = posAllMenuItems().some(function(m){ return m[0].toLowerCase() === name.toLowerCase(); });
+  if (exists) { posShowToast('"' + name + '" is already in the menu.', 'error'); return; }
+  POS_EXTRA_ITEMS.push([name, price]);
+  posRenderExtrasMenu();
+  nameInput.value = '';
+  if (priceInput) priceInput.value = '';
+  posShowToast('Added "' + name + '" to Extras.');
+}
+
+function posOpenAddItemForm(){
+  var details = document.querySelector('#page-manage-parts .cat-group[data-group="Restaurant:Extras"]');
+  if (details) {
+    details.open = true;
+    details.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  var nameInput = document.getElementById('mpExtraNameInput');
+  if (nameInput) nameInput.focus();
+}
+
 var POS_MENU_ITEMS = [['Plain Fries',350],['Buffalo Wings 5 Pieces',799],['Crispy Wings 5 Pieces',550],['Special Loaded Fries',950],['Pizza Fries',850],['Spanish Latte Cold',849],['Spanish Latte Hot',899],['Hazelnut Latte Cold',849],['Hazelnut Latte Hot',899],['Caramel Latte Cold',849],['Caramel Latte Hot',899],['Cortado Hot',799],['Cortado Cold',849],['Apple Cinnamon Cold',899],['Apple Cinnamon Hot',849],['Moca Latte Hot',849],['Moca Latte Cold',879],['Americano Cold',749],['Americano Hot',749],['Caramel Latte Cold',849],['Caramel Latte Hot',899],['Cortado Hot',799],['Cortado Cold',849],['Apple Cinnamon Cold',899],['Apple Cinnamon Hot',849],['Moca Latte Hot',849],['Moca Latte Cold',879],['Americano Cold',749],['Americano Hot',749],['Blueberry Fizz',749],['Strawberry Fizz',749],['Pineapple Fizz',699],['Lemon Ginger Fizz',699],['Chicken Tikka',799],['Chicken Botti One Plate',2450],['Chicken Malai Boti',2650],['Chicken Seekh Kabab (6pcs)',2400],['Beef Bihari Boti (1 plate)',3050],['Mutton Chops (1 kg)',4500],['Mineral Water Small',120],['Mineral Water Large',200],['Soft Drink Can',220],['Diet Can',250],['Mix Tea',250],['Separate Tea',250],['Green Tea',150],['Ice Tea (Peach, Lemon)',599],['Mint Margarita',499],['Pina Colada',699],['Fruit Smoothies',749],['Riviera Resort Special Shake',899],['Kit Kat Shake',799],['Fresh Seasonal Juice',699],['Milk Shake',599],['Egg Omelette',250],['Cheese Omelette',350],['Mushroom Omelette',350],['Fried Egg',249],['Boiled Egg',199],['Lahori Chanay',599],['Aalo Bujiya',599],['Aalo Qeema',159],['Paratha',159],['Naan',60],['Toasted Bread',150],['French Toast',299],['Butter',150],['Jam',200],['Honey',100],['Achaar',149],['Halwa (Plate)',200],['Halwa (Bowl)',500],['Kung Pao Chicken with Rice',1400],['Chicken Manchurian with Rice',999],['Chicken Shashlik with Rice',1350],['Chicken Chilly Dry with Rice',1500],['Beef Chilly Dry with Rice',1299],['Chicken Fried Rice',1100],['Egg Fried Rice',1000],['Garlic Rice',1000],['Plain Rice',800],['Chicken Black Pepper',1400],['Chicken Almond',1400],['Chicken Cashew Nuts',1400],['Mongolian Chicken',1400],['Chicken Vegetable',1300],['Chicken Chowmein',1400],['Vegetable Chowmein',1350],['Mongolian Chowmein',1500],['Vegetable Fried Rice',900],['Latte',699],['Cappuccino',799],['Espresso',0],['Single',499],['Double',699],['Hot Chocolate',749],['Beef Burger',999],['Beef Jalapeno Burger',1089],['Grill Chicken Burger',899],['Riviera Special Grilled Chicken Burger',999],['Grilled Chicken Cheese Sandwich',799],['Chicken Club Sandwich',900],['Riviera Special Sandwich',1049],['Trout Fish (1 Kg)',6000],['Zinger Burger',1000],['Chicken Karahi Half',1599],['Chicken Achari Karahi Half',1199],['Chicken Makhani Karahi Half',1249],['Chicken Handi Half',1399],['Chicken Handi Makhani Half',1449],['Riviera Resort Special Chicken Handi Half',1549],['Chicken Mughlai Handi Half',1499],['Mutton Makhani Karahi Half',2500],['Mutton Karahi Half',2500],['Chicken Ginger Half',1299],['Chicken Karahi Full',2450],['Chicken Achari Karahi Full',2249],['Chicken Makhani Karahi Full',2699],['Chicken Handi Full',2749],['Chicken Handi Makhani Full',2849],['Riviera Resort Special Chicken Handi Full',2799],['Chicken Mughlai Handi Full',3099],['Mutton Makhani Karahi Full',4800],['Mutton Karahi Full',4800],['Chicken Ginger Full',2499],['Chicken Kabab Karahi',1249],['Riviera Resort Special Daal Mash',699],['Mix Vegetable',649],['Chicken Biryani',799],['Kabuli Pulao',999],['Black Forest Cake 1 Pound',1499],['Black Forest Cake 2 Pound',2999],['Pineapple Cake 1 Pound',1399],['Pineapple Cake 2 Pound',2599],['Chocolate Cake 1 Pound',1599],['Chocolate Cake 2 Pound',2999],['Caramel Pudding (per piece)',400],['Walnut Brownie',499],['Chocolate Brownie',499],['Black Forest Cake',400],['Pineapple Cake',499],['Chocolate Cake',499],['Chocolate Fudge Cake',399],['Chocolate Fudge Cake (1 Pound)',1699],['Kit Kat Cake (per pc)',399],['Kit Kat Cake (1 Pound)',1699],['Red Velvet Cake (per pc)',399],['Red Velvet Cake (1 Pound)',1699],['Blueberry Cake (per pc)',399],['Blueberry Cake (per Pound)',1599],['Swiss Roll',350],['Waffles',350],['Donuts',350],['Banana Slice',120],['Cup Cake',250],['3 Milk Cake',400],['Biscuit (250 gm)',350],['Cakeras (150 gm)',350],['Apple Pie (per piece)',350],['Tart',250],['Lasagna Pasta',1349],['Riviera Special Pasta',1499],['Alfredo Pasta',1349],['Penne Arrabbiata Pasta',1100],['Spaghetti Bolognese Chicken',1100],['Riviera Resort Special Pizza Medium',1600],['Chicken BBQ Pizza Medium',1650],['Cheese Cheesy Pizza Medium',1500],['Chicken Fajita Pizza Medium',1600],['Riviera Resort Special Pizza Large',2300],['Chicken BBQ Pizza Large',2300],['Cheese Cheesy Pizza Large',2000],['Chicken Fajita Pizza Large',2250],['Riviera Resort Special Pizza Extra Large',2899],['Crown Crust Pizza Medium',1650],['Crown Crust Pizza Medium Large',2350],['Chicken Fajita Pizza Extra Large',2650],['Chicken Tikka Pizza Medium',1699],['Chicken Tikka Pizza Large',2350],['Italian Chicken Salad',650],['Fresh Green Salad',250],['Russian Salad',499],['Raita',250],['Shinwari Lamb Karahi Half',2500],['Shinwari Lamb Karahi Full',4500],['Shinwari Mutton Tikka Half',2500],['Shinwari Mutton Tikka Full',4500],['Namkeen Lamb Tikka Half',2500],['Namkeen Lamb Tikka Full',4500],['Shinwari Lamb Karahi',2999],['Hot & Sour Soup Single',500],['Chicken Corn Soup Single',499],['Riviera Special Soup Single',549],['Vegetable Soup Single',499],['Hot & Sour Soup Family',1799],['Chicken Corn Soup Family',1977],['Riviera Special Soup Family',1899],['Vegetable Soup Family',1599],['Mushroom Steak Chicken',1699],['Black Pepper Steak Chicken',1749],['Tarragon Steak Chicken',1699],['BBQ Steak Chicken',1689],['BBQ Steak Chicken',1679],['Stuffed Chicken',2599],['Plain Naan',60],['Roghni Naan',149],['Qandhari Naan',99],['Garlic Naan',149],['Plain Roti',50],['Kalwanji Naan',149],['Tandoori Paratha',149],['Per Head',750]];
 
 // posInvoices is already sorted newest-first (posPullFromCloud orders by
@@ -16616,7 +16711,7 @@ function posSetupAutocomplete(input){
     if (!matches.length) {
       var empty = document.createElement('div');
       empty.className = 'ac-empty';
-      empty.textContent = 'No matching items';
+      empty.textContent = 'No matching menu items — you can still type your own item name.';
       menu.appendChild(empty);
     } else {
       matches.forEach(function(m, i){
@@ -16648,6 +16743,7 @@ function posSetupAutocomplete(input){
 
   function pick(m){
     input.value = m[0];
+    input.classList.remove('pos-item-violation');
     var row = input.closest('tr');
     if (row) {
       var priceCell = row.children[4];
@@ -16660,21 +16756,31 @@ function posSetupAutocomplete(input){
     posRecalcAll();
   }
 
-  input.addEventListener('input', function(){
+  function openMenu(){
     var q = input.value.trim().toLowerCase();
-    if (q.length < 2) { close(); return; }
-    matches = POS_MENU_ITEMS.filter(function(m){ return m[0].toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
+    var all = posAllMenuItems();
+    matches = q ? all.filter(function(m){ return m[0].toLowerCase().indexOf(q) !== -1; }) : all.slice();
     activeIdx = -1;
     render();
-  });
+  }
+
+  input.addEventListener('input', openMenu);
+  input.addEventListener('focus', openMenu);
+  input.addEventListener('click', openMenu);
 
   input.addEventListener('keydown', function(e){
     if (e.key === 'Enter') {
       e.preventDefault();
+      // Only auto-pick a suggestion if the user explicitly navigated to it
+      // with arrow keys, or typed the exact name — a loose substring match
+      // must never silently overwrite what they typed.
       if (menu.classList.contains('show') && matches.length) {
-        var pickIdx = activeIdx >= 0 ? activeIdx : 0;
-        if (matches[pickIdx]) pick(matches[pickIdx]);
+        var q = input.value.trim().toLowerCase();
+        var exactIdx = matches.findIndex(function(m){ return m[0].toLowerCase() === q; });
+        var pickIdx = activeIdx >= 0 ? activeIdx : exactIdx;
+        if (pickIdx >= 0 && matches[pickIdx]) pick(matches[pickIdx]);
       }
+      close();
       if (input.value.trim()) posFocusNewLine();
       return;
     }
@@ -16692,6 +16798,70 @@ function posSetupAutocomplete(input){
   });
 }
 
+function posSetupCustomerAutocomplete(){
+  var input = document.getElementById('posCustomer');
+  if (!input) return;
+  var wrap = input.closest('.search-wrap');
+  var menu = wrap ? wrap.querySelector('.ac-menu') : null;
+  if (!menu) return;
+
+  function getNames(){
+    var seen = {};
+    var names = ['Walkin Customer', 'Room Service'];
+    names.forEach(function(n){ seen[n.toLowerCase()] = true; });
+    posInvoices.forEach(function(r){
+      var n = (r.customer || '').trim();
+      if (!n) return;
+      var k = n.toLowerCase();
+      if (!seen[k]) { seen[k] = true; names.push(n); }
+    });
+    return names;
+  }
+
+  function close(){
+    menu.classList.remove('show');
+    menu.innerHTML = '';
+  }
+
+  function render(matches){
+    menu.innerHTML = '';
+    if (!matches.length) {
+      var empty = document.createElement('div');
+      empty.className = 'ac-empty';
+      empty.textContent = 'No matching customers — you can still type a new name.';
+      menu.appendChild(empty);
+    } else {
+      matches.forEach(function(name){
+        var row = document.createElement('div');
+        row.className = 'ac-item';
+        var label = document.createElement('span');
+        label.textContent = name;
+        row.appendChild(label);
+        row.addEventListener('mousedown', function(e){
+          e.preventDefault();
+          input.value = name;
+          close();
+          posRecalcAll();
+        });
+        menu.appendChild(row);
+      });
+    }
+    menu.classList.add('show');
+  }
+
+  function openMenu(){
+    var q = input.value.trim().toLowerCase();
+    var all = getNames();
+    var matches = q ? all.filter(function(n){ return n.toLowerCase().indexOf(q) !== -1; }) : all;
+    render(matches);
+  }
+
+  input.addEventListener('focus', openMenu);
+  input.addEventListener('click', openMenu);
+  input.addEventListener('input', openMenu);
+  input.addEventListener('blur', function(){ setTimeout(close, 120); });
+}
+
 function posClearItemInput(iconEl){
   var wrap = iconEl.closest('.search-wrap');
   var input = wrap ? wrap.querySelector('.pos-item-input') : null;
@@ -16703,14 +16873,20 @@ function posClearItemInput(iconEl){
   posRecalcAll();
 }
 
+function posIsMenuItemName(name){
+  var val = (name || '').trim().toLowerCase();
+  if (!val) return true;
+  return posAllMenuItems().some(function(m){ return m[0].toLowerCase() === val; });
+}
+
 function posValidateItemInput(input){
   var val = input.value.trim();
-  if (!val) return;
-  var isReal = POS_MENU_ITEMS.some(function(m){ return m[0].toLowerCase() === val.toLowerCase(); });
-  if (!isReal) {
-    input.value = '';
-    posShowToast('"' + val + '" is not a menu item — pick one from the list.', 'error');
-    posRecalcAll();
+  if (!val) { input.classList.remove('pos-item-violation'); return; }
+  if (posIsMenuItemName(val)) {
+    input.classList.remove('pos-item-violation');
+  } else {
+    input.classList.add('pos-item-violation');
+    posShowToast('"' + val + '" is not a menu item — flagged as a violation, but you can still post it.', 'error');
   }
 }
 
@@ -17033,12 +17209,13 @@ async function posNextInvoiceNo(){
   }catch(e){ console.error('POS invoice numbering failed', e); return null; }
 }
 
-function posBuildInvoiceRow(record, showStatus){
+function posBuildInvoiceRow(record, showStatus, showOrderNo){
   var tr = document.createElement('tr');
   tr.dataset.invoiceId = record.id;
   tr.className = 'fo-row';
   tr.title = 'Click to open ' + record.no + ' in Point of Sale';
   tr.innerHTML = '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>' +
+    (showOrderNo ? '<td>' + posEscapeHtml(record.orderNo || '') + '</td>' : '') +
     '<td>' + posEscapeHtml(record.date) + '</td>' +
     '<td>' + posEscapeHtml(record.room) + '</td>' +
     '<td>' + posEscapeHtml(record.customer) + '</td>' +
@@ -17872,35 +18049,48 @@ function renderQuantitySummary(){
   var fromIso = fromEl && fromEl.value ? fromEl.value : null;
   var toIso = toEl && toEl.value ? toEl.value : null;
   var byItem = {};
+  var totFood = 0, totBev = 0;
   posInvoices.forEach(function(r){
     if (r.deleted || !r.posted) return;
     if (fromIso && (!r.isoDate || r.isoDate < fromIso)) return;
     if (toIso && (!r.isoDate || r.isoDate > toIso)) return;
+    // Tax isn't tracked per line item — it's an invoice-level total. Allocate
+    // each invoice's tax across its items in proportion to their share of
+    // that invoice's subtotal, so per-item tax adds back up to the real total.
+    var taxRate = (r.subtotal || 0) > 0 ? (r.taxTotal || 0) / r.subtotal : 0;
     (r.items || []).forEach(function(it){
       var key = it.name || '(unnamed)';
-      if (!byItem[key]) byItem[key] = { name: key, qty: 0, amount: 0 };
+      if (!byItem[key]) byItem[key] = { name: key, qty: 0, amount: 0, tax: 0 };
       byItem[key].qty += it.qty || 0;
-      byItem[key].amount += (it.qty || 0) * (it.price || 0) * (1 - (it.pct || 0) / 100);
+      var ext = (it.qty || 0) * (it.price || 0) * (1 - (it.pct || 0) / 100);
+      byItem[key].amount += ext;
+      byItem[key].tax += ext * taxRate;
+      if (posIsBeverageItem(it.name)) totBev += ext; else totFood += ext;
     });
   });
   var list = Object.keys(byItem).map(function(k){ return byItem[k]; }).sort(function(a, b){ return b.amount - a.amount; });
   body.innerHTML = '';
-  var totQty = 0, totAmt = 0;
+  var totQty = 0, totAmt = 0, totTax = 0;
   list.forEach(function(row){
-    totQty += row.qty; totAmt += row.amount;
+    totQty += row.qty; totAmt += row.amount; totTax += row.tax;
     var tr = document.createElement('tr');
     tr.innerHTML = '<td>' + posEscapeHtml(row.name) + '</td>' +
       '<td class="num">' + row.qty + '</td>' +
-      '<td class="num">' + row.amount.toFixed(2) + '</td>';
+      '<td class="num">' + row.amount.toFixed(2) + '</td>' +
+      '<td class="num">' + row.tax.toFixed(2) + '</td>';
     body.appendChild(tr);
   });
   if (list.length) {
     var totalTr = document.createElement('tr');
     totalTr.style.fontWeight = '700';
-    totalTr.innerHTML = '<td>Total</td><td class="num">' + totQty + '</td><td class="num">' + totAmt.toFixed(2) + '</td>';
+    totalTr.innerHTML = '<td>Total</td><td class="num">' + totQty + '</td><td class="num">' + totAmt.toFixed(2) + '</td><td class="num">' + totTax.toFixed(2) + '</td>';
     body.appendChild(totalTr);
   }
   if (countEl) countEl.textContent = list.length + ' items';
+  var foodEl = document.getElementById('qsFoodSale');
+  var bevEl = document.getElementById('qsBevSale');
+  if (foodEl) foodEl.textContent = totFood.toFixed(2);
+  if (bevEl) bevEl.textContent = totBev.toFixed(2);
 }
 
 
@@ -17937,11 +18127,16 @@ function posFormatDateTime(){
   return dd + '-' + mm + '-' + d.getFullYear() + ' ' + hh + ':' + min;
 }
 
+function posFormatMoney(n){
+  n = Math.round((n || 0) * 100) / 100;
+  return n.toString();
+}
+
 function posBuildReceiptHtml(record){
   var itemRows = record.items.map(function(it){
     var ext = it.qty * it.price * (1 - (it.pct || 0) / 100);
     return '<tr><td>' + posEscapeHtml(it.name) + '</td><td class="rc-num">' + it.qty + '</td>' +
-      '<td class="rc-num">' + it.price.toFixed(2) + '</td><td class="rc-num">' + ext.toFixed(2) + '</td></tr>';
+      '<td class="rc-num">' + posFormatMoney(it.price) + '</td><td class="rc-num">' + posFormatMoney(ext) + '</td></tr>';
   }).join('');
 
   return '' +
@@ -17950,7 +18145,6 @@ function posBuildReceiptHtml(record){
     '<div class="rc-line dbl"></div>' +
     '<table class="rc-fields">' +
     '<tr><td>Guest Name</td><td>' + posEscapeHtml(record.customer) + '</td></tr>' +
-    '<tr><td>Company</td><td>Private (PVT)</td></tr>' +
     '<tr><td>Invoice #</td><td>' + posEscapeHtml(record.no) + '</td></tr>' +
     '<tr><td>Order #</td><td>' + posEscapeHtml(record.orderNo) + '</td></tr>' +
     '<tr><td>Printed</td><td>' + posEscapeHtml(record.printedAt) + '</td></tr>' +
@@ -17962,9 +18156,9 @@ function posBuildReceiptHtml(record){
     '<tbody>' + itemRows + '</tbody></table>' +
     '<div class="rc-line"></div>' +
     '<table class="rc-totals">' +
-    '<tr><td>Subtotal</td><td class="rc-num">' + record.subtotal.toFixed(2) + '</td></tr>' +
-    '<tr><td>Tax</td><td class="rc-num">' + record.taxTotal.toFixed(2) + '</td></tr>' +
-    '<tr class="rc-grand"><td>Total</td><td class="rc-num">' + record.amount.toFixed(2) + '</td></tr>' +
+    '<tr><td>Subtotal</td><td class="rc-num">' + posFormatMoney(record.subtotal) + '</td></tr>' +
+    '<tr><td>Tax</td><td class="rc-num">' + posFormatMoney(record.taxTotal) + '</td></tr>' +
+    '<tr class="rc-grand"><td>Total</td><td class="rc-num">' + posFormatMoney(record.amount) + '</td></tr>' +
     '</table>' +
     '<div class="rc-line dbl"></div>' +
     '<div class="rc-thanks">Thank you!</div>' +
@@ -18048,7 +18242,7 @@ async function posPostInvoice(mode){
   var orderNo = (orderInput && orderInput.value.trim()) || '';
   var roomNoInput = document.getElementById('posRoomNoField');
   var roomNoVal = (roomNoInput && roomNoInput.value.trim()) || '';
-  var locationText = roomNoVal ? 'Restaurant' : 'Dining';
+  var locationText = roomNoVal ? 'Room' : 'Restaurant';
 
   // Editing an existing invoice reuses its id + number + original date
   // (an edit shouldn't change when the sale happened) — posSaveInvoiceRecord
@@ -18099,6 +18293,8 @@ async function posPostInvoice(mode){
 
   var saved = await posSaveInvoiceRecord(record, mode);
   if (!saved) { abort(); return; }
+
+  posAddExtraMenuItems(items);
 
   if (mode === 'printpost' || mode === 'printonly') {
     posPrintRecord(record);
@@ -18183,11 +18379,21 @@ function posRequestPost(mode, skipDupeCheck){
   posPendingPostMode = mode;
   var titleEl = document.getElementById('posPostTitle');
   if (titleEl) titleEl.textContent = POS_POST_MODE_LABELS[mode] || 'Post this invoice?';
+
+  var cautionLines = [];
+  if (mode === 'post') cautionLines.push('You haven\'t printed this — are you sure you want to post it?');
+  if (!orderNoVal) cautionLines.push('No Order No(QT) entered — Confirm to proceed anyway.');
+  tbody.querySelectorAll('tr').forEach(function(row){
+    var nameInput = row.querySelector('.pos-item-input');
+    var name = nameInput ? nameInput.value.trim() : '';
+    if (name && !posIsMenuItemName(name)) cautionLines.push('"' + name + '" isn\'t a recognized menu item — flagged, but you can still post it.');
+  });
+
   var detailsEl = document.getElementById('posPostDetails');
   if (detailsEl) {
     detailsEl.innerHTML =
-      (mode === 'post' ? '<b style="color:#dc2626;">You haven\'t printed this — are you sure you want to post it?</b><br>' : '') +
-      (orderNoVal ? '' : '<b style="color:#dc2626;">No Order No(QT) entered — Confirm to proceed anyway.</b><br>') +
+      (cautionLines.length ? '<div style="font-weight:700; color:#dc2626; margin-bottom:6px;">⚠️ ' + cautionLines.length + ' caution' + (cautionLines.length === 1 ? '' : 's') + ' found</div>' : '') +
+      cautionLines.map(function(c){ return '<b style="color:#dc2626;">' + posEscapeHtml(c) + '</b><br>'; }).join('') +
       'Customer: <b>' + posEscapeHtml(customer) + '</b><br>' +
       'Room: ' + posEscapeHtml(roomNoVal) + '<br>' +
       'Total: ' + totals.grandTotal.toFixed(2) + ' &nbsp;·&nbsp; Paid: ' + totals.paid.toFixed(2);
@@ -18485,6 +18691,8 @@ function posBootApp(){
   setTimeout(posSyncSidebarOffset, 1500);
   window.addEventListener('resize', posSyncSidebarOffset);
   document.querySelectorAll('#page-pos-invoice .pos-item-input').forEach(function(inp){ posSetupAutocomplete(inp); });
+  posSetupCustomerAutocomplete();
+  posRenderExtrasMenu();
   posBuildRoomOptions();
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
   if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
