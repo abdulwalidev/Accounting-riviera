@@ -2747,7 +2747,7 @@
   #restaurantNative tr.fo-row{cursor:pointer;}
   #restaurantNative tr.fo-row:hover{background:rgba(37,99,235,.07);}
 
-  #restaurantNative .body-shell{display:flex; align-items:stretch; flex-direction:row-reverse;}
+  #restaurantNative .body-shell{display:flex; align-items:stretch;}
   #restaurantNative .sidebar{width:216px; flex-shrink:0; background:#0f1115; display:flex; flex-direction:column; padding:10px 0;}
   #restaurantNative .sidebar-label{color:#5b6270; font-size:10.5px; font-weight:700; letter-spacing:.08em; padding:8px 18px 6px;}
   #restaurantNative .sidebar button{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:transparent; border:none; border-left:3px solid transparent; color:#9aa1ab; font-size:13.5px; font-weight:600; padding:11px 16px; cursor:pointer; white-space:nowrap;}
@@ -3169,8 +3169,6 @@
   <div class="hdr-row2">
     <div class="topnav">
       <button class="navbtn" id="topNavDashboard" onclick="showView('dashboard')">Dashboard</button>
-      <button class="navbtn" id="topNavFrontOffice" onclick="showView('frontoffice')" style="display:none;">Front Office</button>
-      <button class="navbtn" id="topNavRestaurant" onclick="showView('restaurant')" style="display:none;">Restaurant</button>
       <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail</button>
       <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
@@ -15656,11 +15654,18 @@ async function startApp(){
 
 function showApp(){
   applyRolePermissions();
-  restoreLastView();
+  // Both of these can touch the newly-native Restaurant view (posBootApp
+  // etc.) synchronously, on every login/session-restore for a restaurant
+  // account — a throw in there must never stop the overlay/appRoot lines
+  // below from running, or the account looks logged-out on every refresh
+  // even though currentUser was already set and nothing was ever lost.
+  try{ restoreLastView(); }catch(e){ console.error('restoreLastView failed', e); }
   // restaurant accounts have nothing to see on the default 'entry' view
   // (their nav only has Front Office/Restaurant) — land them on Restaurant
   // instead, unless restoreLastView already sent them to Front Office.
-  if(isRestaurantRole() && currentView === 'entry') showView('restaurant');
+  try{
+    if(isRestaurantRole() && currentView === 'entry') showView('restaurant');
+  }catch(e){ console.error('Auto-navigate to Restaurant failed', e); }
   document.getElementById('loginOverlay').classList.add('hidden');
   document.getElementById('appRoot').style.display = '';
   startApp();
