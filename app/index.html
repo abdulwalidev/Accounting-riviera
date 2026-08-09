@@ -16597,20 +16597,30 @@ if (mpSearchBox) mpSearchBox.addEventListener('input', mpRefresh);
 
 // Items typed that aren't in POS_MENU_ITEMS get added here on posting, so
 // next time they're recognized as real menu items instead of violations.
-var POS_EXTRA_ITEMS = (function(){
-  try {
-    var raw = localStorage.getItem('pos_extra_menu_items');
-    var parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch(e) { return []; }
-})();
+// Lazily initialized on first read, NOT at script-parse time — on a page
+// refresh with an existing session, posBootApp() can fire (via
+// restoreLastView) before the script has finished executing this far
+// down the file, so a plain top-level `var X = (iife)()` would still be
+// undefined when read that early. A lazy getter has no such ordering
+// dependency: whenever it's first called, it initializes itself then.
+var POS_EXTRA_ITEMS;
+function posGetExtraItems(){
+  if (!Array.isArray(POS_EXTRA_ITEMS)) {
+    try {
+      var raw = localStorage.getItem('pos_extra_menu_items');
+      var parsed = raw ? JSON.parse(raw) : [];
+      POS_EXTRA_ITEMS = Array.isArray(parsed) ? parsed : [];
+    } catch(e) { POS_EXTRA_ITEMS = []; }
+  }
+  return POS_EXTRA_ITEMS;
+}
 
 function posSaveExtraItems(){
-  try { localStorage.setItem('pos_extra_menu_items', JSON.stringify(POS_EXTRA_ITEMS)); } catch(e) {}
+  try { localStorage.setItem('pos_extra_menu_items', JSON.stringify(posGetExtraItems())); } catch(e) {}
 }
 
 function posAllMenuItems(){
-  return POS_MENU_ITEMS.concat(POS_EXTRA_ITEMS);
+  return POS_MENU_ITEMS.concat(posGetExtraItems());
 }
 
 function posAddExtraMenuItems(items){
@@ -16620,7 +16630,7 @@ function posAddExtraMenuItems(items){
     if (!name) return;
     var exists = posAllMenuItems().some(function(m){ return m[0].toLowerCase() === name.toLowerCase(); });
     if (exists) return;
-    POS_EXTRA_ITEMS.push([name, it.price || 0]);
+    posGetExtraItems().push([name, it.price || 0]);
     added = true;
   });
   if (added) posRenderExtrasMenu();
@@ -16631,10 +16641,11 @@ function posRenderExtrasMenu(){
   var body = document.getElementById('mpExtrasBody');
   var countEl = document.getElementById('mpExtrasCount');
   var tabBtn = document.getElementById('mpExtrasTabBtn');
-  var n = POS_EXTRA_ITEMS.length;
+  var items = posGetExtraItems();
+  var n = items.length;
   if (body) {
     body.innerHTML = '';
-    POS_EXTRA_ITEMS.forEach(function(it, i){
+    items.forEach(function(it, i){
       var tr = document.createElement('tr');
       tr.innerHTML = '<td>EX-' + String(i + 1).padStart(3, '0') + '</td><td>' + posEscapeHtml(it[0]) + '</td><td class="num">' + (it[1] || 0).toFixed(2) + '</td>';
       body.appendChild(tr);
@@ -16654,7 +16665,7 @@ function posAddManualExtraItem(){
   if (!name) { posShowToast('Enter an item name first.', 'error'); return; }
   var exists = posAllMenuItems().some(function(m){ return m[0].toLowerCase() === name.toLowerCase(); });
   if (exists) { posShowToast('"' + name + '" is already in the menu.', 'error'); return; }
-  POS_EXTRA_ITEMS.push([name, price]);
+  posGetExtraItems().push([name, price]);
   posRenderExtrasMenu();
   nameInput.value = '';
   if (priceInput) priceInput.value = '';
@@ -18707,8 +18718,11 @@ function posBootApp(){
   setTimeout(posSyncSidebarOffset, 1500);
   window.addEventListener('resize', posSyncSidebarOffset);
   document.querySelectorAll('#page-pos-invoice .pos-item-input').forEach(function(inp){ posSetupAutocomplete(inp); });
-  posSetupCustomerAutocomplete();
-  posRenderExtrasMenu();
+  // Each wrapped separately — one throwing (a bug, a missing element, a
+  // localStorage quirk) must never take out everything after it in this
+  // function, especially the date-picker init calls below.
+  try { posSetupCustomerAutocomplete(); } catch(e) { console.error('[POS] posSetupCustomerAutocomplete failed', e); }
+  try { posRenderExtrasMenu(); } catch(e) { console.error('[POS] posRenderExtrasMenu failed', e); }
   posBuildRoomOptions();
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
   if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
