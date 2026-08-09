@@ -4311,6 +4311,16 @@
   </div>
 </div>
 
+<div id="posPostBackdrop" onclick="posCancelPost()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
+<div id="posPostModal" onkeydown="if(event.key==='Enter'){ event.preventDefault(); posConfirmPost(); } if(event.key==='Escape'){ event.preventDefault(); posCancelPost(); }" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
+  <div style="font-weight:700; font-size:14.5px; margin-bottom:12px; color:#1f2430;" id="posPostTitle">Post this invoice?</div>
+  <div id="posPostDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:16px; background:#f7f8fa; border-radius:6px; padding:10px 12px;"></div>
+  <div style="display:flex; gap:10px; justify-content:flex-end;">
+    <button type="button" onclick="posCancelPost()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
+    <button type="button" id="posPostConfirmBtn" onclick="posConfirmPost()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;" autofocus>Confirm (Enter)</button>
+  </div>
+</div>
+
 <div id="restaurantNative">
 
 <div class="body-shell">
@@ -4353,7 +4363,16 @@
   <div class="card">
     <div class="top-fields">
       <div class="col">
-        <div class="lbl-input"><label>CUSTOMER 🔍</label><input type="text" id="posCustomer" value="Walkin Customer" oninput="posRecalcAll()"></div>
+        <div class="lbl-input"><label>CUSTOMER 🔍</label>
+          <div class="with-pick">
+            <input type="text" id="posCustomer" value="Walkin Customer" oninput="posRecalcAll()">
+            <select id="posCustomerQuickPick" onchange="posCustomerQuickPick(this)" title="Quick pick" style="flex:0 0 auto; width:110px; border:1px solid var(--border-strong); border-radius:6px; padding:8px 6px; font-size:12px; background:#fff; color:var(--text);">
+              <option value="">Quick pick…</option>
+              <option value="Walkin Customer">Walkin Customer</option>
+              <option value="Room Service">Room Service</option>
+            </select>
+          </div>
+        </div>
         <div class="lbl-input disabled"><label>ROOM 🔍</label>
           <div class="with-pick"><input type="text" id="posRoom" value="209--1450" disabled><button class="pick-btn" disabled>Pick</button></div>
         </div>
@@ -4530,9 +4549,9 @@
 
   <!-- Action buttons -->
   <div class="action-bar">
-    <button type="button" class="ab-blue" onclick="posPostInvoice('post')">Post</button>
-    <button type="button" class="ab-blue" onclick="posPostInvoice('printpost')">Print & Post</button>
-    <button type="button" class="ab-gray-outline" onclick="posPostInvoice('printonly')">Print-Only</button>
+    <button type="button" class="ab-blue" onclick="posRequestPost('post')">Post</button>
+    <button type="button" class="ab-blue" onclick="posRequestPost('printpost')">Print & Post</button>
+    <button type="button" class="ab-gray-outline" onclick="posRequestPost('printonly')">Print-Only</button>
     <button type="button" class="ab-blue-outline" onclick="posSendToFrontOffice()">Send to Front Office</button>
     <button type="button" class="ab-yellow" onclick="posResetForm()">New</button>
   </div>
@@ -15038,7 +15057,7 @@ function renderFrontOffice(){
 
   collectedBody.innerHTML = collected.length === 0 ? '<div class="empty-note">Nothing collected yet.</div>' : `
     <table>
-      <thead><tr><th>Invoice #</th><th>Date</th><th>Room</th><th>Customer</th><th style="text-align:right;">Amount</th><th>Collected</th></tr></thead>
+      <thead><tr><th>Invoice #</th><th>Date</th><th>Room</th><th>Customer</th><th style="text-align:right;">Amount</th><th>Collected</th><th style="width:80px;"></th></tr></thead>
       <tbody>${collected.map(r=> `
         <tr>
           <td>${foEscapeHtml(r.no)}</td>
@@ -15047,8 +15066,38 @@ function renderFrontOffice(){
           <td>${foEscapeHtml(r.customer)}</td>
           <td style="text-align:right;">${r.amount.toFixed(2)}</td>
           <td>${foEscapeHtml(r.collectedBy)} · ${r.collectedAt ? new Date(r.collectedAt).toLocaleString() : ''}</td>
+          <td><button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="foUndoCollect('${r.id}')">Undo</button></td>
         </tr>`).join('')}</tbody>
     </table>`;
+}
+
+// Reception can mis-click Collect — this puts a row straight back into
+// Pending. Confirmed via the app's shared yes/no dialog (not the type-a-
+// word pattern Collect uses — undo isn't the destructive direction here).
+async function foUndoCollect(id){
+  const record = foInvoices.filter(r=> r.id === id)[0];
+  if(!record) return;
+  const proceed = await showConfirmModal(
+    'Move invoice ' + record.no + ' back to Pending? Front Office will need to collect it again.',
+    { title: 'Undo collected?', okText: 'Undo', cancelText: 'Cancel' }
+  );
+  if(!proceed) return;
+  if(!sb){ showNotice('Not connected to the cloud — try again.'); return; }
+  const { error } = await sb.from('pos_invoices').update({
+    collected: false,
+    collected_by: null,
+    collected_at: null
+  }).eq('id', id);
+  if(error){
+    console.error('Undo collect failed', error);
+    showNotice('Could not undo — check your connection and try again.');
+    return;
+  }
+  foMutationStamp++;
+  record.collected = false;
+  record.collectedBy = null;
+  record.collectedAt = null;
+  renderFrontOffice();
 }
 
 // Collect confirmation — same type-to-confirm pattern as app/POS/index.html's
@@ -16047,6 +16096,16 @@ function posRoomNoChanged(sel){
   posRecalcAll();
 }
 
+// Quick-pick shortcut for the two common customer types — still leaves the
+// text field free to type any other name, this just fills it.
+function posCustomerQuickPick(sel){
+  var val = sel.value;
+  sel.value = '';
+  if (!val) return;
+  var custInput = document.getElementById('posCustomer');
+  if (custInput) { custInput.value = val; posRecalcAll(); }
+}
+
 function posOpenMenuGroup(groupKey, title, pillEl){
   var src = document.querySelector('#page-manage-parts .cat-group[data-group="' + groupKey + '"] .parts tbody');
   var body = document.getElementById('posMenuPanelBody');
@@ -16789,11 +16848,14 @@ async function posPostInvoice(mode){
   });
   if (!items.length) { posShowToast('Add at least one item before posting.', 'error'); return; }
 
+  var custInput = document.getElementById('posCustomer');
+  var customer = custInput ? custInput.value.trim() : '';
+  if (!customer) { posShowToast('Enter a customer name before posting.', 'error'); if (custInput) custInput.focus(); return; }
+
   var totals = posRecalcAll();
+  if (totals.balance < -0.004) { posShowToast('Payments (' + totals.paid.toFixed(2) + ') exceed the total (' + totals.grandTotal.toFixed(2) + ') — fix the payment amount before posting.', 'error'); return; }
   var deptSel = document.getElementById('deptSelect');
   var deptText = (deptSel && deptSel.options[deptSel.selectedIndex] && deptSel.options[deptSel.selectedIndex].textContent.trim()) || 'FO';
-  var custInput = document.getElementById('posCustomer');
-  var customer = (custInput && custInput.value.trim()) || 'Walkin Customer';
   var tableInput = document.getElementById('posTable');
   var table = (tableInput && tableInput.value.trim()) || '';
   var orderInput = document.getElementById('posOrderNo');
@@ -16841,6 +16903,17 @@ async function posPostInvoice(mode){
 }
 
 function posSendToFrontOffice(){
+  posRequestPost('frontoffice');
+}
+
+var posPendingPostMode = null;
+var POS_POST_MODE_LABELS = { post: 'Post this invoice?', printpost: 'Print & post this invoice?', printonly: 'Save as print-only?', frontoffice: 'Send to Front Office?' };
+
+// Same validation posPostInvoice itself runs (items/customer/balance) —
+// checked here first so the confirm dialog never appears for something
+// that's just going to fail anyway. Can still be deleted afterward from
+// any of the invoice lists — this is a speed bump, not a lock.
+function posRequestPost(mode){
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (!tbody) return;
   var hasItem = false;
@@ -16848,8 +16921,49 @@ function posSendToFrontOffice(){
     var nameInput = row.querySelector('.pos-item-input');
     if (nameInput && nameInput.value.trim()) hasItem = true;
   });
-  if (!hasItem) { posShowToast('Add at least one item before sending to front office.', 'error'); return; }
-  posPostInvoice('frontoffice');
+  if (!hasItem) { posShowToast('Add at least one item before posting.', 'error'); return; }
+
+  var custInput = document.getElementById('posCustomer');
+  var customer = custInput ? custInput.value.trim() : '';
+  if (!customer) { posShowToast('Enter a customer name before posting.', 'error'); if (custInput) custInput.focus(); return; }
+
+  var totals = posRecalcAll();
+  if (totals.balance < -0.004) { posShowToast('Payments (' + totals.paid.toFixed(2) + ') exceed the total (' + totals.grandTotal.toFixed(2) + ') — fix the payment amount before posting.', 'error'); return; }
+
+  var roomNoInput = document.getElementById('posRoomNoField');
+  var roomNoVal = (roomNoInput && roomNoInput.value.trim()) || '—';
+
+  posPendingPostMode = mode;
+  var titleEl = document.getElementById('posPostTitle');
+  if (titleEl) titleEl.textContent = POS_POST_MODE_LABELS[mode] || 'Post this invoice?';
+  var detailsEl = document.getElementById('posPostDetails');
+  if (detailsEl) {
+    detailsEl.innerHTML =
+      'Customer: <b>' + posEscapeHtml(customer) + '</b><br>' +
+      'Room: ' + posEscapeHtml(roomNoVal) + '<br>' +
+      'Total: ' + totals.grandTotal.toFixed(2) + ' &nbsp;·&nbsp; Paid: ' + totals.paid.toFixed(2);
+  }
+  var modal = document.getElementById('posPostModal');
+  var backdrop = document.getElementById('posPostBackdrop');
+  if (modal) modal.style.display = '';
+  if (backdrop) backdrop.style.display = '';
+  var confirmBtn = document.getElementById('posPostConfirmBtn');
+  if (confirmBtn) confirmBtn.focus();
+}
+
+function posCancelPost(){
+  posPendingPostMode = null;
+  var modal = document.getElementById('posPostModal');
+  var backdrop = document.getElementById('posPostBackdrop');
+  if (modal) modal.style.display = 'none';
+  if (backdrop) backdrop.style.display = 'none';
+}
+
+function posConfirmPost(){
+  if (!posPendingPostMode) return;
+  var mode = posPendingPostMode;
+  posCancelPost();
+  posPostInvoice(mode);
 }
 
 function posResetForm(){
