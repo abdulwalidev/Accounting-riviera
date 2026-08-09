@@ -2811,6 +2811,7 @@
     <div class="topnav">
       <button class="navbtn" id="topNavDashboard" onclick="showView('dashboard')">Dashboard</button>
       <button class="navbtn" id="topNavFrontOffice" onclick="showView('frontoffice')" style="display:none;">Front Office</button>
+      <button class="navbtn" id="topNavRestaurant" onclick="showView('restaurant')" style="display:none;">Restaurant</button>
       <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail</button>
       <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
@@ -3936,6 +3937,17 @@
 
   </div>
 
+  <div class="view" id="view-restaurant">
+
+    <h1>Restaurant</h1>
+    <div class="sub">The full restaurant POS, embedded — same separate app and data as /app/POS/index.html. Sign in here once per session with your restaurant account.</div>
+
+    <div class="panel accent-filters" style="padding:0; overflow:hidden;">
+      <iframe id="restaurantFrame" title="Restaurant POS" style="width:100%; height:80vh; border:0; display:block;"></iframe>
+    </div>
+
+  </div>
+
   <div id="foCollectBackdrop" onclick="foCancelCollect()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
   <div id="foCollectModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:var(--paper); border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
     <div style="font-weight:700; font-size:14.5px; margin-bottom:12px;">Mark as collected?</div>
@@ -4518,7 +4530,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings','paymentrecord','frontoffice'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -4573,6 +4585,11 @@ function showView(view, fromPopState){
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
+  if(view === 'restaurant' && !isSuperAdmin()){
+    showNotice('Restaurant is only available to the super admin account.');
+    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
+    return;
+  }
   currentView = view;
   try{
     localStorage.setItem('lastView', view);
@@ -4601,7 +4618,10 @@ function showView(view, fromPopState){
   if(topNavPaymentProof) topNavPaymentProof.classList.toggle('active', view === 'paymentrecord');
   const topNavFrontOffice = document.getElementById('topNavFrontOffice');
   if(topNavFrontOffice) topNavFrontOffice.classList.toggle('active', view === 'frontoffice');
+  const topNavRestaurant = document.getElementById('topNavRestaurant');
+  if(topNavRestaurant) topNavRestaurant.classList.toggle('active', view === 'restaurant');
   if(view === 'frontoffice') renderFrontOffice();
+  if(view === 'restaurant') openRestaurantFrame();
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -4755,6 +4775,7 @@ function restoreLastView(){
   try{ saved = localStorage.getItem('lastView'); }catch(e){ return; }
   if(!saved || saved === currentView || !ROUTABLE_VIEWS.includes(saved)) return;
   if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout' || saved === 'arrival' || saved === 'frontoffice') && !isAdmin()) return;
+  if(saved === 'restaurant' && !isSuperAdmin()) return;
   if(saved === 'detail'){
     let savedId = null;
     try{ savedId = localStorage.getItem('lastDetailId'); }catch(e){ /* ignore */ }
@@ -13652,6 +13673,15 @@ async function fetchFrontOfficeOnly(){
   }
 }
 
+// The full restaurant POS, embedded for the super admin only — same app,
+// same separate pos_* data, no duplication. Loaded lazily (src set only
+// once, on first visit) so no other account's page load ever fetches
+// app/POS/index.html at all.
+function openRestaurantFrame(){
+  const frame = document.getElementById('restaurantFrame');
+  if(frame && !frame.src) frame.src = '/app/POS/index.html';
+}
+
 function renderFrontOffice(){
   const pendingBody = document.getElementById('foPendingBody');
   const collectedBody = document.getElementById('foCollectedBody');
@@ -14169,6 +14199,8 @@ function applyRolePermissions(){
   if(settingsFrontOfficeBtn) settingsFrontOfficeBtn.style.display = isAdmin() ? '' : 'none';
   const frontOfficeNav = document.getElementById('topNavFrontOffice');
   if(frontOfficeNav) frontOfficeNav.style.display = isSuperAdmin() ? '' : 'none';
+  const restaurantNav = document.getElementById('topNavRestaurant');
+  if(restaurantNav) restaurantNav.style.display = isSuperAdmin() ? '' : 'none';
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
   const avatar = document.getElementById('hdrAvatar');
