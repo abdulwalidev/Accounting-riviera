@@ -17691,6 +17691,17 @@ var posViewingRecord = null;
 // (see posRequestPost/posConfirmPost), not a separate upfront step.
 // Cleared on successful save, on New, or when a different record is opened.
 var posEditingRecord = null;
+// Opening a record for viewing/reposting isn't itself an edit — only real
+// user changes to the form should trigger the type-"edit"-to-confirm gate.
+// Programmatic .value assignment (loading a record into the form) never
+// fires input/change, so this only flips true on genuine user interaction.
+var posFormDirty = false;
+(function(){
+  var invoicePage = document.getElementById('page-pos-invoice');
+  if (!invoicePage) return;
+  invoicePage.addEventListener('input', function(){ posFormDirty = true; });
+  invoicePage.addEventListener('change', function(){ posFormDirty = true; });
+})();
 
 function posOpenRecordInForm(record){
   posViewingRecord = record;
@@ -17744,6 +17755,7 @@ function posOpenRecordInForm(record){
   }
 
   posRecalcAll();
+  posFormDirty = false;
   posShowToast('Opened ' + record.no + ' in Point of Sale');
 }
 
@@ -18397,7 +18409,10 @@ function posRequestPost(mode){
   var editWrap = document.getElementById('posPostEditConfirmWrap');
   var editInput = document.getElementById('posPostEditConfirmInput');
   var confirmBtn = document.getElementById('posPostConfirmBtn');
-  if (posEditingRecord) {
+  // Opening a record and reposting/reprinting it unchanged isn't an edit —
+  // only require typing "edit" when the form was actually modified.
+  var needsEditConfirm = posEditingRecord && posFormDirty;
+  if (needsEditConfirm) {
     if (editWrap) editWrap.style.display = '';
     if (editInput) editInput.value = '';
     posPostEditConfirmCheck();
@@ -18409,7 +18424,7 @@ function posRequestPost(mode){
   var backdrop = document.getElementById('posPostBackdrop');
   if (modal) modal.style.display = '';
   if (backdrop) backdrop.style.display = '';
-  if (posEditingRecord && editInput) editInput.focus(); else if (confirmBtn) confirmBtn.focus();
+  if (needsEditConfirm && editInput) editInput.focus(); else if (confirmBtn) confirmBtn.focus();
 }
 
 function posCancelPost(){
@@ -18422,7 +18437,7 @@ function posCancelPost(){
 
 function posConfirmPost(){
   if (!posPendingPostMode) return;
-  if (posEditingRecord) {
+  if (posEditingRecord && posFormDirty) {
     var editInput = document.getElementById('posPostEditConfirmInput');
     if (!editInput || editInput.value.trim().toLowerCase() !== 'edit') {
       posShowToast('Type "edit" to confirm updating this invoice.', 'error');
@@ -18504,6 +18519,7 @@ function posResetForm(){
   if (lineDescInput) lineDescInput.value = '';
   try { localStorage.removeItem('pos_invoice_draft'); } catch(e) {}
   posRecalcAll();
+  posFormDirty = false;
 }
 
 function posSaveDraft(){
