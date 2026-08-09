@@ -2722,7 +2722,7 @@
      this account — every other nav button (including the Settings gear)
      is hidden, regardless of whatever per-button display rule
      applyRolePermissions() would otherwise set. See isRestaurantRole(). */
-  .role-restaurant .topnav .navbtn:not(#topNavFrontOffice):not(#topNavRestaurant){
+  .role-restaurant .topnav .navbtn:not(#topNavFrontOffice):not(#topNavRestaurant):not(#topNavPosUnlock){
     display:none !important;
   }
 
@@ -2737,12 +2737,29 @@
     border-radius:6px;
     overflow:hidden;
     margin-bottom:18px;
+    /* The MODULES sidebar is fixed/detached (see .sidebar below), so the
+       whole card — not just its inner content — reserves the matching
+       216px on the left. Putting the margin here instead of on .app-wrap
+       keeps the card's own right edge where it always was, so left/right
+       spacing around the card reads even instead of the content looking
+       shoved to the right inside an unchanged-width box. */
+    margin-left:216px;
   }
   #restaurantNative *{box-sizing:border-box;}
-  #restaurantNative .pos-toast{background:#1f2430; color:#fff; padding:12px 18px; border-radius:8px; font-size:13.5px; box-shadow:0 8px 24px rgba(0,0,0,.25); max-width:420px; display:flex; align-items:center; gap:12px;}
-  #restaurantNative .pos-toast.error{background:#7a2020;}
-  #restaurantNative .pos-toast .pos-toast-close{cursor:pointer; opacity:.7; font-weight:700; background:transparent; border:none; color:inherit; font-size:14px;}
-  #restaurantNative .pos-toast .pos-toast-close:hover{opacity:1;}
+  /* #posToastStack sits outside #restaurantNative in the DOM (it's a
+     sibling, declared before the native Restaurant markup starts) — the
+     old "#restaurantNative .pos-toast" selector never actually matched
+     anything, so every toast rendered with zero styling. Scoped to the
+     stack's own id instead, and mirrors the hotel's own .notice look
+     (see showNotice()/.notice CSS) via its existing --danger/--cash vars
+     rather than inventing a different visual language — read-only
+     reference, nothing in the hotel's own CSS/JS is touched. */
+  #posToastStack .pos-toast{pointer-events:auto; display:flex; align-items:flex-start; gap:10px; background:var(--danger); color:#fff; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; line-height:1.45; padding:14px 16px; border-radius:6px; border-left:6px solid #7F1D1D; box-shadow:0 8px 24px rgba(23,37,84,.35); max-width:420px; animation:posToastIn 0.25s ease;}
+  #posToastStack .pos-toast:not(.error){background:var(--cash); border-left-color:#0B4023;}
+  #posToastStack .pos-toast .pos-toast-close{cursor:pointer; opacity:.7; font-weight:700; background:transparent; border:none; color:inherit; font-size:14px; margin-left:auto;}
+  #posToastStack .pos-toast .pos-toast-close:hover{opacity:1;}
+  @keyframes posToastIn{ from{opacity:0; transform:translateY(-12px);} to{opacity:1; transform:none;} }
+  @media (prefers-reduced-motion: reduce){ #posToastStack .pos-toast{animation:none;} }
 
   #restaurantNative tr.fo-row{cursor:pointer;}
   #restaurantNative tr.fo-row:hover{background:rgba(37,99,235,.07);}
@@ -2759,7 +2776,7 @@
   #restaurantNative .sidebar button.active{color:#fff; border-left-color:#3b82f6; background:rgba(59,130,246,.08);}
   #restaurantNative .sidebar .sb-icon{font-size:15px; width:18px; text-align:center; flex-shrink:0;}
   #restaurantNative .sidebar-spacer{flex:1;}
-  #restaurantNative .app-wrap{flex:1; min-width:0; background:#f4f5f7; margin-left:216px;}
+  #restaurantNative .app-wrap{flex:1; min-width:0; background:#f4f5f7;}
 
   #restaurantNative .app-page{display:none;}
   #restaurantNative .app-page.visible{display:block;}
@@ -2787,7 +2804,7 @@
 #page-pos-invoice .top-fields .col {display:flex; flex-direction:column; gap:12px;}
 #page-pos-invoice .lbl-input {display:flex; align-items:center; gap:8px;}
 #page-pos-invoice .lbl-input label {white-space:nowrap; font-size:11px; color:#4b5b73; font-weight:600; width:110px; text-align:right; flex-shrink:0;}
-#page-pos-invoice .lbl-input input, #page-pos-invoice .lbl-input select {flex:1; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px; background:#fff; color:var(--text);}
+#page-pos-invoice .lbl-input input, #page-pos-invoice .lbl-input select {flex:1; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px; background:#fff; color:#111;}
 #page-pos-invoice .lbl-input .with-pick {display:flex; flex:1; gap:8px;}
 #page-pos-invoice .lbl-input.disabled label {color:#b8bfc9;}
 #page-pos-invoice .lbl-input.disabled input,
@@ -2805,7 +2822,7 @@
 #page-pos-invoice .static-note .sub {color:var(--muted); font-size:11.5px;}
 #page-pos-invoice /* line items */
   .line-table {width:100%; border-collapse:collapse;}
-#page-pos-invoice .line-table thead th {background:var(--headbg); color:#2c3e50; font-size:11px; font-weight:700; letter-spacing:.03em; text-align:left; padding:10px 14px;}
+#page-pos-invoice .line-table thead th {background:var(--headbg); color:var(--text); font-size:11px; font-weight:700; letter-spacing:.03em; text-align:left; padding:10px 14px;}
 #page-pos-invoice .line-table thead th.num {text-align:right;}
 #page-pos-invoice .line-table tbody td {padding:8px 10px; border-bottom:1px solid var(--border);}
 #page-pos-invoice .line-table tbody td.num-col {width:34px; color:var(--muted); text-align:left; padding-left:14px;}
@@ -2830,6 +2847,8 @@
 #page-pos-invoice .row-del-btn:hover {background:#fdecec;}
 #page-pos-invoice .line-actions {padding:12px 16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
 #page-pos-invoice .btn-menu {background:#17a2b8; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;}
+#page-pos-invoice .pos-modal-close {display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; border:1px solid var(--border-strong); background:transparent; color:var(--muted); cursor:pointer; flex-shrink:0; transition:background .12s, color .12s;}
+#page-pos-invoice .pos-modal-close:hover {background:#c53030; border-color:#c53030; color:#fff;}
 #page-pos-invoice .btn-addline {background:#fff; color:var(--green); border:1px solid var(--green); border-radius:6px; padding:7px 14px; font-size:13px; cursor:pointer;}
 #page-pos-invoice .grp-label {color:var(--muted); font-size:12px; font-weight:600; margin-left:8px;}
 #page-pos-invoice .grp-pills {display:flex; gap:6px; flex-wrap:wrap;}
@@ -2841,10 +2860,10 @@
 #page-pos-invoice .bottom-grid {display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
 #page-pos-invoice .tax-card, #page-pos-invoice .totals-card {padding:16px 20px;}
 #page-pos-invoice .section-title {font-size:11px; letter-spacing:.04em; color:var(--muted); font-weight:700; margin-bottom:12px;}
-#page-pos-invoice table.tax-tbl {width:100%; border-collapse:collapse; font-size:13px;}
-#page-pos-invoice table.tax-tbl th {text-align:left; color:var(--text); font-weight:600; font-size:12.5px; padding:6px 0; border-bottom:1px solid var(--border-strong);}
+#page-pos-invoice table.tax-tbl {width:100%; table-layout:fixed; border-collapse:collapse; font-size:13px;}
+#page-pos-invoice table.tax-tbl th {text-align:left; color:var(--text); font-weight:600; font-size:12.5px; padding:6px 8px 6px 0; border-bottom:1px solid var(--border-strong); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 #page-pos-invoice table.tax-tbl th.num, #page-pos-invoice table.tax-tbl td.num {text-align:right;}
-#page-pos-invoice table.tax-tbl td {padding:8px 0; border-bottom:1px solid #f0f1f3;}
+#page-pos-invoice table.tax-tbl td {padding:8px 8px 8px 0; border-bottom:1px solid #f0f1f3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 #page-pos-invoice table.tax-tbl tr.total-row td {font-weight:700; border-bottom:none;}
 #page-pos-invoice .totals-card .row {display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px; color:var(--text);}
 #page-pos-invoice .totals-card .row.big {font-weight:700; font-size:20px; padding-top:10px; border-top:1px solid var(--border-strong); margin-top:6px;}
@@ -2853,7 +2872,7 @@
 #page-pos-invoice /* payments — plain flex rows, not a table */
   .pay-list {width:100%;}
 #page-pos-invoice .pay-row-head, #page-pos-invoice .pay-row {display:flex; align-items:center;}
-#page-pos-invoice .pay-row-head {background:var(--headbg); color:#2c3e50; font-size:11px; font-weight:700; letter-spacing:.03em;}
+#page-pos-invoice .pay-row-head {background:var(--headbg); color:var(--text); font-size:11px; font-weight:700; letter-spacing:.03em;}
 #page-pos-invoice .pay-row-head > div, #page-pos-invoice .pay-row > div {padding:10px 14px; box-sizing:border-box;}
 #page-pos-invoice .pay-col-date {flex:0 0 200px;}
 #page-pos-invoice .pay-col-amt {flex:1; min-width:0;}
@@ -2892,7 +2911,7 @@
 #page-pos-invoice .list-card .lc-title {font-size:15px; font-weight:600; margin-bottom:12px;}
 #page-pos-invoice table.simple {width:100%; border-collapse:collapse; font-size:12.5px;}
 #page-pos-invoice table.simple thead {background:var(--lightblue);}
-#page-pos-invoice table.simple th {text-align:left; padding:8px 10px; font-weight:700; color:#2c3e50;}
+#page-pos-invoice table.simple th {text-align:left; padding:8px 10px; font-weight:700; color:var(--text);}
 #page-pos-invoice table.simple th.num, #page-pos-invoice table.simple td.num {text-align:right;}
 #page-pos-invoice table.simple td {padding:8px 10px; border-bottom:1px solid #f0f1f3;}
 #page-pos-invoice table.simple td a {color:var(--blue); text-decoration:none;}
@@ -2923,7 +2942,11 @@
 #page-receipts .btn-primary {background:var(--blue); color:#fff; border:none; border-radius:6px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px;}
 #page-receipts .btn-outline {border:1px solid var(--border-strong); background:#fff; border-radius:6px; padding:9px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px;}
 #page-receipts .results-card {padding:20px;}
-#page-receipts .results-head {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700; margin-bottom:14px;}
+#page-receipts .results-head {display:flex; justify-content:space-between; align-items:center; font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700; margin-bottom:14px;}
+#page-receipts .results-head .rh-count {font-size:12px; color:var(--blue); letter-spacing:normal; font-weight:600;}
+#page-receipts .status-badge {display:inline-block; border-radius:12px; padding:3px 10px; font-size:11px; font-weight:700; letter-spacing:.02em;}
+#page-receipts .status-badge.posted {background:#dcfce7; color:#15803d;}
+#page-receipts .status-badge.not-posted {background:#fdf1dc; color:var(--amber, #b45309);}
 #page-receipts table.rep {width:100%; border-collapse:collapse; font-size:13px;}
 #page-receipts table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-receipts table.rep th.num {text-align:right;}
@@ -3053,6 +3076,60 @@
 #page-front-office table.rep td.num, #page-deleted table.rep td.num, #page-qty-summary table.rep td.num {text-align:right;}
 #page-front-office table.rep td a, #page-deleted table.rep td a, #page-qty-summary table.rep td a {color:var(--blue); text-decoration:none;}
 
+/* ===== Pending Payments / Previous Day — these two never got their own
+   themed block (unlike every other ported page above), so .card/.rep/etc.
+   fell back to unstyled defaults and stayed light-only regardless of
+   theme. Same pattern as Front Office/Deleted/Quantity Summary above. */
+#page-pending-payments, #page-previous-day {
+    --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
+    --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff;
+  }
+#page-pending-payments *, #page-previous-day * {box-sizing:border-box;}
+#page-pending-payments .wrap, #page-previous-day .wrap {max-width:1280px; margin:0 auto;}
+#page-pending-payments .h-title, #page-previous-day .h-title {font-size:24px; font-weight:600; margin:0 0 4px;}
+#page-pending-payments .h-sub, #page-previous-day .h-sub {color:var(--muted); font-size:13px; margin-bottom:16px;}
+#page-pending-payments .card, #page-previous-day .card {background:var(--panel); border:1px solid var(--border); border-radius:8px;}
+#page-pending-payments .filters-card, #page-previous-day .filters-card {padding:20px; margin-bottom:16px;}
+#page-pending-payments .filters-label, #page-previous-day .filters-label {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700; margin-bottom:14px;}
+#page-pending-payments .filters-grid, #page-previous-day .filters-grid {display:grid; gap:24px;}
+#page-pending-payments .filters-grid label, #page-previous-day .filters-grid label {display:block; font-size:12.5px; color:var(--text); margin-bottom:6px;}
+#page-pending-payments .filters-grid select, #page-pending-payments .filters-grid input, #page-previous-day .filters-grid select, #page-previous-day .filters-grid input {width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px; color:var(--text);}
+#page-pending-payments .results-card, #page-previous-day .results-card {padding:20px;}
+#page-pending-payments .results-head, #page-previous-day .results-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+#page-pending-payments .results-head .rh-title, #page-previous-day .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
+#page-pending-payments .results-head .rh-count, #page-previous-day .results-head .rh-count {font-size:12px; color:var(--blue);}
+#page-pending-payments table.rep, #page-previous-day table.rep {width:100%; border-collapse:collapse; font-size:13px;}
+#page-pending-payments table.rep th, #page-previous-day table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
+#page-pending-payments table.rep th.num, #page-previous-day table.rep th.num {text-align:right;}
+#page-pending-payments table.rep td, #page-previous-day table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
+#page-pending-payments table.rep td.num, #page-previous-day table.rep td.num {text-align:right;}
+#page-pending-payments table.rep td a, #page-previous-day table.rep td a {color:var(--blue); text-decoration:none;}
+
+/* ===== POS Day Lock — same card/table pattern as the pages above ===== */
+#page-pos-daylock {
+    --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
+    --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff;
+  }
+#page-pos-daylock * {box-sizing:border-box;}
+#page-pos-daylock .wrap {max-width:1280px; margin:0 auto;}
+#page-pos-daylock .h-title {font-size:24px; font-weight:600; margin:0 0 4px;}
+#page-pos-daylock .h-sub {color:var(--muted); font-size:13px; margin-bottom:16px;}
+#page-pos-daylock .card {background:var(--panel); border:1px solid var(--border); border-radius:8px;}
+#page-pos-daylock .filters-card {padding:20px; margin-bottom:16px;}
+#page-pos-daylock .filters-label {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700; margin-bottom:14px;}
+#page-pos-daylock .filters-grid {display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:24px; align-items:end;}
+#page-pos-daylock .filters-grid label {display:block; font-size:12.5px; color:var(--text); margin-bottom:6px;}
+#page-pos-daylock .filters-grid select, #page-pos-daylock .filters-grid input {width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px; color:#111; background:#fff;}
+#page-pos-daylock .dl-action-btn {background:var(--blue); color:#fff; border:none; border-radius:6px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer;}
+#page-pos-daylock .dl-action-btn.secondary {background:#fff; color:var(--text); border:1px solid var(--border-strong);}
+#page-pos-daylock .results-card {padding:20px;}
+#page-pos-daylock .results-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+#page-pos-daylock .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
+#page-pos-daylock table.rep {width:100%; border-collapse:collapse; font-size:13px;}
+#page-pos-daylock table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
+#page-pos-daylock table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
+#page-pos-daylock .empty-note {color:var(--muted); font-size:12.5px;}
+
 /* ===== Manage Menu (POS Menu) ===== */
 #page-manage-parts {
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
@@ -3086,6 +3163,73 @@
 #page-manage-parts .tag {display:inline-block; background:#eef2ff; color:var(--blue); border-radius:10px; padding:2px 8px; font-size:11px; margin:1px 2px 1px 0;}
 #page-manage-parts .new-note {color:var(--muted); font-size:12px; margin-bottom:12px;}
 #page-manage-parts .save-row {margin-top:14px;}
+
+/* ===== Restaurant dark theme ===== */
+/* Every ported page already routes its colors through local CSS custom
+   properties (--bg/--panel/--text/--muted/--border/--blue etc.) —
+   redefining just those under the dark selector re-colors the whole
+   page's cards/text/borders without touching every individual rule.
+   Palette matches the hotel app's own dark theme (--paper/--ink/--muted/
+   --line, see html[data-theme="dark"] near the top), not invented fresh. */
+html[data-theme="dark"] #restaurantNative{ background:#0A0A0A; }
+html[data-theme="dark"] #restaurantNative .app-wrap{ background:#0A0A0A; }
+html[data-theme="dark"] #page-pos-invoice,
+html[data-theme="dark"] #page-receipts,
+html[data-theme="dark"] #page-charges-summary,
+html[data-theme="dark"] #page-qty-summary,
+html[data-theme="dark"] #page-printed-only,
+html[data-theme="dark"] #page-front-office,
+html[data-theme="dark"] #page-deleted,
+html[data-theme="dark"] #page-pending-payments,
+html[data-theme="dark"] #page-previous-day,
+html[data-theme="dark"] #page-pos-daylock,
+html[data-theme="dark"] #page-manage-parts{
+  --border:#2a2e35; --border-strong:#3a3f47; --blue:#5b9dff; --blue-dark:#3b7de0;
+  --text:#e8eaed; --muted:#b8bec8; --bg:#0A0A0A; --panel:#14161a;
+  --green:#4ade80; --green-bg:#22c55e; --red:#f87171; --amber:#eab308;
+  --lightblue:#16202c; --headbg:#182230;
+}
+/* Hardcoded (non-variable) literals that don't follow from the above */
+html[data-theme="dark"] [id^="page-"] td{ border-bottom-color:#242830 !important; }
+html[data-theme="dark"] [id^="page-"] .btn-outline{ background:#14161a !important; color:#e8eaed !important; }
+html[data-theme="dark"] [id^="page-"] .cols-box{ background:#14161a !important; }
+html[data-theme="dark"] #page-manage-parts .tag{ background:#182230 !important; }
+html[data-theme="dark"] #page-pos-invoice .lbl-input.disabled input,
+html[data-theme="dark"] #page-pos-invoice .lbl-input.disabled select,
+html[data-theme="dark"] #page-pos-invoice .lbl-input.disabled button.pick-btn{ background:#1a1c20 !important; color:#5a616b !important; border-color:#2a2e35 !important; }
+/* Field labels ("Room:", "Customer:", etc.) and the info-card heading were
+   hardcoded to fixed light-theme colors — too low-contrast against the
+   near-black dark background to read comfortably. */
+html[data-theme="dark"] #page-pos-invoice .lbl-input label{ color:#c7cdd6 !important; }
+html[data-theme="dark"] #page-pos-invoice .info-card .info-title{ color:#5b9dff !important; }
+/* The four confirm modals (Delete/Post/Edit/Order-dupe) are inline-styled
+   with light-mode colors baked directly into their style="" attributes —
+   CSS can't win against inline styles without !important, so this is the
+   one place that's unavoidable rather than a shortcut. */
+html[data-theme="dark"] #posDeleteModal,
+html[data-theme="dark"] #posPostModal,
+html[data-theme="dark"] #posEditModal,
+html[data-theme="dark"] #posOrderDupeModal,
+html[data-theme="dark"] #posDayLockModal{ background:#14161a !important; }
+html[data-theme="dark"] #posDeleteModal > div,
+html[data-theme="dark"] #posPostModal > div,
+html[data-theme="dark"] #posEditModal > div,
+html[data-theme="dark"] #posOrderDupeModal > div,
+html[data-theme="dark"] #posDayLockModal > div,
+html[data-theme="dark"] #posDayLockModal > label{ color:#e8eaed !important; }
+html[data-theme="dark"] #posDayLockTypeInput{ background:#0A0A0A !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
+html[data-theme="dark"] #posDeleteDetails,
+html[data-theme="dark"] #posPostDetails,
+html[data-theme="dark"] #posEditDetails{ background:#1a1c20 !important; color:#c7ccd6 !important; }
+html[data-theme="dark"] #posOrderDupeDetails{ background:#2a1616 !important; color:#f0b8b8 !important; }
+html[data-theme="dark"] #posDeleteConfirmInput,
+html[data-theme="dark"] #posEditConfirmInput,
+html[data-theme="dark"] #posOrderDupeConfirmInput{ background:#0A0A0A !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
+html[data-theme="dark"] #posDeleteModal button[onclick="posCancelDelete()"],
+html[data-theme="dark"] #posPostModal button[onclick="posCancelPost()"],
+html[data-theme="dark"] #posEditModal button[onclick="posCancelEdit()"],
+html[data-theme="dark"] #posOrderDupeModal button[onclick="posCancelOrderDupe()"],
+html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm()"]{ background:#1a1c20 !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 </style>
 <script>
   (function(){
@@ -3116,9 +3260,9 @@
     <div class="login-card">
       <h2 class="login-card-heading">Sign in</h2>
       <label for="loginUsername" class="login-label">Username</label>
-      <input type="text" id="loginUsername" class="login-input" autocomplete="username" placeholder="accountant@riviera">
+      <input type="text" id="loginUsername" class="login-input" autocomplete="off" placeholder="accountant@riviera">
       <label for="loginPassword" class="login-label">Password</label>
-      <input type="password" id="loginPassword" class="login-input" autocomplete="current-password">
+      <input type="password" id="loginPassword" class="login-input" autocomplete="new-password">
       <div class="login-error" id="loginError"></div>
       <button class="login-signin-btn" id="loginBtn">Sign In</button>
       <button type="button" class="login-forgot" onclick="showNotice('Contact your admin to reset your password.')">Forgot password?</button>
@@ -3165,6 +3309,7 @@
     <div class="hdr-right">
       <button class="theme-toggle hdr-pause-btn" id="pauseSyncBtn" onclick="event.stopPropagation(); pauseAppForIdle();" title="Pause syncing with the cloud until you click to resume">Pause Sync</button>
       <span class="hdr-date-pill" id="hdrDatePill"></span>
+      <button class="theme-toggle hdr-pause-btn" id="hotelRestaurantSwitch" onclick="event.stopPropagation(); toggleHotelRestaurantMode();" title="Switch between Hotel and Restaurant" style="display:none;">Restaurant</button>
       <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
         <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"></path></svg>
@@ -3188,6 +3333,7 @@
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
       <button class="navbtn" id="topNavPaymentProof" onclick="showView('paymentrecord')" style="display:none; margin-left:auto;">Report SS</button>
       <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
+      <button class="navbtn" id="topNavPosUnlock" onclick="posOpenDayLockPage()" style="display:none; margin-left:8px; padding:6px 8px;" title="POS Day Lock" aria-label="POS Day Lock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
     </div>
   </div>
   <div class="hdr-row3">
@@ -4315,7 +4461,7 @@
   <div style="font-weight:700; font-size:14.5px; margin-bottom:12px; color:#1f2430;">Delete this record?</div>
   <div id="posDeleteDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:14px; background:#f7f8fa; border-radius:6px; padding:10px 12px;"></div>
   <div style="font-size:12.5px; color:#1f2430; margin-bottom:6px;">Type <b>delete</b> below to confirm:</div>
-  <input type="text" id="posDeleteConfirmInput" autocomplete="off" oninput="posDeleteConfirmCheck()" style="width:100%; border:1px solid #d7dae0; border-radius:6px; padding:8px 10px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
+  <input type="text" id="posDeleteConfirmInput" autocomplete="off" oninput="posDeleteConfirmCheck()" onkeydown="if(event.key==='Enter' && !document.getElementById('posDeleteConfirmBtn').disabled){ event.preventDefault(); posDeleteConfirmed(); } if(event.key==='Escape'){ event.preventDefault(); posCancelDelete(); }" style="width:100%; border:1px solid #d7dae0; border-radius:6px; padding:8px 10px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
   <div style="display:flex; gap:10px; justify-content:flex-end;">
     <button type="button" onclick="posCancelDelete()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
     <button type="button" id="posDeleteConfirmBtn" disabled onclick="posDeleteConfirmed()" style="background:#c53030; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; opacity:.5;">Delete</button>
@@ -4332,20 +4478,58 @@
   </div>
 </div>
 
+<div id="posEditBackdrop" onclick="posCancelEdit()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
+<div id="posEditModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
+  <div style="font-weight:700; font-size:14.5px; margin-bottom:12px; color:#1f2430;">Edit this invoice?</div>
+  <div id="posEditDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:14px; background:#f7f8fa; border-radius:6px; padding:10px 12px;"></div>
+  <div style="font-size:12.5px; color:#1f2430; margin-bottom:6px;">Type <b>edit</b> below to confirm:</div>
+  <input type="text" id="posEditConfirmInput" autocomplete="off" oninput="posEditConfirmCheck()" onkeydown="if(event.key==='Enter' && !document.getElementById('posEditConfirmBtn').disabled){ event.preventDefault(); posEditConfirmed(); } if(event.key==='Escape'){ event.preventDefault(); posCancelEdit(); }" style="width:100%; border:1px solid #d7dae0; border-radius:6px; padding:8px 10px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
+  <div style="display:flex; gap:10px; justify-content:flex-end;">
+    <button type="button" onclick="posCancelEdit()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
+    <button type="button" id="posEditConfirmBtn" disabled onclick="posEditConfirmed()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; opacity:.5;">Edit</button>
+  </div>
+</div>
+
+<div id="posOrderDupeBackdrop" onclick="posCancelOrderDupe()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
+<div id="posOrderDupeModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
+  <div style="font-weight:700; font-size:14.5px; margin-bottom:12px; color:#c53030;">Duplicate Order No(QT)</div>
+  <div id="posOrderDupeDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:14px; background:#fdecec; border-radius:6px; padding:10px 12px;"></div>
+  <div style="font-size:12.5px; color:#1f2430; margin-bottom:6px;">Type <b>confirm</b> below to post it anyway:</div>
+  <input type="text" id="posOrderDupeConfirmInput" autocomplete="off" oninput="posOrderDupeConfirmCheck()" onkeydown="if(event.key==='Enter' && !document.getElementById('posOrderDupeConfirmBtn').disabled){ event.preventDefault(); posOrderDupeConfirmed(); } if(event.key==='Escape'){ event.preventDefault(); posCancelOrderDupe(); }" style="width:100%; border:1px solid #d7dae0; border-radius:6px; padding:8px 10px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
+  <div style="display:flex; gap:10px; justify-content:flex-end;">
+    <button type="button" onclick="posCancelOrderDupe()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
+    <button type="button" id="posOrderDupeConfirmBtn" disabled onclick="posOrderDupeConfirmed()" style="background:#c53030; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; opacity:.5;">Post Anyway</button>
+  </div>
+</div>
+
+<div id="posDayLockBackdrop" onclick="posCloseDayLockConfirm()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
+<div id="posDayLockModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
+  <div style="font-weight:700; font-size:14.5px; margin-bottom:6px; color:#1f2430;" id="posDayLockModalTitle">Confirm</div>
+  <div style="font-size:12.5px; color:#4b5b73; line-height:1.6; margin-bottom:14px;" id="posDayLockModalSub"></div>
+  <label style="display:block; font-size:12px; color:#4b5b73; margin-bottom:6px;" id="posDayLockModalLabel"></label>
+  <input type="text" id="posDayLockTypeInput" autocomplete="off" oninput="this.classList.remove('duplicate')" onkeydown="if(event.key==='Enter'){ event.preventDefault(); posConfirmDayLockAction(); } if(event.key==='Escape'){ event.preventDefault(); posCloseDayLockConfirm(); }" style="width:100%; border:1px solid #d7dae0; border-radius:6px; padding:8px 10px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
+  <div style="display:flex; gap:10px; justify-content:flex-end;">
+    <button type="button" onclick="posCloseDayLockConfirm()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
+    <button type="button" id="posDayLockModalConfirmBtn" onclick="posConfirmDayLockAction()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Confirm</button>
+  </div>
+</div>
+
 <div id="restaurantNative">
 
 <div class="body-shell">
 <nav class="sidebar" id="appSidebar">
   <div class="sidebar-label">MODULES</div>
-  <button class="active" onclick="posShowApp('page-pos-invoice', this)"><span class="sb-icon">🧾</span><span class="sb-text">Point of Sale</span></button>
-  <button onclick="posShowApp('page-receipts', this)"><span class="sb-icon">💳</span><span class="sb-text">Receipts</span></button>
-  <button onclick="posShowApp('page-charges-summary', this)"><span class="sb-icon">📊</span><span class="sb-text">Charges Summary</span></button>
-  <button onclick="posShowApp('page-qty-summary', this)"><span class="sb-icon">📦</span><span class="sb-text">Quantity Summary</span></button>
-  <button onclick="posShowApp('page-printed-only', this)"><span class="sb-icon">🖨️</span><span class="sb-text">Printed-Only</span></button>
-  <button onclick="posShowApp('page-front-office', this)"><span class="sb-icon">🛎️</span><span class="sb-text">Front Office Pending</span></button>
+  <button class="active" onclick="posShowApp('page-pos-invoice', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg><span class="sb-text">Point of Sale</span></button>
+  <button onclick="posShowApp('page-receipts', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg><span class="sb-text">All Receipts</span></button>
+  <button onclick="posShowApp('page-charges-summary', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><span class="sb-text">Charges Summary</span></button>
+  <button onclick="posShowApp('page-qty-summary', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><span class="sb-text">Quantity Summary</span></button>
+  <button onclick="posShowApp('page-printed-only', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg><span class="sb-text">Printed-Only</span></button>
+  <button onclick="posShowApp('page-front-office', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span class="sb-text">Front Office Pending</span></button>
+  <button onclick="posShowApp('page-pending-payments', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><span class="sb-text">Pending Payments</span></button>
+  <button onclick="posShowApp('page-previous-day', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span class="sb-text">Previous Day (Locked)</span></button>
   <div class="sidebar-spacer"></div>
-  <button onclick="posShowApp('page-manage-parts', this)"><span class="sb-icon">🍽️</span><span class="sb-text">Manage Menu</span></button>
-  <button onclick="posShowApp('page-deleted', this)"><span class="sb-icon">🗑️</span><span class="sb-text">Deleted</span></button>
+  <button onclick="posShowApp('page-manage-parts', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h1a2 2 0 0 0 2-2V2"></path><path d="M6 11v11"></path><path d="M18 2v20"></path><path d="M14 2a4 4 0 0 0-4 4v2a4 4 0 0 0 4 4"></path></svg><span class="sb-text">Manage Menu</span></button>
+  <button onclick="posShowApp('page-deleted', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg><span class="sb-text">Deleted</span></button>
 </nav>
 <div class="app-wrap" style="padding:18px;">
 <div id="page-pos-invoice" class="app-page visible">
@@ -4353,14 +4537,15 @@
 <div class="wrap">
 
   <div class="page-head">
-    <h1>Point of Sale</h1>
+    <h1>Point of Sale <span id="posEditingBadge" style="display:none; font-size:12px; font-weight:600; color:#dc2626; vertical-align:middle;">— editing</span></h1>
+    <button type="button" id="posEditBtn" onclick="posRequestEdit()" style="display:none; background:#fff; color:var(--blue); border:1px solid var(--blue); border-radius:6px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">✎ Edit</button>
   </div>
 
   <div id="posMenuBackdrop" onclick="posCloseMenuPanel()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:999;"></div>
   <div class="card" id="posMenuPanel" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1000; width:min(700px,90vw); max-height:80vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,.35); margin:0;">
     <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--border-strong); position:sticky; top:0; background:var(--panel);">
       <span id="posMenuPanelTitle" style="font-weight:700; font-size:14px;">Menu</span>
-      <button type="button" class="btn-outline" onclick="posCloseMenuPanel()">✕ Close</button>
+      <button type="button" class="pos-modal-close" onclick="posCloseMenuPanel()" title="Close" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
     <div class="table-wrap" style="padding:0 4px 8px;">
       <table class="parts" id="posMenuPanelTable">
@@ -4374,15 +4559,15 @@
   <div class="card">
     <div class="top-fields-live">
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>CUSTOMER 🔍</label>
-        <input type="text" id="posCustomer" list="posCustomerOptions" value="Walkin Customer" oninput="posRecalcAll()">
+        <input type="text" id="posCustomer" list="posCustomerOptions" value="Walkin Customer" oninput="posRecalcAll()" onclick="posOpenDatalist(this)">
         <datalist id="posCustomerOptions">
           <option value="Walkin Customer">
           <option value="Room Service">
           <option value="Haji Sahab Guest">
         </datalist>
       </div>
-      <div class="lbl-input" style="flex:0 0 170px;"><label>ORDER #</label><input type="text" id="posOrderNo"></div>
-      <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><input type="text" id="posRoomNoField" list="posRoomOptions" autocomplete="off" oninput="posRoomNoChanged(this)"><datalist id="posRoomOptions"></datalist></div>
+      <div class="lbl-input" style="flex:0 0 170px;"><label>ORDER NO(QT)</label><div class="with-pick"><input type="text" id="posOrderNo"><button type="button" class="pick-btn" onclick="posAutoNextOrderNo()" title="Fill in previous Order No(QT) + 1">+1</button></div></div>
+      <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><input type="text" id="posRoomNoField" list="posRoomOptions" autocomplete="off" oninput="posRoomNoChanged(this)" onclick="posOpenDatalist(this)"><datalist id="posRoomOptions"></datalist></div>
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>Discription(extra notes)</label><input type="text" id="posLineDescription"></div>
     </div>
 
@@ -4511,7 +4696,7 @@
     <div class="card tax-card">
       <div class="section-title">TAX SUMMARY</div>
       <table class="tax-tbl">
-        <thead><tr><th>Account No</th><th>Description</th><th class="num">Amount</th></tr></thead>
+        <thead><tr><th style="width:100px;">Account No</th><th>Description</th><th class="num" style="width:110px;">Amount</th></tr></thead>
         <tbody>
           <tr class="total-row"><td></td><td>Total Tax Amount</td><td class="num">0.00</td></tr>
         </tbody>
@@ -4540,20 +4725,19 @@
           <div class="pay-col-date"><input type="date" class="pay-date-input" onchange="posRecalcAll()"></div>
           <div class="pay-col-amt"><input type="text" inputmode="decimal" class="pay-amount-input" oninput="posRecalcAll()"></div>
           <div class="pay-col-type"><select class="pay-type-select">
+            <option value="cash" selected>Cash</option>
             <option value="account_transfer">Account Transfer</option>
             <option value="card">Card</option>
-            <option value="cash">Cash</option>
           </select></div>
         </div>
       </div>
     </div>
     <div class="add-payment-row">
       <button type="button" class="add-payment-btn" onclick="posAddPayment()">+ Add payment</button>
-      <button type="button" class="add-payment-btn" onclick="posFullPayment()">Full Payment</button>
+      <button type="button" class="add-payment-btn" id="posFullPaymentBtn" onclick="posFullPayment()">Full Payment</button>
     </div>
     <div class="pay-totals">
       <div class="taxes-list">
-        <label class="tax-item" data-code="23220"><input type="checkbox" checked onchange="posRecalcAll()"><span class="name">GST 10%</span></label>
         <label class="tax-item" data-code="23221"><input type="checkbox" checked onchange="posRecalcAll()"><span class="name">Service Charges 10%</span></label>
         <label class="tax-item" data-code="23222"><input type="checkbox" onchange="posRecalcAll()"><span class="name">GST 10% on Food</span></label>
       </div>
@@ -4577,7 +4761,7 @@
   <div class="card list-card">
     <div class="lc-title">Recent Invoices</div>
     <table class="simple">
-      <thead><tr><th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
       <tbody id="recentInvoicesBody"></tbody>
     </table>
   </div>
@@ -4585,7 +4769,7 @@
   <div class="card list-card" id="guestInvoicesCard" style="display:none; margin-top:14px;">
     <div class="lc-title">Guests (Non-Paying)</div>
     <table class="simple">
-      <thead><tr><th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
       <tbody id="guestInvoicesBody"></tbody>
     </table>
   </div>
@@ -4598,21 +4782,31 @@
 
 <div class="wrap">
 
-  <div class="h-title">Receipts</div>
-  <div class="h-sub">Posted invoices for the selected date — paying customers and non-paying guests</div>
+  <div class="h-title">All Receipts</div>
+  <div class="h-sub">Every invoice for the selected date — posted and not-yet-posted, paying customers and non-paying guests</div>
 
   <div class="card filters-card">
-    <div class="filters-label">DATE</div>
-    <div class="filters-grid" style="grid-template-columns:220px;">
+    <div class="filters-label">FILTERS</div>
+    <div class="filters-grid" style="grid-template-columns:220px 200px;">
       <div><label>Date</label><input type="date" id="receiptsDateFilter" onchange="receiptsRefresh()"></div>
+      <div><label>Status</label>
+        <select id="receiptsStatusFilter" onchange="receiptsRefresh()">
+          <option value="all" selected>All</option>
+          <option value="posted">Posted</option>
+          <option value="notposted">Not Posted</option>
+        </select>
+      </div>
     </div>
   </div>
 
   <div class="card results-card">
-    <div class="results-head">PAID</div>
+    <div class="results-head">
+      <span class="rh-title">PAID</span>
+      <span class="rh-count" id="receiptsCount">0 receipts</span>
+    </div>
     <table class="rep">
       <thead>
-        <tr><th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsPaidBody"></tbody>
     </table>
@@ -4622,7 +4816,7 @@
     <div class="results-head">AT FRONT OFFICE</div>
     <table class="rep">
       <thead>
-        <tr><th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsFrontOfficeBody"></tbody>
     </table>
@@ -4632,7 +4826,7 @@
     <div class="results-head">GUESTS (NON-PAYING)</div>
     <table class="rep">
       <thead>
-        <tr><th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsGuestBody"></tbody>
     </table>
@@ -4650,15 +4844,19 @@
   <div class="h-sub">Every posted invoice's charges for the selected period — leave both dates blank to see everything.</div>
 
   <div class="card filters-card">
-    <div class="filters-grid" style="grid-template-columns:220px 220px;">
-      <div><label>From date</label><input type="date" id="csFromDate" onchange="renderChargesSummary()"></div>
-      <div><label>To date</label><input type="date" id="csToDate" onchange="renderChargesSummary()"></div>
+    <div class="filters-grid" style="grid-template-columns:220px;">
+      <div>
+        <label>Date Range</label>
+        <input type="text" id="csRange" placeholder="Select a date range">
+        <input type="date" id="csFromDate" style="display:none">
+        <input type="date" id="csToDate" style="display:none">
+      </div>
     </div>
   </div>
 
   <div class="card results-card">
     <div class="results-head">
-      <span class="rh-title">RESULTS</span>
+      <span class="rh-title">TOTAL SALE</span>
       <span class="rh-count" id="csCount">0 invoices</span>
     </div>
     <table class="rep">
@@ -4675,10 +4873,60 @@
 
   <div class="card results-card" style="margin-top:16px;">
     <div class="results-head">
+      <span class="rh-title">PAYMENT METHOD BREAKDOWN</span>
+    </div>
+    <table class="rep">
+      <thead>
+        <tr><th>METHOD</th><th class="num">AMOUNT</th></tr>
+      </thead>
+      <tbody id="csPaymentBreakdownBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card results-card" style="margin-top:16px;">
+    <div class="results-head">
+      <span class="rh-title">PENDING PAYMENTS</span>
+      <span class="rh-count" id="csPendingCount">0 pending</span>
+    </div>
+    <div class="h-sub" style="margin:-6px 0 12px;">Same list as the Pending Payments module — invoices from Total Sale above that still owe a balance.</div>
+    <table class="rep">
+      <thead>
+        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th></tr>
+      </thead>
+      <tbody id="csPendingBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card results-card" style="margin-top:16px;">
+    <div class="results-head">
+      <span class="rh-title">SERVICE CHARGE (ESTIMATED)</span>
+      <span class="rh-count" id="csServiceChargeTotal">0.00</span>
+    </div>
+    <div class="h-sub" style="margin:-6px 0 12px;">Estimated at the default 10% rate on each invoice's subtotal — invoices aren't stored with which specific taxes were checked, so this is a computed estimate, not a stored fact. Cross-check against Point of Sale's own Tax Summary if you need an exact figure for a single invoice.</div>
+    <table class="rep">
+      <thead>
+        <tr><th>INVOICE #</th><th>DATE</th><th class="num">SUBTOTAL</th><th class="num">EST. SERVICE CHARGE (10%)</th></tr>
+      </thead>
+      <tbody id="csServiceChargeBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card results-card" style="margin-top:16px;">
+    <div class="results-head">
+      <span class="rh-title">RECONCILIATION</span>
+    </div>
+    <div class="h-sub" style="margin:-6px 0 12px;">Total Sale should always equal Total Credit (paid) plus Total Debt (still owed) — this is a sanity check, not something that should ever actually be off.</div>
+    <table class="rep">
+      <tbody id="csReconBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card results-card" style="margin-top:16px;">
+    <div class="results-head">
       <span class="rh-title">GUEST SUMMARY</span>
       <span class="rh-count" id="csGuestCount">0 guest invoices</span>
     </div>
-    <div class="h-sub" style="margin:-6px 0 12px;">Haji Sahab Guest invoices — items served, no payment, not counted in the totals above.</div>
+    <div class="h-sub" style="margin:-6px 0 12px;">Haji Sahab Guest invoices — items served, no payment, not counted in any of the totals above.</div>
     <table class="rep">
       <thead>
         <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th></tr>
@@ -4699,9 +4947,13 @@
   <div class="h-sub">How many of each menu item were sold in the selected period, and for how much — leave both dates blank to see everything.</div>
 
   <div class="card filters-card">
-    <div class="filters-grid" style="grid-template-columns:220px 220px;">
-      <div><label>From date</label><input type="date" id="qsFromDate" onchange="renderQuantitySummary()"></div>
-      <div><label>To date</label><input type="date" id="qsToDate" onchange="renderQuantitySummary()"></div>
+    <div class="filters-grid" style="grid-template-columns:220px;">
+      <div>
+        <label>Date Range</label>
+        <input type="text" id="qsRange" placeholder="Select a date range">
+        <input type="date" id="qsFromDate" style="display:none">
+        <input type="date" id="qsToDate" style="display:none">
+      </div>
     </div>
   </div>
 
@@ -4746,7 +4998,7 @@
     <table class="rep">
       <thead>
         <tr>
-          <th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
+          <th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
           <th class="num">AMOUNT</th><th class="num">PAID</th><th>ACTION</th>
         </tr>
       </thead>
@@ -4761,7 +5013,7 @@
     <table class="rep">
       <thead>
         <tr>
-          <th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
+          <th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
           <th class="num">AMOUNT</th><th class="num">PAID</th><th>ACTION</th>
         </tr>
       </thead>
@@ -4794,7 +5046,7 @@
     </div>
     <table class="rep">
       <thead>
-        <tr><th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="frontOfficeBody"></tbody>
     </table>
@@ -4807,7 +5059,7 @@
     </div>
     <table class="rep">
       <thead>
-        <tr><th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:200px;">COLLECTED</th></tr>
+        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:200px;">COLLECTED</th></tr>
       </thead>
       <tbody id="frontOfficeCollectedBody"></tbody>
     </table>
@@ -4837,10 +5089,97 @@
     </div>
     <table class="rep">
       <thead>
-        <tr><th>DEPT</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th></tr>
+        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th></tr>
       </thead>
       <tbody id="deletedBody"></tbody>
     </table>
+  </div>
+
+</div>
+
+</div>
+<div id="page-pending-payments" class="app-page">
+
+<div class="wrap">
+
+  <div class="h-title">Pending Payments</div>
+  <div class="h-sub">Posted invoices that aren't fully paid yet — sorted by the biggest balance owed first.</div>
+
+  <div class="card filters-card">
+    <div class="filters-label">DATE</div>
+    <div class="filters-grid" style="grid-template-columns:220px;">
+      <div><label>Date</label><input type="date" id="pendingPaymentsDateFilter" onchange="pendingPaymentsRefresh()"></div>
+    </div>
+  </div>
+
+  <div class="card results-card">
+    <div class="results-head">
+      <span class="rh-title">PENDING PAYMENTS</span>
+      <span class="rh-count" id="pendingPaymentsCount">0 pending</span>
+    </div>
+    <table class="rep">
+      <thead>
+        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th><th style="width:90px;"></th></tr>
+      </thead>
+      <tbody id="pendingPaymentsBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+</div>
+<div id="page-previous-day" class="app-page">
+
+<div class="wrap">
+
+  <div class="h-title">Previous Day (Locked)</div>
+  <div class="h-sub">The most recently finished business day — POS runs on a 4am cutover, not midnight, so "today" here means since the last 4am. Everything below is locked: no editing, no deleting.</div>
+
+  <div class="card results-card">
+    <div class="results-head">
+      <span class="rh-title" id="prevDayTitle">PREVIOUS DAY</span>
+      <span class="rh-count" id="prevDayCount">0 invoices</span>
+    </div>
+    <table class="rep">
+      <thead>
+        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="num">BALANCE</th></tr>
+      </thead>
+      <tbody id="prevDayBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card results-card" style="margin-top:16px;">
+    <div class="results-head">
+      <span class="rh-title">DAY TOTALS</span>
+    </div>
+    <table class="rep">
+      <tbody id="prevDayTotalsBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+</div>
+<div id="page-pos-daylock" class="app-page">
+
+<div class="wrap">
+
+  <div class="h-title">POS Day Lock</div>
+  <div class="h-sub">Lock a business day so its invoices can no longer be edited or deleted — separate from the hotel's own Day Lock. The day right before today's 4am cutover locks itself automatically the first time anyone opens the app after it ends; lock/unlock any other day here.</div>
+
+  <div class="card filters-card">
+    <div class="filters-label">LOCK / UNLOCK A DAY</div>
+    <div class="filters-grid">
+      <div><label>Date</label><input type="date" id="posDlDate" onchange="posRenderDayLockPage()"></div>
+      <div><button type="button" class="dl-action-btn" id="posDlActionBtn">Lock This Day</button></div>
+    </div>
+  </div>
+
+  <div class="card results-card">
+    <div class="results-head">
+      <span class="rh-title">CURRENTLY LOCKED DAYS</span>
+    </div>
+    <div id="posDlList"></div>
   </div>
 
 </div>
@@ -5999,6 +6338,7 @@ function showView(view, fromPopState){
   if(topNavFrontOffice) topNavFrontOffice.classList.toggle('active', view === 'frontoffice');
   const topNavRestaurant = document.getElementById('topNavRestaurant');
   if(topNavRestaurant) topNavRestaurant.classList.toggle('active', view === 'restaurant');
+  updateHotelRestaurantSwitch();
   if(view === 'frontoffice') renderFrontOffice();
   if(view === 'restaurant') posBootApp();
   if(view === 'report') renderReport();
@@ -15538,6 +15878,9 @@ async function migrateLegacyLocalData(){
 // browser tab's session (survives a refresh, asks again after the browser
 // is fully closed and reopened).
 const LOGIN_SESSION_KEY = 'guest_system_logged_in_v1';
+// Persists across browser restarts (localStorage, not sessionStorage) so the
+// username field can be silently pre-filled next time — never the password.
+const LOGIN_LAST_USERNAME_KEY = 'guest_system_last_username_v1';
 
 // ---- Account roles ----
 // 'admin' — full access. 'staff' — everything EXCEPT editing mode: the
@@ -15558,6 +15901,19 @@ function isAdmin(){
 // only so one account can see the separate restaurant module's data.
 function isSuperAdmin(){
   return !!currentUser && currentUser.role === 'superadmin';
+}
+
+// Quick Hotel/Restaurant switch next to the theme toggle — superadmin only,
+// same two views topNavRestaurant/topNavDashboard already route to.
+function updateHotelRestaurantSwitch(){
+  const btn = document.getElementById('hotelRestaurantSwitch');
+  if(!btn) return;
+  if(!isSuperAdmin()){ btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  btn.textContent = currentView === 'restaurant' ? 'Hotel' : 'Restaurant';
+}
+function toggleHotelRestaurantMode(){
+  showView(currentView === 'restaurant' ? 'dashboard' : 'restaurant');
 }
 
 // 'restaurant' — sees only the Restaurant tab and Front Office, nothing
@@ -15608,7 +15964,10 @@ function applyRolePermissions(){
   if(frontOfficeNav) frontOfficeNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
+  const posUnlockNav = document.getElementById('topNavPosUnlock');
+  if(posUnlockNav) posUnlockNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
+  updateHotelRestaurantSwitch();
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
   const avatar = document.getElementById('hdrAvatar');
@@ -15644,6 +16003,7 @@ async function attemptLogin(){
   if(typeof role === 'string'){
     currentUser = { username, role };
     try{ sessionStorage.setItem(LOGIN_SESSION_KEY, JSON.stringify(currentUser)); }catch(e){ /* best effort */ }
+    try{ localStorage.setItem(LOGIN_LAST_USERNAME_KEY, username); }catch(e){ /* best effort */ }
     loginError.textContent = '';
     showApp();
   } else if(role === null){
@@ -15682,11 +16042,15 @@ function showApp(){
   // below from running, or the account looks logged-out on every refresh
   // even though currentUser was already set and nothing was ever lost.
   try{ restoreLastView(); }catch(e){ console.error('restoreLastView failed', e); }
-  // restaurant accounts have nothing to see on the default 'entry' view
-  // (their nav only has Front Office/Restaurant) — land them on Restaurant
-  // instead, unless restoreLastView already sent them to Front Office.
+  // restaurant accounts have nothing to see outside Front Office/Restaurant
+  // — land them on Restaurant unless restoreLastView already sent them to
+  // Front Office. restoreLastView() only blocks 'restaurant'/'frontoffice'/
+  // admin-only views from being restored for this role — a stale 'dashboard'
+  // (or any other hotel view) saved from a previous session on the same
+  // browser sails right through, so checking currentView === 'entry' alone
+  // missed that case and stranded restaurant accounts on the hotel Dashboard.
   try{
-    if(isRestaurantRole() && currentView === 'entry') showView('restaurant');
+    if(isRestaurantRole() && currentView !== 'restaurant' && currentView !== 'frontoffice') showView('restaurant');
   }catch(e){ console.error('Auto-navigate to Restaurant failed', e); }
   document.getElementById('loginOverlay').classList.add('hidden');
   document.getElementById('appRoot').style.display = '';
@@ -15749,6 +16113,14 @@ addPayRow();
   if(currentUser){
     showApp();
   } else {
+    // Remembers the last-used username ourselves (localStorage) and fills
+    // it in directly, instead of relying on autocomplete="on" — that would
+    // bring back the browser's own native suggestions dropdown, which is
+    // exactly what should never show here. Password is never remembered.
+    try{
+      const lastUsername = localStorage.getItem(LOGIN_LAST_USERNAME_KEY);
+      if(lastUsername) document.getElementById('loginUsername').value = lastUsername;
+    }catch(e){ /* best effort */ }
     document.getElementById('loginUsername').focus();
   }
 })();
@@ -15795,6 +16167,9 @@ function posInvoicePayload(record){
     tax_total: record.taxTotal || 0,
     grand_total: record.grandTotal != null ? record.grandTotal : (record.amount || 0),
     paid: record.paid || 0,
+    paid_cash: record.paidCash || 0,
+    paid_account_transfer: record.paidAccountTransfer || 0,
+    paid_card: record.paidCard || 0,
     balance: record.balance || 0,
     mode: record.mode,
     posted: !!record.posted,
@@ -15835,6 +16210,9 @@ function posRowFromDb(row, items){
     customer: row.customer,
     amount: Number(row.grand_total) || 0,
     paid: Number(row.paid) || 0,
+    paidCash: Number(row.paid_cash) || 0,
+    paidAccountTransfer: Number(row.paid_account_transfer) || 0,
+    paidCard: Number(row.paid_card) || 0,
     subtotal: Number(row.subtotal) || 0,
     taxTotal: Number(row.tax_total) || 0,
     grandTotal: Number(row.grand_total) || 0,
@@ -15855,14 +16233,21 @@ function posRowFromDb(row, items){
   };
 }
 
-async function posPushNewInvoice(record){
-  if (!sb) { posShowToast('Not connected to the cloud — try again.', 'error'); return false; }
+// ---------- POS cloud retry queue ----------
+// Mirrors the hotel's own pendingPushIds/push-retry pattern (queue on
+// failure, keep retrying until it lands) but kept fully separate/pos_*
+// scoped. A failed save/update/delete no longer just shows a toast and
+// gives up — it's applied to local state immediately (so the UI, e.g. the
+// Deleted page, reflects it right away) and queued to auto-resend the
+// moment the connection comes back, instead of silently doing nothing.
+var posPendingInvoiceSaves = new Map();   // id -> record (full new/edited invoice not yet confirmed)
+var posPendingInvoiceUpdates = new Map(); // id -> { record, fields } (merged field-only updates not yet confirmed)
+var posPendingLockActions = [];           // [{ mode, dateStr }]
+var posSyncRetryInFlight = false;
+
+async function posPushNewInvoiceRaw(record){
   var invRes = await sb.from('pos_invoices').upsert(posInvoicePayload(record), { onConflict: 'id' });
-  if (invRes.error) {
-    console.error('POS invoice save failed', invRes.error);
-    posShowToast('Save failed — check your connection and try again.', 'error');
-    return false;
-  }
+  if (invRes.error) { console.error('POS invoice save failed', invRes.error); return false; }
   var items = posItemPayload(record);
   if (items.length) {
     var itemRes = await sb.from('pos_invoice_items').upsert(items, { onConflict: 'id' });
@@ -15872,17 +16257,61 @@ async function posPushNewInvoice(record){
   return true;
 }
 
-async function posPushInvoiceUpdate(record, fields){
-  if (!sb) { posShowToast('Not connected to the cloud — try again.', 'error'); return false; }
-  var res = await sb.from('pos_invoices').update(fields).eq('id', record.id);
-  if (res.error) {
-    console.error('POS invoice update failed', res.error);
-    posShowToast('Update failed — check your connection.', 'error');
-    return false;
-  }
+async function posPushInvoiceUpdateRaw(id, fields){
+  var res = await sb.from('pos_invoices').update(fields).eq('id', id);
+  if (res.error) { console.error('POS invoice update failed', res.error); return false; }
   posMutationStamp++;
   return true;
 }
+
+// record's local state is already whatever the caller wants shown — this
+// just tries to get it to the server, queuing for background retry on
+// failure instead of leaving the caller to decide what "failed" means.
+async function posPushNewInvoice(record){
+  if (!sb) { posPendingInvoiceSaves.set(record.id, record); posShowToast('Not connected to the cloud — saved locally, will sync automatically.', 'error'); return true; }
+  var ok = await posPushNewInvoiceRaw(record);
+  if (!ok) {
+    posPendingInvoiceSaves.set(record.id, record);
+    posShowToast('Could not reach the cloud database — saved locally, will retry automatically.', 'error');
+    return true;
+  }
+  posPendingInvoiceSaves.delete(record.id);
+  return true;
+}
+
+async function posQueueInvoiceUpdate(record, fields){
+  var existing = posPendingInvoiceUpdates.get(record.id);
+  var merged = Object.assign({}, existing && existing.fields, fields);
+  posPendingInvoiceUpdates.set(record.id, { record: record, fields: merged });
+  if (!sb) return;
+  var ok = await posPushInvoiceUpdateRaw(record.id, merged);
+  if (ok) posPendingInvoiceUpdates.delete(record.id);
+}
+
+async function posFlushPendingPosWrites(){
+  if (!sb || posSyncRetryInFlight) return;
+  if (posPendingInvoiceSaves.size === 0 && posPendingInvoiceUpdates.size === 0 && posPendingLockActions.length === 0) return;
+  posSyncRetryInFlight = true;
+  try{
+    for (const [id, record] of Array.from(posPendingInvoiceSaves.entries())) {
+      var savedOk = await posPushNewInvoiceRaw(record);
+      if (savedOk) posPendingInvoiceSaves.delete(id); else break;
+    }
+    for (const [id2, pending] of Array.from(posPendingInvoiceUpdates.entries())) {
+      var updatedOk = await posPushInvoiceUpdateRaw(id2, pending.fields);
+      if (updatedOk) posPendingInvoiceUpdates.delete(id2); else break;
+    }
+    while (posPendingLockActions.length) {
+      var action = posPendingLockActions[0];
+      var lockOk = action.mode === 'lock' ? await posLockDayAction(action.dateStr, true) : await posUnlockDayAction(action.dateStr, true);
+      if (!lockOk) break; // success already removes itself from the queue inside posLockDayAction/posUnlockDayAction
+    }
+  } finally {
+    posSyncRetryInFlight = false;
+  }
+}
+setInterval(posFlushPendingPosWrites, 20000);
+window.addEventListener('online', posFlushPendingPosWrites);
 
 async function posPullFromCloud(){
   if (!sb) return;
@@ -15906,13 +16335,23 @@ async function posPullFromCloud(){
           .map(function(it){ return { name: it.name, notes: it.notes || '', qty: Number(it.qty) || 0, price: Number(it.price) || 0, pct: Number(it.pct) || 0 }; });
         return posRowFromDb(row, items);
       });
+      // Isolated from the try/catch above on purpose — the pos_locked_days
+      // table not existing yet (migration not run) must not take down the
+      // whole invoice pull. posIsDateLocked's no-row-means-locked default
+      // keeps everything safely locked either way.
+      await posFetchLockedDays();
+      await posAutoLockPastDays();
       posRenderRecentInvoices();
       receiptsRefresh();
       printedOnlyRefresh();
       frontOfficeRefresh();
       deletedRefresh();
+      pendingPaymentsRefresh();
+      prevDayRefresh();
       renderChargesSummary();
       renderQuantitySummary();
+      posRenderDayLockPage();
+      posFlushPendingPosWrites(); // a successful pull is a strong signal the connection is back — retry queued writes right away instead of waiting for the next interval tick
     }catch(e){
       console.error('POS cloud pull failed', e);
       posShowToast('Could not load restaurant data — check your connection and try again.', 'error');
@@ -15944,13 +16383,18 @@ function posShowApp(id, btn){
   document.querySelectorAll('.app-page').forEach(p=>p.classList.remove('visible'));
   document.getElementById(id).classList.add('visible');
   document.querySelectorAll('.sidebar button').forEach(b=>b.classList.remove('active'));
+  var posUnlockNavBtn = document.getElementById('topNavPosUnlock');
+  if (posUnlockNavBtn) posUnlockNavBtn.classList.remove('active');
   btn.classList.add('active');
   if (id === 'page-receipts') receiptsRefresh();
   if (id === 'page-printed-only') printedOnlyRefresh();
   if (id === 'page-front-office') frontOfficeRefresh();
   if (id === 'page-deleted') deletedRefresh();
+  if (id === 'page-pending-payments') pendingPaymentsRefresh();
+  if (id === 'page-previous-day') prevDayRefresh();
   if (id === 'page-charges-summary') renderChargesSummary();
   if (id === 'page-qty-summary') renderQuantitySummary();
+  if (id === 'page-pos-daylock') posRenderDayLockPage();
 }
 
 function mpFilterCat(grp, btn){
@@ -15987,6 +16431,34 @@ var mpSearchBox = document.getElementById('mpSearch');
 if (mpSearchBox) mpSearchBox.addEventListener('input', mpRefresh);
 
 var POS_MENU_ITEMS = [['Plain Fries',350],['Buffalo Wings 5 Pieces',799],['Crispy Wings 5 Pieces',550],['Special Loaded Fries',950],['Pizza Fries',850],['Spanish Latte Cold',849],['Spanish Latte Hot',899],['Hazelnut Latte Cold',849],['Hazelnut Latte Hot',899],['Caramel Latte Cold',849],['Caramel Latte Hot',899],['Cortado Hot',799],['Cortado Cold',849],['Apple Cinnamon Cold',899],['Apple Cinnamon Hot',849],['Moca Latte Hot',849],['Moca Latte Cold',879],['Americano Cold',749],['Americano Hot',749],['Caramel Latte Cold',849],['Caramel Latte Hot',899],['Cortado Hot',799],['Cortado Cold',849],['Apple Cinnamon Cold',899],['Apple Cinnamon Hot',849],['Moca Latte Hot',849],['Moca Latte Cold',879],['Americano Cold',749],['Americano Hot',749],['Blueberry Fizz',749],['Strawberry Fizz',749],['Pineapple Fizz',699],['Lemon Ginger Fizz',699],['Chicken Tikka',799],['Chicken Botti One Plate',2450],['Chicken Malai Boti',2650],['Chicken Seekh Kabab (6pcs)',2400],['Beef Bihari Boti (1 plate)',3050],['Mutton Chops (1 kg)',4500],['Mineral Water Small',120],['Mineral Water Large',200],['Soft Drink Can',220],['Diet Can',250],['Mix Tea',250],['Separate Tea',250],['Green Tea',150],['Ice Tea (Peach, Lemon)',599],['Mint Margarita',499],['Pina Colada',699],['Fruit Smoothies',749],['Riviera Resort Special Shake',899],['Kit Kat Shake',799],['Fresh Seasonal Juice',699],['Milk Shake',599],['Egg Omelette',250],['Cheese Omelette',350],['Mushroom Omelette',350],['Fried Egg',249],['Boiled Egg',199],['Lahori Chanay',599],['Aalo Bujiya',599],['Aalo Qeema',159],['Paratha',159],['Naan',60],['Toasted Bread',150],['French Toast',299],['Butter',150],['Jam',200],['Honey',100],['Achaar',149],['Halwa (Plate)',200],['Halwa (Bowl)',500],['Kung Pao Chicken with Rice',1400],['Chicken Manchurian with Rice',999],['Chicken Shashlik with Rice',1350],['Chicken Chilly Dry with Rice',1500],['Beef Chilly Dry with Rice',1299],['Chicken Fried Rice',1100],['Egg Fried Rice',1000],['Garlic Rice',1000],['Plain Rice',800],['Chicken Black Pepper',1400],['Chicken Almond',1400],['Chicken Cashew Nuts',1400],['Mongolian Chicken',1400],['Chicken Vegetable',1300],['Chicken Chowmein',1400],['Vegetable Chowmein',1350],['Mongolian Chowmein',1500],['Vegetable Fried Rice',900],['Latte',699],['Cappuccino',799],['Espresso',0],['Single',499],['Double',699],['Hot Chocolate',749],['Beef Burger',999],['Beef Jalapeno Burger',1089],['Grill Chicken Burger',899],['Riviera Special Grilled Chicken Burger',999],['Grilled Chicken Cheese Sandwich',799],['Chicken Club Sandwich',900],['Riviera Special Sandwich',1049],['Trout Fish (1 Kg)',6000],['Zinger Burger',1000],['Chicken Karahi Half',1599],['Chicken Achari Karahi Half',1199],['Chicken Makhani Karahi Half',1249],['Chicken Handi Half',1399],['Chicken Handi Makhani Half',1449],['Riviera Resort Special Chicken Handi Half',1549],['Chicken Mughlai Handi Half',1499],['Mutton Makhani Karahi Half',2500],['Mutton Karahi Half',2500],['Chicken Ginger Half',1299],['Chicken Karahi Full',2450],['Chicken Achari Karahi Full',2249],['Chicken Makhani Karahi Full',2699],['Chicken Handi Full',2749],['Chicken Handi Makhani Full',2849],['Riviera Resort Special Chicken Handi Full',2799],['Chicken Mughlai Handi Full',3099],['Mutton Makhani Karahi Full',4800],['Mutton Karahi Full',4800],['Chicken Ginger Full',2499],['Chicken Kabab Karahi',1249],['Riviera Resort Special Daal Mash',699],['Mix Vegetable',649],['Chicken Biryani',799],['Kabuli Pulao',999],['Black Forest Cake 1 Pound',1499],['Black Forest Cake 2 Pound',2999],['Pineapple Cake 1 Pound',1399],['Pineapple Cake 2 Pound',2599],['Chocolate Cake 1 Pound',1599],['Chocolate Cake 2 Pound',2999],['Caramel Pudding (per piece)',400],['Walnut Brownie',499],['Chocolate Brownie',499],['Black Forest Cake',400],['Pineapple Cake',499],['Chocolate Cake',499],['Chocolate Fudge Cake',399],['Chocolate Fudge Cake (1 Pound)',1699],['Kit Kat Cake (per pc)',399],['Kit Kat Cake (1 Pound)',1699],['Red Velvet Cake (per pc)',399],['Red Velvet Cake (1 Pound)',1699],['Blueberry Cake (per pc)',399],['Blueberry Cake (per Pound)',1599],['Swiss Roll',350],['Waffles',350],['Donuts',350],['Banana Slice',120],['Cup Cake',250],['3 Milk Cake',400],['Biscuit (250 gm)',350],['Cakeras (150 gm)',350],['Apple Pie (per piece)',350],['Tart',250],['Lasagna Pasta',1349],['Riviera Special Pasta',1499],['Alfredo Pasta',1349],['Penne Arrabbiata Pasta',1100],['Spaghetti Bolognese Chicken',1100],['Riviera Resort Special Pizza Medium',1600],['Chicken BBQ Pizza Medium',1650],['Cheese Cheesy Pizza Medium',1500],['Chicken Fajita Pizza Medium',1600],['Riviera Resort Special Pizza Large',2300],['Chicken BBQ Pizza Large',2300],['Cheese Cheesy Pizza Large',2000],['Chicken Fajita Pizza Large',2250],['Riviera Resort Special Pizza Extra Large',2899],['Crown Crust Pizza Medium',1650],['Crown Crust Pizza Medium Large',2350],['Chicken Fajita Pizza Extra Large',2650],['Chicken Tikka Pizza Medium',1699],['Chicken Tikka Pizza Large',2350],['Italian Chicken Salad',650],['Fresh Green Salad',250],['Russian Salad',499],['Raita',250],['Shinwari Lamb Karahi Half',2500],['Shinwari Lamb Karahi Full',4500],['Shinwari Mutton Tikka Half',2500],['Shinwari Mutton Tikka Full',4500],['Namkeen Lamb Tikka Half',2500],['Namkeen Lamb Tikka Full',4500],['Shinwari Lamb Karahi',2999],['Hot & Sour Soup Single',500],['Chicken Corn Soup Single',499],['Riviera Special Soup Single',549],['Vegetable Soup Single',499],['Hot & Sour Soup Family',1799],['Chicken Corn Soup Family',1977],['Riviera Special Soup Family',1899],['Vegetable Soup Family',1599],['Mushroom Steak Chicken',1699],['Black Pepper Steak Chicken',1749],['Tarragon Steak Chicken',1699],['BBQ Steak Chicken',1689],['BBQ Steak Chicken',1679],['Stuffed Chicken',2599],['Plain Naan',60],['Roghni Naan',149],['Qandhari Naan',99],['Garlic Naan',149],['Plain Roti',50],['Kalwanji Naan',149],['Tandoori Paratha',149],['Per Head',750]];
+
+// posInvoices is already sorted newest-first (posPullFromCloud orders by
+// created_at descending), so the first non-deleted record with a numeric
+// Order No(QT) found while scanning from the top is the most recent one.
+function posAutoNextOrderNo(){
+  var orderInput = document.getElementById('posOrderNo');
+  if (!orderInput) return;
+  var prev = null;
+  for (var i = 0; i < posInvoices.length; i++) {
+    var r = posInvoices[i];
+    if (r.deleted) continue;
+    var digits = (r.orderNo || '').match(/\d+/);
+    if (digits) { prev = parseInt(digits[0], 10); break; }
+  }
+  if (prev === null) { posShowToast('No previous Order No(QT) found to calculate from.', 'error'); return; }
+  orderInput.value = String(prev + 1);
+}
+
+// Browsers only pop a <datalist>'s suggestions on click when the field is
+// empty — with a value already in it (e.g. "Walkin Customer" or an
+// already-picked room) clicking just places the cursor. Briefly clearing
+// it forces the list open, then the original text is restored right after.
+// Same click-opens-the-list behavior as the hotel's own room selector.
+function posOpenDatalist(input){
+  var val = input.value;
+  input.value = '';
+  input.value = val;
+}
 
 function posSetupAutocomplete(input){
   var wrap = input.closest('.search-wrap');
@@ -16256,14 +16728,18 @@ function posRecalcAll(){
 
   var taxRate = 0;
   var taxRows = [];
-  document.querySelectorAll('#page-pos-invoice .tax-item input[type=checkbox]:checked').forEach(function(cb){
-    var item = cb.closest('.tax-item');
+  // Every tax item stays listed here (at 0.00 if unchecked) instead of
+  // vanishing from the table — only the checked ones count toward the
+  // actual tax total below.
+  document.querySelectorAll('#page-pos-invoice .tax-item').forEach(function(item){
+    var cb = item.querySelector('input[type=checkbox]');
     var code = item.dataset.code || '';
     var name = item.querySelector('.name').textContent.trim();
     var m = name.match(/(\d+(\.\d+)?)%/);
     var rate = m ? parseFloat(m[1]) : 0;
-    taxRate += rate;
-    taxRows.push({ code: code, name: name, amt: subtotal * rate / 100 });
+    var checked = !!(cb && cb.checked);
+    if (checked) taxRate += rate;
+    taxRows.push({ code: code, name: name, amt: checked ? subtotal * rate / 100 : 0 });
   });
   var taxTotal = subtotal * taxRate / 100;
 
@@ -16292,10 +16768,16 @@ function posRecalcAll(){
   if (totalsRows[2]) totalsRows[2].children[1].textContent = grandTotal.toFixed(2);
   if (totalsRows[3]) totalsRows[3].children[1].textContent = (discTotal + manualDiscAmt).toFixed(2);
 
-  var paid = 0;
+  var paid = 0, paidCash = 0, paidAccountTransfer = 0, paidCard = 0;
   document.querySelectorAll('#page-pos-invoice .pay-rows .pay-row').forEach(function(row){
     var amtInput = row.querySelector('.pay-amount-input');
-    paid += parseFloat((amtInput && amtInput.value || '').replace(/,/g, '')) || 0;
+    var amt = parseFloat((amtInput && amtInput.value || '').replace(/,/g, '')) || 0;
+    paid += amt;
+    var typeSel = row.querySelector('.pay-type-select');
+    var type = typeSel ? typeSel.value : 'cash';
+    if (type === 'account_transfer') paidAccountTransfer += amt;
+    else if (type === 'card') paidCard += amt;
+    else paidCash += amt;
   });
   var balance = grandTotal - paid;
 
@@ -16318,7 +16800,7 @@ function posRecalcAll(){
 
   posSaveDraft();
 
-  return { subtotal: subtotal, taxTotal: taxTotal, grandTotal: grandTotal, discTotal: discTotal + manualDiscAmt, paid: paid, balance: balance };
+  return { subtotal: subtotal, taxTotal: taxTotal, grandTotal: grandTotal, discTotal: discTotal + manualDiscAmt, paid: paid, balance: balance, paidCash: paidCash, paidAccountTransfer: paidAccountTransfer, paidCard: paidCard };
 }
 
 function posAddPayment(){
@@ -16343,7 +16825,25 @@ function posAddPayment(){
 // every row already has one) with exactly what's left to bring the
 // balance to zero — no manual subtraction needed for the common case of
 // paying the whole bill in one go.
+// Toggles: first click fills whatever row still needs an amount with
+// exactly enough to zero the balance, and the button becomes "Cancel";
+// clicking that clears the exact amount it filled and reverts.
+var posFullPaymentTarget = null;
+
+function posFullPaymentReset(){
+  posFullPaymentTarget = null;
+  var btn = document.getElementById('posFullPaymentBtn');
+  if (btn) btn.textContent = 'Full Payment';
+}
+
 function posFullPayment(){
+  var btn = document.getElementById('posFullPaymentBtn');
+  if (posFullPaymentTarget) {
+    posFullPaymentTarget.value = '';
+    posFullPaymentReset();
+    posRecalcAll();
+    return;
+  }
   var totals = posRecalcAll();
   if (totals.grandTotal <= 0) { posShowToast('Add at least one item before setting a full payment — there\'s nothing to pay yet.', 'error'); return; }
   var rows = document.querySelectorAll('#page-pos-invoice .pay-rows .pay-row');
@@ -16362,18 +16862,31 @@ function posFullPayment(){
   var otherPaid = totals.paid - currentVal;
   var needed = totals.grandTotal - otherPaid;
   targetInput.value = (needed > 0 ? needed : 0).toFixed(2);
+  posFullPaymentTarget = targetInput;
+  if (btn) btn.textContent = 'Cancel';
   posRecalcAll();
 }
 
-function posTodayISO(){
+// The restaurant's business day rolls over at 4am, not midnight — late
+// service after midnight still counts as the previous day's business.
+// Every date default in POS (invoice date, filter dates, new payment
+// rows) goes through this one function, so fixing it here is enough —
+// no need to touch every call site separately.
+function posBusinessDay(){
   var d = new Date();
+  if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+  return d;
+}
+
+function posTodayISO(){
+  var d = posBusinessDay();
   var mm = String(d.getMonth() + 1).padStart(2, '0');
   var dd = String(d.getDate()).padStart(2, '0');
   return d.getFullYear() + '-' + mm + '-' + dd;
 }
 
 function posFormatDate(){
-  var d = new Date();
+  var d = posBusinessDay();
   var dd = String(d.getDate()).padStart(2, '0');
   var mm = String(d.getMonth() + 1).padStart(2, '0');
   return dd + '-' + mm + '-' + d.getFullYear();
@@ -16391,18 +16904,18 @@ async function posNextInvoiceNo(){
   }catch(e){ console.error('POS invoice numbering failed', e); return null; }
 }
 
-function posBuildInvoiceRow(record, showFo){
+function posBuildInvoiceRow(record, showFo, showStatus){
   var tr = document.createElement('tr');
   tr.dataset.invoiceId = record.id;
   tr.className = 'fo-row';
   tr.title = 'Click to open ' + record.no + ' in Point of Sale';
-  tr.innerHTML = '<td>' + posEscapeHtml(record.dept) + '</td>' +
-    '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>' +
+  tr.innerHTML = '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>' +
     '<td>' + posEscapeHtml(record.date) + '</td>' +
     '<td>' + posEscapeHtml(record.room) + '</td>' +
     '<td>' + posEscapeHtml(record.customer) + '</td>' +
     '<td class="num">' + record.amount.toFixed(2) + '</td>' +
-    '<td class="num">' + record.paid.toFixed(2) + '</td>';
+    '<td class="num">' + record.paid.toFixed(2) + '</td>' +
+    (showStatus ? '<td><span class="status-badge ' + (record.posted ? 'posted' : 'not-posted') + '">' + (record.posted ? 'Posted' : 'Not Posted') + '</span></td>' : '');
   if (!record.deleted) tr.appendChild(posMakeActionsCell(record, showFo));
   tr.addEventListener('click', function(e){
     if (e.target.closest('button')) return;
@@ -16415,6 +16928,240 @@ function posBuildInvoiceRow(record, showFo){
 // showFo: the →FO/Undo toggle only ever shows on Recent Invoices (the
 // row right after posting) — everywhere else (Receipts, Printed-Only,
 // Front Office Pending) just shows delete/collected status.
+// Day Lock — mirrors the hotel's own locked_days/Day Lock page exactly
+// (explicit lock/unlock rows, typed LOCK/UNLOCK confirm, same look), but
+// kept in its own pos_locked_days table so POS and hotel data stay fully
+// isolated per the existing pos_* convention. A day with no row at all is
+// still treated as locked once it's in the past — see posIsDateLocked —
+// so nothing is retroactively unlocked just because this table is new or
+// hasn't been backfilled/synced yet. Locked invoices can still be viewed
+// and opened, just never edited or deleted.
+var posLockedDays = [];
+
+function posFindLockRow(iso){
+  return posLockedDays.find(function(l){ return l.lock_date === iso; });
+}
+function posIsDateLocked(iso){
+  var row = posFindLockRow(iso);
+  if (!row) return true; // no row yet for a past day = still locked, same safety net as before
+  return !row.unlocked_at;
+}
+function posIsLocked(record){
+  if (!record.isoDate) return false;
+  if (record.isoDate >= posTodayISO()) return false;
+  return posIsDateLocked(record.isoDate);
+}
+function posRefreshAfterLockChange(){
+  posRenderRecentInvoices();
+  receiptsRefresh();
+  printedOnlyRefresh();
+  frontOfficeRefresh();
+  deletedRefresh();
+  pendingPaymentsRefresh();
+  prevDayRefresh();
+}
+
+async function posFetchLockedDays(){
+  if (!sb) return;
+  try{
+    var res = await sb.from('pos_locked_days').select('*');
+    if (res.error) throw res.error;
+    posLockedDays = res.data || [];
+  }catch(e){
+    console.error('POS locked days fetch failed', e);
+  }
+}
+
+// Runs once per app load (see posBootApp) — backfills a lock row for any
+// past business day that has invoices but no row yet, so the day the 4am
+// cutover just closed gets locked the first time anyone opens the app
+// afterward. Upsert only ever targets dates already confirmed to have no
+// row (see the posFindLockRow guard below), so this never touches —
+// let alone silently re-locks — a day someone already unlocked.
+async function posAutoLockPastDays(){
+  if (!sb) return;
+  var today = posTodayISO();
+  var seen = {};
+  var toLock = [];
+  posInvoices.forEach(function(r){
+    if (!r.isoDate || r.isoDate >= today) return;
+    if (seen[r.isoDate]) return;
+    seen[r.isoDate] = true;
+    if (!posFindLockRow(r.isoDate)) toLock.push(r.isoDate);
+  });
+  if (!toLock.length) return;
+  try{
+    var rows = toLock.map(function(iso){
+      return { lock_date: iso, locked_by: 'System (auto 4am)', locked_at: new Date().toISOString(), unlocked_by: null, unlocked_at: null };
+    });
+    var res = await sb.from('pos_locked_days').upsert(rows, { onConflict: 'lock_date' });
+    if (res.error) throw res.error;
+    await posFetchLockedDays();
+  }catch(e){
+    console.error('POS auto-lock failed', e);
+  }
+}
+
+var posPendingDayLockAction = null;
+
+function posOpenDayLockConfirm(mode, dateStr){
+  if (!dateStr) { posShowToast('Please pick a date first.', 'error'); return; }
+  posPendingDayLockAction = { mode: mode, dateStr: dateStr };
+  var word = mode === 'lock' ? 'LOCK' : 'UNLOCK';
+  document.getElementById('posDayLockModalTitle').textContent = mode === 'lock' ? 'Confirm Lock' : 'Confirm Unlock';
+  document.getElementById('posDayLockModalSub').textContent = mode === 'lock'
+    ? 'Invoices dated ' + dateStr + ' can no longer be edited or deleted once locked.'
+    : 'Invoices dated ' + dateStr + ' can be edited/deleted again once unlocked.';
+  document.getElementById('posDayLockModalLabel').textContent = 'Type ' + word + ' to ' + mode + ' this day';
+  var input = document.getElementById('posDayLockTypeInput');
+  input.value = '';
+  input.placeholder = mode;
+  input.classList.remove('duplicate');
+  var btn = document.getElementById('posDayLockModalConfirmBtn');
+  btn.textContent = mode === 'lock' ? 'Lock This Day' : 'Unlock This Day';
+  document.getElementById('posDayLockBackdrop').style.display = '';
+  document.getElementById('posDayLockModal').style.display = '';
+  input.focus();
+}
+function posCloseDayLockConfirm(){
+  posPendingDayLockAction = null;
+  document.getElementById('posDayLockBackdrop').style.display = 'none';
+  document.getElementById('posDayLockModal').style.display = 'none';
+}
+function posConfirmDayLockAction(){
+  if (!posPendingDayLockAction) return;
+  var mode = posPendingDayLockAction.mode;
+  var dateStr = posPendingDayLockAction.dateStr;
+  var input = document.getElementById('posDayLockTypeInput');
+  if (input.value.trim().toLowerCase() !== mode) {
+    input.classList.add('duplicate');
+    posShowToast('Type "' + mode.toUpperCase() + '" in the box to ' + mode + ' this day.', 'error');
+    input.focus();
+    return;
+  }
+  posCloseDayLockConfirm();
+  if (mode === 'lock') posLockDayAction(dateStr); else posUnlockDayAction(dateStr);
+}
+
+// fromRetry: called from posFlushPendingPosWrites — local state is already
+// applied and the day already queued, so this just attempts the network
+// call and reports back true/false instead of touching the queue itself.
+function posRemovePendingLockAction(action){
+  if (!action) return;
+  var idx = posPendingLockActions.indexOf(action);
+  if (idx > -1) posPendingLockActions.splice(idx, 1);
+}
+
+async function posLockDayAction(dateStr, fromRetry){
+  var action;
+  if (!fromRetry) {
+    if (posIsDateLocked(dateStr) && posFindLockRow(dateStr)) { posShowToast(dateStr + ' is already locked.', 'error'); return true; }
+    var existing = posFindLockRow(dateStr);
+    var row = existing || { lock_date: dateStr };
+    row.locked_by = currentUser ? currentUser.username : '';
+    row.locked_at = new Date().toISOString();
+    row.unlocked_by = null;
+    row.unlocked_at = null;
+    if (!existing) posLockedDays.push(row);
+    action = { mode: 'lock', dateStr: dateStr };
+    posPendingLockActions.push(action);
+    posRenderDayLockPage();
+    posRefreshAfterLockChange();
+  } else {
+    action = posPendingLockActions.find(function(a){ return a.mode === 'lock' && a.dateStr === dateStr; });
+  }
+  if (!sb) { if (!fromRetry) posShowToast('Not connected to the cloud database — locked locally, will sync automatically.', 'error'); return false; }
+  try{
+    var res = await sb.from('pos_locked_days').upsert({
+      lock_date: dateStr,
+      locked_by: currentUser ? currentUser.username : '',
+      locked_at: new Date().toISOString(),
+      unlocked_by: null,
+      unlocked_at: null
+    }, { onConflict: 'lock_date' });
+    if (res.error) throw res.error;
+    posRemovePendingLockAction(action);
+    await posFetchLockedDays();
+    posRenderDayLockPage();
+    return true;
+  }catch(e){
+    console.error('POS lock day failed', e);
+    if (!fromRetry) posShowToast(e && e.message && e.message.indexOf('pos_locked_days') !== -1
+      ? 'The POS Day Lock table doesn\'t exist yet — run migration/pos_locked_days.sql in Supabase first. Locked locally for now, will sync once it does.'
+      : 'Couldn\'t reach the cloud database — locked locally, will retry automatically.', 'error');
+    return false;
+  }
+}
+async function posUnlockDayAction(dateStr, fromRetry){
+  var action;
+  if (!fromRetry) {
+    var row = posFindLockRow(dateStr);
+    if (row) { row.unlocked_by = currentUser ? currentUser.username : ''; row.unlocked_at = new Date().toISOString(); }
+    action = { mode: 'unlock', dateStr: dateStr };
+    posPendingLockActions.push(action);
+    posRenderDayLockPage();
+    posRefreshAfterLockChange();
+  } else {
+    action = posPendingLockActions.find(function(a){ return a.mode === 'unlock' && a.dateStr === dateStr; });
+  }
+  if (!sb) { if (!fromRetry) posShowToast('Not connected to the cloud database — unlocked locally, will sync automatically.', 'error'); return false; }
+  try{
+    var res = await sb.from('pos_locked_days').upsert({
+      lock_date: dateStr,
+      unlocked_by: currentUser ? currentUser.username : '',
+      unlocked_at: new Date().toISOString()
+    }, { onConflict: 'lock_date' });
+    if (res.error) throw res.error;
+    posRemovePendingLockAction(action);
+    await posFetchLockedDays();
+    posRenderDayLockPage();
+    return true;
+  }catch(e){
+    console.error('POS unlock day failed', e);
+    if (!fromRetry) posShowToast('Couldn\'t reach the cloud database — unlocked locally, will retry automatically.', 'error');
+    return false;
+  }
+}
+
+function posRenderDayLockPage(){
+  var listEl = document.getElementById('posDlList');
+  var dateEl = document.getElementById('posDlDate');
+  var actionBtn = document.getElementById('posDlActionBtn');
+  if (!listEl || !dateEl || !actionBtn) return;
+  if (!dateEl.value) dateEl.value = posTodayISO();
+
+  var pickedDate = dateEl.value;
+  var lockRow = posFindLockRow(pickedDate);
+  var locked = lockRow && !lockRow.unlocked_at;
+  if (locked) {
+    actionBtn.textContent = 'Unlock This Day';
+    actionBtn.className = 'dl-action-btn secondary';
+    actionBtn.onclick = function(){ posOpenDayLockConfirm('unlock', pickedDate); };
+  } else {
+    actionBtn.textContent = 'Lock This Day';
+    actionBtn.className = 'dl-action-btn';
+    actionBtn.onclick = function(){ posOpenDayLockConfirm('lock', pickedDate); };
+  }
+
+  var active = posLockedDays.filter(function(l){ return !l.unlocked_at; }).slice().sort(function(a, b){ return b.lock_date.localeCompare(a.lock_date); });
+  if (!active.length) { listEl.innerHTML = '<div class="empty-note">No days are locked right now.</div>'; return; }
+  listEl.innerHTML =
+    '<table class="rep"><thead><tr><th style="width:130px;">Date</th><th>Locked By</th><th style="width:170px;">Locked At</th><th style="width:110px;"></th></tr></thead><tbody>' +
+    active.map(function(l){
+      return '<tr>' +
+        '<td>' + posEscapeHtml(l.lock_date) + '</td>' +
+        '<td>' + posEscapeHtml(l.locked_by || '-') + '</td>' +
+        '<td>' + (l.locked_at ? new Date(l.locked_at).toLocaleString() : '-') + '</td>' +
+        '<td><button type="button" class="dl-action-btn secondary" style="padding:5px 12px; font-size:12px;" onclick="posOpenDayLockConfirm(\'unlock\', \'' + l.lock_date + '\')">Unlock</button></td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function posOpenDayLockPage(){
+  posShowApp('page-pos-daylock', document.getElementById('topNavPosUnlock'));
+}
+
 function posMakeActionsCell(record, showFo){
   var td = document.createElement('td');
   td.className = 'del-col';
@@ -16422,12 +17169,13 @@ function posMakeActionsCell(record, showFo){
   wrap.style.cssText = 'display:flex; gap:6px; justify-content:flex-end; align-items:center;';
 
   var isGuest = /guest/i.test(record.customer || '');
+  var locked = posIsLocked(record);
   if (record.collected) {
     var collectedTag = document.createElement('span');
     collectedTag.style.cssText = 'font-size:11px; color:#0f7a3d; white-space:nowrap;';
     collectedTag.textContent = 'Collected · ' + (record.collectedBy || '');
     wrap.appendChild(collectedTag);
-  } else if (showFo && record.posted && !isGuest) {
+  } else if (showFo && record.posted && !isGuest && !locked) {
     var foBtn = document.createElement('button');
     foBtn.type = 'button';
     foBtn.className = 'fo-toggle-btn';
@@ -16439,7 +17187,13 @@ function posMakeActionsCell(record, showFo){
     wrap.appendChild(foBtn);
   }
 
-  if (!record.collected) {
+  if (locked && !record.collected) {
+    var lockTag = document.createElement('span');
+    lockTag.title = 'From a locked day — read-only';
+    lockTag.style.cssText = 'opacity:.6; display:inline-flex;';
+    lockTag.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+    wrap.appendChild(lockTag);
+  } else if (!record.collected) {
     var delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'row-del-btn';
@@ -16456,6 +17210,7 @@ function posMakeActionsCell(record, showFo){
 var posPendingDelete = null;
 
 function posRequestDelete(record){
+  if (posIsLocked(record)) { posShowToast('This invoice is from a locked day and can no longer be deleted.', 'error'); return; }
   posPendingDelete = record;
   var details = document.getElementById('posDeleteDetails');
   if (details) {
@@ -16496,9 +17251,12 @@ function posCancelDelete(){
 async function posDeleteConfirmed(){
   if (!posPendingDelete) return;
   var record = posPendingDelete;
-  var ok = await posPushInvoiceUpdate(record, { deleted: true });
-  if (!ok) return;
-  record.deleted = true; // same object reference as in posInvoices — stays in memory so it can show on the Deleted page
+  // Applied locally right away — same object reference as in posInvoices,
+  // so it shows on the Deleted page immediately — instead of the old
+  // behavior of silently doing nothing if the cloud write failed (that's
+  // exactly why deletes went missing whenever the connection dropped).
+  // posQueueInvoiceUpdate retries the actual cloud write in the background.
+  record.deleted = true;
   document.querySelectorAll('[data-invoice-id="' + record.id + '"]').forEach(function(tr){ tr.remove(); });
   posCancelDelete();
   posRenderRecentInvoices();
@@ -16506,9 +17264,12 @@ async function posDeleteConfirmed(){
   printedOnlyRefresh();
   frontOfficeRefresh();
   deletedRefresh();
+  pendingPaymentsRefresh();
+  prevDayRefresh();
   renderChargesSummary();
   renderQuantitySummary();
   posShowToast('Deleted: ' + record.no);
+  posQueueInvoiceUpdate(record, { deleted: true });
 }
 
 // Every save creates a brand-new invoice id + number (there is no
@@ -16519,16 +17280,21 @@ async function posSaveInvoiceRecord(record, mode){
   record.posted = mode !== 'printonly';
   if (mode === 'frontoffice') record.sentToFrontOffice = true;
   record.id = record.id || uid('inv_');
-  record.createdBy = currentUser ? currentUser.username : '';
+  record.createdBy = record.createdBy || (currentUser ? currentUser.username : '');
 
   var ok = await posPushNewInvoice(record);
   if (!ok) return false;
 
-  posInvoices.unshift(record);
+  var existingIdx = posInvoices.findIndex(function(r){ return r.id === record.id; });
+  if (existingIdx > -1) posInvoices[existingIdx] = record; else posInvoices.unshift(record);
   posRenderRecentInvoices();
   receiptsRefresh();
   printedOnlyRefresh();
   frontOfficeRefresh();
+  pendingPaymentsRefresh();
+  prevDayRefresh();
+  renderChargesSummary();
+  renderQuantitySummary();
   return true;
 }
 
@@ -16548,14 +17314,21 @@ function receiptsRefresh(){
   if (foBody) foBody.innerHTML = '';
   var dateInput = document.getElementById('receiptsDateFilter');
   var filterDMY = dateInput && dateInput.value ? receiptsDateToDMY(dateInput.value) : null;
+  var statusFilter = (document.getElementById('receiptsStatusFilter') || {}).value || 'all';
+  var shown = 0;
   posInvoices.forEach(function(record){
-    if (record.deleted || !record.posted) return;
+    if (record.deleted) return;
+    if (statusFilter === 'posted' && !record.posted) return;
+    if (statusFilter === 'notposted' && record.posted) return;
     if (filterDMY && record.date !== filterDMY) return;
-    var row = posBuildInvoiceRow(record);
+    var row = posBuildInvoiceRow(record, false, true);
+    shown++;
     if (/guest/i.test(record.customer || '')) guestBody.appendChild(row);
     else if (record.sentToFrontOffice && foBody) foBody.appendChild(row);
     else paidBody.appendChild(row);
   });
+  var countEl = document.getElementById('receiptsCount');
+  if (countEl) countEl.textContent = shown + (shown === 1 ? ' receipt' : ' receipts');
 }
 
 // Pending = sent to Front Office and not yet collected by reception.
@@ -16591,7 +17364,28 @@ function frontOfficeRefresh(){
   if (collectedCountEl) collectedCountEl.textContent = shownCollected + ' collected';
 }
 
+// Set once a posted record is opened for viewing — the Edit button shows
+// whenever this is non-null. Separate from posEditingRecord (only set
+// once "edit" has actually been typed to confirm) so opening a record
+// doesn't silently unlock editing on its own.
+var posViewingRecord = null;
+// Set only after the type-"edit"-to-confirm modal is confirmed — posting
+// while this is set reuses the SAME invoice id/number (an update) instead
+// of minting a new one. Cleared on successful save, on New, or when a
+// different record is opened.
+var posEditingRecord = null;
+// [mode] while the duplicate-order-no modal is up — re-runs posRequestPost
+// with skipDupeCheck once "confirm" is typed.
+var posPendingDupeArgs = null;
+
 function posOpenRecordInForm(record){
+  posViewingRecord = record;
+  posEditingRecord = null;
+  var editBtn = document.getElementById('posEditBtn');
+  if (editBtn) editBtn.style.display = (record.collected || posIsLocked(record)) ? 'none' : '';
+  var editBadge = document.getElementById('posEditingBadge');
+  if (editBadge) editBadge.style.display = 'none';
+
   var posBtn = document.querySelector('.sidebar button[onclick*="page-pos-invoice"]');
   if (posBtn) posShowApp('page-pos-invoice', posBtn);
 
@@ -16630,10 +17424,87 @@ function posOpenRecordInForm(record){
   var orderInput = document.getElementById('posOrderNo');
   if (orderInput) orderInput.value = record.orderNo || '';
   var roomNoInput = document.getElementById('posRoomNoField');
-  if (roomNoInput) roomNoInput.value = record.roomNo || '';
+  if (roomNoInput) { roomNoInput.value = record.roomNo || ''; posRoomNoChanged(roomNoInput); }
 
   posRecalcAll();
   posShowToast('Opened ' + record.no + ' in Point of Sale');
+}
+
+// Edit-in-place: type "edit" to confirm, same pattern as Delete/Post.
+// Once confirmed, posting reuses the SAME invoice id + number (an
+// update, via the existing upsert) instead of minting a new invoice —
+// see posPostInvoice/posSaveInvoiceRecord.
+function posRequestEdit(){
+  if (!posViewingRecord || posViewingRecord.collected) return;
+  if (posIsLocked(posViewingRecord)) { posShowToast('This invoice is from a locked day and can no longer be edited.', 'error'); return; }
+  var record = posViewingRecord;
+  var details = document.getElementById('posEditDetails');
+  if (details) {
+    details.innerHTML =
+      'Invoice #: <b>' + posEscapeHtml(record.no) + '</b><br>' +
+      'Customer: ' + posEscapeHtml(record.customer) + '<br>' +
+      'Room: ' + posEscapeHtml(record.room || '') + '<br>' +
+      'Posting after this will update this SAME invoice instead of creating a new one.';
+  }
+  var input = document.getElementById('posEditConfirmInput');
+  if (input) input.value = '';
+  posEditConfirmCheck();
+  var modal = document.getElementById('posEditModal');
+  var backdrop = document.getElementById('posEditBackdrop');
+  if (modal) modal.style.display = '';
+  if (backdrop) backdrop.style.display = '';
+  if (input) input.focus();
+}
+
+function posEditConfirmCheck(){
+  var input = document.getElementById('posEditConfirmInput');
+  var confirmBtn = document.getElementById('posEditConfirmBtn');
+  if (!input || !confirmBtn) return;
+  var ok = input.value.trim().toLowerCase() === 'edit';
+  confirmBtn.disabled = !ok;
+  confirmBtn.style.opacity = ok ? '1' : '.5';
+}
+
+function posCancelEdit(){
+  var modal = document.getElementById('posEditModal');
+  var backdrop = document.getElementById('posEditBackdrop');
+  if (modal) modal.style.display = 'none';
+  if (backdrop) backdrop.style.display = 'none';
+}
+
+function posEditConfirmed(){
+  if (!posViewingRecord) return;
+  posEditingRecord = posViewingRecord;
+  posCancelEdit();
+  var editBadge = document.getElementById('posEditingBadge');
+  if (editBadge) editBadge.style.display = '';
+  posShowToast('Editing ' + posEditingRecord.no + ' — posting will update this invoice.');
+}
+
+// Duplicate Order No(QT) — a harder stop than the plain post-confirm:
+// typing "confirm" is required, not just Enter.
+function posOrderDupeConfirmCheck(){
+  var input = document.getElementById('posOrderDupeConfirmInput');
+  var confirmBtn = document.getElementById('posOrderDupeConfirmBtn');
+  if (!input || !confirmBtn) return;
+  var ok = input.value.trim().toLowerCase() === 'confirm';
+  confirmBtn.disabled = !ok;
+  confirmBtn.style.opacity = ok ? '1' : '.5';
+}
+
+function posCancelOrderDupe(){
+  posPendingDupeArgs = null;
+  var modal = document.getElementById('posOrderDupeModal');
+  var backdrop = document.getElementById('posOrderDupeBackdrop');
+  if (modal) modal.style.display = 'none';
+  if (backdrop) backdrop.style.display = 'none';
+}
+
+function posOrderDupeConfirmed(){
+  if (!posPendingDupeArgs) return;
+  var args = posPendingDupeArgs;
+  posCancelOrderDupe();
+  posRequestPost(args[0], true); // skipDupeCheck — already confirmed
 }
 
 function printedOnlyRefresh(){
@@ -16679,6 +17550,84 @@ function deletedRefresh(){
   if (countEl) countEl.textContent = shown + ' deleted';
 }
 
+// Its own dedicated page for a quick daily look, plus feeds the same
+// rows into Charges Summary's Pending Payments section — see
+// renderChargesSummary. Biggest balance first, not insertion order.
+function pendingPaymentsRefresh(){
+  var body = document.getElementById('pendingPaymentsBody');
+  var countEl = document.getElementById('pendingPaymentsCount');
+  if (!body) return;
+  body.innerHTML = '';
+  var dateInput = document.getElementById('pendingPaymentsDateFilter');
+  var filterDMY = dateInput && dateInput.value ? receiptsDateToDMY(dateInput.value) : null;
+  var rows = posInvoices.filter(function(r){
+    if (r.deleted || !r.posted) return false;
+    if (filterDMY && r.date !== filterDMY) return false;
+    var bal = r.balance != null ? r.balance : (r.amount - r.paid);
+    return bal > 0.004;
+  }).sort(function(a, b){
+    var balA = a.balance != null ? a.balance : (a.amount - a.paid);
+    var balB = b.balance != null ? b.balance : (b.amount - b.paid);
+    return balB - balA;
+  });
+  rows.forEach(function(r){
+    var bal = r.balance != null ? r.balance : (r.amount - r.paid);
+    var tr = posBuildInvoiceRow(r);
+    var balTd = document.createElement('td');
+    balTd.className = 'num';
+    balTd.style.fontWeight = '700';
+    balTd.style.color = '#dc2626';
+    balTd.textContent = bal.toFixed(2);
+    tr.insertBefore(balTd, tr.lastElementChild);
+    body.appendChild(tr);
+  });
+  if (countEl) countEl.textContent = rows.length + ' pending';
+}
+
+function posPreviousBusinessDayIso(){
+  var d = posBusinessDay();
+  d.setDate(d.getDate() - 1);
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+
+// The most recently finished (locked) business day, in full — a closing
+// report, not a filterable list. See posIsLocked for what "locked" means.
+function prevDayRefresh(){
+  var body = document.getElementById('prevDayBody');
+  var countEl = document.getElementById('prevDayCount');
+  var titleEl = document.getElementById('prevDayTitle');
+  var totalsBody = document.getElementById('prevDayTotalsBody');
+  if (!body) return;
+  var prevIso = posPreviousBusinessDayIso();
+  if (titleEl) titleEl.textContent = 'PREVIOUS DAY — ' + prevIso;
+  body.innerHTML = '';
+  var rows = posInvoices.filter(function(r){ return !r.deleted && r.posted && r.isoDate === prevIso; });
+  var totAmt = 0, totPaid = 0, totBal = 0;
+  rows.forEach(function(r){
+    var bal = r.balance != null ? r.balance : (r.amount - r.paid);
+    totAmt += r.amount || 0; totPaid += r.paid || 0; totBal += bal;
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + posEscapeHtml(r.dept) + '</td>' +
+      '<td>' + posEscapeHtml(r.no) + '</td>' +
+      '<td>' + posEscapeHtml(r.date) + '</td>' +
+      '<td>' + posEscapeHtml(r.room) + '</td>' +
+      '<td>' + posEscapeHtml(r.customer) + '</td>' +
+      '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
+      '<td class="num">' + (r.paid || 0).toFixed(2) + '</td>' +
+      '<td class="num">' + bal.toFixed(2) + '</td>';
+    body.appendChild(tr);
+  });
+  if (countEl) countEl.textContent = rows.length + ' invoices';
+  if (totalsBody) {
+    totalsBody.innerHTML =
+      '<tr><td>Total Sale</td><td class="num" style="font-weight:700;">' + totAmt.toFixed(2) + '</td></tr>' +
+      '<tr><td>Total Paid</td><td class="num">' + totPaid.toFixed(2) + '</td></tr>' +
+      '<tr><td>Total Balance</td><td class="num">' + totBal.toFixed(2) + '</td></tr>';
+  }
+}
+
 // Money view: one row per posted invoice, plus a totals row. No fake GL
 // account numbers here — that data doesn't exist in this schema, so this
 // shows the real invoice charges instead of a mocked-up ledger.
@@ -16719,9 +17668,11 @@ function renderChargesSummary(){
 
   body.innerHTML = '';
   var totSub = 0, totTax = 0, totAmt = 0, totPaid = 0, totBal = 0;
+  var totCash = 0, totAccountTransfer = 0, totCard = 0;
   rows.forEach(function(r){
     var bal = r.balance != null ? r.balance : (r.amount - r.paid);
     totSub += r.subtotal || 0; totTax += r.taxTotal || 0; totAmt += r.amount || 0; totPaid += r.paid || 0; totBal += bal;
+    totCash += r.paidCash || 0; totAccountTransfer += r.paidAccountTransfer || 0; totCard += r.paidCard || 0;
     var tr = document.createElement('tr');
     tr.innerHTML = '<td>' + posEscapeHtml(r.no) + '</td>' +
       '<td>' + posEscapeHtml(r.date) + '</td>' +
@@ -16746,6 +17697,83 @@ function renderChargesSummary(){
     body.appendChild(totalTr);
   }
   if (countEl) countEl.textContent = rows.length + ' invoices';
+
+  // Payment Method Breakdown — same rows as Total Sale above, split by
+  // each payment row's own type (posRecalcAll's paidCash/paidAccountTransfer/
+  // paidCard) instead of the single lump "paid" figure.
+  var pmBody = document.getElementById('csPaymentBreakdownBody');
+  if (pmBody) {
+    pmBody.innerHTML =
+      '<tr><td>Cash</td><td class="num">' + totCash.toFixed(2) + '</td></tr>' +
+      '<tr><td>Account Transfer</td><td class="num">' + totAccountTransfer.toFixed(2) + '</td></tr>' +
+      '<tr><td>Card</td><td class="num">' + totCard.toFixed(2) + '</td></tr>' +
+      '<tr style="font-weight:700;"><td>Total Paid</td><td class="num">' + (totCash + totAccountTransfer + totCard).toFixed(2) + '</td></tr>';
+  }
+
+  // Pending Payments — same rows as the dedicated module, just scoped to
+  // this page's date filter and excluding guests (they never owe anything).
+  var pendingBody = document.getElementById('csPendingBody');
+  var pendingCountEl = document.getElementById('csPendingCount');
+  if (pendingBody) {
+    pendingBody.innerHTML = '';
+    var pendingRows = rows.filter(function(r){
+      var bal = r.balance != null ? r.balance : (r.amount - r.paid);
+      return bal > 0.004;
+    }).sort(function(a, b){
+      var balA = a.balance != null ? a.balance : (a.amount - a.paid);
+      var balB = b.balance != null ? b.balance : (b.amount - b.paid);
+      return balB - balA;
+    });
+    pendingRows.forEach(function(r){
+      var bal = r.balance != null ? r.balance : (r.amount - r.paid);
+      var ptr = document.createElement('tr');
+      ptr.innerHTML = '<td>' + posEscapeHtml(r.no) + '</td>' +
+        '<td>' + posEscapeHtml(r.date) + '</td>' +
+        '<td>' + posEscapeHtml(r.room) + '</td>' +
+        '<td>' + posEscapeHtml(r.customer) + '</td>' +
+        '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
+        '<td class="num">' + (r.paid || 0).toFixed(2) + '</td>' +
+        '<td class="num" style="font-weight:700; color:#dc2626;">' + bal.toFixed(2) + '</td>';
+      pendingBody.appendChild(ptr);
+    });
+    if (pendingCountEl) pendingCountEl.textContent = pendingRows.length + ' pending';
+  }
+
+  // Service Charge — estimated at the default 10% rate on subtotal (see
+  // the page's own note on why this can't be exact from stored data).
+  var scBody = document.getElementById('csServiceChargeBody');
+  var scTotalEl = document.getElementById('csServiceChargeTotal');
+  if (scBody) {
+    scBody.innerHTML = '';
+    var scTotal = 0;
+    rows.forEach(function(r){
+      var est = (r.subtotal || 0) * 0.10;
+      scTotal += est;
+      var sctr = document.createElement('tr');
+      sctr.innerHTML = '<td>' + posEscapeHtml(r.no) + '</td>' +
+        '<td>' + posEscapeHtml(r.date) + '</td>' +
+        '<td class="num">' + (r.subtotal || 0).toFixed(2) + '</td>' +
+        '<td class="num">' + est.toFixed(2) + '</td>';
+      scBody.appendChild(sctr);
+    });
+    if (scTotalEl) scTotalEl.textContent = scTotal.toFixed(2);
+  }
+
+  // Reconciliation — Total Sale = Total Credit (paid) + Total Debt
+  // (balance) by definition (balance IS total minus paid), so this is a
+  // sanity display more than something that could genuinely fail — but
+  // if it ever does show a mismatch, that itself is a real bug worth
+  // catching immediately.
+  var reconBody = document.getElementById('csReconBody');
+  if (reconBody) {
+    var checkOk = Math.abs(totAmt - (totPaid + totBal)) < 0.01;
+    reconBody.innerHTML =
+      '<tr><td>Total Sale</td><td class="num" style="font-weight:700;">' + totAmt.toFixed(2) + '</td></tr>' +
+      '<tr><td>Total Credit (Paid)</td><td class="num">' + totPaid.toFixed(2) + '</td></tr>' +
+      '<tr><td>Total Debt (Balance)</td><td class="num">' + totBal.toFixed(2) + '</td></tr>' +
+      '<tr><td>Credit + Debt</td><td class="num" style="font-weight:700;">' + (totPaid + totBal).toFixed(2) + '</td></tr>' +
+      '<tr><td>' + (checkOk ? '✓ Balances' : '⚠ Does not balance') + '</td><td class="num" style="color:' + (checkOk ? '#15803d' : '#dc2626') + '; font-weight:700;">' + (checkOk ? 'OK' : (totAmt - (totPaid + totBal)).toFixed(2)) + '</td></tr>';
+  }
 }
 
 // Items view: every line item across posted invoices, grouped by name —
@@ -16795,9 +17823,8 @@ async function posToggleFrontOffice(id){
   if (!record) return;
   if (record.collected) { posShowToast('Already collected by Front Office — cannot modify.', 'error'); return; }
   var next = !record.sentToFrontOffice;
-  var ok = await posPushInvoiceUpdate(record, { sent_to_front_office: next });
-  if (!ok) return;
   record.sentToFrontOffice = next;
+  posQueueInvoiceUpdate(record, { sent_to_front_office: next });
   receiptsRefresh();
   printedOnlyRefresh();
   frontOfficeRefresh();
@@ -16856,7 +17883,6 @@ function posBuildReceiptHtml(record){
     '<tr><td>Guest Name</td><td>' + posEscapeHtml(record.customer) + '</td></tr>' +
     '<tr><td>Company</td><td>Private (PVT)</td></tr>' +
     '<tr><td>Invoice #</td><td>' + posEscapeHtml(record.no) + '</td></tr>' +
-    '<tr><td>Table</td><td>' + posEscapeHtml(record.table) + '</td></tr>' +
     '<tr><td>Order #</td><td>' + posEscapeHtml(record.orderNo) + '</td></tr>' +
     '<tr><td>Printed</td><td>' + posEscapeHtml(record.printedAt) + '</td></tr>' +
     '<tr><td>Invoice Date</td><td>' + posEscapeHtml(record.date) + '</td></tr>' +
@@ -16898,10 +17924,13 @@ var POS_RECEIPT_PRINT_CSS = 'body{font-family:"Courier New",monospace; font-size
   '.rc-thanks{text-align:center; font-size:13px; font-weight:700; margin-top:4mm; letter-spacing:.03em;} ' +
   '.rc-foot{text-align:center; font-size:9.5px; color:#333; margin-top:1mm;}';
 
-// Printing opens an isolated popup document with its own receipt CSS —
-// deliberately NOT sharing the hotel page's @media print rules (those
-// stay untouched for every other hotel print flow: breakfast report,
-// checkout, etc.).
+// Printing opens an isolated document with its own receipt CSS — no
+// width/height passed to window.open, so it's a normal tab rather than a
+// cramped little chrome-less popup. Deliberately NOT sharing the hotel
+// page's @media print rules (those stay untouched for every other hotel
+// print flow: breakfast report, checkout, etc.) — the receipt needs its
+// own 80mm page size, which can't coexist with the hotel's A4 @page rule
+// in the same document.
 // existingWin: a window already opened synchronously at the original
 // click (see posConfirmPost) — opening it HERE instead would happen
 // after posPostInvoice's awaits (invoice numbering, the DB save), and by
@@ -16910,7 +17939,7 @@ var POS_RECEIPT_PRINT_CSS = 'body{font-family:"Courier New",monospace; font-size
 // not. Falls back to opening it here for any other caller.
 function posPrintRecord(record, existingWin){
   var html = posBuildReceiptHtml(record);
-  var w = existingWin || window.open('', '_blank', 'width=340,height=640');
+  var w = existingWin || window.open('', '_blank');
   if (!w) { posShowToast('Enable pop-ups to print receipts.', 'error'); return; }
   w.document.write('<!DOCTYPE html><html><head><title>Receipt ' + posEscapeHtml(record.no) + '</title><style>' + POS_RECEIPT_PRINT_CSS + '</style></head><body>' + html + '</body></html>');
   w.document.close();
@@ -16961,19 +17990,37 @@ async function posPostInvoice(mode, printWin){
   var roomNoVal = (roomNoInput && roomNoInput.value.trim()) || '';
   var locationText = roomNoVal ? 'Restaurant' : 'Dining';
 
-  var invNo = await posNextInvoiceNo();
-  if (invNo == null) { abort('Could not get an invoice number — check your connection and try again.'); return; }
-  var invLabel = 'SI-' + String(invNo).padStart(6, '0');
+  // Editing an existing invoice reuses its id + number + original date
+  // (an edit shouldn't change when the sale happened) — posSaveInvoiceRecord
+  // upserts by id, so this becomes an update instead of a new invoice.
+  var editing = posEditingRecord;
+  var invLabel, invId, recDate, recIsoDate;
+  if (editing) {
+    invLabel = editing.no;
+    invId = editing.id;
+    recDate = editing.date;
+    recIsoDate = editing.isoDate;
+  } else {
+    var invNo = await posNextInvoiceNo();
+    if (invNo == null) { abort('Could not get an invoice number — check your connection and try again.'); return; }
+    invLabel = 'SI-' + String(invNo).padStart(6, '0');
+    recDate = posFormatDate();
+    recIsoDate = posTodayISO();
+  }
 
   var record = {
+    id: invId,
     no: invLabel,
     dept: deptText,
-    date: posFormatDate(),
-    isoDate: posTodayISO(),
+    date: recDate,
+    isoDate: recIsoDate,
     room: roomNoVal || 'NA',
     customer: customer,
     amount: totals.grandTotal,
     paid: totals.paid,
+    paidCash: totals.paidCash,
+    paidAccountTransfer: totals.paidAccountTransfer,
+    paidCard: totals.paidCard,
     subtotal: totals.subtotal,
     taxTotal: totals.taxTotal,
     grandTotal: totals.grandTotal,
@@ -16983,6 +18030,8 @@ async function posPostInvoice(mode, printWin){
     roomNo: roomNoVal,
     locationText: locationText,
     printedAt: posFormatDateTime(),
+    createdBy: editing ? editing.createdBy : undefined,
+    sentToFrontOffice: editing ? !!editing.sentToFrontOffice : false,
     items: items
   };
 
@@ -16993,9 +18042,16 @@ async function posPostInvoice(mode, printWin){
     posPrintRecord(record, printWin);
   }
 
-  var msg = mode === 'printonly' ? 'Saved as print-only: ' :
+  var msg = editing ? 'Updated: ' :
+    mode === 'printonly' ? 'Saved as print-only: ' :
     mode === 'frontoffice' ? 'Sent to Front Office: ' : 'Posted: ';
   posShowToast(msg + invLabel);
+  posEditingRecord = null;
+  posViewingRecord = null;
+  var editBtn = document.getElementById('posEditBtn');
+  if (editBtn) editBtn.style.display = 'none';
+  var editBadge = document.getElementById('posEditingBadge');
+  if (editBadge) editBadge.style.display = 'none';
   posResetForm();
 }
 
@@ -17010,7 +18066,7 @@ var POS_POST_MODE_LABELS = { post: 'Post this invoice?', printpost: 'Print & pos
 // checked here first so the confirm dialog never appears for something
 // that's just going to fail anyway. Can still be deleted afterward from
 // any of the invoice lists — this is a speed bump, not a lock.
-function posRequestPost(mode){
+function posRequestPost(mode, skipDupeCheck){
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (!tbody) return;
   var hasItem = false;
@@ -17027,8 +18083,46 @@ function posRequestPost(mode){
   var totals = posRecalcAll();
   if (totals.balance < -0.004) { posShowToast('Payments (' + totals.paid.toFixed(2) + ') exceed the total (' + totals.grandTotal.toFixed(2) + ') — fix the payment amount before posting.', 'error'); return; }
 
+  var orderInput = document.getElementById('posOrderNo');
+  var orderNoVal = orderInput ? orderInput.value.trim() : '';
+
+  // Same order no already used on another live invoice — a harder stop
+  // than the plain post-confirm below: typing "confirm" is required, not
+  // just Enter, before we'll even show the normal post dialog.
+  if (!skipDupeCheck && orderNoVal) {
+    var dupe = posInvoices.some(function(r){
+      return !r.deleted && (!posEditingRecord || r.id !== posEditingRecord.id) && (r.orderNo || '').trim().toLowerCase() === orderNoVal.toLowerCase();
+    });
+    if (dupe) {
+      posPendingDupeArgs = [mode];
+      var dupeDetails = document.getElementById('posOrderDupeDetails');
+      if (dupeDetails) dupeDetails.textContent = 'Order No(QT) "' + orderNoVal + '" is already used on another invoice.';
+      var dupeInput = document.getElementById('posOrderDupeConfirmInput');
+      if (dupeInput) dupeInput.value = '';
+      posOrderDupeConfirmCheck();
+      var dupeModal = document.getElementById('posOrderDupeModal');
+      var dupeBackdrop = document.getElementById('posOrderDupeBackdrop');
+      if (dupeModal) dupeModal.style.display = '';
+      if (dupeBackdrop) dupeBackdrop.style.display = '';
+      if (dupeInput) dupeInput.focus();
+      return;
+    }
+  }
+
   var roomNoInput = document.getElementById('posRoomNoField');
   var roomNoVal = (roomNoInput && roomNoInput.value.trim()) || '—';
+
+  // Print-only skips the confirm dialog entirely — it's not final like a
+  // real post (no accounting effect until it's actually posted later), so
+  // there's nothing here worth double-checking. Opened synchronously,
+  // right in this click handler — see posConfirmPost's comment on why that
+  // matters for popup blockers.
+  if (mode === 'printonly') {
+    var printWin = window.open('', '_blank');
+    if (!printWin) posShowToast('Enable pop-ups to print receipts.', 'error');
+    posPostInvoice(mode, printWin);
+    return;
+  }
 
   posPendingPostMode = mode;
   var titleEl = document.getElementById('posPostTitle');
@@ -17036,6 +18130,8 @@ function posRequestPost(mode){
   var detailsEl = document.getElementById('posPostDetails');
   if (detailsEl) {
     detailsEl.innerHTML =
+      (mode === 'post' ? '<b style="color:#dc2626;">You haven\'t printed this — are you sure you want to post it?</b><br>' : '') +
+      (orderNoVal ? '' : '<b style="color:#dc2626;">No Order No(QT) entered — Confirm to proceed anyway.</b><br>') +
       'Customer: <b>' + posEscapeHtml(customer) + '</b><br>' +
       'Room: ' + posEscapeHtml(roomNoVal) + '<br>' +
       'Total: ' + totals.grandTotal.toFixed(2) + ' &nbsp;·&nbsp; Paid: ' + totals.paid.toFixed(2);
@@ -17067,7 +18163,7 @@ function posConfirmPost(){
   // blocking or half-rendering it. See posPrintRecord.
   var printWin = null;
   if (mode === 'printpost' || mode === 'printonly') {
-    printWin = window.open('', '_blank', 'width=340,height=640');
+    printWin = window.open('', '_blank');
     if (!printWin) posShowToast('Enable pop-ups to print receipts.', 'error');
   }
   posPostInvoice(mode, printWin);
@@ -17098,6 +18194,7 @@ function posRequestNewForm(){
 }
 
 function posResetForm(){
+  posFullPaymentReset();
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (tbody) {
     var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
@@ -17294,6 +18391,15 @@ function posSyncSidebarOffset(){
   if (!header) return;
   document.documentElement.style.setProperty('--restaurant-sidebar-top', header.getBoundingClientRect().height + 'px');
 }
+// Run this immediately at script load (every account, not just
+// restaurant/superadmin) instead of waiting for posBootApp — a restaurant
+// account lands directly on this view on login, so if the real offset
+// isn't set until Restaurant actually boots, the very first paint uses
+// the CSS fallback (130px) and visibly snaps to the correct position a
+// moment later. Measuring up front shrinks that window to effectively
+// nothing for everyone, at the cost of one harmless DOM query for
+// accounts that never see the sidebar at all.
+posSyncSidebarOffset();
 
 function posBootApp(){
   if (posAppBooted) return; // showView('restaurant') can fire many times — only boot once
@@ -17319,11 +18425,24 @@ function posBootApp(){
   if (printedOnlyDateInitEl) { printedOnlyDateInitEl.value = posTodayISO(); posInitDatePicker(printedOnlyDateInitEl); }
   var frontOfficeDateInitEl = document.getElementById('frontOfficeDateFilter');
   if (frontOfficeDateInitEl) { frontOfficeDateInitEl.value = posTodayISO(); posInitDatePicker(frontOfficeDateInitEl); }
-  // These stay blank on purpose (show everything until filtered) — just
-  // get the same picker UI, no default date.
-  ['deletedDateFilter', 'csFromDate', 'csToDate', 'qsFromDate', 'qsToDate'].forEach(function(id){
-    posInitDatePicker(document.getElementById(id));
+  ['deletedDateFilter', 'pendingPaymentsDateFilter'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) { el.value = posTodayISO(); posInitDatePicker(el); }
   });
+  var posDlDateInitEl = document.getElementById('posDlDate');
+  if (posDlDateInitEl) { posDlDateInitEl.value = posTodayISO(); posInitDatePicker(posDlDateInitEl); }
+  // Same combined range-picker component the hotel's own Payment Report/
+  // Ledgers/Revenue filters use (initRangeDatePicker) — defaulted to
+  // today/today so the range picker opens on a real single-day selection
+  // instead of blank.
+  var csFromEl = document.getElementById('csFromDate'), csToEl = document.getElementById('csToDate');
+  if (csFromEl) csFromEl.value = posTodayISO();
+  if (csToEl) csToEl.value = posTodayISO();
+  var qsFromEl = document.getElementById('qsFromDate'), qsToEl = document.getElementById('qsToDate');
+  if (qsFromEl) qsFromEl.value = posTodayISO();
+  if (qsToEl) qsToEl.value = posTodayISO();
+  initRangeDatePicker('csRange', 'csFromDate', 'csToDate', renderChargesSummary);
+  initRangeDatePicker('qsRange', 'qsFromDate', 'qsToDate', renderQuantitySummary);
   posPullFromCloud();
 }
 
