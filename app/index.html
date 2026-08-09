@@ -2748,14 +2748,18 @@
   #restaurantNative tr.fo-row:hover{background:rgba(37,99,235,.07);}
 
   #restaurantNative .body-shell{display:flex; align-items:stretch;}
-  #restaurantNative .sidebar{width:216px; flex-shrink:0; background:#0f1115; display:flex; flex-direction:column; padding:10px 0; position:sticky; top:130px; align-self:flex-start; max-height:calc(100vh - 150px); overflow-y:auto;}
+  /* Pinned to the true left edge of the browser window — deliberately
+     independent of the Restaurant card's own (centered, max-width) box,
+     not just "sticky within it". .app-wrap below reserves matching space
+     so real content never renders underneath it. */
+  #restaurantNative .sidebar{width:216px; background:#0f1115; display:flex; flex-direction:column; padding:10px 0; position:fixed; left:0; top:130px; bottom:0; z-index:20; overflow-y:auto;}
   #restaurantNative .sidebar-label{color:#5b6270; font-size:10.5px; font-weight:700; letter-spacing:.08em; padding:8px 18px 6px;}
   #restaurantNative .sidebar button{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:transparent; border:none; border-left:3px solid transparent; color:#9aa1ab; font-size:13.5px; font-weight:600; padding:11px 16px; cursor:pointer; white-space:nowrap;}
   #restaurantNative .sidebar button:hover{color:#fff; background:rgba(255,255,255,.05);}
   #restaurantNative .sidebar button.active{color:#fff; border-left-color:#3b82f6; background:rgba(59,130,246,.08);}
   #restaurantNative .sidebar .sb-icon{font-size:15px; width:18px; text-align:center; flex-shrink:0;}
   #restaurantNative .sidebar-spacer{flex:1;}
-  #restaurantNative .app-wrap{flex:1; min-width:0; background:#f4f5f7;}
+  #restaurantNative .app-wrap{flex:1; min-width:0; background:#f4f5f7; margin-left:216px;}
 
   #restaurantNative .app-page{display:none;}
   #restaurantNative .app-page.visible{display:block;}
