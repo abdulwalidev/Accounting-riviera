@@ -3890,12 +3890,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="view" id="view-detail">
 
     <span class="backlink" onclick="goBack()">&larr; Back</span>
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
       <div>
         <h1 id="detailName">Guest</h1>
         <div class="sub" id="detailMeta"></div>
       </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
         <button class="btn secondary" onclick="downloadGuestPdf()">⬇ Download</button>
         <button class="btn secondary" onclick="printGuestLetter()">🖶 Print</button>
         <button class="btn secondary" onclick="downloadGuestFolioPdf()">⬇ Download Folio</button>
@@ -19520,6 +19520,22 @@ function posInitDatePicker(el){
   });
 }
 
+// Reuses the hotel's own Prev/Next Day stepper (addDateStepper) instead of
+// building a separate one — it already handles the flatpickr sync + firing
+// input/change correctly. addDateStepper looks the instance up through
+// getPickerFor(id), which only checks stayDatePickers/filterDatePickers —
+// registries POS's own fields (fixed-id ones only; per-row payment dates
+// are deliberately left out, same as addDateStepper already excludes
+// hotel's own per-row dates) were never added to. Bridging just that one
+// lookup in is enough; nothing about how those registries are otherwise
+// used by the hotel side is touched.
+function posAttachDateStepper(id){
+  var el = document.getElementById(id);
+  if (!el || typeof addDateStepper !== 'function') return;
+  if (el._flatpickr && typeof filterDatePickers !== 'undefined') filterDatePickers[id] = el._flatpickr;
+  addDateStepper(id);
+}
+
 // posAppBooted now declared earlier, right before init() — see the comment there.
 // Measures the hotel header's real rendered height instead of guessing a
 // fixed px offset for the sidebar — closes any gap/overlap between the
@@ -19571,21 +19587,21 @@ function posBootApp(){
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
   if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
   var posInvoiceDateEl = document.getElementById('posInvoiceDate');
-  if (posInvoiceDateEl) { posInvoiceDateEl.value = posTodayISO(); posInitDatePicker(posInvoiceDateEl); }
+  if (posInvoiceDateEl) { posInvoiceDateEl.value = posTodayISO(); posInitDatePicker(posInvoiceDateEl); posAttachDateStepper('posInvoiceDate'); }
   posLoadDraft();
   posRecalcAll();
   var receiptsDateInitEl = document.getElementById('receiptsDateFilter');
-  if (receiptsDateInitEl) { receiptsDateInitEl.value = posTodayISO(); posInitDatePicker(receiptsDateInitEl); }
+  if (receiptsDateInitEl) { receiptsDateInitEl.value = posTodayISO(); posInitDatePicker(receiptsDateInitEl); posAttachDateStepper('receiptsDateFilter'); }
   var printedOnlyDateInitEl = document.getElementById('printedOnlyDateFilter');
-  if (printedOnlyDateInitEl) { printedOnlyDateInitEl.value = posTodayISO(); posInitDatePicker(printedOnlyDateInitEl); }
+  if (printedOnlyDateInitEl) { printedOnlyDateInitEl.value = posTodayISO(); posInitDatePicker(printedOnlyDateInitEl); posAttachDateStepper('printedOnlyDateFilter'); }
   var frontOfficeDateInitEl = document.getElementById('frontOfficeDateFilter');
-  if (frontOfficeDateInitEl) { frontOfficeDateInitEl.value = posTodayISO(); posInitDatePicker(frontOfficeDateInitEl); }
+  if (frontOfficeDateInitEl) { frontOfficeDateInitEl.value = posTodayISO(); posInitDatePicker(frontOfficeDateInitEl); posAttachDateStepper('frontOfficeDateFilter'); }
   ['deletedDateFilter', 'pendingPaymentsDateFilter'].forEach(function(id){
     var el = document.getElementById(id);
-    if (el) { el.value = posTodayISO(); posInitDatePicker(el); }
+    if (el) { el.value = posTodayISO(); posInitDatePicker(el); posAttachDateStepper(id); }
   });
   var posDlDateInitEl = document.getElementById('posDlDate');
-  if (posDlDateInitEl) { posDlDateInitEl.value = posTodayISO(); posInitDatePicker(posDlDateInitEl); }
+  if (posDlDateInitEl) { posDlDateInitEl.value = posTodayISO(); posInitDatePicker(posDlDateInitEl); posAttachDateStepper('posDlDate'); }
   // Same combined range-picker component the hotel's own Payment Report/
   // Ledgers/Revenue filters use (initRangeDatePicker) — defaulted to
   // today/today so the range picker opens on a real single-day selection
