@@ -18552,6 +18552,7 @@ function posBuildReceiptHtml(record){
   }).join('');
 
   return '' +
+    '<img class="rc-logo" src="/app/assets/riviera-logo.png" alt="Riviera Resort">' +
     '<div class="rc-brand">RIVIERA RESORT</div>' +
     '<div class="rc-sub">RESTAURANT</div>' +
     '<div class="rc-line dbl"></div>' +
@@ -18579,6 +18580,7 @@ function posBuildReceiptHtml(record){
 }
 
 var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.4; width:74mm; margin:0 auto; padding:3mm 3mm 6mm; color:#000;} ' +
+  '#posReceiptPrintArea .rc-logo{display:block; width:30mm; max-width:60%; margin:0 auto 1.5mm;} ' +
   '#posReceiptPrintArea .rc-brand{text-align:center; font-size:18px; font-weight:700; letter-spacing:.04em; margin-bottom:1mm;} ' +
   '#posReceiptPrintArea .rc-sub{text-align:center; font-size:12px; letter-spacing:.06em; color:#000; margin-bottom:3mm;} ' +
   '#posReceiptPrintArea .rc-center{text-align:center;} ' +
