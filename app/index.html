@@ -2888,17 +2888,13 @@
 #page-pos-invoice .pay-row-head, #page-pos-invoice .pay-row {display:flex; align-items:center;}
 #page-pos-invoice .pay-row-head {background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; font-weight:700; letter-spacing:.03em;}
 #page-pos-invoice .pay-row-head > div, #page-pos-invoice .pay-row > div {padding:10px 14px; box-sizing:border-box;}
-/* min-width:0 is load-bearing here — flatpickr's alt-input has a natural
-   content width of 307.875px (the app-wide default, sized for full-width
-   single fields elsewhere), and a fixed-basis flex item refuses to shrink
-   below its content's natural width without this override. Without it,
-   the DATE column silently blows past its 200px basis the moment
-   posInitDatePicker() enhances the input, pushing AMOUNT/TYPE/remove out
-   of alignment with their own headers — same fix .pay-col-amt already has. */
-#page-pos-invoice .pay-col-date {flex:0 0 180px; min-width:0;}
-#page-pos-invoice .pay-col-date .flatpickr-alt-input {width:100% !important; max-width:100% !important; min-width:0 !important; padding-left:8px !important; padding-right:8px !important; font-size:12px;}
-#page-pos-invoice .pay-col-amt {flex:0 0 160px; min-width:0; padding-left:10px !important; padding-right:10px !important;}
-#page-pos-invoice .pay-col-type {flex:0 0 170px;}
+/* DATE gets its natural size (same as every other date field in the app —
+   the shared [id^="page-"] .flatpickr-alt-input rule already gives it
+   307.875px, no override needed here), and AMOUNT/TYPE split whatever
+   width is left in the row equally. */
+#page-pos-invoice .pay-col-date {flex:0 0 auto;}
+#page-pos-invoice .pay-col-amt {flex:1; min-width:0;}
+#page-pos-invoice .pay-col-type {flex:1; min-width:0;}
 #page-pos-invoice .pay-col-remove {flex:0 0 40px; text-align:center; padding:10px 4px !important;}
 #page-pos-invoice .pay-row-remove-btn {background:none; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:4px; line-height:1;}
 #page-pos-invoice .pay-row-remove-btn:hover {color:#c53030;}
@@ -4774,7 +4770,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="card tax-card">
       <div class="section-title">TAX SUMMARY</div>
       <table class="tax-tbl">
-        <thead><tr><th style="width:80px;">Account No</th><th>Description</th><th class="num" style="width:90px;">Amount</th></tr></thead>
+        <thead><tr><th style="width:15%;">Account No</th><th style="width:70%;">Description</th><th class="num" style="width:15%;">Amount</th></tr></thead>
         <tbody>
           <tr class="total-row"><td></td><td>Total Tax Amount</td><td class="num">0.00</td></tr>
         </tbody>
@@ -5037,6 +5033,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div style="display:flex; gap:10px; margin-bottom:14px;">
       <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">FOOD SALE</div><div id="qsFoodSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
       <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">BEVERAGE SALE</div><div id="qsBevSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
+      <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">EXTRAS SALE</div><div id="qsExtrasSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
       <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">TOTAL SALE</div><div id="qsTotalSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
     </div>
     <div class="results-head" style="margin-top:6px;"><span class="rh-title">BEVERAGES</span></div>
@@ -5057,6 +5054,16 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         </tr>
       </thead>
       <tbody id="qtySummaryFoodBody"></tbody>
+    </table>
+
+    <div class="results-head" style="margin-top:16px;"><span class="rh-title">EXTRAS</span></div>
+    <table class="rep">
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th><th>ITEM</th><th class="num">QTY</th><th class="num">AMOUNT</th><th class="num">TAX</th><th class="num">TOTAL</th>
+        </tr>
+      </thead>
+      <tbody id="qtySummaryExtraBody"></tbody>
     </table>
   </div>
 
@@ -17659,7 +17666,11 @@ function posRemovePaymentRow(btn){
   var rows = container.querySelectorAll('.pay-row');
   if (rows.length <= 1) {
     row.querySelectorAll('input').forEach(function(inp){
-      if (inp.type !== 'date') { inp.value = ''; return; }
+      // flatpickr swaps the original .pay-date-input's own type to
+      // "hidden" once altInput enhances it — checking .type here instead
+      // of the class would miss it once enhanced, wiping the date via the
+      // inp.value = '' branch below instead of setDate().
+      if (!inp.classList.contains('pay-date-input')) { inp.value = ''; return; }
       if (inp._flatpickr) inp._flatpickr.setDate(posTodayISO(), true); else inp.value = posTodayISO();
     });
     row.querySelectorAll('select').forEach(function(sel){ sel.selectedIndex = 0; });
@@ -18680,6 +18691,14 @@ var POS_BEVERAGE_ITEM_NAMES = (function(){
 function posIsBeverageItem(name){
   return !!POS_BEVERAGE_ITEM_NAMES[(name || '').trim().toLowerCase()];
 }
+// "Extras" = items typed at the till that weren't on the built-in menu,
+// auto-added to posGetExtraItems() (see Manage Menu's Extras tab) — a
+// distinct third bucket from Food/Beverage for Quantity Summary.
+function posIsExtraItem(name){
+  var val = (name || '').trim().toLowerCase();
+  if (!val) return false;
+  return posGetExtraItems().some(function(it){ return (it[0] || '').trim().toLowerCase() === val; });
+}
 
 function renderChargesSummary(){
   var body = document.getElementById('chargesSummaryBody');
@@ -18827,8 +18846,8 @@ function renderQuantitySummary(){
   var toEl = document.getElementById('qsToDate');
   var fromIso = fromEl && fromEl.value ? fromEl.value : null;
   var toIso = toEl && toEl.value ? toEl.value : null;
-  var byBevItem = {}, byFoodItem = {};
-  var totFood = 0, totBev = 0;
+  var byBevItem = {}, byFoodItem = {}, byExtraItem = {};
+  var totFood = 0, totBev = 0, totExtras = 0;
   posInvoices.forEach(function(r){
     if (r.deleted || !r.posted) return;
     if (fromIso && (!r.isoDate || r.isoDate < fromIso)) return;
@@ -18840,26 +18859,31 @@ function renderQuantitySummary(){
     (r.items || []).forEach(function(it){
       var key = it.name || '(unnamed)';
       var isBev = posIsBeverageItem(it.name);
-      var byItem = isBev ? byBevItem : byFoodItem;
+      var isExtra = !isBev && posIsExtraItem(it.name);
+      var byItem = isBev ? byBevItem : (isExtra ? byExtraItem : byFoodItem);
       if (!byItem[key]) byItem[key] = { name: key, qty: 0, amount: 0, tax: 0 };
       byItem[key].qty += it.qty || 0;
       var ext = (it.qty || 0) * (it.price || 0) * (1 - (it.pct || 0) / 100);
       byItem[key].amount += ext;
       byItem[key].tax += ext * taxRate;
-      if (isBev) totBev += ext; else totFood += ext;
+      if (isBev) totBev += ext; else if (isExtra) totExtras += ext; else totFood += ext;
     });
   });
   var bevList = Object.keys(byBevItem).map(function(k){ return byBevItem[k]; }).sort(function(a, b){ return b.amount - a.amount; });
   var foodList = Object.keys(byFoodItem).map(function(k){ return byFoodItem[k]; }).sort(function(a, b){ return b.amount - a.amount; });
+  var extraList = Object.keys(byExtraItem).map(function(k){ return byExtraItem[k]; }).sort(function(a, b){ return b.amount - a.amount; });
   posRenderQtySummaryTable('qtySummaryBevBody', bevList);
   posRenderQtySummaryTable('qtySummaryFoodBody', foodList);
-  if (countEl) countEl.textContent = (bevList.length + foodList.length) + ' items';
+  posRenderQtySummaryTable('qtySummaryExtraBody', extraList);
+  if (countEl) countEl.textContent = (bevList.length + foodList.length + extraList.length) + ' items';
   var foodEl = document.getElementById('qsFoodSale');
   var bevEl = document.getElementById('qsBevSale');
+  var extrasEl = document.getElementById('qsExtrasSale');
   var totalEl = document.getElementById('qsTotalSale');
   if (foodEl) foodEl.textContent = totFood.toFixed(2);
   if (bevEl) bevEl.textContent = totBev.toFixed(2);
-  if (totalEl) totalEl.textContent = (totFood + totBev).toFixed(2);
+  if (extrasEl) extrasEl.textContent = totExtras.toFixed(2);
+  if (totalEl) totalEl.textContent = (totFood + totBev + totExtras).toFixed(2);
 }
 
 
@@ -19381,7 +19405,10 @@ function posResetForm(){
     prows.forEach(function(row, i){ if (i > 0) row.remove(); });
     var pfirst = payContainer.querySelector('.pay-row');
     if (pfirst) pfirst.querySelectorAll('input').forEach(function(inp){
-      if (inp.type !== 'date') { inp.value = ''; return; }
+      // Same flatpickr type-swap gotcha as posRemovePaymentRow — check the
+      // class, not .type, or an already-enhanced date field gets wiped
+      // blank here instead of reset to today via setDate().
+      if (!inp.classList.contains('pay-date-input')) { inp.value = ''; return; }
       if (inp._flatpickr) inp._flatpickr.setDate(posTodayISO(), true); else inp.value = posTodayISO();
     });
   }
