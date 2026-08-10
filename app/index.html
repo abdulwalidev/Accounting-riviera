@@ -7861,10 +7861,18 @@ function splitRoomRowRate(tr, nightIdx, rate){
   specs.push({ rent: String(rate), count: 1 });
   if(after > 0) specs.push({ rent: baseRent, count: after });
 
-  const newRows = specs.map(spec=>{
+  const newRows = specs.map((spec, i)=>{
     const clone = tr.cloneNode(true);
     clone.dataset.rooms = spec.count;
     clone.dataset.splitGroup = splitGroup;
+    // cloneNode also copies data-room-id (the existing DB row this room
+    // was saved as, if editing a saved entry) onto every split row — left
+    // as-is, saving would upsert 2-3 rows sharing the same id in one
+    // batch, which Postgres's ON CONFLICT DO UPDATE rejects outright
+    // ("cannot affect row a second time"). Only the first split row keeps
+    // that identity and updates the existing row; the rest lose it so
+    // they save as brand-new rows with their own fresh ids instead.
+    if(i > 0) delete clone.dataset.roomId;
     clone.querySelector('.rent').value = spec.rent;
     clone.querySelector('.roomCount').textContent = spec.count;
     const unitTypeSel = clone.querySelector('.unitType');
