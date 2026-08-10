@@ -2718,11 +2718,12 @@
   }
   .role-viewer .viewer-lock-note{ display:block; }
 
-  /* Restaurant role: only the Restaurant and Front Office tabs exist for
-     this account — every other nav button (including the Settings gear)
-     is hidden, regardless of whatever per-button display rule
+  /* Restaurant role: only the Restaurant tab exists in the topnav for
+     this account — Front Office is the header badge now, not a nav
+     button — every other nav button (including the Settings gear) is
+     hidden, regardless of whatever per-button display rule
      applyRolePermissions() would otherwise set. See isRestaurantRole(). */
-  .role-restaurant .topnav .navbtn:not(#topNavFrontOffice):not(#topNavRestaurant):not(#topNavPosUnlock){
+  .role-restaurant .topnav .navbtn:not(#topNavRestaurant):not(#topNavPosUnlock){
     display:none !important;
   }
 
@@ -3346,6 +3347,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <div class="hdr-right">
       <button class="theme-toggle hdr-pause-btn" id="pauseSyncBtn" onclick="event.stopPropagation(); pauseAppForIdle();" title="Pause syncing with the cloud until you click to resume">Pause Sync</button>
+      <button class="theme-toggle hdr-fo-badge" id="hdrFrontOfficeBadge" onclick="event.stopPropagation(); showView('frontoffice');" title="Front Office — uncollected restaurant charges" style="display:none; position:relative;">
+        🔔<span id="hdrFrontOfficeCount" style="position:absolute; top:-4px; right:-4px; background:#dc2626; color:#fff; font-size:10px; font-weight:700; line-height:1; min-width:15px; height:15px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;">0</span>
+      </button>
       <span class="hdr-date-pill" id="hdrDatePill"></span>
       <button class="theme-toggle hdr-pause-btn" id="hotelRestaurantSwitch" onclick="event.stopPropagation(); toggleHotelRestaurantMode();" title="Switch between Hotel and Restaurant" style="display:none;">Restaurant</button>
       <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
@@ -3362,7 +3366,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="hdr-row2">
     <div class="topnav">
       <button class="navbtn" id="topNavDashboard" onclick="showView('dashboard')">Dashboard</button>
-      <button class="navbtn" id="topNavFrontOffice" onclick="showView('frontoffice')" style="display:none;">Front Office</button>
       <button class="navbtn" id="topNavRestaurant" onclick="showView('restaurant')" style="display:none;">Restaurant</button>
       <button class="navbtn" id="topNavRoomDetail" onclick="showView('roomdetail')">Room Detail</button>
       <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
@@ -6418,8 +6421,8 @@ function showView(view, fromPopState){
   document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck');
   const topNavPaymentProof = document.getElementById('topNavPaymentProof');
   if(topNavPaymentProof) topNavPaymentProof.classList.toggle('active', view === 'paymentrecord');
-  const topNavFrontOffice = document.getElementById('topNavFrontOffice');
-  if(topNavFrontOffice) topNavFrontOffice.classList.toggle('active', view === 'frontoffice');
+  const hdrFrontOfficeBadge = document.getElementById('hdrFrontOfficeBadge');
+  if(hdrFrontOfficeBadge) hdrFrontOfficeBadge.classList.toggle('active', view === 'frontoffice');
   const topNavRestaurant = document.getElementById('topNavRestaurant');
   if(topNavRestaurant) topNavRestaurant.classList.toggle('active', view === 'restaurant');
   updateHotelRestaurantSwitch();
@@ -15471,13 +15474,28 @@ async function fetchFrontOfficeOnly(){
     const itemsByInvoice = {};
     (itemsRes.data || []).forEach(it=>{ (itemsByInvoice[it.invoice_id] = itemsByInvoice[it.invoice_id] || []).push(it); });
     foInvoices = (invRes.data || []).map(row=> foRowFromDb(row, itemsByInvoice[row.id] || []));
+    updateFrontOfficeBadge();
     rerenderActiveView();
   }catch(e){
     console.error('Front Office fetch failed', e);
   }
 }
 
+// Updates the header notification badge independent of whether the Front
+// Office page is actually the active view — fetchFrontOfficeOnly() polls
+// in the background regardless of what's on screen, so this needs to run
+// on every fetch, not just inside renderFrontOffice().
+function updateFrontOfficeBadge(){
+  const badge = document.getElementById('hdrFrontOfficeBadge');
+  const countEl = document.getElementById('hdrFrontOfficeCount');
+  if(!badge || !countEl) return;
+  const n = foInvoices.filter(r=> !r.collected).length;
+  countEl.textContent = n > 99 ? '99+' : String(n);
+  countEl.style.display = n > 0 ? 'flex' : 'none';
+}
+
 function renderFrontOffice(){
+  updateFrontOfficeBadge();
   const pendingBody = document.getElementById('foPendingBody');
   const collectedBody = document.getElementById('foCollectedBody');
   const pendingCount = document.getElementById('foPendingCount');
@@ -16044,8 +16062,8 @@ function applyRolePermissions(){
   if(paymentProofNav) paymentProofNav.style.display = isAdmin() ? '' : 'none';
   const settingsFrontOfficeBtn = document.getElementById('settingsFrontOfficeBtn');
   if(settingsFrontOfficeBtn) settingsFrontOfficeBtn.style.display = isAdmin() ? '' : 'none';
-  const frontOfficeNav = document.getElementById('topNavFrontOffice');
-  if(frontOfficeNav) frontOfficeNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
+  const hdrFrontOfficeBadge = document.getElementById('hdrFrontOfficeBadge');
+  if(hdrFrontOfficeBadge) hdrFrontOfficeBadge.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const posUnlockNav = document.getElementById('topNavPosUnlock');
@@ -17687,6 +17705,26 @@ function posMakeActionsCell(record){
     collectedTag.style.cssText = 'font-size:11px; color:#0f7a3d; white-space:nowrap;';
     collectedTag.textContent = 'Collected · ' + (record.collectedBy || '');
     wrap.appendChild(collectedTag);
+    if (!locked) {
+      var undoBtn = document.createElement('button');
+      undoBtn.type = 'button';
+      undoBtn.style.cssText = 'border:1px solid #d7dae0; background:#fff; border-radius:5px; padding:4px 8px; font-size:11px; font-weight:600; cursor:pointer; color:#4b5b73; white-space:nowrap;';
+      undoBtn.textContent = 'Undo';
+      undoBtn.title = 'Move back to pending — Front Office will need to collect it again';
+      undoBtn.onclick = function(e){ e.stopPropagation(); posUndoCollected(record); };
+      wrap.appendChild(undoBtn);
+      // Reopening a collected invoice in POS is restaurant staff's job —
+      // a superadmin browsing the same list isn't meant to edit it here.
+      if (isRestaurantRole()) {
+        var updateBtn = document.createElement('button');
+        updateBtn.type = 'button';
+        updateBtn.style.cssText = 'border:1px solid #d7dae0; background:#fff; border-radius:5px; padding:4px 8px; font-size:11px; font-weight:600; cursor:pointer; color:#2563eb; white-space:nowrap;';
+        updateBtn.textContent = 'Update';
+        updateBtn.title = 'Open in Point of Sale';
+        updateBtn.onclick = function(e){ e.stopPropagation(); posOpenRecordInForm(record); };
+        wrap.appendChild(updateBtn);
+      }
+    }
   }
 
   // Deletable regardless of collected status — only a locked day blocks it.
@@ -17708,6 +17746,25 @@ function posMakeActionsCell(record){
 
   td.appendChild(wrap);
   return td;
+}
+
+// Mirrors foUndoCollect() on the hotel side (app/index.html's Front
+// Office page) — same DB update, just triggerable from the restaurant
+// side too now, so staff don't have to go find a hotel account to fix a
+// mis-collected invoice.
+async function posUndoCollected(record){
+  if (!sb) { posShowToast('Not connected to the cloud — try again.', 'error'); return; }
+  var res = await sb.from('pos_invoices').update({ collected: false, collected_by: null, collected_at: null }).eq('id', record.id);
+  if (res.error) {
+    console.error('Undo collect failed', res.error);
+    posShowToast('Could not undo — check your connection and try again.', 'error');
+    return;
+  }
+  record.collected = false;
+  record.collectedBy = null;
+  record.collectedAt = null;
+  posShowToast('Moved ' + record.no + ' back to pending.');
+  frontOfficeRefresh();
 }
 
 var posPendingDelete = null;
