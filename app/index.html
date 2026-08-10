@@ -19153,10 +19153,25 @@ function posRequestPost(mode){
     });
     if (qtDupe) cautionLines.push('Order No(QT) "' + orderNoVal + '" is already used on another invoice — allowed, but flagged.');
   }
+  // Itemized breakdown for the confirm popup — a non-menu item still counts
+  // toward the Total below (posRecalcAll already includes it), but with
+  // nothing here showing that, a fake/custom item's amount looked like it
+  // had silently vanished instead of just being folded into one combined
+  // number. Flagged (non-menu) rows are called out in red so it's obvious
+  // their amount IS in there.
+  var itemLines = [];
   tbody.querySelectorAll('tr').forEach(function(row){
     var nameInput = row.querySelector('.pos-item-input');
     var name = nameInput ? nameInput.value.trim() : '';
-    if (name && !posIsMenuItemName(name)) cautionLines.push('"' + name + '" isn\'t a recognized menu item — flagged, but you can still post it.');
+    if (!name) return;
+    var f = posRowFields(row);
+    var qty = parseFloat(f.qty && f.qty.value) || 0;
+    var price = parseFloat((f.price && f.price.value || '').replace(/,/g, '')) || 0;
+    var pct = parseFloat(f.pct && f.pct.value) || 0;
+    var ext = qty * price * (1 - pct / 100);
+    var flagged = !posIsMenuItemName(name);
+    itemLines.push({ name: name, ext: ext, flagged: flagged });
+    if (flagged) cautionLines.push('"' + name + '" isn\'t a recognized menu item — flagged, but you can still post it.');
   });
 
   var cautionBadge = document.getElementById('posPostCautionBadge');
@@ -19170,10 +19185,20 @@ function posRequestPost(mode){
     }
   }
 
+  var itemListHtml = itemLines.length ?
+    '<table style="width:100%; border-collapse:collapse; font-size:12px; margin:2px 0 8px;">' +
+    itemLines.map(function(it){
+      return '<tr' + (it.flagged ? ' style="color:#dc2626;"' : '') + '>' +
+        '<td style="padding:1px 4px 1px 0;">' + posEscapeHtml(it.name) + (it.flagged ? ' ⚠️' : '') + '</td>' +
+        '<td style="padding:1px 0; text-align:right; white-space:nowrap;">' + it.ext.toFixed(2) + '</td></tr>';
+    }).join('') +
+    '</table>' : '';
+
   var detailsEl = document.getElementById('posPostDetails');
   if (detailsEl) {
     detailsEl.innerHTML =
       cautionLines.map(function(c){ return '<b style="color:#dc2626;">' + posEscapeHtml(c) + '</b><br>'; }).join('') +
+      itemListHtml +
       'Customer: <b>' + posEscapeHtml(customer) + '</b><br>' +
       'Room: ' + posEscapeHtml(roomNoVal) + '<br>' +
       'Total: ' + totals.grandTotal.toFixed(2) + ' &nbsp;·&nbsp; Paid: ' + totals.paid.toFixed(2);
