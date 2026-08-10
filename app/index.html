@@ -19344,6 +19344,14 @@ function posResetForm(){
   }
   var discInput = document.querySelector('#page-pos-invoice .disc-card input');
   if (discInput) discInput.value = '0';
+  // Both taxes default to ON for a genuinely new invoice — without this, an
+  // invoice you'd opened with Service Charge/GST off (restored from its own
+  // saved tax_rows) left the checkboxes in that same unchecked state for
+  // whatever brand-new invoice you started next via "+ New", even though it
+  // has nothing to do with the one you were just looking at. Each invoice
+  // still keeps its own checkbox state once posted — this only resets the
+  // live form back to the default before that new invoice has any history.
+  document.querySelectorAll('#page-pos-invoice .tax-item input[type=checkbox]').forEach(function(cb){ cb.checked = true; });
   var custInput = document.getElementById('posCustomer');
   if (custInput) custInput.value = 'Walkin Customer';
   var tableInput = document.getElementById('posTable');
