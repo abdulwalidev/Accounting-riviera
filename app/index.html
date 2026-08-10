@@ -2877,7 +2877,15 @@
 #page-pos-invoice .pay-row-head, #page-pos-invoice .pay-row {display:flex; align-items:center;}
 #page-pos-invoice .pay-row-head {background:var(--headbg); color:var(--text); font-size:11px; font-weight:700; letter-spacing:.03em;}
 #page-pos-invoice .pay-row-head > div, #page-pos-invoice .pay-row > div {padding:10px 14px; box-sizing:border-box;}
-#page-pos-invoice .pay-col-date {flex:0 0 200px;}
+/* min-width:0 is load-bearing here — flatpickr's alt-input has a natural
+   content width of 307.875px (the app-wide default, sized for full-width
+   single fields elsewhere), and a fixed-basis flex item refuses to shrink
+   below its content's natural width without this override. Without it,
+   the DATE column silently blows past its 200px basis the moment
+   posInitDatePicker() enhances the input, pushing AMOUNT/TYPE/remove out
+   of alignment with their own headers — same fix .pay-col-amt already has. */
+#page-pos-invoice .pay-col-date {flex:0 0 200px; min-width:0;}
+#page-pos-invoice .pay-col-date .flatpickr-alt-input {width:100%; max-width:100%;}
 #page-pos-invoice .pay-col-amt {flex:1; min-width:0;}
 #page-pos-invoice .pay-col-type {flex:0 0 220px;}
 #page-pos-invoice .pay-col-remove {flex:0 0 40px; text-align:center; padding:10px 4px !important;}
@@ -16370,6 +16378,7 @@ function posInvoicePayload(record){
     paid_account_transfer: record.paidAccountTransfer || 0,
     paid_card: record.paidCard || 0,
     payments: record.payments || [],
+    tax_rows: record.taxRows || [],
     balance: record.balance || 0,
     mode: record.mode,
     posted: !!record.posted,
@@ -16414,6 +16423,7 @@ function posRowFromDb(row, items){
     paidAccountTransfer: Number(row.paid_account_transfer) || 0,
     paidCard: Number(row.paid_card) || 0,
     payments: Array.isArray(row.payments) ? row.payments : [],
+    taxRows: Array.isArray(row.tax_rows) ? row.tax_rows : [],
     subtotal: Number(row.subtotal) || 0,
     taxTotal: Number(row.tax_total) || 0,
     grandTotal: Number(row.grand_total) || 0,
@@ -18145,6 +18155,24 @@ function posOpenRecordInForm(record){
     if (record.paidCard) payEntries.push({ date: openIso, amount: record.paidCard, type: 'card' });
   }
   posFillPaymentRows(payEntries, openIso);
+
+  // Restore each tax checkbox (Service Charges 10% / GST 10% on Food) to
+  // whatever it actually was when this invoice was posted — it used to
+  // just leave whatever the checkboxes happened to already be set to
+  // (leftover from the previous invoice you had open), silently changing
+  // the invoice's tax total the moment you touched anything and reposted.
+  // Older invoices saved before tax_rows was persisted have nothing to
+  // restore from — leave the checkboxes as they already are rather than
+  // guessing, since a combined tax_total alone can't tell which single
+  // tax (both are the same 10% rate) was actually the one enabled.
+  if (record.taxRows && record.taxRows.length) {
+    document.querySelectorAll('#page-pos-invoice .tax-item').forEach(function(item){
+      var code = item.dataset.code || '';
+      var cb = item.querySelector('input[type=checkbox]');
+      var match = record.taxRows.find(function(t){ return t.code === code; });
+      if (cb && match) cb.checked = match.amt > 0.004;
+    });
+  }
 
   posRecalcAll();
   posFormDirty = false;
