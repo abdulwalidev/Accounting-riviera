@@ -18543,6 +18543,7 @@ function prevDayRefresh(){
       '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
       '<td class="num">' + (r.paid || 0).toFixed(2) + '</td>' +
       '<td class="num">' + bal.toFixed(2) + '</td>';
+    posMakeRowClickable(tr, r);
     body.appendChild(tr);
   });
   if (countEl) countEl.textContent = rows.length + ' invoices';
@@ -18646,6 +18647,7 @@ function renderChargesSummary(){
       '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
       '<td class="num">' + (r.paid || 0).toFixed(2) + '</td>' +
       '<td class="num">' + bal.toFixed(2) + '</td>';
+    posMakeRowClickable(tr, r);
     body.appendChild(tr);
   });
   if (rows.length) {
@@ -18722,6 +18724,7 @@ function renderChargesSummary(){
         '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
         '<td class="num">' + (r.paid || 0).toFixed(2) + '</td>' +
         '<td class="num" style="font-weight:700; color:#dc2626;">' + bal.toFixed(2) + '</td>';
+      posMakeRowClickable(ptr, r);
       pendingBody.appendChild(ptr);
     });
     if (pendingCountEl) pendingCountEl.textContent = pendingRows.length + ' pending';
