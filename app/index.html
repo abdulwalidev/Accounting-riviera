@@ -18405,12 +18405,6 @@ function posEnterEditMode(){
   if (invoicePage) invoicePage.classList.remove('pos-view-only');
   var editRecordBtn = document.getElementById('posEditRecordBtn');
   if (editRecordBtn) editRecordBtn.style.display = 'none';
-  // New Receipt (duplicate everything loaded into a fresh today-dated
-  // invoice) stays hidden for a normal view-only record — only locked
-  // invoices show it there — but once you're actually editing, it's a
-  // handy way to fork off a copy instead of overwriting the original.
-  var newReceiptBtn = document.getElementById('posNewReceiptBtn');
-  if (newReceiptBtn) newReceiptBtn.style.display = '';
 
   var editBadge = document.getElementById('posEditingBadge');
   var editBadgeLabel = document.getElementById('posEditingBadgeLabel');
