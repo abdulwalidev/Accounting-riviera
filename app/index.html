@@ -2825,10 +2825,13 @@
   .line-table {width:100%; border-collapse:collapse;}
 #page-pos-invoice .line-table thead th {background:var(--headbg); color:var(--text); font-size:11px; font-weight:700; letter-spacing:.03em; text-align:left; padding:10px 14px;}
 #page-pos-invoice .line-table thead th.num {text-align:right;}
-#page-pos-invoice .line-table thead th#posItemNameHead {font-size:9px; letter-spacing:.02em;}
 #page-pos-invoice .line-table tbody td {padding:8px 10px; border-bottom:1px solid var(--border);}
 #page-pos-invoice .line-table tbody td.num-col {width:34px; color:var(--muted); text-align:left; padding-left:14px;}
 #page-pos-invoice .line-table input {width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px;}
+/* Item name text specifically shrinks so long menu item names actually
+   fit inside the input instead of overflowing/getting cut off — the
+   table header itself stays the normal 11px like every other header. */
+#page-pos-invoice .pos-item-input {font-size:11.5px;}
 #page-pos-invoice .qty-cell {display:flex; align-items:center; gap:6px;}
 #page-pos-invoice .qty-cell button {width:30px; height:32px; border:1px solid var(--border-strong); background:#fff; border-radius:6px; font-size:15px; cursor:pointer; color:var(--muted);}
 #page-pos-invoice .qty-cell input {text-align:center; width:50px;}
@@ -2925,13 +2928,13 @@
    everywhere except the New Receipt action, same "look but can't touch"
    intent as the hotel's own read-only guest-entry display. */
 #page-pos-invoice.pos-locked-view > .wrap > .card:not(.list-card) {opacity:.55; pointer-events:none;}
-#page-pos-invoice.pos-locked-view .action-bar button:not(#posNewReceiptBtn) {opacity:.4; pointer-events:none;}
+#page-pos-invoice.pos-locked-view .action-bar button:not(#posNewReceiptBtn):not(#posPrintRecordBtn) {opacity:.4; pointer-events:none;}
 /* Any other (unlocked, not-collected) invoice opened for viewing starts
    the exact same "look but can't touch" — same intent as opening a guest
    entry: you land on a read-only view first, and editing is something you
    explicitly opt into via the Edit button, never just by opening it. */
 #page-pos-invoice.pos-view-only > .wrap > .card:not(.list-card) {opacity:.55; pointer-events:none;}
-#page-pos-invoice.pos-view-only .action-bar button:not(#posEditRecordBtn) {opacity:.4; pointer-events:none;}
+#page-pos-invoice.pos-view-only .action-bar button:not(#posEditRecordBtn):not(#posPrintRecordBtn) {opacity:.4; pointer-events:none;}
 #page-pos-invoice .list-card {padding:16px 20px;}
 #page-pos-invoice .list-card .lc-title {font-size:15px; font-weight:600; margin-bottom:12px;}
 #page-pos-invoice table.simple {width:100%; border-collapse:collapse; font-size:12.5px;}
@@ -3894,6 +3897,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn secondary" onclick="downloadGuestPdf()">⬇ Download</button>
         <button class="btn secondary" onclick="printGuestLetter()">🖶 Print</button>
+        <button class="btn secondary" onclick="downloadGuestFolioPdf()">⬇ Download Folio</button>
         <button class="btn edit-gold" id="editEntryBtn" onclick="openEditModal()">✎ Edit This Entry</button>
       </div>
     </div>
@@ -4801,6 +4805,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="action-bar">
     <button type="button" class="ab-yellow" id="posNewReceiptBtn" onclick="posRequestNewReceipt()" style="display:none;" title="Post everything currently loaded as a brand-new invoice dated today">＋ New Receipt (Today)</button>
     <button type="button" class="ab-yellow" id="posEditRecordBtn" onclick="posEnterEditMode()" style="display:none;" title="Make this invoice editable">✎ Edit</button>
+    <button type="button" class="ab-gray-outline" id="posPrintRecordBtn" onclick="posPrintCurrentRecord()" style="display:none;" title="Print this invoice's receipt again — no editing or posting">🖨 Print</button>
     <button type="button" class="ab-blue" id="posPostBtn" onclick="posRequestPost('post')">Post</button>
     <button type="button" class="ab-blue" onclick="posRequestPost('printpost')">Print & Post</button>
     <button type="button" class="ab-gray-outline" onclick="posRequestPost('printonly')">Print-Only</button>
@@ -4812,7 +4817,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card">
     <div class="lc-title">Recent Invoices</div>
     <table class="simple">
-      <thead><tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
       <tbody id="recentInvoicesBody"></tbody>
     </table>
   </div>
@@ -4820,7 +4825,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card" id="guestInvoicesCard" style="display:none; margin-top:14px;">
     <div class="lc-title">Guests (Non-Paying)</div>
     <table class="simple">
-      <thead><tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
       <tbody id="guestInvoicesBody"></tbody>
     </table>
   </div>
@@ -8128,6 +8133,14 @@ function updateSaveEntryButtonLabel(){
   const btn = document.getElementById('saveEntryBtn');
   const checkInEl = document.getElementById('checkInDate');
   if(!btn || !checkInEl) return;
+  // Editing an already-saved entry is never itself a check-in/reservation
+  // action — the guest's actual status doesn't change just because a field
+  // got corrected — so the button just says "Save", regardless of what the
+  // Check-in Date field holds.
+  if(editingEntryId){
+    btn.textContent = 'Save';
+    return;
+  }
   const checkIn = checkInEl.value;
   btn.textContent = (checkIn && checkIn > checkinTodayStr()) ? 'Save Reservation' : 'Save and Checkin';
 }
@@ -10849,6 +10862,180 @@ function printGuestLetter(){
       win.focus();
       win.print();
     }, 50));
+}
+
+// ---- Guest Folio: the full stay statement (every room segment + every
+// payment), as opposed to downloadGuestPdf()'s one-page reservation
+// confirmation letter. Room segments reuse the exact same "Moved Out on
+// row N immediately followed by a different room's row" shape formatRoomChain()
+// detects — a segment's own Check-out equals the very next segment's
+// Check-in only when that boundary is a same-day room change, never a real
+// departure, so that shared date is what marks it "Room Change" below
+// instead of a real checkout.
+function buildFolioRoomSegments(entry){
+  const rooms = (entry.rooms || []).filter(r=> r && r.roomNo);
+  const actualCheckout = getDetailValue(entry, 'Actual Checkout') || '';
+  const finalCheckout = actualCheckout || entry.checkOut || computeExpectedCheckoutDate(entry) || '';
+  const segments = [];
+  rooms.forEach((r, i)=>{
+    const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
+    const nights = parseInt(r.count) || 1;
+    const total = parseFloat(String(r.total).replace(/,/g,'')) || (rent * nights);
+    if(isMiscRoomNo(r.roomNo)){
+      segments.push({ roomNo: r.unitType || 'Miscellaneous', checkIn:'', checkOut:'', nights, rent, total, roomChange:false, misc:true });
+      return;
+    }
+    const prev = rooms[i-1];
+    const chainedFromPrev = !!(prev && prev.movedOut && !isMiscRoomNo(prev.roomNo) &&
+      r.roomNo.trim().toUpperCase() !== prev.roomNo.trim().toUpperCase());
+    const next = rooms[i+1];
+    const chainedToNext = !!(r.movedOut && next && !isMiscRoomNo(next.roomNo) &&
+      next.roomNo.trim().toUpperCase() !== r.roomNo.trim().toUpperCase());
+    const checkIn = chainedFromPrev ? prev.movedOut : (entry.checkIn || '');
+    const checkOut = r.movedOut || (i === rooms.length - 1 ? finalCheckout : '');
+    segments.push({ roomNo: displayRoomNo(r.roomNo, r.unitType), checkIn, checkOut, nights, rent, total, roomChange: chainedToNext, misc:false });
+  });
+  return segments;
+}
+
+const RIVIERA_FOLIO_CSS = `
+  .riviera-folio-page{
+    width:210mm; box-sizing:border-box;
+    font-family:Georgia,'Times New Roman',serif; color:#1a1a1a; background:#fff;
+  }
+  .riviera-folio-page *{ box-sizing:border-box; }
+  .riviera-folio-header{ display:flex; align-items:center; gap:14px; padding:14mm 15mm 6mm; border-bottom:2px solid #1a1a1a; }
+  .riviera-folio-header img{ width:70px; display:block; }
+  .riviera-folio-header h1{ font-size:22px; letter-spacing:2px; margin:0; }
+  .riviera-folio-header .riviera-folio-sub{ font-size:13px; letter-spacing:1px; color:#555; margin-top:2px; }
+  .riviera-folio-content{ padding:6mm 15mm 14mm; font-size:11.5px; line-height:1.5; }
+  .riviera-folio-guestinfo{ display:grid; grid-template-columns:1fr 1fr; gap:4px 18px; margin-bottom:14px; }
+  .riviera-folio-section-title{ font-weight:bold; font-size:13px; margin:16px 0 8px; border-bottom:1px solid #ccc; padding-bottom:3px; }
+  .riviera-folio-table{ width:100%; border-collapse:collapse; font-size:11px; }
+  .riviera-folio-table th, .riviera-folio-table td{ border:1px solid #ccc; padding:5px 7px; text-align:left; }
+  .riviera-folio-table th{ background:#f2f2f2; font-weight:bold; }
+  .riviera-folio-table td.num, .riviera-folio-table th.num{ text-align:right; font-family:Arial,Helvetica,sans-serif; font-variant-numeric:lining-nums; }
+  .riviera-folio-roomchange-note{ color:#8a6d1a; font-weight:bold; }
+  .riviera-folio-summary{ margin-top:14px; margin-left:auto; width:260px; font-size:12.5px; }
+  .riviera-folio-summary div{ display:flex; justify-content:space-between; padding:4px 0; }
+  .riviera-folio-summary .due{ font-weight:bold; border-top:2px solid #1a1a1a; margin-top:4px; padding-top:6px; }
+`;
+
+function buildGuestFolioHtml(entry){
+  const t = computeTotals(entry);
+  const segments = buildFolioRoomSegments(entry);
+  const segRows = segments.map(s=> `
+    <tr>
+      <td>${s.roomNo}</td>
+      <td>${s.checkIn ? formatDate(s.checkIn) : '-'}</td>
+      <td>${s.checkOut ? formatDate(s.checkOut) : '-'}</td>
+      <td class="num">${s.misc ? '-' : s.nights}</td>
+      <td class="num">${s.rent.toLocaleString()}</td>
+      <td class="num">${s.total.toLocaleString()}</td>
+      <td>${s.roomChange ? '<span class="riviera-folio-roomchange-note">Room Change</span>' : ''}</td>
+    </tr>`).join('');
+
+  // Running balance walks the payments in the same order they're already
+  // stored/entered (not re-sorted by date) — matches how every other
+  // payment list in the app orders them, so this reads the same way.
+  let running = 0;
+  const payRows = (entry.payments || []).map(p=>{
+    running += parseFloat(p.total) || 0;
+    const balance = t.bookingTotal - running;
+    return `
+    <tr>
+      <td>${p.date ? formatDate(p.date) : '-'}</td>
+      <td>${p.type || '-'}</td>
+      <td>${p.mode || '-'}</td>
+      <td>${p.bank || '-'}</td>
+      <td class="num">${(parseFloat(p.total) || 0).toLocaleString()}</td>
+      <td class="num">${balance.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  return `<style>${RIVIERA_FOLIO_CSS}</style>
+    <div class="riviera-folio-page">
+      <div class="riviera-folio-header">
+        <img src="/app/assets/riviera-logo.png" alt="Riviera Resort Logo">
+        <div>
+          <h1>RIVIERA RESORT</h1>
+          <div class="riviera-folio-sub">Guest Folio</div>
+        </div>
+      </div>
+      <div class="riviera-folio-content">
+        <div class="riviera-folio-guestinfo">
+          <div><strong>Guest Name:</strong> ${entry.guestName || '(no name)'}</div>
+          <div><strong>Father Name:</strong> ${entry.fatherName && entry.fatherName !== 'N/A' ? entry.fatherName : '-'}</div>
+          <div><strong>CNIC:</strong> ${entry.cnic || '-'}</div>
+          <div><strong>Contact No:</strong> ${getDetailValue(entry, 'Contact No') || '-'}</div>
+          <div><strong>Check-in:</strong> ${entry.checkIn ? formatDate(entry.checkIn) : '-'}</div>
+          <div><strong>Check-out:</strong> ${(getDetailValue(entry, 'Actual Checkout') || entry.checkOut) ? formatDate(getDetailValue(entry, 'Actual Checkout') || entry.checkOut) : '-'}</div>
+        </div>
+
+        <p class="riviera-folio-section-title">Room / Stay History</p>
+        <table class="riviera-folio-table">
+          <thead><tr><th>Room</th><th>Check-in</th><th>Check-out</th><th class="num">Nights</th><th class="num">Rent/Night</th><th class="num">Total</th><th>Note</th></tr></thead>
+          <tbody>${segRows || '<tr><td colspan="7">No rooms on this entry.</td></tr>'}</tbody>
+        </table>
+
+        <p class="riviera-folio-section-title">Payment History</p>
+        <table class="riviera-folio-table">
+          <thead><tr><th>Date</th><th>Type</th><th>Mode</th><th>Bank</th><th class="num">Amount</th><th class="num">Balance</th></tr></thead>
+          <tbody>${payRows || '<tr><td colspan="6">No payments recorded.</td></tr>'}</tbody>
+        </table>
+
+        <div class="riviera-folio-summary">
+          <div><span>Total Charges</span><span>Rs. ${t.bookingTotal.toLocaleString()}</span></div>
+          <div><span>Total Paid</span><span>Rs. ${t.paid.toLocaleString()}</span></div>
+          <div class="due"><span>Balance Due</span><span>Rs. ${t.due.toLocaleString()}</span></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// Unlike downloadGuestPdf()'s fixed single A4 page, a folio's length
+// varies with how many rooms/payments a stay racked up, so this renders
+// the (possibly tall) content once via html2canvas and slices that single
+// image across as many A4 pages as it takes — same technique, just walked
+// down the canvas in 297mm steps instead of assuming it fits on one page.
+async function downloadGuestFolioPdf(){
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  if(typeof html2canvas === 'undefined' || typeof jspdf === 'undefined'){
+    showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
+    return;
+  }
+  const mount = document.createElement('div');
+  mount.style.cssText = 'position:fixed; left:-10000px; top:0; z-index:-1;';
+  mount.innerHTML = buildGuestFolioHtml(entry);
+  document.body.appendChild(mount);
+  try{
+    const pageEl = mount.querySelector('.riviera-folio-page');
+    await waitForLetterImages(mount);
+    const canvas = await html2canvas(pageEl, { scale: 2, useCORS: true });
+    const pageWidthMm = 210;
+    const pageHeightMm = 297;
+    const imgHeightMm = canvas.height * pageWidthMm / canvas.width;
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const doc = new jspdf.jsPDF({ orientation:'p', unit:'mm', format:'a4' });
+    let heightLeft = imgHeightMm;
+    let position = 0;
+    doc.addImage(imgData, 'JPEG', 0, position, pageWidthMm, imgHeightMm);
+    heightLeft -= pageHeightMm;
+    while(heightLeft > 0){
+      position = heightLeft - imgHeightMm;
+      doc.addPage();
+      doc.addImage(imgData, 'JPEG', 0, position, pageWidthMm, imgHeightMm);
+      heightLeft -= pageHeightMm;
+    }
+    const safeName = (entry.guestName || 'guest').trim().replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'guest';
+    doc.save(`riviera-folio-${safeName}.pdf`);
+  }catch(e){
+    console.error('Guest folio PDF generation failed', e);
+    showNotice('Couldn\'t generate the folio — please try again.');
+  }finally{
+    document.body.removeChild(mount);
+  }
 }
 
 function toggleRoomDetail(){
@@ -16578,10 +16765,13 @@ function posRenderRecentInvoices(){
   recentBody.innerHTML = '';
   if (guestBody) guestBody.innerHTML = '';
   var hasGuest = false;
+  var recentNum = 0, guestNum = 0;
   posInvoices.forEach(function(record){
     if (record.deleted || !record.posted) return; // print-only drafts don't belong in Recent Invoices — only actually posted ones
-    var row = posBuildInvoiceRow(record, false, true, true);
-    if (/guest/i.test(record.customer || '') && guestBody) { guestBody.appendChild(row); hasGuest = true; }
+    var isGuest = /guest/i.test(record.customer || '');
+    var rowNum = isGuest ? ++guestNum : ++recentNum;
+    var row = posBuildInvoiceRow(record, false, true, true, rowNum);
+    if (isGuest && guestBody) { guestBody.appendChild(row); hasGuest = true; }
     else recentBody.appendChild(row);
   });
   if (guestCard) guestCard.style.display = hasGuest ? '' : 'none';
@@ -17451,13 +17641,14 @@ async function posNextInvoiceNo(){
   }catch(e){ console.error('POS invoice numbering failed', e); return null; }
 }
 
-function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems){
+function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum){
   var tr = document.createElement('tr');
   tr.dataset.invoiceId = record.id;
   tr.className = 'fo-row';
   tr.title = 'Click to open ' + record.no + ' in Point of Sale';
   var itemsText = (record.items || []).map(function(it){ return it.name; }).filter(Boolean).join(', ');
-  tr.innerHTML = '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>' +
+  tr.innerHTML = (rowNum != null ? '<td>' + rowNum + '</td>' : '') +
+    '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>' +
     (showOrderNo ? '<td>' + posEscapeHtml(record.orderNo || '') + '</td>' : '') +
     '<td>' + posEscapeHtml(record.date) + '</td>' +
     '<td>' + posEscapeHtml(record.room) + '</td>' +
@@ -18038,6 +18229,9 @@ function posOpenRecordInForm(record){
   if (newReceiptBtn) newReceiptBtn.style.display = isLockedRecord ? '' : 'none';
   var editRecordBtn = document.getElementById('posEditRecordBtn');
   if (editRecordBtn) editRecordBtn.style.display = isLockedRecord ? 'none' : '';
+  // Printing is always allowed, regardless of locked/view-only/edit state.
+  var printRecordBtn = document.getElementById('posPrintRecordBtn');
+  if (printRecordBtn) printRecordBtn.style.display = '';
 
   var posBtn = document.querySelector('.sidebar button[onclick*="page-pos-invoice"]');
   if (posBtn) posShowApp('page-pos-invoice', posBtn);
@@ -18642,6 +18836,17 @@ window.addEventListener('afterprint', function(){
   document.body.classList.remove('pos-printing-receipt');
 });
 
+// Reprints whatever invoice is currently loaded (posViewingRecord) exactly
+// as it already exists — no posting, no editing, works even while the
+// form is still grayed out/view-only or from a locked day, unlike every
+// other action-bar button. Print-Only is a different thing: it SAVES a
+// new print-only invoice, which is wrong for "I just want another copy of
+// this already-posted receipt."
+function posPrintCurrentRecord(){
+  if (!posViewingRecord) return;
+  posPrintRecord(posViewingRecord);
+}
+
 async function posPostInvoice(mode){
   function abort(msg){
     if (msg) posShowToast(msg, 'error');
@@ -18787,6 +18992,8 @@ function posRequestNewReceipt(){
   if (newReceiptBtn) newReceiptBtn.style.display = 'none';
   var editRecordBtn = document.getElementById('posEditRecordBtn');
   if (editRecordBtn) editRecordBtn.style.display = 'none';
+  var printRecordBtn = document.getElementById('posPrintRecordBtn');
+  if (printRecordBtn) printRecordBtn.style.display = 'none';
   var editBadge = document.getElementById('posEditingBadge');
   if (editBadge) editBadge.style.display = 'none';
   var invoiceDateInput = document.getElementById('posInvoiceDate');
@@ -18969,6 +19176,8 @@ function posResetForm(){
   if (newReceiptBtn) newReceiptBtn.style.display = 'none';
   var editRecordBtn = document.getElementById('posEditRecordBtn');
   if (editRecordBtn) editRecordBtn.style.display = 'none';
+  var printRecordBtn = document.getElementById('posPrintRecordBtn');
+  if (printRecordBtn) printRecordBtn.style.display = 'none';
   posFullPaymentReset();
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (tbody) {
