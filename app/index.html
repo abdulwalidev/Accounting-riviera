@@ -13315,6 +13315,29 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
     });
   });
 
+  // Extended stays — a guest whose last BOOKED night already passed but who
+  // hasn't been formally checked out — generate no room-night above (no
+  // night was ever booked for this date, so there's nothing to bill), yet
+  // they're still physically in the room, same as Breakfast/Inhouse Report
+  // already shows them (both read computeRoomStatuses' `extended` flag).
+  // Without this they'd silently vanish from Charges Summary the day after
+  // checkout was due, which read as "the guest disappeared," not "there's
+  // no rent for them yet." Scoped to a single specific day only — Extended
+  // is a snapshot read as-of one date, not something that makes sense
+  // summed across an open date range.
+  const isSingleDay = !!fromDate && !!toDate && fromDate === toDate;
+  const extendedKeys = new Set();
+  if(isSingleDay){
+    computeRoomStatuses(fromDate).filter(rs=> rs.extended && rs.entry).forEach(rs=>{
+      const key = rs.entry.id + '|' + rs.roomNo + '|' + fromDate;
+      if(nightsByKey[key]) return; // already has a real booked night — nothing to add
+      const roomRow = (rs.entry.rooms || []).find(r=> r.roomNo === rs.roomNo);
+      nightsByKey[key] = { rent: 0, received: 0 };
+      rowMeta[key] = { roomNo: rs.roomNo, unitType: roomRow ? roomRow.unitType : '', date: fromDate, guestId: rs.entry.id, guest: rs.entry.guestName || '(no name)' };
+      extendedKeys.add(key);
+    });
+  }
+
   const roomRows = Object.keys(nightsByKey).map(key=>{
     const meta = rowMeta[key];
     const roomData = nightsByKey[key];
@@ -13348,7 +13371,8 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
       guestId: meta.guestId,
       rent, collected, chunks,
       cashTotal, mcbTotal, alfalahTotal, hajiTotal,
-      due: Math.max(rent - collected, 0)
+      due: Math.max(rent - collected, 0),
+      extended: extendedKeys.has(key)
     };
   }).sort((a,b)=> a.date.localeCompare(b.date) || a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
 
@@ -13541,18 +13565,18 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
     <table style="table-layout:fixed; width:100%; min-width:${totalW}px;">
       <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th>${dateTh}<th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th><th class="no-print" style="width:${SS_W}px; white-space:nowrap;">SS</th></tr></thead>
       <tbody>${roomRows.map((r,i)=> `
-        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="${r.extended ? 'Still in the room past their last booked night — no new night booked/billed yet' : 'Open this guest'}">
           <td>${i + 1}</td>
           ${dateTd(r)}
           <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
           <td>${r.guest}</td>
-          <td>${r.rent.toLocaleString()}</td>
-          ${Array.from({length: maxChunks}, (_,i)=> `<td>${paymentCell(r.chunks[i])}</td>`).join('')}
+          <td>${r.extended ? '<span style="color:var(--amber); font-weight:600;">Extended</span>' : r.rent.toLocaleString()}</td>
+          ${Array.from({length: maxChunks}, (_,i)=> `<td>${r.extended ? '-' : paymentCell(r.chunks[i])}</td>`).join('')}
           <td class="cash-amt">${r.cashTotal ? r.cashTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
-          <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
+          <td style="font-weight:700; color:${r.extended ? 'var(--amber)' : (r.due > 0 ? 'var(--danger)' : 'inherit')};">${r.extended ? '—' : r.due.toLocaleString()}</td>
           ${ssCell(r)}
         </tr>`).join('')}
       </tbody>
