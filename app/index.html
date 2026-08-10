@@ -8760,12 +8760,16 @@ async function reviewEntry(){
   // Same room twice is usually a genuine mistake, but not always — a
   // mid-stay rate change or splitting one group's headcount across rows
   // for the same room are both legitimate, so this asks rather than
-  // blocking outright.
+  // blocking outright. Rows sharing a data-split-group id (an
+  // intentional Split Rate — see splitRoomRowRate) skip the prompt
+  // entirely instead of asking about something the user just did on
+  // purpose one screen ago.
   const seenRooms = {};
   for(const r of cleanRooms){
     const key = r.roomNo.toUpperCase();
     if(key === 'N/A' || key === MISC_ROOM_NO.toUpperCase()) continue; // undecided/misc rows may repeat
-    if(seenRooms[key]){
+    const rowSplitGroup = r.tr.dataset.splitGroup || null;
+    if(seenRooms[key] !== undefined && !(rowSplitGroup && seenRooms[key] === rowSplitGroup)){
       const proceed = await showConfirmModal(
         'Room ' + r.roomNo + ' is selected in more than one row. Continue anyway? (Only do this on purpose — e.g. a rate change mid-stay, or splitting the headcount across rows for the same room.)',
         { title: 'Room Used Twice', okText: 'Continue', cancelText: 'Cancel' }
@@ -8775,7 +8779,7 @@ async function reviewEntry(){
         return;
       }
     }
-    seenRooms[key] = true;
+    seenRooms[key] = rowSplitGroup;
   }
 
   // Cross-entry double-booking guard: the same-room-twice check above only
