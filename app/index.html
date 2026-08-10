@@ -4938,7 +4938,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         <div class="rh-count" id="csSummaryServiceCharge" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
       </div>
       <div>
-        <div class="filters-label">TAX</div>
+        <div class="filters-label">GST TAX</div>
         <div class="rh-count" id="csSummaryTax" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
       </div>
       <div>
@@ -4955,38 +4955,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card results-card" style="margin-top:16px;">
     <table class="rep">
       <thead>
-        <tr><th>TOTAL SALE</th><th class="num">SERVICE CHARGE</th><th class="num">RECEIVED</th><th class="num">BALANCE</th></tr>
-      </thead>
-      <tbody id="csSummaryBody"></tbody>
-    </table>
-  </div>
-
-  <div class="card results-card" style="margin-top:16px;">
-    <table class="rep">
-      <thead>
         <tr><th>FOOD SALE</th><th class="num">BEVERAGE SALE</th></tr>
       </thead>
       <tbody id="csFoodBevBody"></tbody>
     </table>
-  </div>
-
-  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-top:16px;">
-    <div class="card results-card">
-      <div class="results-head"><span class="rh-title">SERVICE CHARGE</span></div>
-      <div class="rh-count" id="csServiceChargeTotal" style="font-size:20px; font-weight:700;">0.00</div>
-    </div>
-    <div class="card results-card">
-      <div class="results-head"><span class="rh-title">CASH</span></div>
-      <div class="rh-count" id="csCashTotal" style="font-size:20px; font-weight:700;">0.00</div>
-    </div>
-    <div class="card results-card">
-      <div class="results-head"><span class="rh-title">ACCOUNT TRANSFER</span></div>
-      <div class="rh-count" id="csAccountTransferTotal" style="font-size:20px; font-weight:700;">0.00</div>
-    </div>
-    <div class="card results-card">
-      <div class="results-head"><span class="rh-title">CARD</span></div>
-      <div class="rh-count" id="csCardTotal" style="font-size:20px; font-weight:700;">0.00</div>
-    </div>
   </div>
 
   <div class="card results-card" style="margin-top:16px;">
@@ -4997,25 +4969,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <table class="rep">
       <thead>
         <tr>
-          <th style="width:36px;">#</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th>
-          <th class="num">SUBTOTAL</th><th class="num">TAX</th><th class="num">TOTAL</th>
-          <th class="num">PAID</th><th class="num">BALANCE</th>
+          <th style="width:36px;">#</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th>
+          <th class="num">BEFORE TAX</th><th class="num">TAX</th><th class="num">SERVICE CHARGE</th><th class="num">TOTAL</th>
+          <th class="num">PAID</th><th class="num">DUE</th><th>STATUS</th>
         </tr>
       </thead>
       <tbody id="chargesSummaryBody"></tbody>
-    </table>
-  </div>
-
-  <div class="card results-card" style="margin-top:16px;">
-    <div class="results-head">
-      <span class="rh-title">PENDING PAYMENTS</span>
-      <span class="rh-count" id="csPendingCount">0 pending</span>
-    </div>
-    <table class="rep">
-      <thead>
-        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th></tr>
-      </thead>
-      <tbody id="csPendingBody"></tbody>
     </table>
   </div>
 
@@ -5063,13 +5022,24 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">FOOD SALE</div><div id="qsFoodSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
       <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">BEVERAGE SALE</div><div id="qsBevSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
     </div>
+    <div class="results-head" style="margin-top:6px;"><span class="rh-title">BEVERAGES</span></div>
     <table class="rep">
       <thead>
         <tr>
-          <th>ITEM</th><th class="num">QTY</th><th class="num">AMOUNT</th><th class="num">TAX</th>
+          <th style="width:36px;">#</th><th>ITEM</th><th class="num">QTY</th><th class="num">AMOUNT</th><th class="num">TAX</th><th class="num">TOTAL</th>
         </tr>
       </thead>
-      <tbody id="qtySummaryBody"></tbody>
+      <tbody id="qtySummaryBevBody"></tbody>
+    </table>
+
+    <div class="results-head" style="margin-top:16px;"><span class="rh-title">FOOD</span></div>
+    <table class="rep">
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th><th>ITEM</th><th class="num">QTY</th><th class="num">AMOUNT</th><th class="num">TAX</th><th class="num">TOTAL</th>
+        </tr>
+      </thead>
+      <tbody id="qtySummaryFoodBody"></tbody>
     </table>
   </div>
 
@@ -17162,14 +17132,9 @@ var POS_MENU_ITEMS = [['Plain Fries',350],['Buffalo Wings 5 Pieces',799],['Crisp
 function posAutoNextOrderNo(){
   var orderInput = document.getElementById('posOrderNo');
   if (!orderInput) return;
-  var prev = null;
-  for (var i = 0; i < posInvoices.length; i++) {
-    var r = posInvoices[i];
-    if (r.deleted) continue;
-    var digits = (r.orderNo || '').match(/\d+/);
-    if (digits) { prev = parseInt(digits[0], 10); break; }
-  }
-  if (prev === null) { posShowToast('No previous Order No(QT) found to calculate from.', 'error'); return; }
+  var last = posInvoices.find(function(r){ return !r.deleted; });
+  var prev = last ? parseInt(last.orderNo, 10) : NaN;
+  if (isNaN(prev)) { posShowToast('No previous Order No(QT) found to calculate from.', 'error'); return; }
   orderInput.value = String(prev + 1);
 }
 
@@ -18656,36 +18621,42 @@ function renderChargesSummary(){
     // from before tax_rows existed have nothing to look up, so they still
     // fall back to the estimate rather than being counted as zero.
     var scRow = (r.taxRows || []).find(function(t){ return t.code === '23221'; });
-    totServiceCharge += scRow ? scRow.amt : (r.subtotal || 0) * 0.10;
+    var rowServiceCharge = scRow ? scRow.amt : (r.subtotal || 0) * 0.10;
+    totServiceCharge += rowServiceCharge;
     (r.items || []).forEach(function(it){
       var ext = (it.qty || 0) * (it.price || 0) * (1 - (it.pct || 0) / 100);
       if (posIsBeverageItem(it.name)) totBeverage += ext; else totFood += ext;
     });
     var itemsText = (r.items || []).map(function(it){ return it.name; }).filter(Boolean).join(', ');
+    var rowGstTax = (r.taxTotal || 0) - rowServiceCharge;
+    var statusLabel = bal > 0.004 ? 'Pending' : 'Not Pending';
     var tr = document.createElement('tr');
     tr.innerHTML = '<td>' + (i + 1) + '</td>' +
-      '<td>' + posEscapeHtml(r.no) + '</td>' +
       '<td>' + posEscapeHtml(r.date) + '</td>' +
       '<td>' + posEscapeHtml(r.room) + '</td>' +
       '<td>' + posEscapeHtml(r.customer) + '</td>' +
       '<td class="fo-items-col" title="' + posEscapeHtml(itemsText) + '">' + posEscapeHtml(itemsText) + '</td>' +
       '<td class="num">' + (r.subtotal || 0).toFixed(2) + '</td>' +
-      '<td class="num">' + (r.taxTotal || 0).toFixed(2) + '</td>' +
+      '<td class="num">' + rowGstTax.toFixed(2) + '</td>' +
+      '<td class="num">' + rowServiceCharge.toFixed(2) + '</td>' +
       '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
       '<td class="num">' + (r.paid || 0).toFixed(2) + '</td>' +
-      '<td class="num">' + bal.toFixed(2) + '</td>';
+      '<td class="num">' + bal.toFixed(2) + '</td>' +
+      '<td>' + statusLabel + '</td>';
     posMakeRowClickable(tr, r);
     body.appendChild(tr);
   });
   if (rows.length) {
     var totalTr = document.createElement('tr');
     totalTr.style.fontWeight = '700';
-    totalTr.innerHTML = '<td colspan="6">Total</td>' +
+    totalTr.innerHTML = '<td colspan="5">Total</td>' +
       '<td class="num">' + totSub.toFixed(2) + '</td>' +
-      '<td class="num">' + totTax.toFixed(2) + '</td>' +
+      '<td class="num">' + (totTax - totServiceCharge).toFixed(2) + '</td>' +
+      '<td class="num">' + totServiceCharge.toFixed(2) + '</td>' +
       '<td class="num">' + totAmt.toFixed(2) + '</td>' +
       '<td class="num">' + totPaid.toFixed(2) + '</td>' +
-      '<td class="num">' + totBal.toFixed(2) + '</td>';
+      '<td class="num">' + totBal.toFixed(2) + '</td>' +
+      '<td></td>';
     body.appendChild(totalTr);
   }
   if (countEl) countEl.textContent = rows.length + ' invoices';
@@ -18697,78 +18668,53 @@ function renderChargesSummary(){
   var sumScEl = document.getElementById('csSummaryServiceCharge');
   if (sumScEl) sumScEl.textContent = totServiceCharge.toFixed(2);
   var sumTaxEl = document.getElementById('csSummaryTax');
-  if (sumTaxEl) sumTaxEl.textContent = totTax.toFixed(2);
+  if (sumTaxEl) sumTaxEl.textContent = (totTax - totServiceCharge).toFixed(2);
   var sumReceivedEl = document.getElementById('csSummaryReceived');
   if (sumReceivedEl) sumReceivedEl.textContent = totPaid.toFixed(2);
   var sumReceivedAfterServiceEl = document.getElementById('csSummaryReceivedAfterService');
   if (sumReceivedAfterServiceEl) sumReceivedAfterServiceEl.textContent = (totPaid - totServiceCharge).toFixed(2);
 
-  var summaryBody = document.getElementById('csSummaryBody');
-  if (summaryBody) {
-    summaryBody.innerHTML = '<tr style="font-weight:700;">' +
-      '<td>' + totAmt.toFixed(2) + '</td>' +
-      '<td class="num">' + totServiceCharge.toFixed(2) + '</td>' +
-      '<td class="num">' + totPaid.toFixed(2) + '</td>' +
-      '<td class="num">' + totBal.toFixed(2) + '</td></tr>';
-  }
-
   var foodBevBody = document.getElementById('csFoodBevBody');
   if (foodBevBody) {
     foodBevBody.innerHTML = '<tr><td>' + totFood.toFixed(2) + '</td><td class="num">' + totBeverage.toFixed(2) + '</td></tr>';
-  }
-
-  var scTotalEl = document.getElementById('csServiceChargeTotal');
-  if (scTotalEl) scTotalEl.textContent = totServiceCharge.toFixed(2);
-  var cashTotalEl = document.getElementById('csCashTotal');
-  if (cashTotalEl) cashTotalEl.textContent = totCash.toFixed(2);
-  var atTotalEl = document.getElementById('csAccountTransferTotal');
-  if (atTotalEl) atTotalEl.textContent = totAccountTransfer.toFixed(2);
-  var cardTotalEl = document.getElementById('csCardTotal');
-  if (cardTotalEl) cardTotalEl.textContent = totCard.toFixed(2);
-
-  // Pending Payments — same rows as the dedicated module, just scoped to
-  // this page's date filter and excluding guests (they never owe anything).
-  var pendingBody = document.getElementById('csPendingBody');
-  var pendingCountEl = document.getElementById('csPendingCount');
-  if (pendingBody) {
-    pendingBody.innerHTML = '';
-    var pendingRows = rows.filter(function(r){
-      var bal = r.balance != null ? r.balance : (r.amount - r.paid);
-      return bal > 0.004;
-    }).sort(function(a, b){
-      var balA = a.balance != null ? a.balance : (a.amount - a.paid);
-      var balB = b.balance != null ? b.balance : (b.amount - b.paid);
-      return balB - balA;
-    });
-    pendingRows.forEach(function(r, i){
-      var bal = r.balance != null ? r.balance : (r.amount - r.paid);
-      var ptr = document.createElement('tr');
-      ptr.innerHTML = '<td>' + (i + 1) + '</td>' +
-        '<td>' + posEscapeHtml(r.no) + '</td>' +
-        '<td>' + posEscapeHtml(r.date) + '</td>' +
-        '<td>' + posEscapeHtml(r.room) + '</td>' +
-        '<td>' + posEscapeHtml(r.customer) + '</td>' +
-        '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
-        '<td class="num">' + (r.paid || 0).toFixed(2) + '</td>' +
-        '<td class="num" style="font-weight:700; color:#dc2626;">' + bal.toFixed(2) + '</td>';
-      posMakeRowClickable(ptr, r);
-      pendingBody.appendChild(ptr);
-    });
-    if (pendingCountEl) pendingCountEl.textContent = pendingRows.length + ' pending';
   }
 }
 
 // Items view: every line item across posted invoices, grouped by name —
 // how many of each thing sold, and for how much.
-function renderQuantitySummary(){
-  var body = document.getElementById('qtySummaryBody');
-  var countEl = document.getElementById('qsCount');
+function posRenderQtySummaryTable(bodyId, list){
+  var body = document.getElementById(bodyId);
   if (!body) return;
+  body.innerHTML = '';
+  var totQty = 0, totAmt = 0, totTax = 0;
+  list.forEach(function(row, i){
+    totQty += row.qty; totAmt += row.amount; totTax += row.tax;
+    var total = row.amount + row.tax;
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + (i + 1) + '</td>' +
+      '<td>' + posEscapeHtml(row.name) + '</td>' +
+      '<td class="num">' + row.qty + '</td>' +
+      '<td class="num">' + row.amount.toFixed(2) + '</td>' +
+      '<td class="num">' + row.tax.toFixed(2) + '</td>' +
+      '<td class="num">' + total.toFixed(2) + '</td>';
+    body.appendChild(tr);
+  });
+  if (list.length) {
+    var totalTr = document.createElement('tr');
+    totalTr.style.fontWeight = '700';
+    totalTr.innerHTML = '<td colspan="2">Total</td><td class="num">' + totQty + '</td><td class="num">' + totAmt.toFixed(2) + '</td><td class="num">' + totTax.toFixed(2) + '</td><td class="num">' + (totAmt + totTax).toFixed(2) + '</td>';
+    body.appendChild(totalTr);
+  }
+}
+
+function renderQuantitySummary(){
+  var countEl = document.getElementById('qsCount');
+  if (!document.getElementById('qtySummaryBevBody')) return;
   var fromEl = document.getElementById('qsFromDate');
   var toEl = document.getElementById('qsToDate');
   var fromIso = fromEl && fromEl.value ? fromEl.value : null;
   var toIso = toEl && toEl.value ? toEl.value : null;
-  var byItem = {};
+  var byBevItem = {}, byFoodItem = {};
   var totFood = 0, totBev = 0;
   posInvoices.forEach(function(r){
     if (r.deleted || !r.posted) return;
@@ -18780,33 +18726,21 @@ function renderQuantitySummary(){
     var taxRate = (r.subtotal || 0) > 0 ? (r.taxTotal || 0) / r.subtotal : 0;
     (r.items || []).forEach(function(it){
       var key = it.name || '(unnamed)';
+      var isBev = posIsBeverageItem(it.name);
+      var byItem = isBev ? byBevItem : byFoodItem;
       if (!byItem[key]) byItem[key] = { name: key, qty: 0, amount: 0, tax: 0 };
       byItem[key].qty += it.qty || 0;
       var ext = (it.qty || 0) * (it.price || 0) * (1 - (it.pct || 0) / 100);
       byItem[key].amount += ext;
       byItem[key].tax += ext * taxRate;
-      if (posIsBeverageItem(it.name)) totBev += ext; else totFood += ext;
+      if (isBev) totBev += ext; else totFood += ext;
     });
   });
-  var list = Object.keys(byItem).map(function(k){ return byItem[k]; }).sort(function(a, b){ return b.amount - a.amount; });
-  body.innerHTML = '';
-  var totQty = 0, totAmt = 0, totTax = 0;
-  list.forEach(function(row){
-    totQty += row.qty; totAmt += row.amount; totTax += row.tax;
-    var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + posEscapeHtml(row.name) + '</td>' +
-      '<td class="num">' + row.qty + '</td>' +
-      '<td class="num">' + row.amount.toFixed(2) + '</td>' +
-      '<td class="num">' + row.tax.toFixed(2) + '</td>';
-    body.appendChild(tr);
-  });
-  if (list.length) {
-    var totalTr = document.createElement('tr');
-    totalTr.style.fontWeight = '700';
-    totalTr.innerHTML = '<td>Total</td><td class="num">' + totQty + '</td><td class="num">' + totAmt.toFixed(2) + '</td><td class="num">' + totTax.toFixed(2) + '</td>';
-    body.appendChild(totalTr);
-  }
-  if (countEl) countEl.textContent = list.length + ' items';
+  var bevList = Object.keys(byBevItem).map(function(k){ return byBevItem[k]; }).sort(function(a, b){ return b.amount - a.amount; });
+  var foodList = Object.keys(byFoodItem).map(function(k){ return byFoodItem[k]; }).sort(function(a, b){ return b.amount - a.amount; });
+  posRenderQtySummaryTable('qtySummaryBevBody', bevList);
+  posRenderQtySummaryTable('qtySummaryFoodBody', foodList);
+  if (countEl) countEl.textContent = (bevList.length + foodList.length) + ' items';
   var foodEl = document.getElementById('qsFoodSale');
   var bevEl = document.getElementById('qsBevSale');
   if (foodEl) foodEl.textContent = totFood.toFixed(2);
@@ -19212,7 +19146,7 @@ function posRequestPost(mode){
   if (!orderNoVal) cautionLines.push('No Order No(QT) entered — Confirm to proceed anyway.');
   if (orderNoVal) {
     var qtDupe = posInvoices.some(function(r){
-      return (!posEditingRecord || r.id !== posEditingRecord.id) && (r.orderNo || '').trim().toLowerCase() === orderNoVal.toLowerCase();
+      return (!posEditingRecord || r.id !== posEditingRecord.id) && !r.deleted && (r.orderNo || '').trim().toLowerCase() === orderNoVal.toLowerCase();
     });
     if (qtDupe) cautionLines.push('Order No(QT) "' + orderNoVal + '" is already used on another invoice — allowed, but flagged.');
   }
