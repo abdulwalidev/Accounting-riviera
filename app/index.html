@@ -18735,9 +18735,13 @@ function posBuildReceiptHtml(record){
   // Itemized tax breakdown when it's available (freshly posted/printed in
   // this same session) — older invoices reprinted later fall back to just
   // the single Tax total line below, since the breakdown isn't persisted.
-  var taxDetailRows = (record.taxRows || []).filter(function(t){ return t.amt > 0.004; });
+  // A tax that was left unchecked at entry still gets its own row here,
+  // marked OFF, instead of silently disappearing — otherwise a receipt
+  // with GST off looks identical to one where GST just wasn't applicable.
+  var taxDetailRows = record.taxRows || [];
   var taxDetailHtml = taxDetailRows.map(function(t){
-    return '<tr><td>' + posEscapeHtml(t.name) + '</td><td class="rc-num">' + posFormatMoney(t.amt) + '</td></tr>';
+    var isOff = !(t.amt > 0.004);
+    return '<tr' + (isOff ? ' class="rc-taxoff"' : '') + '><td>' + posEscapeHtml(t.name) + '</td><td class="rc-num">' + (isOff ? 'OFF' : posFormatMoney(t.amt)) + '</td></tr>';
   }).join('');
 
   return '' +
@@ -18787,6 +18791,7 @@ var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sa
   '#posReceiptPrintArea .rc-num{text-align:right;} ' +
   '#posReceiptPrintArea table.rc-taxdetail{width:100%; border-collapse:collapse; font-size:11.5px; color:#333;} ' +
   '#posReceiptPrintArea table.rc-taxdetail td{padding:1px 0;} ' +
+  '#posReceiptPrintArea table.rc-taxdetail tr.rc-taxoff{color:#888; font-style:italic;} ' +
   '#posReceiptPrintArea table.rc-totals{width:100%; border-collapse:collapse; font-size:13px; margin-top:1mm;} ' +
   '#posReceiptPrintArea table.rc-totals td{padding:1.5px 0;} ' +
   '#posReceiptPrintArea table.rc-totals tr.rc-final td{font-weight:700;} ' +
