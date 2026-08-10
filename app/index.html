@@ -4578,8 +4578,13 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
+  <div class="editing-bar no-print" id="posEditingBadge" style="display:none;">
+    <span>✎ EDITING: <b id="posEditingBadgeLabel"></b> — saving will update this existing invoice, not create a new one.</span>
+    <button type="button" class="btn secondary" onclick="posResetForm()">Cancel Edit</button>
+  </div>
+
   <div class="page-head">
-    <h1>Point of Sale <span id="posEditingBadge" style="display:none; font-size:12px; font-weight:600; color:#dc2626; vertical-align:middle;">— editing</span></h1>
+    <h1>Point of Sale</h1>
   </div>
 
   <div id="posMenuBackdrop" onclick="posCloseMenuPanel()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:999;"></div>
@@ -18087,6 +18092,8 @@ function posOpenRecordInForm(record){
   posEditingRecord = (record.collected || posIsLocked(record)) ? null : record;
   var editBadge = document.getElementById('posEditingBadge');
   if (editBadge) editBadge.style.display = posEditingRecord ? '' : 'none';
+  var editBadgeLabel = document.getElementById('posEditingBadgeLabel');
+  if (editBadgeLabel && posEditingRecord) editBadgeLabel.textContent = posEditingRecord.no;
 
   // Locked-day invoices are read-only from here on — the only allowed
   // action is "New Receipt", which posts everything currently loaded as a
