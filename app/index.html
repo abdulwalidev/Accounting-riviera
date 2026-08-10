@@ -2926,6 +2926,12 @@
    intent as the hotel's own read-only guest-entry display. */
 #page-pos-invoice.pos-locked-view > .wrap > .card:not(.list-card) {opacity:.55; pointer-events:none;}
 #page-pos-invoice.pos-locked-view .action-bar button:not(#posNewReceiptBtn) {opacity:.4; pointer-events:none;}
+/* Any other (unlocked, not-collected) invoice opened for viewing starts
+   the exact same "look but can't touch" — same intent as opening a guest
+   entry: you land on a read-only view first, and editing is something you
+   explicitly opt into via the Edit button, never just by opening it. */
+#page-pos-invoice.pos-view-only > .wrap > .card:not(.list-card) {opacity:.55; pointer-events:none;}
+#page-pos-invoice.pos-view-only .action-bar button:not(#posEditRecordBtn) {opacity:.4; pointer-events:none;}
 #page-pos-invoice .list-card {padding:16px 20px;}
 #page-pos-invoice .list-card .lc-title {font-size:15px; font-weight:600; margin-bottom:12px;}
 #page-pos-invoice table.simple {width:100%; border-collapse:collapse; font-size:12.5px;}
@@ -3625,7 +3631,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       </table>
       <div class="actions">
         <button class="btn secondary" onclick="addRow()">+ Add Row</button>
-        <button class="btn secondary edit-only" onclick="openChangeRoomModal()" title="Guest is moving to a different room mid-stay">⇄ Change Room</button>
         <div class="grandtotal">Grand Total: Rs. <span id="grandTotal">0</span></div>
       </div>
     </div>
@@ -4795,6 +4800,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <!-- Action buttons -->
   <div class="action-bar">
     <button type="button" class="ab-yellow" id="posNewReceiptBtn" onclick="posRequestNewReceipt()" style="display:none;" title="Post everything currently loaded as a brand-new invoice dated today">＋ New Receipt (Today)</button>
+    <button type="button" class="ab-yellow" id="posEditRecordBtn" onclick="posEnterEditMode()" style="display:none;" title="Make this invoice editable">✎ Edit</button>
     <button type="button" class="ab-blue" id="posPostBtn" onclick="posRequestPost('post')">Post</button>
     <button type="button" class="ab-blue" onclick="posRequestPost('printpost')">Print & Post</button>
     <button type="button" class="ab-gray-outline" onclick="posRequestPost('printonly')">Print-Only</button>
@@ -6283,24 +6289,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   </div>
 </div>
 
-<div class="modal-backdrop" id="changeRoomModalBackdrop">
-  <div class="modal">
-    <h3>Change Room</h3>
-    <div class="sub" style="margin-bottom:14px;">The guest leaves one room and moves into another — this always happens on the same day.</div>
-    <label for="crFromRoom" style="margin-top:4px;">Room the guest is leaving</label>
-    <select id="crFromRoom"></select>
-    <label for="crToRoom" style="margin-top:10px;">Room the guest is moving into</label>
-    <div class="roomno-wrap">
-      <input type="text" id="crToRoom" placeholder="Search room / apt no" autocomplete="off">
-      <div class="roomno-list" id="crToRoomList"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn secondary" onclick="closeChangeRoomModal()">Cancel</button>
-      <button class="btn" onclick="confirmChangeRoom()">Change Room</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-backdrop" id="addPayModalBackdrop">
   <div class="modal">
     <h3>Confirm Payment</h3>
@@ -7275,14 +7263,15 @@ function displayRoomNo(roomNo, unitType){
   return roomNo || '';
 }
 
-// Wherever a guest's rooms are shown as one string, a genuine Change Room
-// (guest moved from X into Y mid-stay) should read as "X → Y", not the
-// same plain "X, Y" a real two-simultaneous-rooms booking gets — otherwise
-// the two look identical and nobody can tell a move happened. No extra
-// data is needed for this: Change Room always leaves its trace as a Moved
-// Out date on the vacated row followed immediately by a different room's
-// row (see confirmChangeRoom()), so that shape alone is enough to detect
-// it straight off the rooms array's own order.
+// Wherever a guest's rooms are shown as one string, a genuine room change
+// (guest moved from X into Y mid-stay — recorded by hand: a Moved Out date
+// on the vacated row's own field, plus a separate row added for the new
+// room) should read as "X → Y", not the same plain "X, Y" a real two-
+// simultaneous-rooms booking gets — otherwise the two look identical and
+// nobody can tell a move happened. No extra data is needed for this: a
+// room change always leaves its trace as a Moved Out date on the vacated
+// row followed immediately by a different room's row, so that shape alone
+// is enough to detect it straight off the rooms array's own order.
 function formatRoomChain(rooms){
   const list = (rooms || []).filter(r=> r && r.roomNo);
   if(list.length === 0) return '';
@@ -7441,9 +7430,9 @@ function refreshDuplicateRoomHighlights(){
   });
 }
 
-// Change Room leaves its trace as a Moved Out date on the vacated row
-// immediately followed by a different room's row (see confirmChangeRoom())
-// — the exact shape formatRoomChain() looks for in reports. This is the
+// A room change leaves its trace as a Moved Out date on the vacated row
+// immediately followed by a different room's row — the exact shape
+// formatRoomChain() looks for in reports. This is the
 // live-editing mirror of that same check: flag the pair right in the
 // table so it's obvious at a glance that row 2 is a continuation of row 1,
 // not an unrelated second room.
@@ -7621,12 +7610,6 @@ function addRow(){
   tbody.appendChild(tr);
 }
 
-// "Change Room": pick the room the guest is leaving and the room they're
-// moving into — the move always happens same-day, so one date covers both
-// sides. Confirming stamps that date as Moved Out on the old room's row
-// (chained occupancy in computeRoomStatuses uses it to flip the old room to
-// vacant and the new room to occupied) and adds a fresh row for the new room.
-let changeRoomActiveRows = [];
 
 // ---- Room Detail: clicking a non-occupied room opens this instead of a
 // guest page. Extended rooms get a one-click "actually checked out"
@@ -7787,79 +7770,6 @@ async function confirmRoomCheckout(){
   rerenderActiveView();
   showNotice((entry.guestName || 'Guest') + ' checked out (' + formatDate(checkoutDate) + ') — room ' + roomNos.join(', ') + ' marked Dirty.', 'success');
 }
-
-function openChangeRoomModal(){
-  const rows = Array.from(document.getElementById('roomBody').querySelectorAll('tr'));
-  changeRoomActiveRows = rows.filter(tr=> tr.querySelector('.roomNo').value.trim() && !tr.querySelector('.movedOut').value);
-  if(changeRoomActiveRows.length === 0){
-    showNotice('Add a room for this guest first, then use Change Room to move them to a different one.');
-    return;
-  }
-  const fromSel = document.getElementById('crFromRoom');
-  fromSel.innerHTML = changeRoomActiveRows.map((tr,i)=>
-    `<option value="${i}">${tr.querySelector('.roomNo').value.trim()}</option>`
-  ).join('');
-  const toInput = document.getElementById('crToRoom');
-  toInput.value = '';
-  document.getElementById('crToRoomList').classList.remove('show');
-  document.getElementById('changeRoomModalBackdrop').classList.add('active');
-  fromSel.focus();
-}
-
-function closeChangeRoomModal(){
-  document.getElementById('changeRoomModalBackdrop').classList.remove('active');
-}
-
-function confirmChangeRoom(){
-  const fromTr = changeRoomActiveRows[parseInt(document.getElementById('crFromRoom').value)];
-  const toRoomNo = document.getElementById('crToRoom').value.trim();
-  if(!fromTr) return;
-  if(!toRoomNo){
-    showNotice('Please pick the room the guest is moving into.');
-    focusError(document.getElementById('crToRoom'));
-    return;
-  }
-  if(getUsedRoomNumbers(null).has(toRoomNo.toUpperCase())){
-    showNotice('Room ' + toRoomNo + ' is already used in this entry.');
-    focusError(document.getElementById('crToRoom'));
-    return;
-  }
-
-  const movedOutInput = fromTr.querySelector('.movedOut');
-  movedOutInput.value = todayStr();
-  updateDateReadout(movedOutInput, fromTr.querySelector('.movedOutReadout'));
-
-  addRow();
-  const newRow = document.getElementById('roomBody').querySelector('tr:last-child');
-  newRow.querySelector('.roomNo').value = toRoomNo;
-  updateUnitType(newRow);
-  refreshDuplicateRoomHighlights();
-  refreshRoomChangeLinks();
-  closeChangeRoomModal();
-  newRow.querySelector('.rent').focus();
-}
-
-// The "moving into" search box mirrors the per-row room-number autocomplete
-// (renderRoomNoList/getUsedRoomNumbers), just wired directly instead of via
-// #roomBody delegation since this input lives in a modal, not a table row.
-document.getElementById('crToRoom').addEventListener('input', e=>{
-  renderRoomNoList(document.getElementById('crToRoomList'), e.target.value, null);
-  document.getElementById('crToRoomList').classList.add('show');
-});
-document.getElementById('crToRoom').addEventListener('focus', e=>{
-  renderRoomNoList(document.getElementById('crToRoomList'), e.target.value, null);
-  document.getElementById('crToRoomList').classList.add('show');
-});
-document.getElementById('crToRoom').addEventListener('blur', ()=>{
-  setTimeout(()=>{ document.getElementById('crToRoomList').classList.remove('show'); }, 150);
-});
-document.getElementById('crToRoomList').addEventListener('mousedown', e=>{
-  const item = e.target.closest('.roomno-item');
-  if(!item || !item.dataset.value) return;
-  e.preventDefault();
-  document.getElementById('crToRoom').value = item.dataset.value;
-  document.getElementById('crToRoomList').classList.remove('show');
-});
 
 function changeRooms(btn, delta){
   const tr = btn.closest('tr');
@@ -8083,7 +7993,12 @@ function msUntilNextKarachiMidnight(){
 
 function scheduleKarachiMidnightRollover(){
   setTimeout(()=>{
-    handleKarachiMidnightRollover();
+    // The reschedule must always happen even if the handler throws —
+    // otherwise one bad tick (a missing field, a torn-down picker) kills
+    // every future midnight rollover for the rest of the session, with
+    // nothing but the pullFreshFromCloud() day-change check left as a backstop.
+    try{ handleKarachiMidnightRollover(); }
+    catch(e){ console.error('Midnight rollover failed', e); }
     scheduleKarachiMidnightRollover();
   }, msUntilNextKarachiMidnight() + 1000);
 }
@@ -15768,6 +15683,18 @@ async function pullFreshFromCloud(){
       const firstLoad = !initialLoadDone;
       initialLoadDone = true;
       lastSyncAt = new Date();
+      // The hash-skip below only guards against re-rendering when the
+      // underlying rows haven't changed — but a date-dependent view (the
+      // Dashboard's Arrivals tile, Arrival Due, etc.) can go stale purely
+      // from the calendar day rolling over with NO row changes at all (e.g.
+      // a quiet overnight with no new bookings). handleKarachiMidnightRollover()
+      // already does the correct per-view refresh for a day change; this
+      // just makes sure it also runs here — on every successful pull,
+      // including the idle-resume and 5-minute safety-net polls — instead
+      // of relying solely on its own precise midnight setTimeout firing
+      // while the Dashboard happens to be the active view at that exact
+      // moment.
+      if(todayStr() !== lastKnownToday) handleKarachiMidnightRollover();
       // reads working doesn't mean writes landed — while saves are still
       // queued, the warning stays up until the push itself succeeds
       if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0) syncProblem = null;
@@ -18089,20 +18016,28 @@ function posFillPaymentRows(entries, fallbackDate){
 
 function posOpenRecordInForm(record){
   posViewingRecord = record;
-  posEditingRecord = (record.collected || posIsLocked(record)) ? null : record;
+  // Never editable straight away — editing is something you explicitly
+  // opt into via the Edit button (posEnterEditMode), same as opening a
+  // guest entry lands you on a read-only view first.
+  posEditingRecord = null;
   var editBadge = document.getElementById('posEditingBadge');
-  if (editBadge) editBadge.style.display = posEditingRecord ? '' : 'none';
-  var editBadgeLabel = document.getElementById('posEditingBadgeLabel');
-  if (editBadgeLabel && posEditingRecord) editBadgeLabel.textContent = posEditingRecord.no;
+  if (editBadge) editBadge.style.display = 'none';
 
   // Locked-day invoices are read-only from here on — the only allowed
   // action is "New Receipt", which posts everything currently loaded as a
-  // fresh invoice dated today instead of touching the locked one.
+  // fresh invoice dated today instead of touching the locked one. Any
+  // other invoice still starts grayed out/view-only too, just with an
+  // Edit button instead of New Receipt as its one way in.
   var invoicePage = document.getElementById('page-pos-invoice');
   var isLockedRecord = posIsLocked(record);
-  if (invoicePage) invoicePage.classList.toggle('pos-locked-view', isLockedRecord);
+  if (invoicePage) {
+    invoicePage.classList.toggle('pos-locked-view', isLockedRecord);
+    invoicePage.classList.toggle('pos-view-only', !isLockedRecord);
+  }
   var newReceiptBtn = document.getElementById('posNewReceiptBtn');
   if (newReceiptBtn) newReceiptBtn.style.display = isLockedRecord ? '' : 'none';
+  var editRecordBtn = document.getElementById('posEditRecordBtn');
+  if (editRecordBtn) editRecordBtn.style.display = isLockedRecord ? 'none' : '';
 
   var posBtn = document.querySelector('.sidebar button[onclick*="page-pos-invoice"]');
   if (posBtn) posShowApp('page-pos-invoice', posBtn);
@@ -18184,6 +18119,31 @@ function posOpenRecordInForm(record){
   posRecalcAll();
   posFormDirty = false;
   posShowToast('Opened ' + record.no + ' in Point of Sale');
+}
+
+// The explicit "open a view-only invoice up for actual editing" step —
+// never automatic just from posOpenRecordInForm. A collected record still
+// unlocks into a normal live form here (Post creates a fresh invoice for
+// it, exactly like it always has — collected records were never editable
+// in place), it just skips the "EDITING: SI-x" banner since nothing
+// existing is actually being updated.
+function posEnterEditMode(){
+  if (!posViewingRecord || posIsLocked(posViewingRecord)) return;
+  posEditingRecord = posViewingRecord.collected ? null : posViewingRecord;
+
+  var invoicePage = document.getElementById('page-pos-invoice');
+  if (invoicePage) invoicePage.classList.remove('pos-view-only');
+  var editRecordBtn = document.getElementById('posEditRecordBtn');
+  if (editRecordBtn) editRecordBtn.style.display = 'none';
+
+  var editBadge = document.getElementById('posEditingBadge');
+  var editBadgeLabel = document.getElementById('posEditingBadgeLabel');
+  if (posEditingRecord) {
+    if (editBadgeLabel) editBadgeLabel.textContent = posEditingRecord.no;
+    if (editBadge) editBadge.style.display = '';
+  } else if (editBadge) {
+    editBadge.style.display = 'none';
+  }
 }
 
 // Type "edit" to confirm — lives inside the normal Post/Print confirm
@@ -18822,9 +18782,11 @@ function posRequestNewReceipt(){
   posViewingRecord = null;
   posEditingRecord = null;
   var invoicePage = document.getElementById('page-pos-invoice');
-  if (invoicePage) invoicePage.classList.remove('pos-locked-view');
+  if (invoicePage) invoicePage.classList.remove('pos-locked-view', 'pos-view-only');
   var newReceiptBtn = document.getElementById('posNewReceiptBtn');
   if (newReceiptBtn) newReceiptBtn.style.display = 'none';
+  var editRecordBtn = document.getElementById('posEditRecordBtn');
+  if (editRecordBtn) editRecordBtn.style.display = 'none';
   var editBadge = document.getElementById('posEditingBadge');
   if (editBadge) editBadge.style.display = 'none';
   var invoiceDateInput = document.getElementById('posInvoiceDate');
@@ -18849,6 +18811,15 @@ function posRequestPost(mode){
   // (which clears posViewingRecord first) is allowed to post from here.
   if (posViewingRecord && posIsLocked(posViewingRecord)) {
     posShowToast('This invoice is from a locked day and is read-only — use "New Receipt" to create a fresh copy dated today instead.', 'error');
+    return;
+  }
+  // Same defense-in-depth as the locked-invoice check above: the .pos-view-only
+  // gray-out already blocks this via pointer-events:none, but the actual
+  // guard belongs here too — not just in CSS — since silently posting
+  // whatever's loaded in a not-yet-edited view is exactly the "create an
+  // unintended duplicate" bug the locked-invoice fix above closed.
+  if (posViewingRecord && !posEditingRecord && document.getElementById('page-pos-invoice').classList.contains('pos-view-only')) {
+    posShowToast('Click "Edit" first to make this invoice editable before posting.', 'error');
     return;
   }
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
@@ -18993,9 +18964,11 @@ function posResetForm(){
   var editBadge = document.getElementById('posEditingBadge');
   if (editBadge) editBadge.style.display = 'none';
   var invoicePage = document.getElementById('page-pos-invoice');
-  if (invoicePage) invoicePage.classList.remove('pos-locked-view');
+  if (invoicePage) invoicePage.classList.remove('pos-locked-view', 'pos-view-only');
   var newReceiptBtn = document.getElementById('posNewReceiptBtn');
   if (newReceiptBtn) newReceiptBtn.style.display = 'none';
+  var editRecordBtn = document.getElementById('posEditRecordBtn');
+  if (editRecordBtn) editRecordBtn.style.display = 'none';
   posFullPaymentReset();
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (tbody) {
