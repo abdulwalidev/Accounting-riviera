@@ -2877,8 +2877,7 @@
 #page-pos-invoice .section-title {font-size:11px; letter-spacing:.04em; color:var(--muted); font-weight:700; margin-bottom:12px;}
 #page-pos-invoice table.tax-tbl {width:100%; table-layout:fixed; border-collapse:collapse; font-size:13px;}
 #page-pos-invoice table.tax-tbl th {text-align:center; background:var(--tblhead-bg); color:var(--tblhead-text); font-weight:700; font-size:10.5px; letter-spacing:.03em; text-transform:uppercase; padding:6px 8px; border-bottom:1px solid var(--border-strong); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-#page-pos-invoice table.tax-tbl td.num {text-align:right;}
-#page-pos-invoice table.tax-tbl td {padding:8px 8px 8px 0; border-bottom:1px solid #f0f1f3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+#page-pos-invoice table.tax-tbl td {text-align:center; padding:8px; border-bottom:1px solid #f0f1f3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 #page-pos-invoice table.tax-tbl tr.total-row td {font-weight:700; border-bottom:none;}
 #page-pos-invoice .totals-card .row {display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px; color:var(--text);}
 #page-pos-invoice .totals-card .row.big {font-weight:700; font-size:20px; padding-top:10px; border-top:1px solid var(--border-strong); margin-top:6px;}
@@ -2897,7 +2896,7 @@
    posInitDatePicker() enhances the input, pushing AMOUNT/TYPE/remove out
    of alignment with their own headers — same fix .pay-col-amt already has. */
 #page-pos-invoice .pay-col-date {flex:0 0 180px; min-width:0;}
-#page-pos-invoice .pay-col-date .flatpickr-alt-input {width:100%; max-width:100%;}
+#page-pos-invoice .pay-col-date .flatpickr-alt-input {width:100% !important; max-width:100% !important; min-width:0 !important; padding-left:8px !important; padding-right:8px !important; font-size:12px;}
 #page-pos-invoice .pay-col-amt {flex:0 0 130px; min-width:0;}
 #page-pos-invoice .pay-col-type {flex:0 0 170px;}
 #page-pos-invoice .pay-col-remove {flex:0 0 40px; text-align:center; padding:10px 4px !important;}
@@ -3035,6 +3034,10 @@
 #page-charges-summary table.rep tr.subtotal td {font-weight:700; border-bottom:none;}
 #page-charges-summary table.rep tr.subtotal.grand td {border-top:none; border-bottom:none;}
 #page-charges-summary .footnote {display:flex; justify-content:space-between; margin-top:14px; font-size:11.5px; color:var(--muted); align-items:flex-start; gap:20px;}
+#page-charges-summary table.foodbev-tbl th {text-align:center;}
+#page-charges-summary .status-badge {display:inline-block; border-radius:12px; padding:3px 10px; font-size:11px; font-weight:700; letter-spacing:.02em;}
+#page-charges-summary .status-badge.paid {background:#dcfce7; color:#15803d;}
+#page-charges-summary .status-badge.pending {background:#fde2e2; color:#c53030;}
 
 /* ===== Quantity Summary ===== */
 #page-qty-summary {
@@ -4596,8 +4599,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <button onclick="posShowApp('page-charges-summary', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><span class="sb-text">Charges Summary</span></button>
   <button onclick="posShowApp('page-qty-summary', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><span class="sb-text">Quantity Summary</span></button>
   <button onclick="posShowApp('page-printed-only', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg><span class="sb-text">Printed-Only</span></button>
-  <button onclick="posShowApp('page-deleted', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg><span class="sb-text">Deleted</span></button>
   <div class="sidebar-spacer"></div>
+  <button onclick="posShowApp('page-deleted', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg><span class="sb-text">Deleted</span></button>
   <button onclick="posShowApp('page-pos-settings', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span class="sb-text">Settings</span></button>
 </nav>
 <div class="app-wrap" style="padding:18px;">
@@ -4963,7 +4966,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   </div>
 
   <div class="card results-card" style="margin-top:16px;">
-    <table class="rep">
+    <table class="rep foodbev-tbl">
       <thead>
         <tr><th>FOOD SALE</th><th class="num">BEVERAGE SALE</th><th class="num">TOTAL</th></tr>
       </thead>
@@ -18686,7 +18689,7 @@ function renderChargesSummary(){
     });
     var itemsText = (r.items || []).map(function(it){ return it.name; }).filter(Boolean).join(', ');
     var rowGstTax = (r.taxTotal || 0) - rowServiceCharge;
-    var statusLabel = bal > 0.004 ? 'Pending' : 'Not Pending';
+    var statusBadge = bal > 0.004 ? '<span class="status-badge pending">Pending</span>' : '<span class="status-badge paid">Paid</span>';
     var tr = document.createElement('tr');
     tr.innerHTML = '<td>' + (i + 1) + '</td>' +
       '<td>' + posEscapeHtml(r.date) + '</td>' +
@@ -18699,7 +18702,7 @@ function renderChargesSummary(){
       '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
       '<td class="num">' + (r.paid || 0).toFixed(2) + '</td>' +
       '<td class="num">' + bal.toFixed(2) + '</td>' +
-      '<td>' + statusLabel + '</td>';
+      '<td>' + statusBadge + '</td>';
     posMakeRowClickable(tr, r);
     body.appendChild(tr);
   });
