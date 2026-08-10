@@ -17327,7 +17327,13 @@ function posRecalcAll(){
     postBtn.textContent = /guest/i.test((custEl && custEl.value) || '') ? 'Post Guest' : 'Post';
   }
 
-  posSaveDraft();
+  // Only autosave the "recover my unposted invoice after a refresh" draft
+  // while genuinely composing a NEW invoice — viewing or editing an
+  // existing (already-saved) record also runs through posRecalcAll, and
+  // letting that overwrite the draft with a stripped-down copy (it never
+  // captured order/table/room/payments) is what silently wiped in-progress
+  // New Receipt data on refresh.
+  if (!posViewingRecord && !posEditingRecord) posSaveDraft();
 
   return { subtotal: subtotal, taxTotal: taxTotal, grandTotal: grandTotal, discTotal: discTotal + manualDiscAmt, paid: paid, balance: balance, paidCash: paidCash, paidAccountTransfer: paidAccountTransfer, paidCard: paidCard, taxRows: taxRows };
 }
@@ -17965,6 +17971,43 @@ var posFormDirty = false;
   invoicePage.addEventListener('change', function(){ posFormDirty = true; });
 })();
 
+// Rebuilds the .pay-rows list from a plain [{date, amount, type}] array —
+// shared by posOpenRecordInForm (loading a saved invoice's real payments)
+// and posLoadDraft (restoring an in-progress unposted invoice after a
+// refresh). An empty/missing entries array still clears down to a single
+// blank row dated fallbackDate, instead of leaving stale rows from
+// whatever was previously loaded in the form.
+function posFillPaymentRows(entries, fallbackDate){
+  var payContainer = document.querySelector('#page-pos-invoice .pay-rows');
+  if (!payContainer) return;
+  var payRows = Array.prototype.slice.call(payContainer.querySelectorAll('.pay-row'));
+  var payTemplate = payRows[0];
+  if (!payTemplate) return;
+  payRows.forEach(function(row, i){ if (i > 0) row.remove(); });
+
+  var fillPayRow = function(row, entry){
+    var dateCell = row.querySelector('.pay-col-date');
+    if (dateCell) dateCell.innerHTML = '<input type="date" class="pay-date-input" onchange="posRecalcAll()">';
+    var dateInput = row.querySelector('.pay-date-input');
+    var amtInput = row.querySelector('.pay-amount-input');
+    var typeSel = row.querySelector('.pay-type-select');
+    if (dateInput) { dateInput.value = (entry && entry.date) || fallbackDate || posTodayISO(); posInitDatePicker(dateInput); }
+    if (amtInput) amtInput.value = (entry && entry.amount) ? entry.amount : '';
+    if (typeSel) typeSel.value = (entry && entry.type) || 'cash';
+  };
+
+  if (entries && entries.length) {
+    fillPayRow(payTemplate, entries[0]);
+    for (var i = 1; i < entries.length; i++) {
+      var clone = payTemplate.cloneNode(true);
+      payContainer.appendChild(clone);
+      fillPayRow(clone, entries[i]);
+    }
+  } else {
+    fillPayRow(payTemplate, null);
+  }
+}
+
 function posOpenRecordInForm(record){
   posViewingRecord = record;
   posEditingRecord = (record.collected || posIsLocked(record)) ? null : record;
@@ -18031,41 +18074,13 @@ function posOpenRecordInForm(record){
   // invoices saved before per-row payments existed have no `payments`
   // array — reconstruct one row per nonzero payment type from the
   // aggregate totals instead of showing nothing.
-  var payContainer = document.querySelector('#page-pos-invoice .pay-rows');
-  if (payContainer) {
-    var payRows = Array.prototype.slice.call(payContainer.querySelectorAll('.pay-row'));
-    var payTemplate = payRows[0];
-    payRows.forEach(function(row, i){ if (i > 0) row.remove(); });
-
-    var payEntries = (record.payments && record.payments.length) ? record.payments : [];
-    if (!payEntries.length) {
-      if (record.paidCash) payEntries.push({ date: openIso, amount: record.paidCash, type: 'cash' });
-      if (record.paidAccountTransfer) payEntries.push({ date: openIso, amount: record.paidAccountTransfer, type: 'account_transfer' });
-      if (record.paidCard) payEntries.push({ date: openIso, amount: record.paidCard, type: 'card' });
-    }
-
-    var fillPayRow = function(row, entry){
-      var dateCell = row.querySelector('.pay-col-date');
-      if (dateCell) dateCell.innerHTML = '<input type="date" class="pay-date-input" onchange="posRecalcAll()">';
-      var dateInput = row.querySelector('.pay-date-input');
-      var amtInput = row.querySelector('.pay-amount-input');
-      var typeSel = row.querySelector('.pay-type-select');
-      if (dateInput) { dateInput.value = (entry && entry.date) || openIso; posInitDatePicker(dateInput); }
-      if (amtInput) amtInput.value = (entry && entry.amount) ? entry.amount : '';
-      if (typeSel) typeSel.value = (entry && entry.type) || 'cash';
-    };
-
-    if (payEntries.length) {
-      fillPayRow(payTemplate, payEntries[0]);
-      for (var pei = 1; pei < payEntries.length; pei++) {
-        var payClone = payTemplate.cloneNode(true);
-        payContainer.appendChild(payClone);
-        fillPayRow(payClone, payEntries[pei]);
-      }
-    } else {
-      fillPayRow(payTemplate, null);
-    }
+  var payEntries = (record.payments && record.payments.length) ? record.payments : [];
+  if (!payEntries.length) {
+    if (record.paidCash) payEntries.push({ date: openIso, amount: record.paidCash, type: 'cash' });
+    if (record.paidAccountTransfer) payEntries.push({ date: openIso, amount: record.paidAccountTransfer, type: 'account_transfer' });
+    if (record.paidCard) payEntries.push({ date: openIso, amount: record.paidCard, type: 'card' });
   }
+  posFillPaymentRows(payEntries, openIso);
 
   posRecalcAll();
   posFormDirty = false;
@@ -18678,9 +18693,13 @@ function posSendToFrontOffice(){
   posRequestPost('frontoffice');
 }
 
-// Takes everything currently loaded from a locked-day invoice and posts
-// it as a genuinely new one dated today — clearing posViewingRecord/
-// posEditingRecord first is what makes posRequestPost treat it as new
+// Takes everything currently loaded from a locked-day invoice and copies
+// it into a genuinely new, unlocked, unposted invoice dated today — just
+// unsticks it from the old record and hands it back to the user still
+// sitting in the form to review (item lines, customer, table, order no,
+// payments all carried over as-is). It does NOT post on its own anymore;
+// clearing posViewingRecord/posEditingRecord is what makes the normal
+// Post/Print & Post/Print-Only buttons treat it as a brand new invoice
 // instead of blocking it as a locked-record edit.
 function posRequestNewReceipt(){
   if (!posViewingRecord) { posShowToast('Open an invoice first.', 'error'); return; }
@@ -18695,7 +18714,8 @@ function posRequestNewReceipt(){
   var invoiceDateInput = document.getElementById('posInvoiceDate');
   if (invoiceDateInput) { if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(posTodayISO(), true); else invoiceDateInput.value = posTodayISO(); }
   posFormDirty = true;
-  posRequestPost('post');
+  posRecalcAll();
+  posShowToast('Copied into a new receipt dated today — review and Post when ready.');
 }
 
 var posPendingPostMode = null;
@@ -18893,6 +18913,8 @@ function posResetForm(){
   if (discInput) discInput.value = '0';
   var custInput = document.getElementById('posCustomer');
   if (custInput) custInput.value = 'Walkin Customer';
+  var tableInput = document.getElementById('posTable');
+  if (tableInput) tableInput.value = '';
   var roomNoInput = document.getElementById('posRoomNoField');
   if (roomNoInput) { roomNoInput.value = ''; posRoomNoChanged(roomNoInput); }
   var invoiceDateInput = document.getElementById('posInvoiceDate');
@@ -18926,10 +18948,30 @@ function posSaveDraft(){
     }
     var custInput = document.getElementById('posCustomer');
     var discInput = document.querySelector('#page-pos-invoice .disc-card input');
+    var tableInput = document.getElementById('posTable');
+    var orderInput = document.getElementById('posOrderNo');
+    var roomNoInput = document.getElementById('posRoomNoField');
+    var invoiceDateInput = document.getElementById('posInvoiceDate');
+    var payments = [];
+    document.querySelectorAll('#page-pos-invoice .pay-rows .pay-row').forEach(function(row){
+      var dateInput = row.querySelector('.pay-date-input');
+      var amtInput = row.querySelector('.pay-amount-input');
+      var typeSel = row.querySelector('.pay-type-select');
+      payments.push({
+        date: dateInput ? dateInput.value : '',
+        amount: amtInput ? amtInput.value : '',
+        type: typeSel ? typeSel.value : 'cash'
+      });
+    });
     var draft = {
       items: items,
       customer: custInput ? custInput.value : '',
-      manualDisc: discInput ? discInput.value : ''
+      manualDisc: discInput ? discInput.value : '',
+      table: tableInput ? tableInput.value : '',
+      orderNo: orderInput ? orderInput.value : '',
+      roomNo: roomNoInput ? roomNoInput.value : '',
+      invoiceDate: invoiceDateInput ? invoiceDateInput.value : '',
+      payments: payments
     };
     localStorage.setItem('pos_invoice_draft', JSON.stringify(draft));
   } catch(e) {}
@@ -18970,6 +19012,18 @@ function posLoadDraft(){
   if (custInput && draft.customer) custInput.value = draft.customer;
   var discInput = document.querySelector('#page-pos-invoice .disc-card input');
   if (discInput && draft.manualDisc) discInput.value = draft.manualDisc;
+  var tableInput = document.getElementById('posTable');
+  if (tableInput && draft.table) tableInput.value = draft.table;
+  var orderInput = document.getElementById('posOrderNo');
+  if (orderInput && draft.orderNo) orderInput.value = draft.orderNo;
+  var roomNoInput = document.getElementById('posRoomNoField');
+  if (roomNoInput && draft.roomNo) { roomNoInput.value = draft.roomNo; posRoomNoChanged(roomNoInput); }
+  var invoiceDateInput = document.getElementById('posInvoiceDate');
+  if (invoiceDateInput && draft.invoiceDate) {
+    if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(draft.invoiceDate, true); else invoiceDateInput.value = draft.invoiceDate;
+  }
+  var hasPayments = draft.payments && draft.payments.some(function(p){ return parseFloat(p.amount) > 0; });
+  if (hasPayments) posFillPaymentRows(draft.payments, posTodayISO());
 
   posRecalcAll();
 }
