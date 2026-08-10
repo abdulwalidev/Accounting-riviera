@@ -436,26 +436,11 @@
      neighbors again. */
   .rd-occ-field{ position:relative; }
   .rd-occ-field .date-stepper{ position:absolute; top:100%; left:0; right:0; margin-top:4px; }
-  /* Change Room: flags the vacated row and its continuation row so the
-     pair reads as one stay, not two unrelated rooms — see
-     refreshRoomChangeLinks(). */
+  /* Same-day-turnover indicator on Room Status's "next guest pending" rows. */
   .room-chain-arrow{
     color:var(--gold-deep);
     font-weight:700;
     margin-right:2px;
-  }
-  .room-change-tag{
-    margin-top:4px;
-    text-align:center;
-    font-size:9.5px;
-    font-weight:700;
-    text-transform:uppercase;
-    letter-spacing:0.03em;
-    color:#fff;
-    background:var(--gold-deep);
-    border-radius:3px;
-    padding:2px 5px;
-    white-space:nowrap;
   }
   input:focus, select:focus{
     outline:2px solid var(--account);
@@ -607,10 +592,6 @@
     background:var(--ink-fill);
     color:var(--paper);
   }
-  /* Moved Out only makes sense once a booking already exists to amend —
-     hidden on a brand new Guest Entry, shown only while editing a saved one. */
-  .edit-only{ display:none; }
-  body.editing-mode .edit-only{ display:revert; }
   .btn.danger{
     background:transparent;
     color:var(--danger);
@@ -3646,7 +3627,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
             <th style="width:90px;">Children</th>
             <th style="width:100px;">Inc. Breakfast</th>
             <th style="width:120px;">No of Days</th>
-            <th style="width:130px;" class="edit-only">Moved Out</th>
             <th style="width:120px;">Total</th>
             <th style="width:40px;"></th>
           </tr>
@@ -3993,7 +3973,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
               <th style="width:110px;">Breakfast Adults</th>
               <th style="width:110px;">Breakfast Children</th>
               <th style="width:110px;">No of Days</th>
-              <th style="width:120px;">Moved Out</th>
               <th style="width:120px;">Total</th>
             </tr>
           </thead>
@@ -7324,34 +7303,8 @@ function displayRoomNo(roomNo, unitType){
   return roomNo || '';
 }
 
-// Wherever a guest's rooms are shown as one string, a genuine room change
-// (guest moved from X into Y mid-stay — recorded by hand: a Moved Out date
-// on the vacated row's own field, plus a separate row added for the new
-// room) should read as "X → Y", not the same plain "X, Y" a real two-
-// simultaneous-rooms booking gets — otherwise the two look identical and
-// nobody can tell a move happened. No extra data is needed for this: a
-// room change always leaves its trace as a Moved Out date on the vacated
-// row followed immediately by a different room's row, so that shape alone
-// is enough to detect it straight off the rooms array's own order.
 function formatRoomChain(rooms){
-  const list = (rooms || []).filter(r=> r && r.roomNo);
-  if(list.length === 0) return '';
-  const parts = [];
-  let chain = [displayRoomNo(list[0].roomNo, list[0].unitType)];
-  for(let i = 1; i < list.length; i++){
-    const prev = list[i-1];
-    const cur = list[i];
-    const chained = !!prev.movedOut && !isMiscRoomNo(prev.roomNo) && !isMiscRoomNo(cur.roomNo) &&
-      cur.roomNo.trim().toUpperCase() !== prev.roomNo.trim().toUpperCase();
-    if(chained){
-      chain.push(displayRoomNo(cur.roomNo, cur.unitType));
-    } else {
-      parts.push(chain.join(' → '));
-      chain = [displayRoomNo(cur.roomNo, cur.unitType)];
-    }
-  }
-  parts.push(chain.join(' → '));
-  return parts.join(', ');
+  return (rooms || []).filter(r=> r && r.roomNo).map(r=> displayRoomNo(r.roomNo, r.unitType)).join(', ');
 }
 
 function detectUnitType(roomNo){
@@ -7491,41 +7444,6 @@ function refreshDuplicateRoomHighlights(){
   });
 }
 
-// A room change leaves its trace as a Moved Out date on the vacated row
-// immediately followed by a different room's row — the exact shape
-// formatRoomChain() looks for in reports. This is the
-// live-editing mirror of that same check: flag the pair right in the
-// table so it's obvious at a glance that row 2 is a continuation of row 1,
-// not an unrelated second room.
-function refreshRoomChangeLinks(){
-  const rows = Array.from(document.querySelectorAll('#roomBody tr'));
-  rows.forEach(tr=>{
-    const arrowEl = tr.querySelector('.room-chain-arrow');
-    const tagEl = tr.querySelector('.room-change-tag');
-    if(arrowEl){ arrowEl.textContent = ''; arrowEl.title = ''; }
-    if(tagEl){ tagEl.style.display = 'none'; tagEl.textContent = ''; }
-  });
-  rows.forEach((tr,i)=>{
-    const roomNo = tr.querySelector('.roomNo').value.trim();
-    const movedOut = tr.querySelector('.movedOut').value;
-    if(!movedOut || !roomNo || isMiscRoomNo(roomNo)) return;
-    const nextTr = rows[i+1];
-    if(!nextTr) return;
-    const nextRoomNo = nextTr.querySelector('.roomNo').value.trim();
-    if(!nextRoomNo || isMiscRoomNo(nextRoomNo) || nextRoomNo.toUpperCase() === roomNo.toUpperCase()) return;
-    const tagEl = tr.querySelector('.room-change-tag');
-    if(tagEl){
-      tagEl.textContent = '→ Moved to Room ' + nextRoomNo;
-      tagEl.style.display = 'block';
-    }
-    const arrowEl = nextTr.querySelector('.room-chain-arrow');
-    if(arrowEl){
-      arrowEl.textContent = '→ ';
-      arrowEl.title = 'Continued from Room ' + roomNo;
-    }
-  });
-}
-
 // Event delegation so this works for every room row, including ones added later
 const roomBodyEl = document.getElementById('roomBody');
 
@@ -7537,7 +7455,6 @@ roomBodyEl.addEventListener('input', e=>{
   renderRoomNoList(list, e.target.value, tr);
   list.classList.add('show');
   refreshDuplicateRoomHighlights();
-  refreshRoomChangeLinks();
   updateUnitType(tr);
 });
 
@@ -7555,11 +7472,6 @@ roomBodyEl.addEventListener('change', e=>{
   document.getElementById('extraDetailList').addEventListener(evt, e=>{
     if(!e.target.classList.contains('edValue')) return;
     updateDateReadout(e.target, e.target.closest('.extra-detail-row').querySelector('.edValueReadout'));
-  });
-  roomBodyEl.addEventListener(evt, e=>{
-    if(!e.target.classList.contains('movedOut')) return;
-    updateDateReadout(e.target, e.target.closest('tr').querySelector('.movedOutReadout'));
-    refreshRoomChangeLinks();
   });
 });
 
@@ -7586,7 +7498,6 @@ roomBodyEl.addEventListener('mousedown', e=>{
   wrap.querySelector('.roomNo').value = item.dataset.value;
   wrap.querySelector('.roomno-list').classList.remove('show');
   refreshDuplicateRoomHighlights();
-  refreshRoomChangeLinks();
   updateUnitType(wrap.closest('tr'));
 });
 
@@ -7607,7 +7518,6 @@ roomBodyEl.addEventListener('keydown', e=>{
       e.target.value = firstItem.dataset.value;
       list.classList.remove('show');
       refreshDuplicateRoomHighlights();
-      refreshRoomChangeLinks();
       updateUnitType(tr);
     }
     tr.querySelector('.rent').focus();
@@ -7633,7 +7543,7 @@ function addRow(){
   const tr = document.createElement('tr');
   tr.dataset.rooms = 1;
   tr.innerHTML = `
-    <td class="rmno"><span class="room-chain-arrow"></span><span class="rmno-num">${rowCount}</span></td>
+    <td class="rmno"><span class="rmno-num">${rowCount}</span></td>
     <td>
       <div class="roomno-wrap">
         <input type="text" placeholder="Search room / apt no" class="roomNo" autocomplete="off">
@@ -7664,7 +7574,6 @@ function addRow(){
       </div>
       <span class="roomCountMisc" style="display:none;">-</span>
     </td>
-    <td class="edit-only"><input type="date" class="movedOut" title="Date the guest left THIS room (leave blank while still here)"><div class="date-readout movedOutReadout"></div><div class="room-change-tag" style="display:none;"></div></td>
     <td class="rowtotal">0</td>
     <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'room')">✕</button></td>
   `;
@@ -7871,8 +7780,7 @@ function isRowEmpty(tr, kind){
            !tr.querySelector('.rent').value.trim() &&
            !tr.querySelector('.roomAdults').value.trim() &&
            !tr.querySelector('.roomChildren').value.trim() &&
-           !tr.querySelector('.roomIncBreakfast').checked &&
-           !tr.querySelector('.movedOut').value;
+           !tr.querySelector('.roomIncBreakfast').checked;
   }
   if(kind === 'payment'){
     return !tr.querySelector('.payRemarks').value.trim() &&
@@ -7918,7 +7826,6 @@ function requestDeleteRow(btn, kind){
         <div><div class="confirm-lbl">Children</div><div class="confirm-val">${tr.querySelector('.roomChildren').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">Inc. Breakfast</div><div class="confirm-val">${tr.querySelector('.roomIncBreakfast').checked ? 'Yes' : 'No'}</div></div>
         <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${isMiscRoomNo(tr.querySelector('.roomNo').value) ? '-' : (tr.dataset.rooms || 1)}</div></div>
-        <div><div class="confirm-lbl">Moved Out</div><div class="confirm-val">${tr.querySelector('.movedOut').value ? formatDate(tr.querySelector('.movedOut').value) : '-'}</div></div>
         <div><div class="confirm-lbl">Total</div><div class="confirm-val">${tr.querySelector('.rowtotal').textContent || 0}</div></div>
       </div>`;
   } else {
@@ -7973,7 +7880,6 @@ function renumber(){
     tr.querySelector('.rmno-num').textContent = i+1;
   });
   rowCount = document.querySelectorAll('#roomBody tr').length;
-  refreshRoomChangeLinks();
 }
 
 function calcGrandTotal(){
@@ -8714,7 +8620,6 @@ async function reviewEntry(){
       breakfastAdults: isMiscRoomNo(roomNo) ? '' : breakfastAdultsVal,
       breakfastChildren: isMiscRoomNo(roomNo) ? '' : breakfastChildrenVal,
       count: tr.dataset.rooms,
-      movedOut: tr.querySelector('.movedOut').value || '',
       total: parseFloat(tr.querySelector('.rowtotal').textContent.replace(/,/g,'')) || 0
     };
     if(tr.dataset.roomId) roomObj.id = tr.dataset.roomId; // keep identity when editing
@@ -8876,7 +8781,7 @@ async function reviewEntry(){
     checkIn: checkInEl.value || '',
     checkOut: computedCheckOut,
     extraDetails,
-    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, adults: r.adults, children: r.children, breakfastAdults: r.breakfastAdults, breakfastChildren: r.breakfastChildren, count: r.count, movedOut: r.movedOut, total: r.total })),
+    rooms: cleanRooms.map(r=> ({ id: r.id, roomNo: r.roomNo, unitType: r.unitType, rent: r.rent, adults: r.adults, children: r.children, breakfastAdults: r.breakfastAdults, breakfastChildren: r.breakfastChildren, count: r.count, total: r.total })),
     payments: cleanPayments
   };
   data.bookingTotal = document.getElementById('sumBookingTotal').textContent;
@@ -8892,7 +8797,7 @@ function openConfirmModal(data){
   const box = document.getElementById('confirmBody');
 
   const roomRowsHtml = data.rooms.map(r=>`
-    <tr><td>${displayRoomNo(r.roomNo, r.unitType)}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : ((parseInt(r.breakfastAdults) || parseInt(r.breakfastChildren)) ? 'Yes' : 'No')}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td>${r.movedOut ? formatDate(r.movedOut) : '-'}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
+    <tr><td>${displayRoomNo(r.roomNo, r.unitType)}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : ((parseInt(r.breakfastAdults) || parseInt(r.breakfastChildren)) ? 'Yes' : 'No')}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
@@ -8918,7 +8823,7 @@ function openConfirmModal(data){
       ${visibleExtraDetails(data).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
     </div>
     <table style="margin-bottom:14px;">
-      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Adults</th><th>Children</th><th>Inc. Breakfast</th><th>Days</th><th>Moved Out</th><th>Total</th></tr></thead>
+      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Adults</th><th>Children</th><th>Inc. Breakfast</th><th>Days</th><th>Total</th></tr></thead>
       <tbody>${roomRowsHtml}</tbody>
     </table>
     <table style="margin-bottom:14px;">
@@ -9073,7 +8978,6 @@ function confirmSaveEntry(){
 
 // Clear the whole entry form for the next guest.
 function resetEntryForm(){
-  document.body.classList.remove('editing-mode');
   ['guestName','cnic','contactNo'].forEach(id=>{
     document.getElementById(id).value = '';
   });
@@ -9253,7 +9157,6 @@ function startEditEntry(entry){
   }
   editingEntryId = entry.id;
   editingBaseline = JSON.parse(JSON.stringify(entry));
-  document.body.classList.add('editing-mode'); // reveals Moved Out — only relevant when amending a saved entry
 
   document.getElementById('guestName').value = entry.guestName || '';
   document.getElementById('fatherName').value = entry.fatherName || '';
@@ -9290,9 +9193,6 @@ function startEditEntry(entry){
     tr.querySelector('.roomAdults').value = r.adults || '';
     tr.querySelector('.roomChildren').value = r.children || '';
     tr.querySelector('.roomIncBreakfast').checked = !!((parseInt(r.breakfastAdults) || 0) || (parseInt(r.breakfastChildren) || 0));
-    const movedOutInput = tr.querySelector('.movedOut');
-    movedOutInput.value = r.movedOut || '';
-    updateDateReadout(movedOutInput, tr.querySelector('.movedOutReadout'));
     updateUnitType(tr);
     const typeSel = tr.querySelector('.unitType');
     if(!typeSel.disabled && r.unitType){
@@ -9302,7 +9202,6 @@ function startEditEntry(entry){
     calcRow(tr.querySelector('.rent'));
   });
   refreshDuplicateRoomHighlights();
-  refreshRoomChangeLinks();
   updateExpectedCheckoutDisplay();
 
   destroyPayDatePickers(document.getElementById('payBody'));
@@ -9742,14 +9641,6 @@ function roomSectionLabel(section){
 // current for that date; it counts as occupied unless its Actual Checkout
 // had already happened by then (a checkout dated after the reference date
 // doesn't count yet — the guest was still in on that earlier date).
-// Each room row optionally carries a "Moved Out" date — the day the guest
-// left THAT specific room, used when a guest changes rooms mid-stay. A
-// row's occupancy window is chained off its neighbors: it starts when the
-// previous row's Moved Out date fires (or the entry's check-in, for the
-// first row) and ends on its own Moved Out date (or the entry's actual
-// checkout, if this is the last room, i.e. still open-ended). Rows that
-// never set Moved Out — genuinely simultaneous rooms, not a room change —
-// all collapse back to the whole-entry window, matching the old behavior.
 function computeRoomStatuses(asOfDate){
   const refDate = asOfDate || todayStr();
   // Only today's live read requires a confirmed arrival — a booking that
@@ -9762,7 +9653,7 @@ function computeRoomStatuses(asOfDate){
   const all = loadAllEntries();
   // Occupancy is read straight off the same room-nights Ledgers bills by
   // (checkIn + each room row's own booked-nights count) — no checkIn/
-  // checkout date-window math of its own, no movedOut chaining. A room is
+  // checkout date-window math of its own. A room is
   // occupied on refDate because a booked night lands on that exact date —
   // except for today, where a booked night alone only means a reservation
   // is expected; the guest doesn't read as occupying the room until Arrival
@@ -10436,22 +10327,9 @@ function renderDetail(){
   ).join('');
 
   const roomBody = document.getElementById('detailRoomBody');
-  // Same Change Room detection as formatRoomChain()/refreshRoomChangeLinks() —
-  // a Moved Out date immediately followed by a different room's row — but
-  // rendered inline here since this table has no room-cursor to reuse.
-  roomBody.innerHTML = (entry.rooms || []).map((r,i,arr)=>{
-    const prev = arr[i-1];
-    const next = arr[i+1];
-    const isContinuation = !!(prev && prev.movedOut && !isMiscRoomNo(prev.roomNo) && !isMiscRoomNo(r.roomNo) &&
-      (r.roomNo || '').trim().toUpperCase() !== (prev.roomNo || '').trim().toUpperCase());
-    const leadsToNext = !!(r.movedOut && !isMiscRoomNo(r.roomNo) && next && !isMiscRoomNo(next.roomNo) &&
-      (next.roomNo || '').trim().toUpperCase() !== (r.roomNo || '').trim().toUpperCase());
-    const roomNoCell = (isContinuation ? `<span class="room-chain-arrow" title="Continued from Room ${displayRoomNo(prev.roomNo, prev.unitType)}">→</span> ` : '') + (r.roomNo ? displayRoomNo(r.roomNo, r.unitType) : '-');
-    const movedOutCell = (r.movedOut ? formatDate(r.movedOut) : '-') +
-      (leadsToNext ? `<div class="room-change-tag" style="display:block;">→ Moved to Room ${displayRoomNo(next.roomNo, next.unitType)}</div>` : '');
-    return `
+  roomBody.innerHTML = (entry.rooms || []).map(r=> `
     <tr>
-      <td>${roomNoCell}</td>
+      <td>${r.roomNo ? displayRoomNo(r.roomNo, r.unitType) : '-'}</td>
       <td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td>
       <td>${Number(r.rent || 0).toLocaleString()}</td>
       <td>${r.adults || '0'}</td>
@@ -10459,10 +10337,9 @@ function renderDetail(){
       <td>${r.breakfastAdults || '-'}</td>
       <td>${r.breakfastChildren || '-'}</td>
       <td>${isMiscRoomNo(r.roomNo) ? '-' : (r.count || 1)}</td>
-      <td>${movedOutCell}</td>
       <td class="rowtotal">${(parseFloat(String(r.total || 0).replace(/,/g,'')) || 0).toLocaleString()}</td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="10" class="empty-note">No rooms.</td></tr>';
+    </tr>`
+  ).join('') || '<tr><td colspan="9" class="empty-note">No rooms.</td></tr>';
 
   const payBody = document.getElementById('detailPayBody');
   const payments = (entry.payments || []).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''));
@@ -10917,34 +10794,23 @@ function printGuestLetter(){
 
 // ---- Guest Folio: the full stay statement (every room segment + every
 // payment), as opposed to downloadGuestPdf()'s one-page reservation
-// confirmation letter. Room segments reuse the exact same "Moved Out on
-// row N immediately followed by a different room's row" shape formatRoomChain()
-// detects — a segment's own Check-out equals the very next segment's
-// Check-in only when that boundary is a same-day room change, never a real
-// departure, so that shared date is what marks it "Room Change" below
-// instead of a real checkout.
+// confirmation letter. Every room segment shares the entry's own single
+// Check-in/Check-out — there's no per-room date, since rooms are never
+// changed mid-stay.
 function buildFolioRoomSegments(entry){
   const rooms = (entry.rooms || []).filter(r=> r && r.roomNo);
   const actualCheckout = getDetailValue(entry, 'Actual Checkout') || '';
   const finalCheckout = actualCheckout || entry.checkOut || computeExpectedCheckoutDate(entry) || '';
   const segments = [];
-  rooms.forEach((r, i)=>{
+  rooms.forEach(r=>{
     const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
     const nights = parseInt(r.count) || 1;
     const total = parseFloat(String(r.total).replace(/,/g,'')) || (rent * nights);
     if(isMiscRoomNo(r.roomNo)){
-      segments.push({ roomNo: r.unitType || 'Miscellaneous', checkIn:'', checkOut:'', nights, rent, total, roomChange:false, misc:true });
+      segments.push({ roomNo: r.unitType || 'Miscellaneous', checkIn:'', checkOut:'', nights, rent, total, misc:true });
       return;
     }
-    const prev = rooms[i-1];
-    const chainedFromPrev = !!(prev && prev.movedOut && !isMiscRoomNo(prev.roomNo) &&
-      r.roomNo.trim().toUpperCase() !== prev.roomNo.trim().toUpperCase());
-    const next = rooms[i+1];
-    const chainedToNext = !!(r.movedOut && next && !isMiscRoomNo(next.roomNo) &&
-      next.roomNo.trim().toUpperCase() !== r.roomNo.trim().toUpperCase());
-    const checkIn = chainedFromPrev ? prev.movedOut : (entry.checkIn || '');
-    const checkOut = r.movedOut || (i === rooms.length - 1 ? finalCheckout : '');
-    segments.push({ roomNo: displayRoomNo(r.roomNo, r.unitType), checkIn, checkOut, nights, rent, total, roomChange: chainedToNext, misc:false });
+    segments.push({ roomNo: displayRoomNo(r.roomNo, r.unitType), checkIn: entry.checkIn || '', checkOut: finalCheckout, nights, rent, total, misc:false });
   });
   return segments;
 }
@@ -10991,7 +10857,7 @@ function openFullLedgerModal(){
       body.innerHTML = '<div class="empty-note">No stay history found for this guest.</div>';
     } else {
       const bodyRows = rows.map(r=>{
-        const note = r.misc ? 'Miscellaneous' : (r.roomChange ? 'Room Change' : '');
+        const note = r.misc ? 'Miscellaneous' : '';
         return `<tr>
           <td>${r.roomNo}</td>
           <td>${r.checkIn ? formatDate(r.checkIn) : '—'}</td>
@@ -11035,7 +10901,6 @@ const RIVIERA_FOLIO_CSS = `
   .riviera-folio-table th, .riviera-folio-table td{ border:1px solid #ccc; padding:5px 7px; text-align:left; }
   .riviera-folio-table th{ background:#f2f2f2; font-weight:bold; }
   .riviera-folio-table td.num, .riviera-folio-table th.num{ text-align:right; font-family:Arial,Helvetica,sans-serif; font-variant-numeric:lining-nums; }
-  .riviera-folio-roomchange-note{ color:#8a6d1a; font-weight:bold; }
   .riviera-folio-summary{ margin-top:14px; margin-left:auto; width:260px; font-size:12.5px; }
   .riviera-folio-summary div{ display:flex; justify-content:space-between; padding:4px 0; }
   .riviera-folio-summary .due{ font-weight:bold; border-top:2px solid #1a1a1a; margin-top:4px; padding-top:6px; }
@@ -11052,7 +10917,6 @@ function buildGuestFolioHtml(entry){
       <td class="num">${s.misc ? '-' : s.nights}</td>
       <td class="num">${s.rent.toLocaleString()}</td>
       <td class="num">${s.total.toLocaleString()}</td>
-      <td>${s.roomChange ? '<span class="riviera-folio-roomchange-note">Room Change</span>' : ''}</td>
     </tr>`).join('');
 
   // Running balance walks the payments in the same order they're already
@@ -11094,8 +10958,8 @@ function buildGuestFolioHtml(entry){
 
         <p class="riviera-folio-section-title">Room / Stay History</p>
         <table class="riviera-folio-table">
-          <thead><tr><th>Room</th><th>Check-in</th><th>Check-out</th><th class="num">Nights</th><th class="num">Rent/Night</th><th class="num">Total</th><th>Note</th></tr></thead>
-          <tbody>${segRows || '<tr><td colspan="7">No rooms on this entry.</td></tr>'}</tbody>
+          <thead><tr><th>Room</th><th>Check-in</th><th>Check-out</th><th class="num">Nights</th><th class="num">Rent/Night</th><th class="num">Total</th></tr></thead>
+          <tbody>${segRows || '<tr><td colspan="6">No rooms on this entry.</td></tr>'}</tbody>
         </table>
 
         <p class="riviera-folio-section-title">Payment History</p>
@@ -11219,7 +11083,6 @@ function buildCompleteGuestFolioHtml(entry){
       <td class="num">${s.misc ? '-' : s.nights}</td>
       <td class="num">${s.rent.toLocaleString()}</td>
       <td class="num">${s.total.toLocaleString()}</td>
-      <td>${s.roomChange ? '<span class="riviera-folio-roomchange-note">Room Change</span>' : ''}</td>
     </tr>`).join('');
 
   let running = 0;
@@ -11263,8 +11126,8 @@ function buildCompleteGuestFolioHtml(entry){
 
         <p class="riviera-folio-section-title">Room / Stay History (All Visits)</p>
         <table class="riviera-folio-table">
-          <thead><tr><th>Room</th><th>Check-in</th><th>Check-out</th><th class="num">Nights</th><th class="num">Rent/Night</th><th class="num">Total</th><th>Note</th></tr></thead>
-          <tbody>${segRows || '<tr><td colspan="7">No rooms on record.</td></tr>'}</tbody>
+          <thead><tr><th>Room</th><th>Check-in</th><th>Check-out</th><th class="num">Nights</th><th class="num">Rent/Night</th><th class="num">Total</th></tr></thead>
+          <tbody>${segRows || '<tr><td colspan="6">No rooms on record.</td></tr>'}</tbody>
         </table>
 
         <p class="riviera-folio-section-title">Payment History (All Visits)</p>
@@ -15577,7 +15440,6 @@ function roomPayload(e, r){
     breakfast_adults: r.breakfastAdults || null,
     breakfast_children: r.breakfastChildren || null,
     days_count: parseInt(r.count) || 1,
-    moved_out_date: r.movedOut || null,
     total: num(r.total)
   };
 }
@@ -15762,7 +15624,7 @@ function mapServerRoom(r){
     id: r.id, roomNo, unitType,
     rent: num(r.rent_per_day), adults: r.adults || '', children: r.children || '',
     breakfastAdults: r.breakfast_adults || '', breakfastChildren: r.breakfast_children || '', count: parseInt(r.days_count) || 1,
-    movedOut: r.moved_out_date || '', total: num(r.total)
+    total: num(r.total)
   };
 }
 
