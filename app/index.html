@@ -13322,10 +13322,10 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
   // already shows them (both read computeRoomStatuses' `extended` flag).
   // Without this they'd silently vanish from Charges Summary the day after
   // checkout was due, which read as "the guest disappeared," not "there's
-  // no rent for them yet." Billed at the room's own last nightly rate (same
-  // number that room was already charging) so the row reads like real,
-  // owed rent instead of a placeholder — it counts toward Due same as any
-  // other room. Scoped to a single specific day only — Extended is a
+  // no rent for them yet." No rent for this row IS the honest answer — the
+  // extra night was never actually booked/priced, so nothing here should
+  // read as a real billed number (shown as "NOT SET" instead of a real or
+  // zero rent). Scoped to a single specific day only — Extended is a
   // snapshot read as-of one date, not something that makes sense summed
   // across an open date range.
   const isSingleDay = !!fromDate && !!toDate && fromDate === toDate;
@@ -13335,8 +13335,7 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
       const key = rs.entry.id + '|' + rs.roomNo + '|' + fromDate;
       if(nightsByKey[key]) return; // already has a real booked night — nothing to add
       const roomRow = (rs.entry.rooms || []).find(r=> r.roomNo === rs.roomNo);
-      const extRent = roomRow ? (parseFloat(String(roomRow.rent).replace(/,/g,'')) || 0) : 0;
-      nightsByKey[key] = { rent: extRent, received: 0 };
+      nightsByKey[key] = { rent: 0, received: 0 };
       rowMeta[key] = { roomNo: rs.roomNo, unitType: roomRow ? roomRow.unitType : '', date: fromDate, guestId: rs.entry.id, guest: rs.entry.guestName || '(no name)' };
       extendedKeys.add(key);
     });
@@ -13574,13 +13573,13 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
           ${dateTd(r)}
           <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
           <td>${r.guest}${r.extended ? ' <span style="color:var(--amber); font-weight:600; font-size:11px;">(Extended)</span>' : ''}</td>
-          <td>${r.rent.toLocaleString()}</td>
-          ${Array.from({length: maxChunks}, (_,i)=> `<td>${paymentCell(r.chunks[i])}</td>`).join('')}
+          <td>${r.extended ? '<span style="color:var(--amber); font-weight:600;">NOT SET</span>' : r.rent.toLocaleString()}</td>
+          ${Array.from({length: maxChunks}, (_,i)=> `<td>${r.extended ? '-' : paymentCell(r.chunks[i])}</td>`).join('')}
           <td class="cash-amt">${r.cashTotal ? r.cashTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
-          <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
+          <td style="font-weight:700; color:${r.extended ? 'var(--amber)' : (r.due > 0 ? 'var(--danger)' : 'inherit')};">${r.extended ? 'NOT SET' : r.due.toLocaleString()}</td>
           ${ssCell(r)}
         </tr>`).join('')}
       </tbody>
