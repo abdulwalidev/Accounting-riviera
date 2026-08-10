@@ -18626,7 +18626,22 @@ function posPrintRecord(record){
   if (!area) return;
   area.innerHTML = '<style>' + POS_RECEIPT_PRINT_CSS + '</style>' + posBuildReceiptHtml(record);
   document.body.classList.add('pos-printing-receipt');
-  window.print();
+  // window.print() doesn't wait for pending image requests — calling it
+  // right after setting innerHTML would print before the logo (first time,
+  // uncached) has actually finished loading, leaving a blank gap instead
+  // of the image. Wait for it to settle (load OR error — never block
+  // printing forever over a missing/slow image) before printing, same as
+  // it already prints instantly once the browser has it cached.
+  var logoImg = area.querySelector('.rc-logo');
+  var printed = false;
+  function doPrint(){ if (printed) return; printed = true; window.print(); }
+  if (logoImg && !logoImg.complete) {
+    logoImg.addEventListener('load', doPrint, { once: true });
+    logoImg.addEventListener('error', doPrint, { once: true });
+    setTimeout(doPrint, 1500);
+  } else {
+    doPrint();
+  }
 }
 window.addEventListener('afterprint', function(){
   document.body.classList.remove('pos-printing-receipt');
