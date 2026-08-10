@@ -2888,11 +2888,15 @@
 #page-pos-invoice .pay-row-head, #page-pos-invoice .pay-row {display:flex; align-items:center;}
 #page-pos-invoice .pay-row-head {background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; font-weight:700; letter-spacing:.03em;}
 #page-pos-invoice .pay-row-head > div, #page-pos-invoice .pay-row > div {padding:10px 14px; box-sizing:border-box;}
-/* DATE gets its natural size (same as every other date field in the app —
-   the shared [id^="page-"] .flatpickr-alt-input rule already gives it
-   307.875px, no override needed here), and AMOUNT/TYPE split whatever
-   width is left in the row equally. */
-#page-pos-invoice .pay-col-date {flex:0 0 auto;}
+/* DATE is a fixed width matching the flatpickr alt-input's own natural
+   size (307.875px + this cell's 14px×2 padding) — same size as every
+   other date field in the app. It has to be a fixed number, not "auto",
+   because .pay-row-head's DATE cell only holds the word "DATE" with no
+   input in it — sized by content alone, the header cell would end up
+   much narrower than the data row's date field and throw AMOUNT/TYPE/
+   remove out of alignment between the two rows. AMOUNT/TYPE split
+   whatever width is left in the row equally. */
+#page-pos-invoice .pay-col-date {flex:0 0 336px;}
 #page-pos-invoice .pay-col-amt {flex:1; min-width:0;}
 #page-pos-invoice .pay-col-type {flex:1; min-width:0;}
 #page-pos-invoice .pay-col-remove {flex:0 0 40px; text-align:center; padding:10px 4px !important;}
@@ -4712,8 +4716,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <thead>
         <tr>
           <th style="width:36px;">NUMBER</th>
-          <th id="posItemNameHead">ITEM NAME</th>
-          <th>DESCRIPTION (EXTRA NOTES)</th>
+          <th id="posItemNameHead" style="width:296px;">ITEM NAME</th>
+          <th style="width:177px;">DESCRIPTION (EXTRA NOTES)</th>
           <th style="width:150px;">QTY</th>
           <th style="width:120px;">PRICE</th>
           <th style="width:56px; display:none;">%</th>
@@ -6520,8 +6524,14 @@ function showView(view, fromPopState){
   }
 }
 
+// posPage (optional) lets the restaurant module push its own sub-page
+// history entries under the same 'restaurant' view without every one of
+// them looking like the exit-guard's duplicate trip-wire entry — see
+// posShowApp/the posPage popstate handling further down. Hotel routes
+// never set posPage, so (undefined||null) === (undefined||null) there and
+// this compares exactly as before for every non-restaurant route.
 function sameRoute(a, b){
-  return !!a && !!b && a.view === b.view;
+  return !!a && !!b && a.view === b.view && (a.posPage || null) === (b.posPage || null);
 }
 
 // Guest Detail's "← Back" — every list that opens a guest (Search, Room
@@ -16854,7 +16864,7 @@ function posShowApp(id, btn){
   document.querySelectorAll('.sidebar button').forEach(b=>b.classList.remove('active'));
   var posUnlockNavBtn = document.getElementById('topNavPosUnlock');
   if (posUnlockNavBtn) posUnlockNavBtn.classList.remove('active');
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   if (id === 'page-receipts') receiptsRefresh();
   if (id === 'page-printed-only') printedOnlyRefresh();
   if (id === 'page-front-office') frontOfficeRefresh();
@@ -16865,7 +16875,37 @@ function posShowApp(id, btn){
   if (id === 'page-qty-summary') renderQuantitySummary();
   if (id === 'page-pos-daylock') posRenderDayLockPage();
   if (id === 'page-pos-invoice') window.scrollTo(0, 0);
+  posPushHistoryForPage(id);
 }
+
+// Gives every internal restaurant page (Charges Summary, Receipts, Manage
+// Menu, ...) its own Back-able browser-history entry — without this, the
+// whole restaurant section was one single history entry (posShowApp never
+// touched history at all), so the very first Back press from ANY internal
+// page landed straight on the app's exit-guard trip wire and asked "leave
+// the app?" instead of stepping to the previous internal page. Skipped
+// while posSuppressHistoryPush is set — that's true only while the
+// popstate handler below is REPLAYING a Back/Forward pop, so this doesn't
+// push a fresh entry on top of the one the user just landed on.
+var posSuppressHistoryPush = false;
+function posPushHistoryForPage(id){
+  if (posSuppressHistoryPush) return;
+  var state = { view: 'restaurant', posPage: id };
+  if (sameRoute(state, currentRouteState)) return;
+  currentRouteState = state;
+  try { history.pushState(state, '', location.pathname + location.search); } catch(e) {}
+}
+window.addEventListener('popstate', function(e){
+  var state = e.state;
+  if (!state || state.view !== 'restaurant') return;
+  var pageId = state.posPage || 'page-pos-invoice';
+  if (!document.getElementById(pageId)) return;
+  posSuppressHistoryPush = true;
+  currentRouteState = { view: 'restaurant', posPage: state.posPage || null };
+  var trigger = document.querySelector('[onclick*="posShowApp(\'' + pageId + '\'"]');
+  posShowApp(pageId, trigger || null);
+  posSuppressHistoryPush = false;
+});
 
 function mpFilterCat(grp, btn){
   var mpEl = document.getElementById('page-manage-parts');
