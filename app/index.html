@@ -2793,6 +2793,13 @@
 #page-pos-invoice .wrap {max-width:1280px; margin:0 auto;}
 #page-pos-invoice .page-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
 #page-pos-invoice .page-head h1 {font-size:24px; font-weight:600; margin:0;}
+/* Quick "start a blank invoice" entry point from every restaurant/POS
+   page, not just from inside Point of Sale itself — shares one class
+   across all of them rather than a page-scoped rule per page. */
+.pos-page-head {display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+.pos-page-head .h-title {margin:0;}
+.pos-new-btn {background:#f5c518; color:#1f2430; border:none; border-radius:6px; padding:7px 16px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; flex:0 0 auto;}
+.pos-new-btn:hover {background:#e6b800;}
 #page-pos-invoice .card {background:var(--panel); border:1px solid var(--border); border-radius:8px; margin-bottom:16px;}
 #page-pos-invoice .top-fields {padding:16px 20px; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:14px 28px;}
 #page-pos-invoice .top-fields-live {display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px 24px; padding:16px 20px;}
@@ -4595,6 +4602,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="page-head">
     <h1>Point of Sale</h1>
+    <button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button>
   </div>
 
   <div id="posMenuBackdrop" onclick="posCloseMenuPanel()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:999;"></div>
@@ -4839,7 +4847,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">All Receipts</div>
+  <div class="pos-page-head"><div class="h-title">All Receipts</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
   <div class="h-sub">Every invoice for the selected date — posted and not-yet-posted, paying customers and non-paying guests</div>
 
   <div class="card filters-card">
@@ -4898,7 +4906,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">Charges Summary</div>
+  <div class="pos-page-head"><div class="h-title">Charges Summary</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
 
   <div class="card filters-card">
     <div class="filters-grid" style="grid-template-columns:220px;">
@@ -5028,7 +5036,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">Quantity Summary</div>
+  <div class="pos-page-head"><div class="h-title">Quantity Summary</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
   <div class="h-sub">How many of each menu item were sold in the selected period, and for how much — leave both dates blank to see everything.</div>
 
   <div class="card filters-card">
@@ -5069,7 +5077,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">Printed-Only</div>
+  <div class="pos-page-head"><div class="h-title">Printed-Only</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
   <div class="h-sub">Invoices sent via Print-Only that have not been posted yet</div>
 
   <div class="card filters-card">
@@ -5118,7 +5126,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">Front Office Pending</div>
+  <div class="pos-page-head"><div class="h-title">Front Office Pending</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
   <div class="h-sub">Invoices sent to Front Office — click anywhere on a row to open it in Point of Sale</div>
 
   <div class="card filters-card">
@@ -5161,7 +5169,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">Deleted</div>
+  <div class="pos-page-head"><div class="h-title">Deleted</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
   <div class="h-sub">Invoices deleted after being posted (post/print &amp; post/sent to front office) — a deleted print-only draft never counted as a real invoice, so it never shows here.</div>
 
   <div class="card filters-card">
@@ -5191,7 +5199,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">Pending Payments</div>
+  <div class="pos-page-head"><div class="h-title">Pending Payments</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
   <div class="h-sub">Posted invoices that aren't fully paid yet — sorted by the biggest balance owed first.</div>
 
   <div class="card filters-card">
@@ -5221,7 +5229,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">Previous Day (Locked)</div>
+  <div class="pos-page-head"><div class="h-title">Previous Day (Locked)</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
   <div class="h-sub">The most recently finished business day — POS runs on a 4am cutover, not midnight, so "today" here means since the last 4am. Everything below is locked: no editing, no deleting.</div>
 
   <div class="card results-card">
@@ -5253,7 +5261,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">POS Day Lock</div>
+  <div class="pos-page-head"><div class="h-title">POS Day Lock</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
   <div class="h-sub">Lock a business day so its invoices can no longer be edited or deleted — separate from the hotel's own Day Lock. The day right before today's 4am cutover locks itself automatically the first time anyone opens the app after it ends; lock/unlock any other day here.</div>
 
   <div class="card filters-card">
@@ -5278,7 +5286,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">Settings</div>
+  <div class="pos-page-head"><div class="h-title">Settings</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
   <div class="h-sub">Less-frequently-used pages, moved here to keep the main sidebar short.</div>
 
   <div class="card">
@@ -5311,7 +5319,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="wrap">
 
-  <div class="h-title">Manage Menu</div>
+  <div class="pos-page-head"><div class="h-title">Manage Menu</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
   <div class="h-sub">Full restaurant menu — 213 items across 17 categories</div>
 
   <div class="subtabs">
@@ -19277,6 +19285,16 @@ function posRequestNewForm(){
     'This invoice has data that hasn\'t been posted, printed, or sent anywhere yet. Clear it and start a new one?',
     { title: 'Discard unsaved invoice?', okText: 'Discard', cancelText: 'Keep editing', danger: true }
   ).then(function(proceed){ if (proceed) posResetForm(); });
+}
+
+// The "+ New" button every restaurant/POS page carries in its header —
+// jumps straight to a blank invoice from wherever you're browsing
+// (Receipts, Charges Summary, Front Office Pending, etc.) instead of
+// making you navigate to Point of Sale first and reset it manually there.
+function posGoToNewReceipt(){
+  posResetForm();
+  var posBtn = document.querySelector('.sidebar button[onclick*="page-pos-invoice"]');
+  if (posBtn) posShowApp('page-pos-invoice', posBtn);
 }
 
 function posResetForm(){
