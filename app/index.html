@@ -7847,6 +7847,13 @@ function splitRoomRowRate(tr, nightIdx, rate){
   const totalNights = parseInt(tr.dataset.rooms) || 1;
   const before = nightIdx - 1;
   const after = totalNights - nightIdx;
+  // cloneNode(true) doesn't reliably carry over a <select>'s CURRENT
+  // selected option once it's been set via JS (as unitType always is,
+  // through updateUnitType()) rather than the option's HTML "selected"
+  // attribute — captured here and re-applied to every split row below
+  // instead of trusting the clone to have kept it.
+  const unitTypeVal = tr.querySelector('.unitType').value;
+  const unitTypeDisabled = tr.querySelector('.unitType').disabled;
 
   const splitGroup = 'sg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
   const specs = [];
@@ -7860,6 +7867,9 @@ function splitRoomRowRate(tr, nightIdx, rate){
     clone.dataset.splitGroup = splitGroup;
     clone.querySelector('.rent').value = spec.rent;
     clone.querySelector('.roomCount').textContent = spec.count;
+    const unitTypeSel = clone.querySelector('.unitType');
+    unitTypeSel.value = unitTypeVal;
+    unitTypeSel.disabled = unitTypeDisabled;
     return clone;
   });
   newRows.forEach(nr=> tr.parentNode.insertBefore(nr, tr));
