@@ -4819,7 +4819,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="card filters-card">
     <div class="filters-label">FILTERS</div>
-    <div class="filters-grid" style="grid-template-columns:220px 200px;">
+    <div class="filters-grid" style="grid-template-columns:260px 220px 200px;">
+      <div><label>Search</label><input type="text" id="receiptsSearchInput" placeholder="Invoice #, Order #, Customer, Room…" oninput="receiptsRefresh()"></div>
       <div><label>Date</label><input type="date" id="receiptsDateFilter" onchange="receiptsRefresh()"></div>
       <div><label>Status</label>
         <select id="receiptsStatusFilter" onchange="receiptsRefresh()">
@@ -17951,12 +17952,23 @@ function receiptsRefresh(){
   var dateInput = document.getElementById('receiptsDateFilter');
   var filterDMY = dateInput && dateInput.value ? receiptsDateToDMY(dateInput.value) : null;
   var statusFilter = (document.getElementById('receiptsStatusFilter') || {}).value || 'all';
+  // Searching for a specific receipt (by Order #, Invoice #, customer, or
+  // room) is exactly when you DON'T remember what date it's from — the
+  // date filter would just hide the thing you're looking for, so a
+  // non-empty search overrides it and searches every date instead.
+  var searchInput = document.getElementById('receiptsSearchInput');
+  var searchQ = searchInput ? searchInput.value.trim().toLowerCase() : '';
   var shown = 0;
   posInvoices.forEach(function(record){
     if (record.deleted) return;
     if (statusFilter === 'posted' && !record.posted) return;
     if (statusFilter === 'notposted' && record.posted) return;
-    if (filterDMY && record.date !== filterDMY) return;
+    if (searchQ) {
+      var haystack = [record.no, record.orderNo, record.customer, record.room, record.roomNo, record.table].filter(Boolean).join(' ').toLowerCase();
+      if (haystack.indexOf(searchQ) === -1) return;
+    } else if (filterDMY && record.date !== filterDMY) {
+      return;
+    }
     var row = posBuildInvoiceRow(record, true, true);
     shown++;
     if (/guest/i.test(record.customer || '')) guestBody.appendChild(row);
