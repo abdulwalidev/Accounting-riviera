@@ -3915,10 +3915,22 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         <h1 id="detailName">Guest</h1>
         <div class="sub" id="detailMeta"></div>
       </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
-        <button class="btn secondary" onclick="downloadGuestPdf()">⬇ Download</button>
-        <button class="btn secondary" onclick="printGuestLetter()">🖶 Print</button>
-        <button class="btn secondary" onclick="downloadGuestFolioPdf()">⬇ Download Folio</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center;">
+        <button class="btn secondary" onclick="openFullLedgerModal()">📖 Full Ledger</button>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; border:1px solid var(--line); border-radius:8px; padding:8px 10px; min-width:64px;">
+          <div style="font-size:10px; font-weight:700; letter-spacing:.04em; color:var(--muted);">FOLIO</div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" title="Print Folio" onclick="requestFolioAction('print')" style="background:none; border:none; cursor:pointer; padding:4px; color:var(--ink);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></button>
+            <button type="button" title="Download Folio" onclick="requestFolioAction('download')" style="background:none; border:none; cursor:pointer; padding:4px; color:var(--ink);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; border:1px solid var(--line); border-radius:8px; padding:8px 10px; min-width:64px;">
+          <div style="font-size:10px; font-weight:700; letter-spacing:.04em; color:var(--muted);">RESV.</div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" title="Print Reservation" onclick="printGuestLetter()" style="background:none; border:none; cursor:pointer; padding:4px; color:var(--ink);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></button>
+            <button type="button" title="Download Reservation" onclick="downloadGuestPdf()" style="background:none; border:none; cursor:pointer; padding:4px; color:var(--ink);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
+          </div>
+        </div>
         <button class="btn edit-gold" id="editEntryBtn" onclick="openEditModal()">✎ Edit This Entry</button>
       </div>
     </div>
@@ -6214,6 +6226,29 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   </div>
 </div>
 
+
+<div class="modal-backdrop" id="folioScopeModalBackdrop">
+  <div class="modal" style="width:320px;">
+    <h3>Which Folio?</h3>
+    <div class="sub" style="margin-bottom:14px;">This guest has more than one stay on record.</div>
+    <div class="modal-actions" style="flex-direction:column; gap:8px; align-items:stretch;">
+      <button class="btn secondary" style="width:100%;" onclick="chooseFolioScope('this')">This Stay Only</button>
+      <button class="btn" style="width:100%;" onclick="chooseFolioScope('complete')">Complete Folio (All Stays)</button>
+      <button class="btn secondary" style="width:100%;" onclick="closeFolioScopeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="fullLedgerModalBackdrop">
+  <div class="modal" style="width:min(900px,92vw); max-height:85vh; overflow-y:auto;">
+    <h3>Full Ledger</h3>
+    <div class="sub" id="fullLedgerSub" style="margin-bottom:14px;">Every check-in and check-out for this guest, across every visit.</div>
+    <div id="fullLedgerBody" style="overflow-x:auto;"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeFullLedgerModal()">Close</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop" id="exitPromptModalBackdrop">
   <div class="modal" style="width:340px;">
@@ -10914,6 +10949,75 @@ function buildFolioRoomSegments(entry){
   return segments;
 }
 
+// Guests who've stayed more than once share the same CNIC (or guest name,
+// when CNIC was left blank) across separate entries — this is the single
+// source of truth for "every entry belonging to this guest," shared by
+// the Full Ledger modal and the multi-stay Complete Folio option below.
+function findGuestEntries(entry){
+  const all = loadAllEntries();
+  const cnic = (entry.cnic || '').trim();
+  const name = (entry.guestName || '').trim().toLowerCase();
+  return all.filter(e=>{
+    if(cnic) return (e.cnic || '').trim() === cnic;
+    return !!name && (e.guestName || '').trim().toLowerCase() === name;
+  });
+}
+
+// ---- Full Ledger: every check-in/check-out this guest has ever had,
+// across every visit — not just the entry currently open. Reuses
+// buildFolioRoomSegments()'s existing room-change detection (a segment's
+// Check-out landing on the same day as the next segment's Check-in) per
+// visit, then stitches every matching visit's segments into one
+// chronological list.
+function buildFullGuestLedger(entry){
+  const matches = findGuestEntries(entry);
+  const rows = [];
+  matches.forEach(e=>{
+    buildFolioRoomSegments(e).forEach(seg=> rows.push(Object.assign({ entryId: e.id }, seg)));
+  });
+  rows.sort((a, b)=> (a.checkIn || '').localeCompare(b.checkIn || ''));
+  return rows;
+}
+
+function openFullLedgerModal(){
+  const entry = getCurrentEntry();
+  if(!entry){ showNotice('Open a guest first.'); return; }
+  const rows = buildFullGuestLedger(entry);
+  const subEl = document.getElementById('fullLedgerSub');
+  if(subEl) subEl.textContent = rows.length + ' room ' + (rows.length === 1 ? 'stay' : 'stays') + ' across every visit for ' + (entry.guestName || 'this guest') + '.';
+  const body = document.getElementById('fullLedgerBody');
+  if(body){
+    if(!rows.length){
+      body.innerHTML = '<div class="empty-note">No stay history found for this guest.</div>';
+    } else {
+      const bodyRows = rows.map(r=>{
+        const note = r.misc ? 'Miscellaneous' : (r.roomChange ? 'Room Change' : '');
+        return `<tr>
+          <td>${r.roomNo}</td>
+          <td>${r.checkIn ? formatDate(r.checkIn) : '—'}</td>
+          <td>${r.checkOut ? formatDate(r.checkOut) : '—'}</td>
+          <td>${r.misc ? '-' : r.nights}</td>
+          <td>${r.rent.toLocaleString()}</td>
+          <td>${r.total.toLocaleString()}</td>
+          <td>${note}</td>
+        </tr>`;
+      }).join('');
+      body.innerHTML = `
+        <table>
+          <thead>
+            <tr><th>Room</th><th>Check-in</th><th>Check-out</th><th>Nights</th><th>Rent</th><th>Total</th><th>Note</th></tr>
+          </thead>
+          <tbody>${bodyRows}</tbody>
+        </table>`;
+    }
+  }
+  document.getElementById('fullLedgerModalBackdrop').classList.add('active');
+}
+
+function closeFullLedgerModal(){
+  document.getElementById('fullLedgerModalBackdrop').classList.remove('active');
+}
+
 const RIVIERA_FOLIO_CSS = `
   .riviera-folio-page{
     width:210mm; box-sizing:border-box;
@@ -11051,6 +11155,228 @@ async function downloadGuestFolioPdf(){
     showNotice('Couldn\'t generate the folio — please try again.');
   }finally{
     document.body.removeChild(mount);
+  }
+}
+
+// Same hidden-iframe technique as printGuestLetter() — but unlike the
+// fixed single-page letter, a folio's actual page count varies with the
+// stay, so this skips fitLetterContent() entirely and lets the browser's
+// own print engine paginate the flowing HTML across as many pages as it
+// needs, instead of forcing it onto one.
+function printGuestFolio(){
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  let frame = document.getElementById('riviera-folio-print-frame');
+  if(!frame){
+    frame = document.createElement('iframe');
+    frame.id = 'riviera-folio-print-frame';
+    frame.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; visibility:hidden;';
+    document.body.appendChild(frame);
+  }
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Riviera Resort — ${(entry.guestName || 'Guest').replace(/</g,'')} Folio</title>
+    <style>*{margin:0; padding:0;} @page{ size:A4; margin:0; }</style>
+    </head><body>${buildGuestFolioHtml(entry)}</body></html>`);
+  doc.close();
+  const win = frame.contentWindow;
+  const imgs = Array.from(doc.querySelectorAll('img'));
+  Promise.all(imgs.map(img=> img.complete ? Promise.resolve() : new Promise(res=>{ img.onload = img.onerror = res; })))
+    .then(()=> setTimeout(()=>{
+      win.focus();
+      win.print();
+    }, 50));
+}
+
+// ---- Complete Folio: same shape as buildGuestFolioHtml(), but the Room/
+// Stay History and Payment History tables span EVERY visit this guest has
+// ever had (findGuestEntries()) instead of just the one currently open —
+// separate from the single-stay folio rather than a shared/parametrized
+// function, since the two rarely change in lockstep and this keeps the
+// far more commonly used single-stay path untouched.
+function buildCompleteGuestFolioHtml(entry){
+  const matches = findGuestEntries(entry);
+  let bookingTotal = 0, paid = 0;
+  const allSegments = [];
+  const allPayments = [];
+  matches.forEach(e=>{
+    const t = computeTotals(e);
+    bookingTotal += t.bookingTotal;
+    paid += t.paid;
+    buildFolioRoomSegments(e).forEach(seg=> allSegments.push(seg));
+    (e.payments || []).forEach(p=> allPayments.push(p));
+  });
+  allSegments.sort((a, b)=> (a.checkIn || '').localeCompare(b.checkIn || ''));
+  allPayments.sort((a, b)=> (a.date || '').localeCompare(b.date || ''));
+  const due = Math.max(bookingTotal - paid, 0);
+
+  const segRows = allSegments.map(s=> `
+    <tr>
+      <td>${s.roomNo}</td>
+      <td>${s.checkIn ? formatDate(s.checkIn) : '-'}</td>
+      <td>${s.checkOut ? formatDate(s.checkOut) : '-'}</td>
+      <td class="num">${s.misc ? '-' : s.nights}</td>
+      <td class="num">${s.rent.toLocaleString()}</td>
+      <td class="num">${s.total.toLocaleString()}</td>
+      <td>${s.roomChange ? '<span class="riviera-folio-roomchange-note">Room Change</span>' : ''}</td>
+    </tr>`).join('');
+
+  let running = 0;
+  const payRows = allPayments.map(p=>{
+    running += parseFloat(p.total) || 0;
+    const balance = bookingTotal - running;
+    return `
+    <tr>
+      <td>${p.date ? formatDate(p.date) : '-'}</td>
+      <td>${p.type || '-'}</td>
+      <td>${p.mode || '-'}</td>
+      <td>${p.bank || '-'}</td>
+      <td class="num">${(parseFloat(p.total) || 0).toLocaleString()}</td>
+      <td class="num">${balance.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  const checkInDates = matches.map(e=> e.checkIn).filter(Boolean).sort();
+  const checkOutDates = matches.map(e=> getDetailValue(e, 'Actual Checkout') || e.checkOut).filter(Boolean).sort();
+  const earliestCheckIn = checkInDates[0] || '';
+  const latestCheckOut = checkOutDates[checkOutDates.length - 1] || '';
+
+  return `<style>${RIVIERA_FOLIO_CSS}</style>
+    <div class="riviera-folio-page">
+      <div class="riviera-folio-header">
+        <img src="/app/assets/riviera-logo.png" alt="Riviera Resort Logo">
+        <div>
+          <h1>RIVIERA RESORT</h1>
+          <div class="riviera-folio-sub">Complete Guest Folio — ${matches.length} ${matches.length === 1 ? 'Stay' : 'Stays'}</div>
+        </div>
+      </div>
+      <div class="riviera-folio-content">
+        <div class="riviera-folio-guestinfo">
+          <div><strong>Guest Name:</strong> ${entry.guestName || '(no name)'}</div>
+          <div><strong>Father Name:</strong> ${entry.fatherName && entry.fatherName !== 'N/A' ? entry.fatherName : '-'}</div>
+          <div><strong>CNIC:</strong> ${entry.cnic || '-'}</div>
+          <div><strong>Contact No:</strong> ${getDetailValue(entry, 'Contact No') || '-'}</div>
+          <div><strong>First Check-in:</strong> ${earliestCheckIn ? formatDate(earliestCheckIn) : '-'}</div>
+          <div><strong>Last Check-out:</strong> ${latestCheckOut ? formatDate(latestCheckOut) : '-'}</div>
+        </div>
+
+        <p class="riviera-folio-section-title">Room / Stay History (All Visits)</p>
+        <table class="riviera-folio-table">
+          <thead><tr><th>Room</th><th>Check-in</th><th>Check-out</th><th class="num">Nights</th><th class="num">Rent/Night</th><th class="num">Total</th><th>Note</th></tr></thead>
+          <tbody>${segRows || '<tr><td colspan="7">No rooms on record.</td></tr>'}</tbody>
+        </table>
+
+        <p class="riviera-folio-section-title">Payment History (All Visits)</p>
+        <table class="riviera-folio-table">
+          <thead><tr><th>Date</th><th>Type</th><th>Mode</th><th>Bank</th><th class="num">Amount</th><th class="num">Balance</th></tr></thead>
+          <tbody>${payRows || '<tr><td colspan="6">No payments recorded.</td></tr>'}</tbody>
+        </table>
+
+        <div class="riviera-folio-summary">
+          <div><span>Total Charges (All Visits)</span><span>Rs. ${bookingTotal.toLocaleString()}</span></div>
+          <div><span>Total Paid (All Visits)</span><span>Rs. ${paid.toLocaleString()}</span></div>
+          <div class="due"><span>Balance Due</span><span>Rs. ${due.toLocaleString()}</span></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function downloadCompleteGuestFolioPdf(){
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  if(typeof html2canvas === 'undefined' || typeof jspdf === 'undefined'){
+    showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
+    return;
+  }
+  const mount = document.createElement('div');
+  mount.style.cssText = 'position:fixed; left:-10000px; top:0; z-index:-1;';
+  mount.innerHTML = buildCompleteGuestFolioHtml(entry);
+  document.body.appendChild(mount);
+  try{
+    const pageEl = mount.querySelector('.riviera-folio-page');
+    await waitForLetterImages(mount);
+    const canvas = await html2canvas(pageEl, { scale: 2, useCORS: true });
+    const pageWidthMm = 210;
+    const pageHeightMm = 297;
+    const imgHeightMm = canvas.height * pageWidthMm / canvas.width;
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const doc = new jspdf.jsPDF({ orientation:'p', unit:'mm', format:'a4' });
+    let heightLeft = imgHeightMm;
+    let position = 0;
+    doc.addImage(imgData, 'JPEG', 0, position, pageWidthMm, imgHeightMm);
+    heightLeft -= pageHeightMm;
+    while(heightLeft > 0){
+      position = heightLeft - imgHeightMm;
+      doc.addPage();
+      doc.addImage(imgData, 'JPEG', 0, position, pageWidthMm, imgHeightMm);
+      heightLeft -= pageHeightMm;
+    }
+    const safeName = (entry.guestName || 'guest').trim().replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'guest';
+    doc.save(`riviera-complete-folio-${safeName}.pdf`);
+  }catch(e){
+    console.error('Complete guest folio PDF generation failed', e);
+    showNotice('Couldn\'t generate the complete folio — please try again.');
+  }finally{
+    document.body.removeChild(mount);
+  }
+}
+
+function printCompleteGuestFolio(){
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  let frame = document.getElementById('riviera-folio-print-frame');
+  if(!frame){
+    frame = document.createElement('iframe');
+    frame.id = 'riviera-folio-print-frame';
+    frame.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; visibility:hidden;';
+    document.body.appendChild(frame);
+  }
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Riviera Resort — ${(entry.guestName || 'Guest').replace(/</g,'')} Complete Folio</title>
+    <style>*{margin:0; padding:0;} @page{ size:A4; margin:0; }</style>
+    </head><body>${buildCompleteGuestFolioHtml(entry)}</body></html>`);
+  doc.close();
+  const win = frame.contentWindow;
+  const imgs = Array.from(doc.querySelectorAll('img'));
+  Promise.all(imgs.map(img=> img.complete ? Promise.resolve() : new Promise(res=>{ img.onload = img.onerror = res; })))
+    .then(()=> setTimeout(()=>{
+      win.focus();
+      win.print();
+    }, 50));
+}
+
+// Folio print/download only ask "which stay?" when there's more than one
+// on record for this guest — a single-stay guest just gets the normal
+// folio immediately, same as before this existed. Reservation (the
+// confirmation letter) always stays scoped to the exact entry currently
+// open regardless — printGuestLetter()/downloadGuestPdf() are unchanged.
+let folioScopePendingAction = null; // 'print' | 'download'
+function requestFolioAction(action){
+  const entry = getCurrentEntry();
+  if(!entry) return;
+  const matches = findGuestEntries(entry);
+  if(matches.length <= 1){
+    if(action === 'print') printGuestFolio(); else downloadGuestFolioPdf();
+    return;
+  }
+  folioScopePendingAction = action;
+  document.getElementById('folioScopeModalBackdrop').classList.add('active');
+}
+function closeFolioScopeModal(){
+  folioScopePendingAction = null;
+  document.getElementById('folioScopeModalBackdrop').classList.remove('active');
+}
+function chooseFolioScope(scope){
+  const action = folioScopePendingAction;
+  closeFolioScopeModal();
+  if(!action) return;
+  if(scope === 'this'){
+    if(action === 'print') printGuestFolio(); else downloadGuestFolioPdf();
+  } else {
+    if(action === 'print') printCompleteGuestFolio(); else downloadCompleteGuestFolioPdf();
   }
 }
 
