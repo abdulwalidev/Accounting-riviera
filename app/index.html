@@ -3251,28 +3251,24 @@ html[data-theme="dark"] #page-pos-invoice .lbl-input.disabled button.pick-btn{ b
    near-black dark background to read comfortably. */
 html[data-theme="dark"] #page-pos-invoice .lbl-input label{ color:#c7cdd6 !important; }
 html[data-theme="dark"] #page-pos-invoice .info-card .info-title{ color:#5b9dff !important; }
-/* The confirm modals (Delete/Post/Order-dupe) are inline-styled with
-   light-mode colors baked directly into their style="" attributes — CSS
-   can't win against inline styles without !important, so this is the one
-   place that's unavoidable rather than a shortcut. */
+/* The confirm modals (Delete/Post) are inline-styled with light-mode
+   colors baked directly into their style="" attributes — CSS can't win
+   against inline styles without !important, so this is the one place
+   that's unavoidable rather than a shortcut. */
 html[data-theme="dark"] #posDeleteModal,
 html[data-theme="dark"] #posPostModal,
-html[data-theme="dark"] #posOrderDupeModal,
 html[data-theme="dark"] #posDayLockModal{ background:#14161a !important; }
 html[data-theme="dark"] #posDeleteModal > div,
 html[data-theme="dark"] #posPostModal > div,
-html[data-theme="dark"] #posOrderDupeModal > div,
 html[data-theme="dark"] #posDayLockModal > div,
 html[data-theme="dark"] #posDayLockModal > label{ color:#e8eaed !important; }
 html[data-theme="dark"] #posDayLockTypeInput{ background:#0A0A0A !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 html[data-theme="dark"] #posDeleteDetails,
 html[data-theme="dark"] #posPostDetails{ background:#1a1c20 !important; color:#c7ccd6 !important; }
-html[data-theme="dark"] #posOrderDupeDetails{ background:#2a1616 !important; color:#f0b8b8 !important; }
 html[data-theme="dark"] #posDeleteConfirmInput,
 html[data-theme="dark"] #posPostEditConfirmInput{ background:#0A0A0A !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 html[data-theme="dark"] #posDeleteModal button[onclick="posCancelDelete()"],
 html[data-theme="dark"] #posPostModal button[onclick="posCancelPost()"],
-html[data-theme="dark"] #posOrderDupeModal button[onclick="posCancelOrderDupe()"],
 html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm()"]{ background:#1a1c20 !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 </style>
 <script>
@@ -4525,15 +4521,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div style="display:flex; gap:10px; justify-content:flex-end;">
     <button type="button" onclick="posCancelPost()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
     <button type="button" id="posPostConfirmBtn" onclick="posConfirmPost()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;" autofocus>Confirm (Enter)</button>
-  </div>
-</div>
-
-<div id="posOrderDupeBackdrop" onclick="posCancelOrderDupe()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
-<div id="posOrderDupeModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
-  <div style="font-weight:700; font-size:14.5px; margin-bottom:12px; color:#c53030;">Duplicate Order No(QT)</div>
-  <div id="posOrderDupeDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:16px; background:#fdecec; border-radius:6px; padding:10px 12px;"></div>
-  <div style="display:flex; gap:10px; justify-content:flex-end;">
-    <button type="button" onclick="posCancelOrderDupe()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;" autofocus>OK</button>
   </div>
 </div>
 
@@ -18101,15 +18088,6 @@ function posPostEditConfirmCheck(){
   confirmBtn.style.opacity = ok ? '1' : '.5';
 }
 
-// Duplicate Order No(QT) is a hard block — no override, just acknowledge
-// and pick a different number.
-function posCancelOrderDupe(){
-  var modal = document.getElementById('posOrderDupeModal');
-  var backdrop = document.getElementById('posOrderDupeBackdrop');
-  if (modal) modal.style.display = 'none';
-  if (backdrop) backdrop.style.display = 'none';
-}
-
 function printedOnlyRefresh(){
   var body = document.getElementById('printedOnlyBody');
   var guestBody = document.getElementById('printedOnlyGuestBody');
@@ -18753,25 +18731,6 @@ function posRequestPost(mode){
 
   var orderInput = document.getElementById('posOrderNo');
   var orderNoVal = orderInput ? orderInput.value.trim() : '';
-
-  // Same order no ever used on any invoice — including deleted ones — is
-  // a hard block, no override. A deleted invoice's QT number is retired
-  // for good, not freed up for reuse.
-  if (orderNoVal) {
-    var dupe = posInvoices.some(function(r){
-      return (!posEditingRecord || r.id !== posEditingRecord.id) && (r.orderNo || '').trim().toLowerCase() === orderNoVal.toLowerCase();
-    });
-    if (dupe) {
-      var dupeDetails = document.getElementById('posOrderDupeDetails');
-      if (dupeDetails) dupeDetails.textContent = 'Order No(QT) "' + orderNoVal + '" has already been used (even if that invoice was later deleted) — pick a different number.';
-      var dupeModal = document.getElementById('posOrderDupeModal');
-      var dupeBackdrop = document.getElementById('posOrderDupeBackdrop');
-      if (dupeModal) dupeModal.style.display = '';
-      if (dupeBackdrop) dupeBackdrop.style.display = '';
-      if (orderInput) orderInput.focus();
-      return;
-    }
-  }
 
   var roomNoInput = document.getElementById('posRoomNoField');
   var roomNoVal = (roomNoInput && roomNoInput.value.trim()) || '—';
