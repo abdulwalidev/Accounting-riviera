@@ -16578,6 +16578,36 @@ var posPendingInvoiceSaves = new Map();   // id -> record (full new/edited invoi
 var posPendingInvoiceUpdates = new Map(); // id -> { record, fields } (merged field-only updates not yet confirmed)
 var posPendingLockActions = [];           // [{ mode, dateStr }]
 var posSyncRetryInFlight = false;
+var posPushRetryTimer = null; // mirrors the hotel side's own pushRetryTimer — near-instant retry on failure, not just the next opportunistic pull/5-min tick
+
+// These three queues used to live in memory only — a save that failed
+// (offline, or the server briefly rejecting the write, e.g. a column the
+// schema didn't have yet) sat here waiting for automatic retry, but a
+// refresh or closed tab before that retry succeeded wiped it out with
+// nothing ever having reached the database. Real invoices were lost this
+// way. Now every mutation to these queues is mirrored to localStorage
+// immediately, and posBootApp() restores them before its first pull/flush
+// so a queued write survives a refresh.
+var POS_PENDING_WRITES_KEY = 'pos_pending_writes_v1';
+function posSavePendingWritesToStorage(){
+  try {
+    localStorage.setItem(POS_PENDING_WRITES_KEY, JSON.stringify({
+      saves: Array.from(posPendingInvoiceSaves.entries()),
+      updates: Array.from(posPendingInvoiceUpdates.entries()),
+      locks: posPendingLockActions
+    }));
+  } catch (e) { console.error('[POS] failed to persist pending writes', e); }
+}
+function posLoadPendingWritesFromStorage(){
+  try {
+    var raw = localStorage.getItem(POS_PENDING_WRITES_KEY);
+    if (!raw) return;
+    var data = JSON.parse(raw) || {};
+    (data.saves || []).forEach(function(pair){ posPendingInvoiceSaves.set(pair[0], pair[1]); });
+    (data.updates || []).forEach(function(pair){ posPendingInvoiceUpdates.set(pair[0], pair[1]); });
+    (data.locks || []).forEach(function(a){ posPendingLockActions.push(a); });
+  } catch (e) { console.error('[POS] failed to restore pending writes', e); }
+}
 
 async function posPushNewInvoiceRaw(record){
   var invRes = await sb.from('pos_invoices').upsert(posInvoicePayload(record), { onConflict: 'id' });
@@ -16601,15 +16631,25 @@ async function posPushInvoiceUpdateRaw(id, fields){
 // record's local state is already whatever the caller wants shown — this
 // just tries to get it to the server, queuing for background retry on
 // failure instead of leaving the caller to decide what "failed" means.
+// Same near-instant-retry pattern as the hotel side's queueEntryPush —
+// clear/reschedule rather than letting duplicate timers pile up.
+function posScheduleRetryFlush(){
+  clearTimeout(posPushRetryTimer);
+  posPushRetryTimer = setTimeout(posFlushPendingPosWrites, 1500);
+}
+
 async function posPushNewInvoice(record){
-  if (!sb) { posPendingInvoiceSaves.set(record.id, record); posShowToast('Not connected to the cloud — saved locally, will sync automatically.', 'error'); return true; }
+  if (!sb) { posPendingInvoiceSaves.set(record.id, record); posSavePendingWritesToStorage(); posShowToast('Not connected to the cloud — saved locally, will sync automatically.', 'error'); return true; }
   var ok = await posPushNewInvoiceRaw(record);
   if (!ok) {
     posPendingInvoiceSaves.set(record.id, record);
+    posSavePendingWritesToStorage();
+    posScheduleRetryFlush();
     posShowToast('Could not reach the cloud database — saved locally, will retry automatically.', 'error');
     return true;
   }
   posPendingInvoiceSaves.delete(record.id);
+  posSavePendingWritesToStorage();
   return true;
 }
 
@@ -16617,23 +16657,26 @@ async function posQueueInvoiceUpdate(record, fields){
   var existing = posPendingInvoiceUpdates.get(record.id);
   var merged = Object.assign({}, existing && existing.fields, fields);
   posPendingInvoiceUpdates.set(record.id, { record: record, fields: merged });
+  posSavePendingWritesToStorage();
   if (!sb) return;
   var ok = await posPushInvoiceUpdateRaw(record.id, merged);
-  if (ok) posPendingInvoiceUpdates.delete(record.id);
+  if (ok) { posPendingInvoiceUpdates.delete(record.id); posSavePendingWritesToStorage(); }
+  else posScheduleRetryFlush();
 }
 
 async function posFlushPendingPosWrites(){
   if (!sb || posSyncRetryInFlight) return;
   if (posPendingInvoiceSaves.size === 0 && posPendingInvoiceUpdates.size === 0 && posPendingLockActions.length === 0) return;
   posSyncRetryInFlight = true;
+  clearTimeout(posPushRetryTimer);
   try{
     for (const [id, record] of Array.from(posPendingInvoiceSaves.entries())) {
       var savedOk = await posPushNewInvoiceRaw(record);
-      if (savedOk) posPendingInvoiceSaves.delete(id); else break;
+      if (savedOk) { posPendingInvoiceSaves.delete(id); posSavePendingWritesToStorage(); } else break;
     }
     for (const [id2, pending] of Array.from(posPendingInvoiceUpdates.entries())) {
       var updatedOk = await posPushInvoiceUpdateRaw(id2, pending.fields);
-      if (updatedOk) posPendingInvoiceUpdates.delete(id2); else break;
+      if (updatedOk) { posPendingInvoiceUpdates.delete(id2); posSavePendingWritesToStorage(); } else break;
     }
     while (posPendingLockActions.length) {
       var action = posPendingLockActions[0];
@@ -16642,6 +16685,13 @@ async function posFlushPendingPosWrites(){
     }
   } finally {
     posSyncRetryInFlight = false;
+    // Mirrors the hotel side's own pushRetryTimer: anything still queued
+    // after a pass means something failed (offline, or the server
+    // rejecting the write) — retry near-instantly instead of waiting for
+    // the next opportunistic pull or the 20s interval tick.
+    if (posPendingInvoiceSaves.size > 0 || posPendingInvoiceUpdates.size > 0 || posPendingLockActions.length > 0) {
+      posPushRetryTimer = setTimeout(posFlushPendingPosWrites, 1500);
+    }
   }
 }
 setInterval(posFlushPendingPosWrites, 20000);
@@ -17794,7 +17844,7 @@ function posConfirmDayLockAction(){
 function posRemovePendingLockAction(action){
   if (!action) return;
   var idx = posPendingLockActions.indexOf(action);
-  if (idx > -1) posPendingLockActions.splice(idx, 1);
+  if (idx > -1) { posPendingLockActions.splice(idx, 1); posSavePendingWritesToStorage(); }
 }
 
 async function posLockDayAction(dateStr, fromRetry){
@@ -17810,6 +17860,7 @@ async function posLockDayAction(dateStr, fromRetry){
     if (!existing) posLockedDays.push(row);
     action = { mode: 'lock', dateStr: dateStr };
     posPendingLockActions.push(action);
+    posSavePendingWritesToStorage();
     posRenderDayLockPage();
     posRefreshAfterLockChange();
   } else {
@@ -17844,6 +17895,7 @@ async function posUnlockDayAction(dateStr, fromRetry){
     if (row) { row.unlocked_by = currentUser ? currentUser.username : ''; row.unlocked_at = new Date().toISOString(); }
     action = { mode: 'unlock', dateStr: dateStr };
     posPendingLockActions.push(action);
+    posSavePendingWritesToStorage();
     posRenderDayLockPage();
     posRefreshAfterLockChange();
   } else {
@@ -19459,6 +19511,12 @@ function posBootApp(){
   console.log('[POS] posBootApp() called. posAppBooted =', posAppBooted, '| sb =', sb);
   if (posAppBooted) { console.log('[POS] already booted, skipping'); return; } // showView('restaurant') can fire many times — only boot once
   posAppBooted = true;
+
+  // Restore any writes that failed and got queued for retry before this
+  // tab was closed/refreshed — otherwise they'd just vanish, having never
+  // reached the database. The pull right below already retries the queue
+  // on success, so this just needs to repopulate it first.
+  try { posLoadPendingWritesFromStorage(); } catch (e) { console.error('[POS] posLoadPendingWritesFromStorage failed', e); }
 
   posSyncSidebarOffset();
   // Re-measure a moment later too — web fonts/late layout shifts can change
