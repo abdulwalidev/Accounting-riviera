@@ -2912,6 +2912,11 @@
 #page-pos-invoice .disc-card input {width:220px; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px;}
 #page-pos-invoice .change-room-btn {background:#16a34a; color:#fff; border:none; border-radius:6px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; margin-bottom:16px;}
 #page-pos-invoice .lists-grid {display:grid; grid-template-columns:1fr 1.4fr; gap:16px;}
+/* Locked-day invoice loaded for viewing — grayed out and non-interactive
+   everywhere except the New Receipt action, same "look but can't touch"
+   intent as the hotel's own read-only guest-entry display. */
+#page-pos-invoice.pos-locked-view > .wrap > .card:not(.list-card) {opacity:.55; pointer-events:none;}
+#page-pos-invoice.pos-locked-view .action-bar button:not(#posNewReceiptBtn) {opacity:.4; pointer-events:none;}
 #page-pos-invoice .list-card {padding:16px 20px;}
 #page-pos-invoice .list-card .lc-title {font-size:15px; font-weight:600; margin-bottom:12px;}
 #page-pos-invoice table.simple {width:100%; border-collapse:collapse; font-size:12.5px;}
@@ -4784,6 +4789,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <!-- Action buttons -->
   <div class="action-bar">
+    <button type="button" class="ab-yellow" id="posNewReceiptBtn" onclick="posRequestNewReceipt()" style="display:none;" title="Post everything currently loaded as a brand-new invoice dated today">＋ New Receipt (Today)</button>
     <button type="button" class="ab-blue" id="posPostBtn" onclick="posRequestPost('post')">Post</button>
     <button type="button" class="ab-blue" onclick="posRequestPost('printpost')">Print & Post</button>
     <button type="button" class="ab-gray-outline" onclick="posRequestPost('printonly')">Print-Only</button>
@@ -17963,6 +17969,15 @@ function posOpenRecordInForm(record){
   var editBadge = document.getElementById('posEditingBadge');
   if (editBadge) editBadge.style.display = posEditingRecord ? '' : 'none';
 
+  // Locked-day invoices are read-only from here on — the only allowed
+  // action is "New Receipt", which posts everything currently loaded as a
+  // fresh invoice dated today instead of touching the locked one.
+  var invoicePage = document.getElementById('page-pos-invoice');
+  var isLockedRecord = posIsLocked(record);
+  if (invoicePage) invoicePage.classList.toggle('pos-locked-view', isLockedRecord);
+  var newReceiptBtn = document.getElementById('posNewReceiptBtn');
+  if (newReceiptBtn) newReceiptBtn.style.display = isLockedRecord ? '' : 'none';
+
   var posBtn = document.querySelector('.sidebar button[onclick*="page-pos-invoice"]');
   if (posBtn) posShowApp('page-pos-invoice', posBtn);
 
@@ -18595,6 +18610,26 @@ function posSendToFrontOffice(){
   posRequestPost('frontoffice');
 }
 
+// Takes everything currently loaded from a locked-day invoice and posts
+// it as a genuinely new one dated today — clearing posViewingRecord/
+// posEditingRecord first is what makes posRequestPost treat it as new
+// instead of blocking it as a locked-record edit.
+function posRequestNewReceipt(){
+  if (!posViewingRecord) { posShowToast('Open an invoice first.', 'error'); return; }
+  posViewingRecord = null;
+  posEditingRecord = null;
+  var invoicePage = document.getElementById('page-pos-invoice');
+  if (invoicePage) invoicePage.classList.remove('pos-locked-view');
+  var newReceiptBtn = document.getElementById('posNewReceiptBtn');
+  if (newReceiptBtn) newReceiptBtn.style.display = 'none';
+  var editBadge = document.getElementById('posEditingBadge');
+  if (editBadge) editBadge.style.display = 'none';
+  var invoiceDateInput = document.getElementById('posInvoiceDate');
+  if (invoiceDateInput) { if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(posTodayISO(), true); else invoiceDateInput.value = posTodayISO(); }
+  posFormDirty = true;
+  posRequestPost('post');
+}
+
 var posPendingPostMode = null;
 var POS_POST_MODE_LABELS = { post: 'Post this invoice?', printpost: 'Print & post this invoice?', printonly: 'Save as print-only?', frontoffice: 'Send to Front Office?' };
 
@@ -18603,6 +18638,15 @@ var POS_POST_MODE_LABELS = { post: 'Post this invoice?', printpost: 'Print & pos
 // that's just going to fail anyway. Can still be deleted afterward from
 // any of the invoice lists — this is a speed bump, not a lock.
 function posRequestPost(mode){
+  // Viewing a locked-day invoice must never silently post — either as an
+  // update (blocked already, posEditingRecord is null for locked records)
+  // or, the actual bug this closes, as a brand-new invoice via the normal
+  // Post flow since nothing stopped that path before. Only "New Receipt"
+  // (which clears posViewingRecord first) is allowed to post from here.
+  if (posViewingRecord && posIsLocked(posViewingRecord)) {
+    posShowToast('This invoice is from a locked day and is read-only — use "New Receipt" to create a fresh copy dated today instead.', 'error');
+    return;
+  }
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (!tbody) return;
   var hasItem = false;
@@ -18747,6 +18791,10 @@ function posResetForm(){
   posViewingRecord = null;
   var editBadge = document.getElementById('posEditingBadge');
   if (editBadge) editBadge.style.display = 'none';
+  var invoicePage = document.getElementById('page-pos-invoice');
+  if (invoicePage) invoicePage.classList.remove('pos-locked-view');
+  var newReceiptBtn = document.getElementById('posNewReceiptBtn');
+  if (newReceiptBtn) newReceiptBtn.style.display = 'none';
   posFullPaymentReset();
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (tbody) {
