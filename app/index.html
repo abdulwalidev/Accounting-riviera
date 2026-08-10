@@ -2936,13 +2936,13 @@
    everywhere except the New Receipt action, same "look but can't touch"
    intent as the hotel's own read-only guest-entry display. */
 #page-pos-invoice.pos-locked-view > .wrap > .card:not(.list-card) {opacity:.55; pointer-events:none;}
-#page-pos-invoice.pos-locked-view .action-bar button:not(#posNewReceiptBtn):not(#posPrintRecordBtn) {opacity:.4; pointer-events:none;}
+#page-pos-invoice.pos-locked-view .action-bar button:not(#posPrintOnlyBtn) {opacity:.4; pointer-events:none;}
 /* Any other (unlocked, not-collected) invoice opened for viewing starts
    the exact same "look but can't touch" — same intent as opening a guest
    entry: you land on a read-only view first, and editing is something you
    explicitly opt into via the Edit button, never just by opening it. */
 #page-pos-invoice.pos-view-only > .wrap > .card:not(.list-card) {opacity:.55; pointer-events:none;}
-#page-pos-invoice.pos-view-only .action-bar button:not(#posEditRecordBtn):not(#posPrintRecordBtn) {opacity:.4; pointer-events:none;}
+#page-pos-invoice.pos-view-only .action-bar button:not(#posEditRecordBtn):not(#posPrintOnlyBtn) {opacity:.4; pointer-events:none;}
 #page-pos-invoice .list-card {padding:16px 20px;}
 #page-pos-invoice .list-card .lc-title {font-size:15px; font-weight:600; margin-bottom:12px;}
 #page-pos-invoice table.simple {width:100%; border-collapse:collapse; font-size:12.5px;}
@@ -4615,7 +4615,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="page-head">
     <h1>Point of Sale</h1>
-    <button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button type="button" class="pos-new-btn" id="posPrevInvoiceBtn" onclick="posGoToAdjacentInvoice(-1)" style="display:none; background:#fff; color:var(--text); border:1px solid var(--border-strong); padding:7px 12px;" title="Previous invoice">‹</button>
+      <button type="button" class="pos-new-btn" id="posNextInvoiceBtn" onclick="posGoToAdjacentInvoice(1)" style="display:none; background:#fff; color:var(--text); border:1px solid var(--border-strong); padding:7px 12px;" title="Next invoice">›</button>
+      <button type="button" class="pos-new-btn" id="posEditRecordBtnTop" onclick="posEnterEditMode()" style="display:none; background:#fff; color:var(--text); border:1px solid var(--border-strong);" title="Make this invoice editable">✎ Edit</button>
+      <button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button>
+    </div>
   </div>
 
   <div id="posMenuBackdrop" onclick="posCloseMenuPanel()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:999;"></div>
@@ -4825,12 +4830,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <!-- Action buttons -->
   <div class="action-bar">
-    <button type="button" class="ab-yellow" id="posNewReceiptBtn" onclick="posRequestNewReceipt()" style="display:none;" title="Post everything currently loaded as a brand-new invoice dated today">＋ New Receipt (Today)</button>
     <button type="button" class="ab-yellow" id="posEditRecordBtn" onclick="posEnterEditMode()" style="display:none;" title="Make this invoice editable">✎ Edit</button>
-    <button type="button" class="ab-gray-outline" id="posPrintRecordBtn" onclick="posPrintCurrentRecord()" style="display:none;" title="Print this invoice's receipt again — no editing or posting">🖨 Print</button>
     <button type="button" class="ab-blue" id="posPostBtn" onclick="posRequestPost('post')">Post</button>
     <button type="button" class="ab-blue" onclick="posRequestPost('printpost')">Print & Post</button>
-    <button type="button" class="ab-gray-outline" onclick="posRequestPost('printonly')">Print-Only</button>
+    <button type="button" class="ab-gray-outline" id="posPrintOnlyBtn" onclick="posRequestPost('printonly')">Print-Only</button>
     <button type="button" class="ab-blue-outline" onclick="posSendToFrontOffice()">Send to Front Office</button>
     <button type="button" class="ab-yellow" onclick="posRequestNewForm()">New</button>
   </div>
@@ -18331,6 +18334,40 @@ function posFillPaymentRows(entries, fallbackDate){
   }
 }
 
+// Prev/Next page through every non-deleted invoice in posInvoices' own
+// order (index 0 = newest, since new invoices are unshifted in) — Prev
+// (-1) moves toward index 0/newest, Next (+1) moves toward the end/oldest.
+function posAdjacentInvoiceList(){
+  return posInvoices.filter(function(r){ return !r.deleted; });
+}
+function posUpdateAdjacentInvoiceButtons(){
+  var prevBtn = document.getElementById('posPrevInvoiceBtn');
+  var nextBtn = document.getElementById('posNextInvoiceBtn');
+  if (!prevBtn || !nextBtn) return;
+  if (!posViewingRecord) { prevBtn.style.display = 'none'; nextBtn.style.display = 'none'; return; }
+  var list = posAdjacentInvoiceList();
+  var idx = list.findIndex(function(r){ return r.id === posViewingRecord.id; });
+  prevBtn.style.display = '';
+  nextBtn.style.display = '';
+  var atStart = idx <= 0;
+  var atEnd = idx === -1 || idx >= list.length - 1;
+  prevBtn.disabled = atStart;
+  prevBtn.style.opacity = atStart ? '.4' : '';
+  prevBtn.style.cursor = atStart ? 'default' : 'pointer';
+  nextBtn.disabled = atEnd;
+  nextBtn.style.opacity = atEnd ? '.4' : '';
+  nextBtn.style.cursor = atEnd ? 'default' : 'pointer';
+}
+function posGoToAdjacentInvoice(dir){
+  if (!posViewingRecord) return;
+  var list = posAdjacentInvoiceList();
+  var idx = list.findIndex(function(r){ return r.id === posViewingRecord.id; });
+  if (idx === -1) return;
+  var newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= list.length) return;
+  posOpenRecordInForm(list[newIdx]);
+}
+
 function posOpenRecordInForm(record){
   posViewingRecord = record;
   // Never editable straight away — editing is something you explicitly
@@ -18341,23 +18378,22 @@ function posOpenRecordInForm(record){
   if (editBadge) editBadge.style.display = 'none';
 
   // Locked-day invoices are read-only from here on — the only allowed
-  // action is "New Receipt", which posts everything currently loaded as a
-  // fresh invoice dated today instead of touching the locked one. Any
+  // action is Print-Only (ungrayed for locked/view-only records, see the
+  // .pos-locked-view/.pos-view-only CSS), which saves whatever's loaded
+  // as a fresh print-only draft instead of touching the locked one. Any
   // other invoice still starts grayed out/view-only too, just with an
-  // Edit button instead of New Receipt as its one way in.
+  // Edit button as its way into becoming editable.
   var invoicePage = document.getElementById('page-pos-invoice');
   var isLockedRecord = posIsLocked(record);
   if (invoicePage) {
     invoicePage.classList.toggle('pos-locked-view', isLockedRecord);
     invoicePage.classList.toggle('pos-view-only', !isLockedRecord);
   }
-  var newReceiptBtn = document.getElementById('posNewReceiptBtn');
-  if (newReceiptBtn) newReceiptBtn.style.display = isLockedRecord ? '' : 'none';
   var editRecordBtn = document.getElementById('posEditRecordBtn');
   if (editRecordBtn) editRecordBtn.style.display = isLockedRecord ? 'none' : '';
-  // Printing is always allowed, regardless of locked/view-only/edit state.
-  var printRecordBtn = document.getElementById('posPrintRecordBtn');
-  if (printRecordBtn) printRecordBtn.style.display = '';
+  var editRecordBtnTop = document.getElementById('posEditRecordBtnTop');
+  if (editRecordBtnTop) editRecordBtnTop.style.display = isLockedRecord ? 'none' : '';
+  posUpdateAdjacentInvoiceButtons();
 
   var posBtn = document.querySelector('.sidebar button[onclick*="page-pos-invoice"]');
   if (posBtn) posShowApp('page-pos-invoice', posBtn);
@@ -18441,6 +18477,25 @@ function posOpenRecordInForm(record){
   posShowToast('Opened ' + record.no + ' in Point of Sale');
 }
 
+// Escape cancels an in-progress edit (same as clicking "Cancel Edit" on the
+// EDITING banner) — but only while posEditingRecord is actually set, no
+// modal is open (those handle their own Escape), and no autocomplete
+// dropdown is open (that Escape just closes the dropdown, same as clicking
+// away, not the whole edit).
+function posEscCancelEdit(e){
+  if (e.key !== 'Escape') return;
+  if (!posEditingRecord) return;
+  var openModalIds = ['posDeleteModal', 'posPostModal', 'posDayLockModal', 'posMenuPanel', 'posMenuEditModal'];
+  var modalOpen = openModalIds.some(function(id){
+    var el = document.getElementById(id);
+    return el && el.style.display && el.style.display !== 'none';
+  });
+  if (modalOpen) return;
+  var wrap = e.target.closest && e.target.closest('.search-wrap');
+  if (wrap && wrap.querySelector('.ac-menu.show')) return;
+  posResetForm();
+}
+
 // The explicit "open a view-only invoice up for actual editing" step —
 // never automatic just from posOpenRecordInForm. A collected record still
 // unlocks into a normal live form here (Post creates a fresh invoice for
@@ -18455,10 +18510,8 @@ function posEnterEditMode(){
   if (invoicePage) invoicePage.classList.remove('pos-view-only');
   var editRecordBtn = document.getElementById('posEditRecordBtn');
   if (editRecordBtn) editRecordBtn.style.display = 'none';
-  var printRecordBtn = document.getElementById('posPrintRecordBtn');
-  if (printRecordBtn) printRecordBtn.style.display = 'none';
-  var newReceiptBtn = document.getElementById('posNewReceiptBtn');
-  if (newReceiptBtn) newReceiptBtn.style.display = '';
+  var editRecordBtnTop = document.getElementById('posEditRecordBtnTop');
+  if (editRecordBtnTop) editRecordBtnTop.style.display = 'none';
 
   var editBadge = document.getElementById('posEditingBadge');
   var editBadgeLabel = document.getElementById('posEditingBadgeLabel');
@@ -18976,17 +19029,6 @@ window.addEventListener('afterprint', function(){
   if (pageOverride) pageOverride.textContent = '';
 });
 
-// Reprints whatever invoice is currently loaded (posViewingRecord) exactly
-// as it already exists — no posting, no editing, works even while the
-// form is still grayed out/view-only or from a locked day, unlike every
-// other action-bar button. Print-Only is a different thing: it SAVES a
-// new print-only invoice, which is wrong for "I just want another copy of
-// this already-posted receipt."
-function posPrintCurrentRecord(){
-  if (!posViewingRecord) return;
-  posPrintRecord(posViewingRecord);
-}
-
 async function posPostInvoice(mode){
   function abort(msg){
     if (msg) posShowToast(msg, 'error');
@@ -19114,35 +19156,6 @@ function posSendToFrontOffice(){
   posRequestPost('frontoffice');
 }
 
-// Takes everything currently loaded from a locked-day invoice and copies
-// it into a genuinely new, unlocked, unposted invoice dated today — just
-// unsticks it from the old record and hands it back to the user still
-// sitting in the form to review (item lines, customer, table, order no,
-// payments all carried over as-is). It does NOT post on its own anymore;
-// clearing posViewingRecord/posEditingRecord is what makes the normal
-// Post/Print & Post/Print-Only buttons treat it as a brand new invoice
-// instead of blocking it as a locked-record edit.
-function posRequestNewReceipt(){
-  if (!posViewingRecord) { posShowToast('Open an invoice first.', 'error'); return; }
-  posViewingRecord = null;
-  posEditingRecord = null;
-  var invoicePage = document.getElementById('page-pos-invoice');
-  if (invoicePage) invoicePage.classList.remove('pos-locked-view', 'pos-view-only');
-  var newReceiptBtn = document.getElementById('posNewReceiptBtn');
-  if (newReceiptBtn) newReceiptBtn.style.display = 'none';
-  var editRecordBtn = document.getElementById('posEditRecordBtn');
-  if (editRecordBtn) editRecordBtn.style.display = 'none';
-  var printRecordBtn = document.getElementById('posPrintRecordBtn');
-  if (printRecordBtn) printRecordBtn.style.display = 'none';
-  var editBadge = document.getElementById('posEditingBadge');
-  if (editBadge) editBadge.style.display = 'none';
-  var invoiceDateInput = document.getElementById('posInvoiceDate');
-  if (invoiceDateInput) { if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(posTodayISO(), true); else invoiceDateInput.value = posTodayISO(); }
-  posFormDirty = true;
-  posRecalcAll();
-  posShowToast('Copied into a new receipt dated today — review and Post when ready.');
-}
-
 var posPendingPostMode = null;
 var POS_POST_MODE_LABELS = { post: 'Post this invoice?', printpost: 'Print & post this invoice?', printonly: 'Save as print-only?', frontoffice: 'Send to Front Office?' };
 
@@ -19154,10 +19167,13 @@ function posRequestPost(mode){
   // Viewing a locked-day invoice must never silently post — either as an
   // update (blocked already, posEditingRecord is null for locked records)
   // or, the actual bug this closes, as a brand-new invoice via the normal
-  // Post flow since nothing stopped that path before. Only "New Receipt"
-  // (which clears posViewingRecord first) is allowed to post from here.
-  if (posViewingRecord && posIsLocked(posViewingRecord)) {
-    posShowToast('This invoice is from a locked day and is read-only — use "New Receipt" to create a fresh copy dated today instead.', 'error');
+  // Post flow since nothing stopped that path before. Print-Only is exempt:
+  // it always saves a fresh draft rather than touching the locked record,
+  // so it's the sanctioned way to get a locked or not-yet-edited invoice's
+  // data into a new one (see the .pos-locked-view/.pos-view-only CSS,
+  // which ungrays only Print-Only for exactly this reason).
+  if (posViewingRecord && posIsLocked(posViewingRecord) && mode !== 'printonly') {
+    posShowToast('This invoice is from a locked day and is read-only.', 'error');
     return;
   }
   // Same defense-in-depth as the locked-invoice check above: the .pos-view-only
@@ -19165,7 +19181,7 @@ function posRequestPost(mode){
   // guard belongs here too — not just in CSS — since silently posting
   // whatever's loaded in a not-yet-edited view is exactly the "create an
   // unintended duplicate" bug the locked-invoice fix above closed.
-  if (posViewingRecord && !posEditingRecord && document.getElementById('page-pos-invoice').classList.contains('pos-view-only')) {
+  if (posViewingRecord && !posEditingRecord && mode !== 'printonly' && document.getElementById('page-pos-invoice').classList.contains('pos-view-only')) {
     posShowToast('Click "Edit" first to make this invoice editable before posting.', 'error');
     return;
   }
@@ -19306,23 +19322,14 @@ function posConfirmPost(){
   posPostInvoice(mode);
 }
 
-// "New" wipes whatever's in the form — if that's real unsaved data (an
-// item typed, a non-default customer, or a payment amount) that never
-// got posted/printed/sent anywhere, confirm first instead of silently
-// losing it.
+// "New" wipes whatever's in the form — if posFormDirty (anything actually
+// typed/changed since the form was last loaded or reset) is still false,
+// there's nothing to lose, so just reset silently. Checking raw form
+// content instead of posFormDirty used to false-positive on an opened,
+// untouched record — its loaded item/customer/payment values read as
+// "data" even though nothing had actually changed yet.
 function posRequestNewForm(){
-  var hasData = false;
-  var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
-  if (tbody) {
-    tbody.querySelectorAll('.pos-item-input').forEach(function(inp){ if (inp.value.trim()) hasData = true; });
-  }
-  var custInput = document.getElementById('posCustomer');
-  if (custInput && custInput.value.trim() && custInput.value.trim() !== 'Walkin Customer') hasData = true;
-  document.querySelectorAll('#page-pos-invoice .pay-amount-input').forEach(function(inp){
-    if ((parseFloat((inp.value || '').replace(/,/g, '')) || 0) > 0) hasData = true;
-  });
-
-  if (!hasData) { posResetForm(); return; }
+  if (!posFormDirty) { posResetForm(); return; }
 
   showConfirmModal(
     'This invoice has data that hasn\'t been posted, printed, or sent anywhere yet. Clear it and start a new one?',
@@ -19347,12 +19354,11 @@ function posResetForm(){
   if (editBadge) editBadge.style.display = 'none';
   var invoicePage = document.getElementById('page-pos-invoice');
   if (invoicePage) invoicePage.classList.remove('pos-locked-view', 'pos-view-only');
-  var newReceiptBtn = document.getElementById('posNewReceiptBtn');
-  if (newReceiptBtn) newReceiptBtn.style.display = 'none';
   var editRecordBtn = document.getElementById('posEditRecordBtn');
   if (editRecordBtn) editRecordBtn.style.display = 'none';
-  var printRecordBtn = document.getElementById('posPrintRecordBtn');
-  if (printRecordBtn) printRecordBtn.style.display = 'none';
+  var editRecordBtnTop = document.getElementById('posEditRecordBtnTop');
+  if (editRecordBtnTop) editRecordBtnTop.style.display = 'none';
+  posUpdateAdjacentInvoiceButtons();
   posFullPaymentReset();
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (tbody) {
@@ -19653,6 +19659,7 @@ function posBootApp(){
   try { posRenderExtrasMenu(); } catch(e) { console.error('[POS] posRenderExtrasMenu failed', e); }
   try { posRefreshMenuStats(); } catch(e) { console.error('[POS] posRefreshMenuStats failed', e); }
   try { posSetupRoomAutocomplete(); } catch(e) { console.error('[POS] posSetupRoomAutocomplete failed', e); }
+  document.addEventListener('keydown', posEscCancelEdit);
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
   if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
   var posInvoiceDateEl = document.getElementById('posInvoiceDate');
