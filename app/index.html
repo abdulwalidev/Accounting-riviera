@@ -6360,6 +6360,16 @@ function settingsNavTo(el, sectionId){
 }
 
 function showView(view, fromPopState){
+  // Restaurant-role accounts must never land on a hotel view — the nav
+  // buttons being hidden is only cosmetic, it doesn't stop a Chrome Back
+  // press from popping into whatever view sits in browser history (e.g.
+  // 'dashboard' from before the role restriction kicked in, or a stray
+  // entry). Every other view below is individually admin-gated; this is
+  // the one blanket rule for the restaurant role specifically.
+  if(isRestaurantRole() && view !== 'restaurant' && view !== 'frontoffice'){
+    showView('restaurant', fromPopState);
+    return;
+  }
   if(view === 'daylock' && !isAdmin()){
     showNotice('Day Lock is only available to admin accounts.');
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
