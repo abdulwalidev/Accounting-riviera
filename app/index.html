@@ -18816,15 +18816,25 @@ var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sa
 // Printing renders straight into #posReceiptPrintArea (a hidden div at the
 // end of <body>) and calls window.print() on the current page — no popup,
 // no new tab. body.pos-printing-receipt (@media print) hides every other
-// top-level element while it's set, and #posReceiptPrintArea is tagged
-// with the named page "pos-receipt" (defined near the div, size:80mm) so
-// its page size doesn't fight with the hotel's own A4 @page rule, which
-// still governs everything else that ever gets printed (breakfast report,
-// checkout, etc.) since that rule is untouched.
+// top-level element while it's set. The named page "pos-receipt" (size:
+// 80mm, defined near the div) is kept as a harmless fallback, but named
+// @page support is unreliable — when a browser/printer ignores it, the
+// page falls back to the default full sheet (A4/Letter) and the 80mm
+// receipt just shows up as a small block on a mostly-blank page. So while
+// printing we also inject a plain (unnamed) @page override, which every
+// print engine honors, and strip it right after so it doesn't leak into
+// the hotel's own A4 reports (breakfast report, checkout, etc.).
 function posPrintRecord(record){
   var area = document.getElementById('posReceiptPrintArea');
   if (!area) return;
   area.innerHTML = '<style>' + POS_RECEIPT_PRINT_CSS + '</style>' + posBuildReceiptHtml(record);
+  var pageOverride = document.getElementById('posReceiptPageOverride');
+  if (!pageOverride) {
+    pageOverride = document.createElement('style');
+    pageOverride.id = 'posReceiptPageOverride';
+    document.head.appendChild(pageOverride);
+  }
+  pageOverride.textContent = '@page{size:80mm auto; margin:0;}';
   document.body.classList.add('pos-printing-receipt');
   // window.print() doesn't wait for pending image requests — calling it
   // right after setting innerHTML would print before the logo (first time,
@@ -18845,6 +18855,8 @@ function posPrintRecord(record){
 }
 window.addEventListener('afterprint', function(){
   document.body.classList.remove('pos-printing-receipt');
+  var pageOverride = document.getElementById('posReceiptPageOverride');
+  if (pageOverride) pageOverride.textContent = '';
 });
 
 // Reprints whatever invoice is currently loaded (posViewingRecord) exactly
