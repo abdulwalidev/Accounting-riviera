@@ -527,6 +527,19 @@
     align-items:center;
     gap:6px;
   }
+  .split-rate-btn{
+    display:block;
+    margin-top:4px;
+    background:none;
+    border:none;
+    color:var(--gold-deep);
+    font-size:10.5px;
+    font-weight:700;
+    cursor:pointer;
+    padding:2px 0;
+    white-space:nowrap;
+  }
+  .split-rate-btn:hover{ text-decoration:underline; }
   input.duplicate, select.duplicate{
     border-color:var(--danger) !important;
     background:var(--danger-bg) !important;
@@ -6206,6 +6219,21 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 </div>
 
 
+<div class="modal-backdrop" id="splitRateModalBackdrop">
+  <div class="modal" style="width:320px;">
+    <h3>Different Rate for One Night</h3>
+    <div class="sub" style="margin-bottom:14px;">Pick which night of this room's stay should have a different rate — the row splits automatically, the rest of the stay keeps its usual rate.</div>
+    <label for="splitRateNightSelect">Night</label>
+    <select id="splitRateNightSelect"></select>
+    <label for="splitRateAmountInput" style="margin-top:10px;">Rate for that night</label>
+    <input type="text" inputmode="decimal" id="splitRateAmountInput" placeholder="0" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeSplitRateModal()">Cancel</button>
+      <button class="btn" onclick="confirmSplitRate()">Apply</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="folioScopeModalBackdrop">
   <div class="modal" style="width:320px;">
     <h3>Which Folio?</h3>
@@ -7429,18 +7457,25 @@ function renderRoomNoList(listEl, filter, currentTr){
 
 // Flags any room-number field whose value is already used in another row,
 // so a mistaken duplicate (typed by hand, not picked from the list) is
-// still caught and visibly marked before it can be saved.
+// still caught and visibly marked before it can be saved. Rows sharing a
+// data-split-group id (an auto-split room, see splitRoomRowRate) count as
+// ONE intentional unit rather than duplicates of each other — a stray
+// unrelated row still using the same room number outside that group is
+// still flagged, on every row involved.
 function refreshDuplicateRoomHighlights(){
   const inputs = Array.from(document.querySelectorAll('#roomBody .roomNo'));
-  const counts = {};
-  inputs.forEach(inp=>{
+  const unitsPerRoom = {};
+  inputs.forEach((inp, i)=>{
     const v = inp.value.trim().toUpperCase();
     if(!v || v === 'N/A' || v === MISC_ROOM_NO.toUpperCase()) return; // several undecided/misc rows are allowed
-    counts[v] = (counts[v] || 0) + 1;
+    const tr = inp.closest('tr');
+    const unitKey = tr.dataset.splitGroup ? ('sg:' + tr.dataset.splitGroup) : ('row:' + i);
+    if(!unitsPerRoom[v]) unitsPerRoom[v] = new Set();
+    unitsPerRoom[v].add(unitKey);
   });
   inputs.forEach(inp=>{
     const v = inp.value.trim().toUpperCase();
-    inp.classList.toggle('duplicate', !!v && counts[v] > 1);
+    inp.classList.toggle('duplicate', !!v && unitsPerRoom[v] && unitsPerRoom[v].size > 1);
   });
 }
 
@@ -7573,6 +7608,7 @@ function addRow(){
         <button onclick="changeRooms(this,1)">+</button>
       </div>
       <span class="roomCountMisc" style="display:none;">-</span>
+      <button type="button" class="split-rate-btn" onclick="openSplitRateModal(this)" title="Give one night of this room's stay a different rate">⚡ Split Rate</button>
     </td>
     <td class="rowtotal">0</td>
     <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'room')">✕</button></td>
@@ -7758,6 +7794,80 @@ function calcRow(rentInput){
   const total = rent * rooms;
   tr.querySelector('.rowtotal').textContent = total.toLocaleString();
   calcGrandTotal();
+}
+
+// ---- Split Rate: a different rent for one specific night of a room's
+// stay. No new data model — buildLedgersRecords()/the Revenue/Ledgers
+// reports already chain multiple rows of the SAME room number into
+// consecutive nights (rate-change-mid-stay support that already existed
+// for a different reason), so this just automates splitting one row into
+// up to three (before / the picked night / after) with the right counts
+// and rates. Split-sibling rows share a data-split-group id so
+// refreshDuplicateRoomHighlights() below knows they're an intentional
+// split, not an accidental duplicate room entry.
+let splitRatePendingRow = null;
+
+function openSplitRateModal(btn){
+  const tr = btn.closest('tr');
+  const roomNo = tr.querySelector('.roomNo').value.trim();
+  if(!roomNo){ showNotice('Pick a room first.'); return; }
+  if(isMiscRoomNo(roomNo)){ showNotice('Split Rate isn\'t for Miscellaneous charges — those are always a one-off, not a multi-night stay.'); return; }
+  const count = parseInt(tr.dataset.rooms) || 1;
+  if(count < 2){ showNotice('This room is only booked for 1 night — add more nights first, then split one out.'); return; }
+  splitRatePendingRow = tr;
+  const sel = document.getElementById('splitRateNightSelect');
+  sel.innerHTML = '';
+  for(let i = 1; i <= count; i++){
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = 'Night ' + i;
+    sel.appendChild(opt);
+  }
+  document.getElementById('splitRateAmountInput').value = '';
+  document.getElementById('splitRateModalBackdrop').classList.add('active');
+}
+
+function closeSplitRateModal(){
+  splitRatePendingRow = null;
+  document.getElementById('splitRateModalBackdrop').classList.remove('active');
+}
+
+function confirmSplitRate(){
+  const tr = splitRatePendingRow;
+  if(!tr) return;
+  const nightIdx = parseInt(document.getElementById('splitRateNightSelect').value);
+  const rate = parseFloat(document.getElementById('splitRateAmountInput').value);
+  if(!nightIdx || isNaN(rate) || rate < 0){ showNotice('Enter a valid rate.'); return; }
+  closeSplitRateModal();
+  splitRoomRowRate(tr, nightIdx, rate);
+}
+
+function splitRoomRowRate(tr, nightIdx, rate){
+  const baseRent = tr.querySelector('.rent').value;
+  const totalNights = parseInt(tr.dataset.rooms) || 1;
+  const before = nightIdx - 1;
+  const after = totalNights - nightIdx;
+
+  const splitGroup = 'sg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  const specs = [];
+  if(before > 0) specs.push({ rent: baseRent, count: before });
+  specs.push({ rent: String(rate), count: 1 });
+  if(after > 0) specs.push({ rent: baseRent, count: after });
+
+  const newRows = specs.map(spec=>{
+    const clone = tr.cloneNode(true);
+    clone.dataset.rooms = spec.count;
+    clone.dataset.splitGroup = splitGroup;
+    clone.querySelector('.rent').value = spec.rent;
+    clone.querySelector('.roomCount').textContent = spec.count;
+    return clone;
+  });
+  newRows.forEach(nr=> tr.parentNode.insertBefore(nr, tr));
+  tr.remove();
+  newRows.forEach(nr=> calcRow(nr.querySelector('.rent')));
+  renumber();
+  refreshDuplicateRoomHighlights();
+  updateExpectedCheckoutDisplay();
 }
 
 function deleteRow(btn){
@@ -9180,12 +9290,28 @@ function startEditEntry(entry){
 
   document.getElementById('roomBody').innerHTML = '';
   rowCount = 0;
+  // Consecutive saved rows sharing a room number are a rate-split from a
+  // prior save (see splitRoomRowRate) — re-tag them with a shared
+  // data-split-group id on reload so refreshDuplicateRoomHighlights()
+  // doesn't flag them as an accidental duplicate the moment this entry is
+  // reopened for editing.
+  let prevSplitRoomNo = null, prevSplitGroup = null;
   (entry.rooms && entry.rooms.length ? entry.rooms : [null]).forEach(r=>{
     addRow();
     if(!r) return;
     const tr = document.querySelector('#roomBody tr:last-child');
     if(r.id) tr.dataset.roomId = r.id;
     tr.querySelector('.roomNo').value = r.roomNo || '';
+    const rNo = (r.roomNo || '').trim().toUpperCase();
+    if(rNo && !isMiscRoomNo(rNo) && rNo === prevSplitRoomNo){
+      if(!prevSplitGroup) prevSplitGroup = 'sg-load-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+      tr.dataset.splitGroup = prevSplitGroup;
+      const prevTr = tr.previousElementSibling;
+      if(prevTr && !prevTr.dataset.splitGroup) prevTr.dataset.splitGroup = prevSplitGroup;
+    } else {
+      prevSplitGroup = null;
+    }
+    prevSplitRoomNo = rNo || null;
     const days = parseInt(r.count) || 1;
     tr.dataset.rooms = days;
     tr.querySelector('.roomCount').textContent = days;
