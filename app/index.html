@@ -13322,9 +13322,12 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
   // already shows them (both read computeRoomStatuses' `extended` flag).
   // Without this they'd silently vanish from Charges Summary the day after
   // checkout was due, which read as "the guest disappeared," not "there's
-  // no rent for them yet." Scoped to a single specific day only — Extended
-  // is a snapshot read as-of one date, not something that makes sense
-  // summed across an open date range.
+  // no rent for them yet." Billed at the room's own last nightly rate (same
+  // number that room was already charging) so the row reads like real,
+  // owed rent instead of a placeholder — it counts toward Due same as any
+  // other room. Scoped to a single specific day only — Extended is a
+  // snapshot read as-of one date, not something that makes sense summed
+  // across an open date range.
   const isSingleDay = !!fromDate && !!toDate && fromDate === toDate;
   const extendedKeys = new Set();
   if(isSingleDay){
@@ -13332,7 +13335,8 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
       const key = rs.entry.id + '|' + rs.roomNo + '|' + fromDate;
       if(nightsByKey[key]) return; // already has a real booked night — nothing to add
       const roomRow = (rs.entry.rooms || []).find(r=> r.roomNo === rs.roomNo);
-      nightsByKey[key] = { rent: 0, received: 0 };
+      const extRent = roomRow ? (parseFloat(String(roomRow.rent).replace(/,/g,'')) || 0) : 0;
+      nightsByKey[key] = { rent: extRent, received: 0 };
       rowMeta[key] = { roomNo: rs.roomNo, unitType: roomRow ? roomRow.unitType : '', date: fromDate, guestId: rs.entry.id, guest: rs.entry.guestName || '(no name)' };
       extendedKeys.add(key);
     });
@@ -13565,18 +13569,18 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
     <table style="table-layout:fixed; width:100%; min-width:${totalW}px;">
       <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th>${dateTh}<th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th><th class="no-print" style="width:${SS_W}px; white-space:nowrap;">SS</th></tr></thead>
       <tbody>${roomRows.map((r,i)=> `
-        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="${r.extended ? 'Still in the room past their last booked night — no new night booked/billed yet' : 'Open this guest'}">
+        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="${r.extended ? 'Still in the room past their last booked night — not checked out yet' : 'Open this guest'}">
           <td>${i + 1}</td>
           ${dateTd(r)}
           <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
-          <td>${r.guest}</td>
-          <td>${r.extended ? '<span style="color:var(--amber); font-weight:600;">Extended</span>' : r.rent.toLocaleString()}</td>
-          ${Array.from({length: maxChunks}, (_,i)=> `<td>${r.extended ? '-' : paymentCell(r.chunks[i])}</td>`).join('')}
+          <td>${r.guest}${r.extended ? ' <span style="color:var(--amber); font-weight:600; font-size:11px;">(Extended)</span>' : ''}</td>
+          <td>${r.rent.toLocaleString()}</td>
+          ${Array.from({length: maxChunks}, (_,i)=> `<td>${paymentCell(r.chunks[i])}</td>`).join('')}
           <td class="cash-amt">${r.cashTotal ? r.cashTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
-          <td style="font-weight:700; color:${r.extended ? 'var(--amber)' : (r.due > 0 ? 'var(--danger)' : 'inherit')};">${r.extended ? '—' : r.due.toLocaleString()}</td>
+          <td style="font-weight:700; color:${r.due > 0 ? 'var(--danger)' : 'inherit'};">${r.due.toLocaleString()}</td>
           ${ssCell(r)}
         </tr>`).join('')}
       </tbody>
@@ -13659,23 +13663,23 @@ function renderRevenue(){
   // ---- Room Statistics: occupancy as of the report's own selected date —
   // the END of the range (To Date) if one's picked, since that's the
   // point-in-time snapshot a range naturally settles on; falls back to
-  // From Date, then today, if the range is cleared. "Occupied" here
-  // strictly means booked for that exact night -- same as the Rooms table
-  // below and unlike Dashboard/Room Detail, Extended is NOT folded in,
-  // since an unconfirmed departure isn't a confirmed occupied room. A
-  // billing snapshot, not a live front-desk view — same fix as Night
-  // Summary: stays tied to actual booked nights, not computeRoomStatuses'
-  // `occupied` flag, which for today also requires an Arrival confirmation
-  // and would otherwise disagree with the Charges Summary table below it
-  // (a reservation checking in today still owes/collects rent whether or
-  // not the front desk has clicked Check-in yet). ----
+  // From Date, then today, if the range is cleared. "Occupied" here means
+  // booked for that exact night, PLUS any Extended room (still physically
+  // occupied past its last booked night, not yet checked out) — same set
+  // Charges Summary below now shows, so this stat and that table always
+  // agree on how many rooms are in play. A billing-aware snapshot, not a
+  // live front-desk view — same fix as Night Summary: stays tied to actual
+  // booked nights (plus Extended), not computeRoomStatuses' `occupied`
+  // flag on its own, which for today also requires an Arrival confirmation
+  // that a reservation checking in today still owes/collects rent for
+  // whether or not the front desk has clicked Check-in yet. ----
   const statDate = toVal || fromVal || todayStr();
   document.getElementById('rvStatSub').textContent = 'Occupancy as of ' + formatDate(statDate) + (statDate === todayStr() ? ' (today)' : '');
   const statRooms = computeRoomStatuses(statDate);
   const statTotal = statRooms.length;
   const statNightRecords = buildLedgersRecords().filter(n=> n.date === statDate && !isMiscRoomNo(n.roomNo));
   const statBookedRoomKeys = new Set(statNightRecords.map(n=> n.roomNo.trim().toUpperCase()));
-  const statOccupiedRooms = statRooms.filter(rs=> statBookedRoomKeys.has(rs.roomNo));
+  const statOccupiedRooms = statRooms.filter(rs=> statBookedRoomKeys.has(rs.roomNo) || rs.extended);
   const statOccupied = statOccupiedRooms.length;
   const statVacant = statTotal - statOccupied;
   const statPax = statOccupiedRooms.reduce((s,rs)=>{
