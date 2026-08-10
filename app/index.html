@@ -4885,7 +4885,32 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
   </div>
 
+  <!-- Quick summary: the 4 numbers that actually matter at a glance —
+       Service Charge is the total across every invoice regardless of how
+       it was paid (cash or card), never split by payment method. -->
   <div class="card results-card">
+    <div class="results-head"><span class="rh-title">SUMMARY</span></div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-top:10px;">
+      <div>
+        <div class="filters-label">CASH</div>
+        <div class="rh-count" id="csSummaryCash" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
+      </div>
+      <div>
+        <div class="filters-label">SERVICE CHARGE</div>
+        <div class="rh-count" id="csSummaryServiceCharge" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
+      </div>
+      <div>
+        <div class="filters-label">TAX</div>
+        <div class="rh-count" id="csSummaryTax" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
+      </div>
+      <div>
+        <div class="filters-label">TOTAL RECEIVED</div>
+        <div class="rh-count" id="csSummaryReceived" style="font-size:22px; font-weight:700; color:#166534;">0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card results-card" style="margin-top:16px;">
     <table class="rep">
       <thead>
         <tr><th>TOTAL SALE</th><th class="num">SERVICE CHARGE</th><th class="num">RECEIVED</th><th class="num">BALANCE</th></tr>
@@ -18342,6 +18367,15 @@ function renderChargesSummary(){
     body.appendChild(totalTr);
   }
   if (countEl) countEl.textContent = rows.length + ' invoices';
+
+  var sumCashEl = document.getElementById('csSummaryCash');
+  if (sumCashEl) sumCashEl.textContent = totCash.toFixed(2);
+  var sumScEl = document.getElementById('csSummaryServiceCharge');
+  if (sumScEl) sumScEl.textContent = totServiceCharge.toFixed(2);
+  var sumTaxEl = document.getElementById('csSummaryTax');
+  if (sumTaxEl) sumTaxEl.textContent = totTax.toFixed(2);
+  var sumReceivedEl = document.getElementById('csSummaryReceived');
+  if (sumReceivedEl) sumReceivedEl.textContent = totPaid.toFixed(2);
 
   var summaryBody = document.getElementById('csSummaryBody');
   if (summaryBody) {
