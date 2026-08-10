@@ -18613,7 +18613,13 @@ function renderChargesSummary(){
     var bal = r.balance != null ? r.balance : (r.amount - r.paid);
     totSub += r.subtotal || 0; totTax += r.taxTotal || 0; totAmt += r.amount || 0; totPaid += r.paid || 0; totBal += bal;
     totCash += r.paidCash || 0; totAccountTransfer += r.paidAccountTransfer || 0; totCard += r.paidCard || 0;
-    totServiceCharge += (r.subtotal || 0) * 0.10; // estimated — see POS_BEVERAGE_ITEM_NAMES note
+    // Uses the invoice's own persisted tax breakdown when available — a
+    // flat 10%-of-subtotal guess was wrong for any invoice posted with the
+    // Service Charge checkbox off (or a different rate). Older invoices
+    // from before tax_rows existed have nothing to look up, so they still
+    // fall back to the estimate rather than being counted as zero.
+    var scRow = (r.taxRows || []).find(function(t){ return t.code === '23221'; });
+    totServiceCharge += scRow ? scRow.amt : (r.subtotal || 0) * 0.10;
     (r.items || []).forEach(function(it){
       var ext = (it.qty || 0) * (it.price || 0) * (1 - (it.pct || 0) / 100);
       if (posIsBeverageItem(it.name)) totBeverage += ext; else totFood += ext;
