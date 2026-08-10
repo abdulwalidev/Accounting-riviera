@@ -2787,6 +2787,7 @@
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb; --blue-dark:#1d4ed8;
     --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff;
     --green:#15803d; --green-bg:#16a34a; --red:#dc2626; --amber:#d18f1f; --lightblue:#dff1fb; --headbg:#d9edf7;
+    --tblhead-bg:#000; --tblhead-text:#fff;
   }
 #page-pos-invoice * {box-sizing:border-box;}
 #page-pos-invoice body {margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:13px;}
@@ -2830,7 +2831,7 @@
 #page-pos-invoice .static-note .sub {color:var(--muted); font-size:11.5px;}
 #page-pos-invoice /* line items */
   .line-table {width:100%; border-collapse:collapse;}
-#page-pos-invoice .line-table thead th {background:var(--headbg); color:var(--text); font-size:11px; font-weight:700; letter-spacing:.03em; text-align:left; padding:10px 14px;}
+#page-pos-invoice .line-table thead th {background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; font-weight:700; letter-spacing:.03em; text-align:left; padding:10px 14px;}
 #page-pos-invoice .line-table thead th.num {text-align:right;}
 #page-pos-invoice .line-table tbody td {padding:8px 10px; border-bottom:1px solid var(--border);}
 #page-pos-invoice .line-table tbody td.num-col {width:34px; color:var(--muted); text-align:left; padding-left:14px;}
@@ -2838,7 +2839,7 @@
 /* Item name text specifically shrinks so long menu item names actually
    fit inside the input instead of overflowing/getting cut off — the
    table header itself stays the normal 11px like every other header. */
-#page-pos-invoice .pos-item-input {font-size:11.5px;}
+#page-pos-invoice .pos-item-input {font-size:15px; font-weight:600;}
 #page-pos-invoice .qty-cell {display:flex; align-items:center; gap:6px;}
 #page-pos-invoice .qty-cell button {width:30px; height:32px; border:1px solid var(--border-strong); background:#fff; border-radius:6px; font-size:15px; cursor:pointer; color:var(--muted);}
 #page-pos-invoice .qty-cell input {text-align:center; width:50px;}
@@ -2847,6 +2848,7 @@
 #page-pos-invoice .search-wrap .icon {position:absolute; right:8px; color:var(--muted); font-size:13px; cursor:pointer;}
 #page-pos-invoice .search-wrap .icon:hover {color:#c53030;}
 #page-pos-invoice .ac-menu {position:absolute; top:100%; left:0; right:0; margin-top:6px; background:#fff; border:1px solid var(--border-strong); border-radius:8px; box-shadow:0 10px 28px rgba(0,0,0,.18); max-height:320px; overflow-y:auto; z-index:60; display:none; padding:6px;}
+#page-pos-invoice .ac-menu.room-ac-menu {max-height:150px;}
 #page-pos-invoice .ac-menu.show {display:block;}
 #page-pos-invoice .ac-item {padding:10px 12px; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; gap:10px; border-radius:6px;}
 #page-pos-invoice .ac-item:hover, #page-pos-invoice .ac-item.active {background:var(--blue); color:#fff;}
@@ -2874,8 +2876,8 @@
 #page-pos-invoice .tax-card, #page-pos-invoice .totals-card {padding:16px 20px;}
 #page-pos-invoice .section-title {font-size:11px; letter-spacing:.04em; color:var(--muted); font-weight:700; margin-bottom:12px;}
 #page-pos-invoice table.tax-tbl {width:100%; table-layout:fixed; border-collapse:collapse; font-size:13px;}
-#page-pos-invoice table.tax-tbl th {text-align:left; color:var(--muted); font-weight:700; font-size:10.5px; letter-spacing:.03em; text-transform:uppercase; padding:6px 8px 6px 0; border-bottom:1px solid var(--border-strong); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-#page-pos-invoice table.tax-tbl th.num, #page-pos-invoice table.tax-tbl td.num {text-align:right;}
+#page-pos-invoice table.tax-tbl th {text-align:center; background:var(--tblhead-bg); color:var(--tblhead-text); font-weight:700; font-size:10.5px; letter-spacing:.03em; text-transform:uppercase; padding:6px 8px; border-bottom:1px solid var(--border-strong); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+#page-pos-invoice table.tax-tbl td.num {text-align:right;}
 #page-pos-invoice table.tax-tbl td {padding:8px 8px 8px 0; border-bottom:1px solid #f0f1f3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 #page-pos-invoice table.tax-tbl tr.total-row td {font-weight:700; border-bottom:none;}
 #page-pos-invoice .totals-card .row {display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px; color:var(--text);}
@@ -2885,7 +2887,7 @@
 #page-pos-invoice /* payments — plain flex rows, not a table */
   .pay-list {width:100%;}
 #page-pos-invoice .pay-row-head, #page-pos-invoice .pay-row {display:flex; align-items:center;}
-#page-pos-invoice .pay-row-head {background:var(--headbg); color:var(--text); font-size:11px; font-weight:700; letter-spacing:.03em;}
+#page-pos-invoice .pay-row-head {background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; font-weight:700; letter-spacing:.03em;}
 #page-pos-invoice .pay-row-head > div, #page-pos-invoice .pay-row > div {padding:10px 14px; box-sizing:border-box;}
 /* min-width:0 is load-bearing here — flatpickr's alt-input has a natural
    content width of 307.875px (the app-wide default, sized for full-width
@@ -2894,10 +2896,10 @@
    the DATE column silently blows past its 200px basis the moment
    posInitDatePicker() enhances the input, pushing AMOUNT/TYPE/remove out
    of alignment with their own headers — same fix .pay-col-amt already has. */
-#page-pos-invoice .pay-col-date {flex:0 0 200px; min-width:0;}
+#page-pos-invoice .pay-col-date {flex:0 0 180px; min-width:0;}
 #page-pos-invoice .pay-col-date .flatpickr-alt-input {width:100%; max-width:100%;}
-#page-pos-invoice .pay-col-amt {flex:1; min-width:0;}
-#page-pos-invoice .pay-col-type {flex:0 0 220px;}
+#page-pos-invoice .pay-col-amt {flex:0 0 130px; min-width:0;}
+#page-pos-invoice .pay-col-type {flex:0 0 170px;}
 #page-pos-invoice .pay-col-remove {flex:0 0 40px; text-align:center; padding:10px 4px !important;}
 #page-pos-invoice .pay-row-remove-btn {background:none; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:4px; line-height:1;}
 #page-pos-invoice .pay-row-remove-btn:hover {color:#c53030;}
@@ -2958,6 +2960,7 @@
 #page-receipts {
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
     --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff;
+    --tblhead-bg:#000; --tblhead-text:#fff;
   }
 #page-receipts * {box-sizing:border-box;}
 #page-receipts body {margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:13px;}
@@ -2985,7 +2988,7 @@
 #page-receipts .status-badge.posted {background:#dcfce7; color:#15803d;}
 #page-receipts .status-badge.not-posted {background:#fdf1dc; color:var(--amber, #b45309);}
 #page-receipts table.rep {width:100%; border-collapse:collapse; font-size:13px;}
-#page-receipts table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
+#page-receipts table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-receipts table.rep th.num {text-align:right;}
 #page-receipts table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
 #page-receipts table.rep td.num {text-align:right;}
@@ -2997,6 +3000,7 @@
 #page-charges-summary {
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
     --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff;
+    --tblhead-bg:#000; --tblhead-text:#fff;
   }
 #page-charges-summary * {box-sizing:border-box;}
 #page-charges-summary body {margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:13px;}
@@ -3024,7 +3028,7 @@
 #page-charges-summary .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
 #page-charges-summary .results-head .rh-count {font-size:12px; color:var(--blue);}
 #page-charges-summary table.rep {width:100%; border-collapse:collapse; font-size:13px;}
-#page-charges-summary table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 6px; border-bottom:none;}
+#page-charges-summary table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 6px; border-bottom:none;}
 #page-charges-summary table.rep th.num, #page-charges-summary table.rep td.num {text-align:right;}
 #page-charges-summary table.rep td {padding:9px 6px; border-bottom:none;}
 #page-charges-summary table.rep td a {color:var(--blue); text-decoration:none;}
@@ -3067,6 +3071,7 @@
 #page-printed-only {
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
     --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff; --amber:#b45309;
+    --tblhead-bg:#000; --tblhead-text:#fff;
   }
 #page-printed-only * {box-sizing:border-box;}
 #page-printed-only body {margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:13px;}
@@ -3079,7 +3084,7 @@
 #page-printed-only .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
 #page-printed-only .results-head .rh-count {font-size:12px; color:var(--amber);}
 #page-printed-only table.rep {width:100%; border-collapse:collapse; font-size:13px;}
-#page-printed-only table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
+#page-printed-only table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-printed-only table.rep th.num {text-align:right;}
 #page-printed-only table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
 #page-printed-only table.rep td.num {text-align:right;}
@@ -3090,6 +3095,7 @@
 #page-front-office, #page-deleted, #page-qty-summary {
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
     --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff;
+    --tblhead-bg:#000; --tblhead-text:#fff;
   }
 #page-front-office *, #page-deleted *, #page-qty-summary * {box-sizing:border-box;}
 #page-front-office .wrap, #page-deleted .wrap, #page-qty-summary .wrap {max-width:1280px; margin:0 auto;}
@@ -3107,7 +3113,7 @@
 #page-front-office .results-head .rh-title, #page-deleted .results-head .rh-title, #page-qty-summary .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
 #page-front-office .results-head .rh-count, #page-deleted .results-head .rh-count, #page-qty-summary .results-head .rh-count {font-size:12px; color:var(--blue);}
 #page-front-office table.rep, #page-deleted table.rep, #page-qty-summary table.rep {width:100%; border-collapse:collapse; font-size:13px;}
-#page-front-office table.rep th, #page-deleted table.rep th, #page-qty-summary table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
+#page-front-office table.rep th, #page-deleted table.rep th, #page-qty-summary table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-front-office table.rep th.num, #page-deleted table.rep th.num, #page-qty-summary table.rep th.num {text-align:right;}
 #page-front-office table.rep td, #page-deleted table.rep td, #page-qty-summary table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
 #page-front-office table.rep td.num, #page-deleted table.rep td.num, #page-qty-summary table.rep td.num {text-align:right;}
@@ -3121,6 +3127,7 @@
 #page-pending-payments, #page-previous-day {
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
     --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff;
+    --tblhead-bg:#000; --tblhead-text:#fff;
   }
 #page-pending-payments *, #page-previous-day * {box-sizing:border-box;}
 #page-pending-payments .wrap, #page-previous-day .wrap {max-width:1280px; margin:0 auto;}
@@ -3137,7 +3144,7 @@
 #page-pending-payments .results-head .rh-title, #page-previous-day .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
 #page-pending-payments .results-head .rh-count, #page-previous-day .results-head .rh-count {font-size:12px; color:var(--blue);}
 #page-pending-payments table.rep, #page-previous-day table.rep {width:100%; border-collapse:collapse; font-size:13px;}
-#page-pending-payments table.rep th, #page-previous-day table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
+#page-pending-payments table.rep th, #page-previous-day table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-pending-payments table.rep th.num, #page-previous-day table.rep th.num {text-align:right;}
 #page-pending-payments table.rep td, #page-previous-day table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
 #page-pending-payments table.rep td.num, #page-previous-day table.rep td.num {text-align:right;}
@@ -3147,6 +3154,7 @@
 #page-pos-daylock {
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
     --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff;
+    --tblhead-bg:#000; --tblhead-text:#fff;
   }
 #page-pos-daylock * {box-sizing:border-box;}
 #page-pos-daylock .wrap {max-width:1280px; margin:0 auto;}
@@ -3164,7 +3172,7 @@
 #page-pos-daylock .results-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
 #page-pos-daylock .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
 #page-pos-daylock table.rep {width:100%; border-collapse:collapse; font-size:13px;}
-#page-pos-daylock table.rep th {text-align:left; color:var(--muted); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
+#page-pos-daylock table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-pos-daylock table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
 #page-pos-daylock .empty-note {color:var(--muted); font-size:12.5px;}
 
@@ -3206,6 +3214,7 @@
 #page-manage-parts {
     --border:#e2e5ea; --border-strong:#d7dae0; --blue:#2563eb;
     --text:#1f2430; --muted:#6b7280; --bg:#f4f5f7; --panel:#ffffff; --green:#16a34a;
+    --tblhead-bg:#000; --tblhead-text:#fff;
   }
 #page-manage-parts * {box-sizing:border-box;}
 #page-manage-parts .wrap {max-width:1280px; margin:0 auto;}
@@ -3227,7 +3236,7 @@
 #page-manage-parts .btn-primary {background:var(--blue); color:#fff; border:none; border-radius:6px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;}
 #page-manage-parts .table-wrap {overflow-x:auto;}
 #page-manage-parts table.parts {width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap;}
-#page-manage-parts table.parts th {text-align:left; color:var(--muted); font-size:10.5px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong); text-transform:uppercase;}
+#page-manage-parts table.parts th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:10.5px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong); text-transform:uppercase;}
 #page-manage-parts table.parts th.num, #page-manage-parts table.parts td.num {text-align:right;}
 #page-manage-parts table.parts td {padding:7px 10px; border-bottom:1px solid #f0f1f3;}
 #page-manage-parts table.parts input, #page-manage-parts table.parts select {width:100%; min-width:120px; border:1px solid var(--border-strong); border-radius:5px; padding:5px 7px; font-size:12.5px;}
@@ -3264,6 +3273,7 @@ html[data-theme="dark"] #page-manage-parts{
   --text:#e8eaed; --muted:#b8bec8; --bg:#0A0A0A; --panel:#14161a;
   --green:#4ade80; --green-bg:#22c55e; --red:#f87171; --amber:#eab308;
   --lightblue:#16202c; --headbg:#182230;
+  --tblhead-bg:#fff; --tblhead-text:#000;
 }
 /* Hardcoded (non-variable) literals that don't follow from the above */
 html[data-theme="dark"] [id^="page-"] td{ border-bottom-color:#242830 !important; }
@@ -4626,7 +4636,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         <div class="search-wrap" style="flex:1;"><input type="text" id="posCustomer" value="Walkin Customer" autocomplete="off" oninput="posRecalcAll()" style="width:100%;"><div class="ac-menu"></div></div>
       </div>
       <div class="lbl-input" style="flex:0 0 170px;"><label>ORDER NO(QT)</label><div class="with-pick"><input type="text" id="posOrderNo"><button type="button" class="pick-btn" onclick="posAutoNextOrderNo()" title="Fill in previous Order No(QT) + 1">+1</button></div></div>
-      <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><input type="text" id="posRoomNoField" list="posRoomOptions" autocomplete="off" oninput="posRoomNoChanged(this)" onclick="posOpenDatalist(this)"><datalist id="posRoomOptions"></datalist></div>
+      <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><div class="search-wrap" style="flex:1;"><input type="text" id="posRoomNoField" autocomplete="off" oninput="posRoomNoChanged(this)" style="width:100%;"><div class="ac-menu room-ac-menu"></div></div></div>
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>Discription(extra notes)</label><input type="text" id="posLineDescription"></div>
       <div class="lbl-input" style="flex:0 0 170px;"><label>Invoice Date</label><input type="date" id="posInvoiceDate"></div>
     </div>
@@ -4702,8 +4712,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <th>DESCRIPTION (EXTRA NOTES)</th>
           <th style="width:150px;">QTY</th>
           <th style="width:120px;">PRICE</th>
-          <th style="width:56px;">%</th>
-          <th class="num" style="width:110px;">EXTENDED</th>
+          <th style="width:56px; display:none;">%</th>
+          <th class="num" style="width:110px;">TOTAL</th>
           <th style="width:36px;">🗑️</th>
         </tr>
       </thead>
@@ -4720,7 +4730,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
             </div>
           </td>
           <td><input type="text" class="price-input" oninput="posRecalcAll()" onkeydown="posRowFieldEnter(event,this)"></td>
-          <td><input type="text" class="pct-input" oninput="posRecalcAll()" onkeydown="posRowFieldEnter(event,this)"></td>
+          <td style="display:none;"><input type="text" class="pct-input" oninput="posRecalcAll()" onkeydown="posRowFieldEnter(event,this)"></td>
           <td class="ext-col">0.00</td>
           <td class="del-col"><button type="button" class="row-del-btn" onclick="posDeleteLine(this)" title="Delete line">✕</button></td>
         </tr>
@@ -4924,30 +4934,30 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
        it was paid (cash or card), never split by payment method. -->
   <div class="card results-card">
     <div class="results-head"><span class="rh-title">SUMMARY</span></div>
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-top:10px;">
-      <div>
-        <div class="filters-label">CASH</div>
-        <div class="rh-count" id="csSummaryCash" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
+    <div style="display:flex; flex-wrap:nowrap; gap:12px; margin-top:10px; overflow-x:auto;">
+      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
+        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">CASH</div>
+        <div class="rh-count" id="csSummaryCash" style="font-size:22px; font-weight:700; color:#4ade80;">0.00</div>
       </div>
-      <div>
-        <div class="filters-label">ACCOUNT + CARD</div>
-        <div class="rh-count" id="csSummaryAccountCard" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
+      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
+        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">ACCOUNT + CARD</div>
+        <div class="rh-count" id="csSummaryAccountCard" style="font-size:22px; font-weight:700; color:#60a5fa;">0.00</div>
       </div>
-      <div>
-        <div class="filters-label">SERVICE CHARGE</div>
-        <div class="rh-count" id="csSummaryServiceCharge" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
+      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
+        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">SERVICE CHARGE</div>
+        <div class="rh-count" id="csSummaryServiceCharge" style="font-size:22px; font-weight:700; color:#fff;">0.00</div>
       </div>
-      <div>
-        <div class="filters-label">GST TAX</div>
-        <div class="rh-count" id="csSummaryTax" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
+      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
+        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">GST TAX</div>
+        <div class="rh-count" id="csSummaryTax" style="font-size:22px; font-weight:700; color:#fff;">0.00</div>
       </div>
-      <div>
-        <div class="filters-label">TOTAL RECEIVED</div>
-        <div class="rh-count" id="csSummaryReceived" style="font-size:22px; font-weight:700; color:#166534;">0.00</div>
+      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
+        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">TOTAL RECEIVED</div>
+        <div class="rh-count" id="csSummaryReceived" style="font-size:22px; font-weight:700; color:#fff;">0.00</div>
       </div>
-      <div>
-        <div class="filters-label">RECEIVED − SERVICE CHARGE</div>
-        <div class="rh-count" id="csSummaryReceivedAfterService" style="font-size:22px; font-weight:700; color:#166534;">0.00</div>
+      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
+        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">RECEIVED − SERVICE CHARGE</div>
+        <div class="rh-count" id="csSummaryReceivedAfterService" style="font-size:22px; font-weight:700; color:#fff;">0.00</div>
       </div>
     </div>
   </div>
@@ -4955,7 +4965,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card results-card" style="margin-top:16px;">
     <table class="rep">
       <thead>
-        <tr><th>FOOD SALE</th><th class="num">BEVERAGE SALE</th></tr>
+        <tr><th>FOOD SALE</th><th class="num">BEVERAGE SALE</th><th class="num">TOTAL</th></tr>
       </thead>
       <tbody id="csFoodBevBody"></tbody>
     </table>
@@ -5021,6 +5031,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div style="display:flex; gap:10px; margin-bottom:14px;">
       <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">FOOD SALE</div><div id="qsFoodSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
       <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">BEVERAGE SALE</div><div id="qsBevSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
+      <div style="flex:1; background:#f4f5f7; border-radius:6px; padding:10px 14px;"><div style="font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;">TOTAL SALE</div><div id="qsTotalSale" style="font-size:17px; font-weight:700; margin-top:2px;">0.00</div></div>
     </div>
     <div class="results-head" style="margin-top:6px;"><span class="rh-title">BEVERAGES</span></div>
     <table class="rep">
@@ -16386,7 +16397,7 @@ addPayRow();
 // -> posBootApp() immediately, before the rest of this script has even
 // executed. Since `var` only hoists the NAME (not the assigned value),
 // anything still declared further down was read as `undefined` the very
-// first time a signed-in user refreshed the page: posBuildRoomOptions()
+// first time a signed-in user refreshed the page: posSetupRoomAutocomplete()
 // crashed outright (POS_ROOMS.map on undefined), and posMutationStamp/
 // posInvoices being undefined meant the async cloud pull's own staleness
 // check discarded its results — either way, nothing ever synced after a
@@ -16840,6 +16851,7 @@ function posShowApp(id, btn){
   if (id === 'page-charges-summary') renderChargesSummary();
   if (id === 'page-qty-summary') renderQuantitySummary();
   if (id === 'page-pos-daylock') posRenderDayLockPage();
+  if (id === 'page-pos-invoice') window.scrollTo(0, 0);
 }
 
 function mpFilterCat(grp, btn){
@@ -17138,17 +17150,6 @@ function posAutoNextOrderNo(){
   orderInput.value = String(prev + 1);
 }
 
-// Browsers only pop a <datalist>'s suggestions on click when the field is
-// empty — with a value already in it (e.g. "Walkin Customer" or an
-// already-picked room) clicking just places the cursor. Briefly clearing
-// it forces the list open, then the original text is restored right after.
-// Same click-opens-the-list behavior as the hotel's own room selector.
-function posOpenDatalist(input){
-  var val = input.value;
-  input.value = '';
-  input.value = val;
-}
-
 function posSetupAutocomplete(input){
   var wrap = input.closest('.search-wrap');
   var menu = wrap.querySelector('.ac-menu');
@@ -17298,16 +17299,16 @@ function posSetupCustomerAutocomplete(){
     menu.classList.add('show');
   }
 
-  function openMenu(){
-    var q = input.value.trim().toLowerCase();
+  function openMenu(forceAll){
     var all = getNames();
-    var matches = q ? all.filter(function(n){ return n.toLowerCase().indexOf(q) !== -1; }) : all;
+    var q = input.value.trim().toLowerCase();
+    var matches = (forceAll || !q) ? all : all.filter(function(n){ return n.toLowerCase().indexOf(q) !== -1; });
     render(matches);
   }
 
-  input.addEventListener('focus', openMenu);
-  input.addEventListener('click', openMenu);
-  input.addEventListener('input', openMenu);
+  input.addEventListener('focus', function(){ openMenu(true); });
+  input.addEventListener('click', function(){ openMenu(true); });
+  input.addEventListener('input', function(){ openMenu(false); });
   input.addEventListener('blur', function(){ setTimeout(close, 120); });
 }
 
@@ -17341,12 +17342,63 @@ function posValidateItemInput(input){
 
 // POS_ROOMS now declared earlier, right before init() — see the comment there.
 
-function posBuildRoomOptions(){
-  // <datalist> has no <optgroup> support (unlike <select>) — flat list,
-  // grouping is lost, but the field is typeable now so that matters less.
-  var list = document.getElementById('posRoomOptions');
-  if (!list) return;
-  list.innerHTML = POS_ROOMS.map(function(r){ return '<option value="' + posEscapeHtml(r.no) + '">'; }).join('');
+// Same custom dropdown as posSetupCustomerAutocomplete — click/focus always
+// shows the full room list (not filtered down to just the room already
+// typed in), and the .room-ac-menu height cap keeps it to ~4 rows visible
+// with the rest reachable by scrolling, since POS_ROOMS runs into the
+// dozens.
+function posSetupRoomAutocomplete(){
+  var input = document.getElementById('posRoomNoField');
+  if (!input) return;
+  var wrap = input.closest('.search-wrap');
+  var menu = wrap ? wrap.querySelector('.ac-menu') : null;
+  if (!menu) return;
+
+  function close(){
+    menu.classList.remove('show');
+    menu.innerHTML = '';
+  }
+
+  function render(matches){
+    menu.innerHTML = '';
+    if (!matches.length) {
+      var empty = document.createElement('div');
+      empty.className = 'ac-empty';
+      empty.textContent = 'No matching rooms.';
+      menu.appendChild(empty);
+    } else {
+      matches.forEach(function(r){
+        var row = document.createElement('div');
+        row.className = 'ac-item';
+        var label = document.createElement('span');
+        label.textContent = r.no;
+        var floor = document.createElement('span');
+        floor.className = 'ac-price';
+        floor.textContent = r.floor;
+        row.appendChild(label);
+        row.appendChild(floor);
+        row.addEventListener('mousedown', function(e){
+          e.preventDefault();
+          input.value = r.no;
+          close();
+          posRoomNoChanged(input);
+        });
+        menu.appendChild(row);
+      });
+    }
+    menu.classList.add('show');
+  }
+
+  function openMenu(forceAll){
+    var q = input.value.trim().toLowerCase();
+    var matches = (forceAll || !q) ? POS_ROOMS : POS_ROOMS.filter(function(r){ return r.no.toLowerCase().indexOf(q) !== -1; });
+    render(matches);
+  }
+
+  input.addEventListener('focus', function(){ openMenu(true); });
+  input.addEventListener('click', function(){ openMenu(true); });
+  input.addEventListener('input', function(){ openMenu(false); });
+  input.addEventListener('blur', function(){ setTimeout(close, 120); });
 }
 
 function posRoomNoChanged(input){
@@ -17560,7 +17612,7 @@ function posRecalcAll(){
   var postBtn = document.getElementById('posPostBtn');
   if (postBtn) {
     var custEl = document.getElementById('posCustomer');
-    postBtn.textContent = /guest/i.test((custEl && custEl.value) || '') ? 'Post Guest' : 'Post';
+    postBtn.textContent = posEditingRecord ? 'Save' : (/guest/i.test((custEl && custEl.value) || '') ? 'Post Guest' : 'Post');
   }
 
   // Only autosave the "recover my unposted invoice after a refresh" draft
@@ -18400,6 +18452,10 @@ function posEnterEditMode(){
   if (invoicePage) invoicePage.classList.remove('pos-view-only');
   var editRecordBtn = document.getElementById('posEditRecordBtn');
   if (editRecordBtn) editRecordBtn.style.display = 'none';
+  var printRecordBtn = document.getElementById('posPrintRecordBtn');
+  if (printRecordBtn) printRecordBtn.style.display = 'none';
+  var newReceiptBtn = document.getElementById('posNewReceiptBtn');
+  if (newReceiptBtn) newReceiptBtn.style.display = '';
 
   var editBadge = document.getElementById('posEditingBadge');
   var editBadgeLabel = document.getElementById('posEditingBadgeLabel');
@@ -18409,6 +18465,7 @@ function posEnterEditMode(){
   } else if (editBadge) {
     editBadge.style.display = 'none';
   }
+  posRecalcAll();
 }
 
 // Type "edit" to confirm — lives inside the normal Post/Print confirm
@@ -18676,7 +18733,7 @@ function renderChargesSummary(){
 
   var foodBevBody = document.getElementById('csFoodBevBody');
   if (foodBevBody) {
-    foodBevBody.innerHTML = '<tr><td>' + totFood.toFixed(2) + '</td><td class="num">' + totBeverage.toFixed(2) + '</td></tr>';
+    foodBevBody.innerHTML = '<tr><td>' + totFood.toFixed(2) + '</td><td class="num">' + totBeverage.toFixed(2) + '</td><td class="num">' + (totFood + totBeverage).toFixed(2) + '</td></tr>';
   }
 }
 
@@ -18743,8 +18800,10 @@ function renderQuantitySummary(){
   if (countEl) countEl.textContent = (bevList.length + foodList.length) + ' items';
   var foodEl = document.getElementById('qsFoodSale');
   var bevEl = document.getElementById('qsBevSale');
+  var totalEl = document.getElementById('qsTotalSale');
   if (foodEl) foodEl.textContent = totFood.toFixed(2);
   if (bevEl) bevEl.textContent = totBev.toFixed(2);
+  if (totalEl) totalEl.textContent = (totFood + totBev).toFixed(2);
 }
 
 
@@ -19590,7 +19649,7 @@ function posBootApp(){
   try { posApplyBuiltinMenuEdits(); } catch(e) { console.error('[POS] posApplyBuiltinMenuEdits failed', e); }
   try { posRenderExtrasMenu(); } catch(e) { console.error('[POS] posRenderExtrasMenu failed', e); }
   try { posRefreshMenuStats(); } catch(e) { console.error('[POS] posRefreshMenuStats failed', e); }
-  posBuildRoomOptions();
+  try { posSetupRoomAutocomplete(); } catch(e) { console.error('[POS] posSetupRoomAutocomplete failed', e); }
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
   if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
   var posInvoiceDateEl = document.getElementById('posInvoiceDate');
