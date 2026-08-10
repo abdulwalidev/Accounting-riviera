@@ -4512,7 +4512,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div id="posPostBackdrop" onclick="posCancelPost()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
 <div id="posPostModal" onkeydown="if(event.key==='Enter' && !document.getElementById('posPostConfirmBtn').disabled){ event.preventDefault(); posConfirmPost(); } if(event.key==='Escape'){ event.preventDefault(); posCancelPost(); }" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
-  <div style="font-weight:700; font-size:14.5px; margin-bottom:12px; color:#1f2430;" id="posPostTitle">Post this invoice?</div>
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+    <div style="font-weight:700; font-size:14.5px; color:#1f2430;" id="posPostTitle">Post this invoice?</div>
+    <span id="posPostCautionBadge" style="display:none; font-weight:800; font-size:16px; color:#dc2626; white-space:nowrap;"></span>
+  </div>
   <div id="posPostDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:16px; background:#f7f8fa; border-radius:6px; padding:10px 12px;"></div>
   <div id="posPostEditConfirmWrap" style="display:none;">
     <div style="font-size:12.5px; color:#1f2430; margin-bottom:6px;">Type <b>edit</b> below to confirm updating this existing invoice:</div>
@@ -18750,16 +18753,32 @@ function posRequestPost(mode){
   var cautionLines = [];
   if (mode === 'post') cautionLines.push('You haven\'t printed this — are you sure you want to post it?');
   if (!orderNoVal) cautionLines.push('No Order No(QT) entered — Confirm to proceed anyway.');
+  if (orderNoVal) {
+    var qtDupe = posInvoices.some(function(r){
+      return (!posEditingRecord || r.id !== posEditingRecord.id) && (r.orderNo || '').trim().toLowerCase() === orderNoVal.toLowerCase();
+    });
+    if (qtDupe) cautionLines.push('Order No(QT) "' + orderNoVal + '" is already used on another invoice — allowed, but flagged.');
+  }
   tbody.querySelectorAll('tr').forEach(function(row){
     var nameInput = row.querySelector('.pos-item-input');
     var name = nameInput ? nameInput.value.trim() : '';
     if (name && !posIsMenuItemName(name)) cautionLines.push('"' + name + '" isn\'t a recognized menu item — flagged, but you can still post it.');
   });
 
+  var cautionBadge = document.getElementById('posPostCautionBadge');
+  if (cautionBadge) {
+    if (cautionLines.length) {
+      cautionBadge.textContent = '⚠️ ' + cautionLines.length + ' caution' + (cautionLines.length === 1 ? '' : 's') + ' found';
+      cautionBadge.style.display = '';
+    } else {
+      cautionBadge.textContent = '';
+      cautionBadge.style.display = 'none';
+    }
+  }
+
   var detailsEl = document.getElementById('posPostDetails');
   if (detailsEl) {
     detailsEl.innerHTML =
-      (cautionLines.length ? '<div style="font-weight:700; color:#dc2626; margin-bottom:6px;">⚠️ ' + cautionLines.length + ' caution' + (cautionLines.length === 1 ? '' : 's') + ' found</div>' : '') +
       cautionLines.map(function(c){ return '<b style="color:#dc2626;">' + posEscapeHtml(c) + '</b><br>'; }).join('') +
       'Customer: <b>' + posEscapeHtml(customer) + '</b><br>' +
       'Room: ' + posEscapeHtml(roomNoVal) + '<br>' +
