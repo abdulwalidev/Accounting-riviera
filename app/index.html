@@ -13579,7 +13579,7 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
           <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
-          <td style="font-weight:700; color:${r.extended ? 'var(--amber)' : (r.due > 0 ? 'var(--danger)' : 'inherit')};">${r.extended ? 'NOT SET' : (r.rent === 0 ? 'Guest' : r.due.toLocaleString())}</td>
+          <td style="font-weight:700; color:${r.extended ? 'var(--amber)' : (r.due > 0 ? 'var(--danger)' : 'inherit')};">${r.extended ? 'NOT SET' : r.due.toLocaleString()}</td>
           ${ssCell(r)}
         </tr>`).join('')}
       </tbody>
