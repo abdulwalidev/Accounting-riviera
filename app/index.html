@@ -18522,7 +18522,15 @@ var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sa
   '#posReceiptPrintArea table.rc-totals tr.rc-final td{font-weight:700;} ' +
   '#posReceiptPrintArea table.rc-totals tr.rc-grand td{font-size:15px; font-weight:700; padding-top:1.5mm;} ' +
   '#posReceiptPrintArea .rc-thanks{text-align:center; font-size:13px; font-weight:700; margin-top:4mm; letter-spacing:.03em;} ' +
-  '#posReceiptPrintArea .rc-foot{text-align:center; font-size:9.5px; color:#333; margin-top:1mm;}';
+  '#posReceiptPrintArea .rc-foot{text-align:center; font-size:9.5px; color:#333; margin-top:1mm;} ' +
+  /* The app-wide @media print reset (see the plain "th, td{border:1px
+     solid #000 !important}" rule that every OTHER printed report relies
+     on) forces a grid of table borders back onto every th/td on the
+     page, including these — that's the actual reason borders kept
+     showing up here no matter what the rules above said. Only an
+     !important override scoped to this receipt beats it. */
+  '#posReceiptPrintArea table th, #posReceiptPrintArea table td{border:none !important; background:transparent !important;} ' +
+  '#posReceiptPrintArea table{border-collapse:collapse !important;}';
 
 // Printing renders straight into #posReceiptPrintArea (a hidden div at the
 // end of <body>) and calls window.print() on the current page — no popup,
