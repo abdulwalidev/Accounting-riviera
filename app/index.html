@@ -2943,6 +2943,7 @@
 #page-pos-invoice table.simple th.num, #page-pos-invoice table.simple td.num {text-align:right;}
 #page-pos-invoice table.simple td {padding:8px 10px; border-bottom:1px solid #f0f1f3;}
 #page-pos-invoice table.simple td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
+#page-charges-summary table.rep td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
 #page-pos-invoice table.simple td a {color:var(--blue); text-decoration:none;}
 #page-pos-invoice .neg {color:var(--muted);}
 
@@ -4984,7 +4985,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <table class="rep">
       <thead>
         <tr>
-          <th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
+          <th style="width:36px;">#</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th>
           <th class="num">SUBTOTAL</th><th class="num">TAX</th><th class="num">TOTAL</th>
           <th class="num">PAID</th><th class="num">BALANCE</th>
         </tr>
@@ -5000,7 +5001,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th></tr>
       </thead>
       <tbody id="csPendingBody"></tbody>
     </table>
@@ -5013,7 +5014,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th></tr>
       </thead>
       <tbody id="csGuestBody"></tbody>
     </table>
@@ -18582,12 +18583,15 @@ function renderChargesSummary(){
 
   if (guestBody) {
     guestBody.innerHTML = '';
-    guestRows.forEach(function(r){
+    guestRows.forEach(function(r, i){
+      var itemsText = (r.items || []).map(function(it){ return it.name; }).filter(Boolean).join(', ');
       var gtr = document.createElement('tr');
-      gtr.innerHTML = '<td>' + posEscapeHtml(r.no) + '</td>' +
+      gtr.innerHTML = '<td>' + (i + 1) + '</td>' +
+        '<td>' + posEscapeHtml(r.no) + '</td>' +
         '<td>' + posEscapeHtml(r.date) + '</td>' +
         '<td>' + posEscapeHtml(r.room) + '</td>' +
-        '<td>' + posEscapeHtml(r.customer) + '</td>';
+        '<td>' + posEscapeHtml(r.customer) + '</td>' +
+        '<td class="fo-items-col" title="' + posEscapeHtml(itemsText) + '">' + posEscapeHtml(itemsText) + '</td>';
       guestBody.appendChild(gtr);
     });
   }
@@ -18597,7 +18601,7 @@ function renderChargesSummary(){
   var totSub = 0, totTax = 0, totAmt = 0, totPaid = 0, totBal = 0;
   var totCash = 0, totAccountTransfer = 0, totCard = 0;
   var totFood = 0, totBeverage = 0, totServiceCharge = 0;
-  rows.forEach(function(r){
+  rows.forEach(function(r, i){
     var bal = r.balance != null ? r.balance : (r.amount - r.paid);
     totSub += r.subtotal || 0; totTax += r.taxTotal || 0; totAmt += r.amount || 0; totPaid += r.paid || 0; totBal += bal;
     totCash += r.paidCash || 0; totAccountTransfer += r.paidAccountTransfer || 0; totCard += r.paidCard || 0;
@@ -18606,11 +18610,14 @@ function renderChargesSummary(){
       var ext = (it.qty || 0) * (it.price || 0) * (1 - (it.pct || 0) / 100);
       if (posIsBeverageItem(it.name)) totBeverage += ext; else totFood += ext;
     });
+    var itemsText = (r.items || []).map(function(it){ return it.name; }).filter(Boolean).join(', ');
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + posEscapeHtml(r.no) + '</td>' +
+    tr.innerHTML = '<td>' + (i + 1) + '</td>' +
+      '<td>' + posEscapeHtml(r.no) + '</td>' +
       '<td>' + posEscapeHtml(r.date) + '</td>' +
       '<td>' + posEscapeHtml(r.room) + '</td>' +
       '<td>' + posEscapeHtml(r.customer) + '</td>' +
+      '<td class="fo-items-col" title="' + posEscapeHtml(itemsText) + '">' + posEscapeHtml(itemsText) + '</td>' +
       '<td class="num">' + (r.subtotal || 0).toFixed(2) + '</td>' +
       '<td class="num">' + (r.taxTotal || 0).toFixed(2) + '</td>' +
       '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
@@ -18621,7 +18628,7 @@ function renderChargesSummary(){
   if (rows.length) {
     var totalTr = document.createElement('tr');
     totalTr.style.fontWeight = '700';
-    totalTr.innerHTML = '<td colspan="4">Total</td>' +
+    totalTr.innerHTML = '<td colspan="6">Total</td>' +
       '<td class="num">' + totSub.toFixed(2) + '</td>' +
       '<td class="num">' + totTax.toFixed(2) + '</td>' +
       '<td class="num">' + totAmt.toFixed(2) + '</td>' +
@@ -18679,10 +18686,11 @@ function renderChargesSummary(){
       var balB = b.balance != null ? b.balance : (b.amount - b.paid);
       return balB - balA;
     });
-    pendingRows.forEach(function(r){
+    pendingRows.forEach(function(r, i){
       var bal = r.balance != null ? r.balance : (r.amount - r.paid);
       var ptr = document.createElement('tr');
-      ptr.innerHTML = '<td>' + posEscapeHtml(r.no) + '</td>' +
+      ptr.innerHTML = '<td>' + (i + 1) + '</td>' +
+        '<td>' + posEscapeHtml(r.no) + '</td>' +
         '<td>' + posEscapeHtml(r.date) + '</td>' +
         '<td>' + posEscapeHtml(r.room) + '</td>' +
         '<td>' + posEscapeHtml(r.customer) + '</td>' +
