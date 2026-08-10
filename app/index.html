@@ -2925,6 +2925,7 @@
 #page-pos-invoice table.simple th {text-align:left; padding:8px 10px; font-weight:700; color:var(--text);}
 #page-pos-invoice table.simple th.num, #page-pos-invoice table.simple td.num {text-align:right;}
 #page-pos-invoice table.simple td {padding:8px 10px; border-bottom:1px solid #f0f1f3;}
+#page-pos-invoice table.simple td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
 #page-pos-invoice table.simple td a {color:var(--blue); text-decoration:none;}
 #page-pos-invoice .neg {color:var(--muted);}
 
@@ -4792,7 +4793,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card">
     <div class="lc-title">Recent Invoices</div>
     <table class="simple">
-      <thead><tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
       <tbody id="recentInvoicesBody"></tbody>
     </table>
   </div>
@@ -4800,7 +4801,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card" id="guestInvoicesCard" style="display:none; margin-top:14px;">
     <div class="lc-title">Guests (Non-Paying)</div>
     <table class="simple">
-      <thead><tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
       <tbody id="guestInvoicesBody"></tbody>
     </table>
   </div>
@@ -16578,7 +16579,7 @@ function posRenderRecentInvoices(){
   var hasGuest = false;
   posInvoices.forEach(function(record){
     if (record.deleted || !record.posted) return; // print-only drafts don't belong in Recent Invoices — only actually posted ones
-    var row = posBuildInvoiceRow(record, false, true);
+    var row = posBuildInvoiceRow(record, false, true, true);
     if (/guest/i.test(record.customer || '') && guestBody) { guestBody.appendChild(row); hasGuest = true; }
     else recentBody.appendChild(row);
   });
@@ -17449,16 +17450,18 @@ async function posNextInvoiceNo(){
   }catch(e){ console.error('POS invoice numbering failed', e); return null; }
 }
 
-function posBuildInvoiceRow(record, showStatus, showOrderNo){
+function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems){
   var tr = document.createElement('tr');
   tr.dataset.invoiceId = record.id;
   tr.className = 'fo-row';
   tr.title = 'Click to open ' + record.no + ' in Point of Sale';
+  var itemsText = (record.items || []).map(function(it){ return it.name; }).filter(Boolean).join(', ');
   tr.innerHTML = '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>' +
     (showOrderNo ? '<td>' + posEscapeHtml(record.orderNo || '') + '</td>' : '') +
     '<td>' + posEscapeHtml(record.date) + '</td>' +
     '<td>' + posEscapeHtml(record.room) + '</td>' +
     '<td>' + posEscapeHtml(record.customer) + '</td>' +
+    (showItems ? '<td class="fo-items-col" title="' + posEscapeHtml(itemsText) + '">' + posEscapeHtml(itemsText) + '</td>' : '') +
     '<td class="num">' + record.amount.toFixed(2) + '</td>' +
     '<td class="num">' + record.paid.toFixed(2) + '</td>' +
     (showStatus ? '<td><span class="status-badge ' + (record.posted ? 'posted' : 'not-posted') + '">' + (record.posted ? 'Posted' : 'Not Posted') + '</span></td>' : '');
