@@ -14975,7 +14975,13 @@ function updateCloudIndicator(){
   updateHeaderDate();
   const el = document.getElementById('cloudStatus');
   if(el){
-    const pending = pendingPushIds.size + pendingSoftDeletes.length + pendingEditLogs.length;
+    // Restaurant/POS writes queue in their own posPending*/posPendingWriteCount
+    // structures (kept fully separate from the hotel's pendingPushIds etc.,
+    // same as everywhere else in the pos_* isolation) — folded in here so
+    // this one shared header indicator reflects BOTH sides' unsaved work,
+    // not just the hotel's.
+    const pending = pendingPushIds.size + pendingSoftDeletes.length + pendingEditLogs.length +
+      (typeof posPendingWriteCount === 'function' ? posPendingWriteCount() : 0);
     if(!sb){
       el.textContent = '⚠ Cloud database not configured';
       el.style.color = 'var(--danger)';
@@ -15853,7 +15859,17 @@ function resumeAppFromIdle(){
   const wasPaused = appPaused;
   appPaused = false;
   document.getElementById('idlePauseOverlay').classList.remove('active');
-  if(wasPaused && appStarted){ pushPendingNow(); pullFreshFromCloud(); }
+  if(wasPaused && appStarted){
+    pushPendingNow();
+    pullFreshFromCloud();
+    fetchFrontOfficeOnly();
+    // Restaurant/POS gets the exact same "resumed from idle/offline" sync
+    // hotel entries already had — without this, a restaurant device coming
+    // back from sleep/background only saw fresh data on the next 5-minute
+    // safety-net poll instead of instantly like the hotel side does.
+    if(typeof posFlushPendingPosWrites === 'function') posFlushPendingPosWrites();
+    if(typeof posAppBooted !== 'undefined' && posAppBooted && typeof posPullFromCloud === 'function') posPullFromCloud();
+  }
 }
 
 // Broad activity only resets the countdown — never dismisses an already-
@@ -15894,6 +15910,16 @@ if(sb && typeof sb.channel === 'function'){
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_attachments' }, ()=> fetchPaymentAttachmentsOnly())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_invoices' }, ()=> { fetchFrontOfficeOnly(); if(typeof posAppBooted !== 'undefined' && posAppBooted) posPullFromCloud(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_invoice_items' }, ()=> { fetchFrontOfficeOnly(); if(typeof posAppBooted !== 'undefined' && posAppBooted) posPullFromCloud(); })
+      // Same instant cross-device sync locked_days already gets — without
+      // this, a Day Lock/unlock made on one device only reached other open
+      // tabs on the next 5-minute poll instead of immediately.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_locked_days' }, ()=> {
+        if (typeof posAppBooted === 'undefined' || !posAppBooted || typeof posFetchLockedDays !== 'function') return;
+        posFetchLockedDays().then(function(){
+          if (typeof posRefreshAfterLockChange === 'function') posRefreshAfterLockChange();
+          if (typeof posRenderDayLockPage === 'function') posRenderDayLockPage();
+        });
+      })
       .subscribe();
   }catch(e){ console.error('Realtime unavailable — the periodic poll covers it', e); }
 }
@@ -16470,8 +16496,15 @@ window.addEventListener('online', posFlushPendingPosWrites);
 // pendingPushIds (see flushPendingKeepalive/beforeunload above): a
 // best-effort keepalive fetch straight to PostgREST (outlives the page
 // unload) plus a native "leave site?" prompt so a refresh is never silent.
+// Guarded reads, not just a plain sum: the hotel's own init() can reach
+// updateCloudIndicator() synchronously on a page load with an existing
+// session, BEFORE this point in the script — where these Maps/array are
+// declared — has even run yet. Same boot-order hazard as POS_EXTRA_ITEMS
+// earlier this session; reading them undefined here must not throw.
 function posPendingWriteCount(){
-  return posPendingInvoiceSaves.size + posPendingInvoiceUpdates.size + posPendingLockActions.length;
+  return (posPendingInvoiceSaves ? posPendingInvoiceSaves.size : 0) +
+    (posPendingInvoiceUpdates ? posPendingInvoiceUpdates.size : 0) +
+    (posPendingLockActions ? posPendingLockActions.length : 0);
 }
 function posFlushPendingKeepalive(){
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
