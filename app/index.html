@@ -8015,12 +8015,7 @@ function msUntilNextKarachiMidnight(){
 
 function scheduleKarachiMidnightRollover(){
   setTimeout(()=>{
-    // The reschedule must always happen even if the handler throws —
-    // otherwise one bad tick (a missing field, a torn-down picker) kills
-    // every future midnight rollover for the rest of the session, with
-    // nothing but the pullFreshFromCloud() day-change check left as a backstop.
-    try{ handleKarachiMidnightRollover(); }
-    catch(e){ console.error('Midnight rollover failed', e); }
+    handleKarachiMidnightRollover();
     scheduleKarachiMidnightRollover();
   }, msUntilNextKarachiMidnight() + 1000);
 }
@@ -15887,18 +15882,6 @@ async function pullFreshFromCloud(){
       const firstLoad = !initialLoadDone;
       initialLoadDone = true;
       lastSyncAt = new Date();
-      // The hash-skip below only guards against re-rendering when the
-      // underlying rows haven't changed — but a date-dependent view (the
-      // Dashboard's Arrivals tile, Arrival Due, etc.) can go stale purely
-      // from the calendar day rolling over with NO row changes at all (e.g.
-      // a quiet overnight with no new bookings). handleKarachiMidnightRollover()
-      // already does the correct per-view refresh for a day change; this
-      // just makes sure it also runs here — on every successful pull,
-      // including the idle-resume and 5-minute safety-net polls — instead
-      // of relying solely on its own precise midnight setTimeout firing
-      // while the Dashboard happens to be the active view at that exact
-      // moment.
-      if(todayStr() !== lastKnownToday) handleKarachiMidnightRollover();
       // reads working doesn't mean writes landed — while saves are still
       // queued, the warning stays up until the push itself succeeds
       if(pendingPushIds.size === 0 && pendingSoftDeletes.length === 0 && pendingEditLogs.length === 0) syncProblem = null;
@@ -17744,6 +17727,22 @@ function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum){
   return tr;
 }
 
+// Same click-to-open behavior as posBuildInvoiceRow, for the handful of
+// tables (Charges Summary's three, Previous Day) that build their own rows
+// straight from a template string instead of going through that shared
+// builder — those columns don't match its fixed layout, but every row
+// should still open in Point of Sale on click, same as everywhere else
+// (Recent Invoices, Receipts, Front Office Pending, etc.) and the same as
+// the hotel side's own record tables.
+function posMakeRowClickable(tr, record){
+  tr.style.cursor = 'pointer';
+  tr.title = 'Click to open ' + record.no + ' in Point of Sale';
+  tr.addEventListener('click', function(e){
+    if (e.target.closest('button, a')) return;
+    posOpenRecordInForm(record);
+  });
+}
+
 // showFo: the →FO/Undo toggle only ever shows on Recent Invoices (the
 // row right after posting) — everywhere else (Receipts, Printed-Only,
 // Front Office Pending) just shows delete/collected status.
@@ -18609,6 +18608,7 @@ function renderChargesSummary(){
         '<td>' + posEscapeHtml(r.room) + '</td>' +
         '<td>' + posEscapeHtml(r.customer) + '</td>' +
         '<td class="fo-items-col" title="' + posEscapeHtml(itemsText) + '">' + posEscapeHtml(itemsText) + '</td>';
+      posMakeRowClickable(gtr, r);
       guestBody.appendChild(gtr);
     });
   }
