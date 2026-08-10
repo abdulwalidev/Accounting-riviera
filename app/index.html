@@ -4710,7 +4710,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <tbody>
         <tr>
           <td class="num-col">1.</td>
-          <td><div class="search-wrap"><input type="text" class="pos-item-input" autocomplete="off" oninput="posRecalcAll()"><span class="icon" onclick="posClearItemInput(this)" title="Clear">✕</span><div class="ac-menu"></div></div></td>
+          <td><div class="search-wrap"><input type="text" class="pos-item-input" autocomplete="off" oninput="posOnItemNameInput(this)"><span class="icon" onclick="posClearItemInput(this)" title="Clear">✕</span><div class="ac-menu"></div></div></td>
           <td><input type="text" oninput="posRecalcAll()" onkeydown="posRowFieldEnter(event,this)"></td>
           <td>
             <div class="qty-cell">
@@ -17434,6 +17434,17 @@ function posSelectMenuItem(name, price){
   var qtyInput = lastRow ? lastRow.querySelector('.qty-cell input') : null;
   if (qtyInput && (!qtyInput.value || parseFloat(qtyInput.value) === 0)) qtyInput.value = '1';
   posCloseMenuPanel();
+  posRecalcAll();
+}
+
+// Typing a custom (non-menu) item name never got the same qty=1 default
+// posSelectMenuItem already gives a picked menu item — qty just silently
+// stayed blank, so a correctly-typed price still computed EXTENDED as
+// 0.00 (qty 0 × price = 0), looking exactly like the price had vanished.
+function posOnItemNameInput(input){
+  var row = input.closest('tr');
+  var qtyInput = row ? row.querySelector('.qty-cell input') : null;
+  if (qtyInput && input.value.trim() && (!qtyInput.value || parseFloat(qtyInput.value) === 0)) qtyInput.value = '1';
   posRecalcAll();
 }
 
