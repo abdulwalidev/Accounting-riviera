@@ -4930,6 +4930,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         <div class="rh-count" id="csSummaryCash" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
       </div>
       <div>
+        <div class="filters-label">ACCOUNT + CARD</div>
+        <div class="rh-count" id="csSummaryAccountCard" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
+      </div>
+      <div>
         <div class="filters-label">SERVICE CHARGE</div>
         <div class="rh-count" id="csSummaryServiceCharge" style="font-size:22px; font-weight:700; color:var(--text);">0.00</div>
       </div>
@@ -18659,6 +18663,8 @@ function renderChargesSummary(){
 
   var sumCashEl = document.getElementById('csSummaryCash');
   if (sumCashEl) sumCashEl.textContent = totCash.toFixed(2);
+  var sumAccountCardEl = document.getElementById('csSummaryAccountCard');
+  if (sumAccountCardEl) sumAccountCardEl.textContent = (totAccountTransfer + totCard).toFixed(2);
   var sumScEl = document.getElementById('csSummaryServiceCharge');
   if (sumScEl) sumScEl.textContent = totServiceCharge.toFixed(2);
   var sumTaxEl = document.getElementById('csSummaryTax');
