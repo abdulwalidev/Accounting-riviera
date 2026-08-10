@@ -2897,7 +2897,7 @@
    of alignment with their own headers — same fix .pay-col-amt already has. */
 #page-pos-invoice .pay-col-date {flex:0 0 180px; min-width:0;}
 #page-pos-invoice .pay-col-date .flatpickr-alt-input {width:100% !important; max-width:100% !important; min-width:0 !important; padding-left:8px !important; padding-right:8px !important; font-size:12px;}
-#page-pos-invoice .pay-col-amt {flex:0 0 130px; min-width:0;}
+#page-pos-invoice .pay-col-amt {flex:0 0 160px; min-width:0; padding-left:10px !important; padding-right:10px !important;}
 #page-pos-invoice .pay-col-type {flex:0 0 170px;}
 #page-pos-invoice .pay-col-remove {flex:0 0 40px; text-align:center; padding:10px 4px !important;}
 #page-pos-invoice .pay-row-remove-btn {background:none; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:4px; line-height:1;}
@@ -18754,7 +18754,7 @@ function renderChargesSummary(){
       '<td class="num">' + rowServiceCharge.toFixed(2) + '</td>' +
       '<td class="num">' + (r.amount || 0).toFixed(2) + '</td>' +
       '<td class="num">' + (r.paid || 0).toFixed(2) + '</td>' +
-      '<td class="num">' + bal.toFixed(2) + '</td>' +
+      '<td class="num"' + (bal > 0.004 ? ' style="color:#c53030; font-weight:700;"' : '') + '>' + bal.toFixed(2) + '</td>' +
       '<td>' + statusBadge + '</td>';
     posMakeRowClickable(tr, r);
     body.appendChild(tr);
