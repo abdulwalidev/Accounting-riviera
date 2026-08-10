@@ -16325,6 +16325,7 @@ function posInvoicePayload(record){
     paid_cash: record.paidCash || 0,
     paid_account_transfer: record.paidAccountTransfer || 0,
     paid_card: record.paidCard || 0,
+    payments: record.payments || [],
     balance: record.balance || 0,
     mode: record.mode,
     posted: !!record.posted,
@@ -16368,6 +16369,7 @@ function posRowFromDb(row, items){
     paidCash: Number(row.paid_cash) || 0,
     paidAccountTransfer: Number(row.paid_account_transfer) || 0,
     paidCard: Number(row.paid_card) || 0,
+    payments: Array.isArray(row.payments) ? row.payments : [],
     subtotal: Number(row.subtotal) || 0,
     taxTotal: Number(row.tax_total) || 0,
     grandTotal: Number(row.grand_total) || 0,
@@ -18018,9 +18020,51 @@ function posOpenRecordInForm(record){
   var roomNoInput = document.getElementById('posRoomNoField');
   if (roomNoInput) { roomNoInput.value = record.roomNo || ''; posRoomNoChanged(roomNoInput); }
   var invoiceDateInput = document.getElementById('posInvoiceDate');
+  var openIso = record.isoDate || posTodayISO();
   if (invoiceDateInput) {
-    var openIso = record.isoDate || posTodayISO();
     if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(openIso, true); else invoiceDateInput.value = openIso;
+  }
+
+  // Restore the payment rows too — they used to just get left blank (or,
+  // worse, kept whatever the PREVIOUS invoice you had open left behind)
+  // defaulting to today's date instead of the invoice's own date. Older
+  // invoices saved before per-row payments existed have no `payments`
+  // array — reconstruct one row per nonzero payment type from the
+  // aggregate totals instead of showing nothing.
+  var payContainer = document.querySelector('#page-pos-invoice .pay-rows');
+  if (payContainer) {
+    var payRows = Array.prototype.slice.call(payContainer.querySelectorAll('.pay-row'));
+    var payTemplate = payRows[0];
+    payRows.forEach(function(row, i){ if (i > 0) row.remove(); });
+
+    var payEntries = (record.payments && record.payments.length) ? record.payments : [];
+    if (!payEntries.length) {
+      if (record.paidCash) payEntries.push({ date: openIso, amount: record.paidCash, type: 'cash' });
+      if (record.paidAccountTransfer) payEntries.push({ date: openIso, amount: record.paidAccountTransfer, type: 'account_transfer' });
+      if (record.paidCard) payEntries.push({ date: openIso, amount: record.paidCard, type: 'card' });
+    }
+
+    var fillPayRow = function(row, entry){
+      var dateCell = row.querySelector('.pay-col-date');
+      if (dateCell) dateCell.innerHTML = '<input type="date" class="pay-date-input" onchange="posRecalcAll()">';
+      var dateInput = row.querySelector('.pay-date-input');
+      var amtInput = row.querySelector('.pay-amount-input');
+      var typeSel = row.querySelector('.pay-type-select');
+      if (dateInput) { dateInput.value = (entry && entry.date) || openIso; posInitDatePicker(dateInput); }
+      if (amtInput) amtInput.value = (entry && entry.amount) ? entry.amount : '';
+      if (typeSel) typeSel.value = (entry && entry.type) || 'cash';
+    };
+
+    if (payEntries.length) {
+      fillPayRow(payTemplate, payEntries[0]);
+      for (var pei = 1; pei < payEntries.length; pei++) {
+        var payClone = payTemplate.cloneNode(true);
+        payContainer.appendChild(payClone);
+        fillPayRow(payClone, payEntries[pei]);
+      }
+    } else {
+      fillPayRow(payTemplate, null);
+    }
   }
 
   posRecalcAll();
@@ -18528,6 +18572,21 @@ async function posPostInvoice(mode){
 
   var totals = posRecalcAll();
   if (totals.balance < -0.004) { abort('Payments (' + totals.paid.toFixed(2) + ') exceed the total (' + totals.grandTotal.toFixed(2) + ') — fix the payment amount before posting.'); return; }
+
+  var paymentsArr = [];
+  document.querySelectorAll('#page-pos-invoice .pay-rows .pay-row').forEach(function(row){
+    var amtInput = row.querySelector('.pay-amount-input');
+    var amt = parseFloat((amtInput && amtInput.value || '').replace(/,/g, '')) || 0;
+    var dateInput = row.querySelector('.pay-date-input');
+    var typeSel = row.querySelector('.pay-type-select');
+    if (!amt) return;
+    paymentsArr.push({
+      date: (dateInput && dateInput.value) || '',
+      amount: amt,
+      type: typeSel ? typeSel.value : 'cash'
+    });
+  });
+
   var deptSel = document.getElementById('deptSelect');
   var deptText = (deptSel && deptSel.options[deptSel.selectedIndex] && deptSel.options[deptSel.selectedIndex].textContent.trim()) || 'FO';
   var tableInput = document.getElementById('posTable');
@@ -18571,6 +18630,7 @@ async function posPostInvoice(mode){
     paidCash: totals.paidCash,
     paidAccountTransfer: totals.paidAccountTransfer,
     paidCard: totals.paidCard,
+    payments: paymentsArr,
     subtotal: totals.subtotal,
     taxTotal: totals.taxTotal,
     taxRows: totals.taxRows,
