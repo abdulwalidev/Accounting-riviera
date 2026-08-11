@@ -9942,7 +9942,13 @@ function computeRoomStatuses(asOfDate){
     // Extended.
     const actualCheckoutDate = current ? getDetailValue(current, 'Actual Checkout') : '';
     const resolvedByCheckout = !!(actualCheckoutDate && lastNightDate && actualCheckoutDate >= lastNightDate);
-    const extended = !todayNight && !!lastNightDate && lastNightDate < refDate && !resolvedByCheckout;
+    // Extended is strictly a live/past-date state, never a forecast: for a
+    // FUTURE refDate (Check Availability picking a day ahead), a guest who
+    // is inhouse right now with no confirmed checkout must be assumed to
+    // leave when their booked nights end — otherwise every unconfirmed
+    // departure blocks its room on every future date forever and
+    // availability reads permanently full.
+    const extended = !todayNight && !!lastNightDate && lastNightDate < refDate && !resolvedByCheckout && refDate <= todayStr();
     // Arrival gate — today only, and only for an advance reservation (booked
     // ahead of its own check-in date). A walk-in entered the same day as its
     // check-in date is its own confirmation — the front desk was looking at
@@ -10310,8 +10316,12 @@ function computeMovement(fromDate, toDate){
       roomNightTotals[r.roomNo] = (roomNightTotals[r.roomNo] || 0) + nights;
     });
     Object.values(roomNightTotals).forEach(n=>{ if(n > maxNights) maxNights = n; });
-    if(checkIn && maxNights > 0){
-      const computedCheckout = addDaysToDateStr(checkIn, maxNights);
+    // Same "stay = actual checkin + booked nights" rule as everywhere else —
+    // a late-confirmed arrival's expected checkout moves with the day they
+    // actually showed up, not the day they were booked for.
+    const stayStart = getDetailValue(entry, 'Actual Checkin') || checkIn;
+    if(stayStart && maxNights > 0){
+      const computedCheckout = addDaysToDateStr(stayStart, maxNights);
       if(computedCheckout >= fromDate && computedCheckout <= toDate){
         // Carries the computed date alongside the item so the Expected
         // Checkouts panel can display the SAME date that put it on this
@@ -13364,7 +13374,15 @@ function buildLedgersRecords(includeUnconfirmed){
     // plenty of existing bookings, and skipping it retroactively wiped real
     // room-nights out of both reports the first time this was tried).
     if(!includeUnconfirmed && entry.checkIn >= todayStr() && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
-    const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
+    // The stay runs from when the guest ACTUALLY arrived (Arrival's
+    // confirmed Actual Checkin, which the desk can set to a different day
+    // than the booked Check-in — late arrivals happen), and only falls back
+    // to the booked Check-in date when no confirmation exists (walk-ins,
+    // and every booking predating the Arrival feature). Room-nights are
+    // what occupancy reads everywhere (computeRoomStatuses → Dashboard,
+    // Room Detail, Inhouse, availability), so inhouse = actual checkin +
+    // booked nights, not booked checkin + booked nights.
+    const startDate = getDetailValue(entry, 'Actual Checkin') || entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     if(!startDate) return;
     const guest = entry.guestName || '(no name)';
 
@@ -14899,7 +14917,11 @@ function renderDayLock(){
 // Check-in + the longest room's booked nights (not summed across DIFFERENT
 // rooms — same formula used on the Reservations page's Expected Checkout).
 function computeExpectedCheckoutDate(entry){
-  if(!entry.checkIn) return '';
+  // Counted from the confirmed Actual Checkin when there is one — same
+  // "stay = actual checkin + booked nights" rule as buildLedgersRecords,
+  // so a late-confirmed arrival's expected checkout shifts with it.
+  const stayStart = getDetailValue(entry, 'Actual Checkin') || entry.checkIn;
+  if(!stayStart) return '';
   const roomNightTotals = {};
   (entry.rooms || []).forEach(r=>{
     if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
@@ -14908,7 +14930,7 @@ function computeExpectedCheckoutDate(entry){
   });
   let maxNights = 0;
   Object.values(roomNightTotals).forEach(n=>{ if(n > maxNights) maxNights = n; });
-  return maxNights > 0 ? addDaysToDateStr(entry.checkIn, maxNights) : '';
+  return maxNights > 0 ? addDaysToDateStr(stayStart, maxNights) : '';
 }
 
 function buildAutoCheckoutRows(asOfDate){
@@ -15100,12 +15122,27 @@ function buildArrivalRows(asOfDate){
   // whose stay still covers today.
   const dueSeen = new Set();
   const due = [];
-  computeRoomStatuses(asOfDate).forEach(rs=>{
-    if(rs.arrivalPending && rs.entry && !dueSeen.has(rs.entry.id)){
-      dueSeen.add(rs.entry.id);
-      due.push(toRow(rs.entry, 'due'));
-    }
-  });
+  if(asOfDate > todayStr()){
+    // Future date: arrivalPending (used below) is deliberately today-only in
+    // computeRoomStatuses, so it can never surface a future day's arrivals —
+    // the page always read empty for any day ahead. A future day's arrivals
+    // are simply the advance reservations whose booked Check-in lands on
+    // that exact day and that nobody has confirmed in yet. No stale-history
+    // flood risk here: this branch only ever looks at one future date.
+    all.forEach(entry=>{
+      if(entry.checkIn === asOfDate && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin') && !dueSeen.has(entry.id)){
+        dueSeen.add(entry.id);
+        due.push(toRow(entry, 'due'));
+      }
+    });
+  } else {
+    computeRoomStatuses(asOfDate).forEach(rs=>{
+      if(rs.arrivalPending && rs.entry && !dueSeen.has(rs.entry.id)){
+        dueSeen.add(rs.entry.id);
+        due.push(toRow(rs.entry, 'due'));
+      }
+    });
+  }
   // Checked in ON asOfDate specifically — lets the As Of Date filter show
   // what was confirmed that day, same as Checkout/Pending's log merge.
   const checkedIn = all
