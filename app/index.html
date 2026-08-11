@@ -442,6 +442,12 @@
     font-weight:700;
     margin-right:2px;
   }
+  .new-rate-tag{
+    color:var(--gold-deep);
+    font-weight:700;
+    font-size:11px;
+    white-space:nowrap;
+  }
   input:focus, select:focus{
     outline:2px solid var(--account);
     outline-offset:0;
@@ -7331,8 +7337,38 @@ function displayRoomNo(roomNo, unitType){
   return roomNo || '';
 }
 
+// Split Rate (splitRoomRowRate) can leave more than one entry.rooms row
+// for the same physical room — different nightly rates, same room. Every
+// caller of this just wants "which room(s) is this guest in", so a room
+// number is only ever listed once here, however many rate-split rows it
+// actually has behind it.
 function formatRoomChain(rooms){
-  return (rooms || []).filter(r=> r && r.roomNo).map(r=> displayRoomNo(r.roomNo, r.unitType)).join(', ');
+  const seen = new Set();
+  return (rooms || []).filter(r=>{
+    if(!r || !r.roomNo) return false;
+    const key = r.roomNo.trim().toUpperCase();
+    if(seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map(r=> displayRoomNo(r.roomNo, r.unitType)).join(', ');
+}
+
+// Same Split Rate gotcha as formatRoomChain() above, for anything that
+// SUMS a field across a guest's rooms (adults/children/breakfast counts)
+// rather than just listing them — occupant counts are the same people for
+// every rate-split row of one physical room, so summing across all of
+// them would double/triple-count. Keeps just the first row seen per room
+// number; rent/total are deliberately NOT deduped this way since those
+// really do differ per split segment.
+function dedupeRoomsByNo(rooms){
+  const seen = new Set();
+  return (rooms || []).filter(r=>{
+    if(!r || !r.roomNo) return true; // misc rows (no meaningful room number) never dedupe against each other
+    const key = r.roomNo.trim().toUpperCase();
+    if(seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function detectUnitType(roomNo){
@@ -10475,9 +10511,20 @@ function renderDetail(){
   ).join('');
 
   const roomBody = document.getElementById('detailRoomBody');
-  roomBody.innerHTML = (entry.rooms || []).map(r=> `
+  // A room number repeating further down this list is a Split Rate
+  // (splitRoomRowRate) — same physical room, a different rate for part of
+  // the stay. Only the first row of a room number is "the" booking; every
+  // repeat after it gets a "[new rate]" tag here so it's obvious at a
+  // glance this isn't a second, separate room.
+  const seenRoomNos = new Set();
+  roomBody.innerHTML = (entry.rooms || []).map(r=>{
+    const key = (r.roomNo || '').trim().toUpperCase();
+    const isRepeat = key && !isMiscRoomNo(r.roomNo) && seenRoomNos.has(key);
+    if(key) seenRoomNos.add(key);
+    const roomNoCell = (r.roomNo ? displayRoomNo(r.roomNo, r.unitType) : '-') + (isRepeat ? ' <span class="new-rate-tag">[new rate]</span>' : '');
+    return `
     <tr>
-      <td>${r.roomNo ? displayRoomNo(r.roomNo, r.unitType) : '-'}</td>
+      <td>${roomNoCell}</td>
       <td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td>
       <td>${Number(r.rent || 0).toLocaleString()}</td>
       <td>${r.adults || '0'}</td>
@@ -10486,8 +10533,8 @@ function renderDetail(){
       <td>${r.breakfastChildren || '-'}</td>
       <td>${isMiscRoomNo(r.roomNo) ? '-' : (r.count || 1)}</td>
       <td class="rowtotal">${(parseFloat(String(r.total || 0).replace(/,/g,'')) || 0).toLocaleString()}</td>
-    </tr>`
-  ).join('') || '<tr><td colspan="9" class="empty-note">No rooms.</td></tr>';
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" class="empty-note">No rooms.</td></tr>';
 
   const payBody = document.getElementById('detailPayBody');
   const payments = (entry.payments || []).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''));
@@ -10781,13 +10828,23 @@ const RIVIERA_LETTER_CSS = `
 function buildGuestLetterFields(entry){
   const t = computeTotals(entry);
   const realRooms = (entry.rooms || []).filter(r=> r.roomNo && !isMiscRoomNo(r.roomNo));
-  const nights = Math.max(1, ...realRooms.map(r=> parseInt(r.count) || 1));
-  const adults = realRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
-  const children = realRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
-  const hasBreakfast = realRooms.some(r=> (parseInt(r.breakfastAdults) || 0) + (parseInt(r.breakfastChildren) || 0) > 0);
-  const rentPerNight = realRooms.reduce((s,r)=> s + (parseFloat(String(r.rent).replace(/,/g,'')) || 0), 0);
-  const roomTypeLine = realRooms.length
-    ? realRooms.map(r=> r.unitType || detectUnitType(r.roomNo) || 'Room').join(', ')
+  // A room split across more than one row (see splitRoomRowRate — a
+  // mid-stay rate change) still adds up to ONE room's worth of nights, not
+  // one per split row, and its occupants/rate must only be counted once —
+  // grouped by room number first, then combined across distinct rooms.
+  const nightsByRoom = {};
+  realRooms.forEach(r=>{
+    const key = r.roomNo.trim().toUpperCase();
+    nightsByRoom[key] = (nightsByRoom[key] || 0) + (parseInt(r.count) || 1);
+  });
+  const nights = Math.max(1, ...Object.values(nightsByRoom), 0);
+  const dedupedRooms = dedupeRoomsByNo(realRooms);
+  const adults = dedupedRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
+  const children = dedupedRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
+  const hasBreakfast = dedupedRooms.some(r=> (parseInt(r.breakfastAdults) || 0) + (parseInt(r.breakfastChildren) || 0) > 0);
+  const rentPerNight = dedupedRooms.reduce((s,r)=> s + (parseFloat(String(r.rent).replace(/,/g,'')) || 0), 0);
+  const roomTypeLine = dedupedRooms.length
+    ? dedupedRooms.map(r=> r.unitType || detectUnitType(r.roomNo) || 'Room').join(', ')
     : '-';
   const checkOutDate = entry.checkOut || computeExpectedCheckoutDate(entry);
   return {
@@ -14024,7 +14081,7 @@ function renderRevenue(){
   const statVacant = statTotal - statOccupied;
   const statPax = statOccupiedRooms.reduce((s,rs)=>{
     if(!rs.entry) return s;
-    const relevantRooms = (rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo);
+    const relevantRooms = dedupeRoomsByNo((rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo));
     return s + relevantRooms.reduce((rs2,r)=> rs2 + (parseInt(r.adults) || 0) + (parseInt(r.children) || 0), 0);
   }, 0);
   const statOccRate = statTotal > 0 ? (statOccupied / statTotal * 100) : 0;
@@ -14280,7 +14337,7 @@ function buildNightSummaryReport(asOfDate){
 
   const rows = nightRecords.map(n=>{
     const entry = byId[n.guestId];
-    const relevantRooms = entry ? (entry.rooms || []).filter(r=> r.roomNo === n.roomNo) : [];
+    const relevantRooms = entry ? dedupeRoomsByNo((entry.rooms || []).filter(r=> r.roomNo === n.roomNo)) : [];
     const adultsDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
     const childrenDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
     return {
@@ -14394,7 +14451,7 @@ function buildInhouseReport(){
   const occupiedRs = computeRoomStatuses(today).filter(rs=> (rs.occupied || rs.extended) && rs.entry);
   const rows = occupiedRs
     .map(rs=>{
-      const relevantRooms = (rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo);
+      const relevantRooms = dedupeRoomsByNo((rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo));
       const adultsDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
       const childrenDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
       return {
@@ -14511,7 +14568,7 @@ function buildBreakfastReport(){
       roomsByEntity[id].roomNos.push(rs.roomNo);
     });
   const rows = Object.values(roomsByEntity).map(({ entry, roomNos })=>{
-    const relevantRooms = (entry.rooms || []).filter(r=> roomNos.includes(r.roomNo));
+    const relevantRooms = dedupeRoomsByNo((entry.rooms || []).filter(r=> roomNos.includes(r.roomNo)));
     const adultsSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
     const childrenSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
     const breakfastAdultsSum = relevantRooms.reduce((s,r)=> s + (parseInt(r.breakfastAdults) || 0), 0);
