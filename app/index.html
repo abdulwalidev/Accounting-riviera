@@ -7292,12 +7292,16 @@ function updateExpectedCheckoutDisplay(){
   if(!el) return;
   const ci = document.getElementById('checkInDate').value;
   const roomNightTotals = {};
-  document.querySelectorAll('#roomBody tr').forEach(tr=>{
+  document.querySelectorAll('#roomBody tr').forEach((tr, i)=>{
     const roomNoInput = tr.querySelector('.roomNo');
     const roomNo = roomNoInput ? roomNoInput.value.trim() : '';
     if(!roomNo || isMiscRoomNo(roomNo)) return;
     const nights = parseInt(tr.dataset.rooms) || 1;
-    roomNightTotals[roomNo] = (roomNightTotals[roomNo] || 0) + nights;
+    // "N/A" doesn't identify one specific physical room — two N/A rows are
+    // two different undecided rooms, not the same room split across rows,
+    // so each gets its own key instead of being summed into one total.
+    const key = roomNo.toUpperCase() === 'N/A' ? ('na-' + i) : roomNo;
+    roomNightTotals[key] = (roomNightTotals[key] || 0) + nights;
   });
   let maxNights = 0;
   Object.values(roomNightTotals).forEach(n=>{ if(n > maxNights) maxNights = n; });
@@ -8961,10 +8965,13 @@ async function reviewEntry(){
   // Reservations, Dashboard), so this can never drift from what's
   // actually booked the way a hand-typed date could.
   const roomNightTotalsForCheckout = {};
-  cleanRooms.forEach(r=>{
+  cleanRooms.forEach((r, i)=>{
     if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
     const nights = parseInt(r.count) || 1;
-    roomNightTotalsForCheckout[r.roomNo] = (roomNightTotalsForCheckout[r.roomNo] || 0) + nights;
+    // Same "N/A rows are separate rooms, never the same room" rule as
+    // updateExpectedCheckoutDisplay.
+    const key = r.roomNo.toUpperCase() === 'N/A' ? ('na-' + i) : r.roomNo;
+    roomNightTotalsForCheckout[key] = (roomNightTotalsForCheckout[key] || 0) + nights;
   });
   let maxNightsForCheckout = 0;
   Object.values(roomNightTotalsForCheckout).forEach(n=>{ if(n > maxNightsForCheckout) maxNightsForCheckout = n; });
@@ -10338,10 +10345,13 @@ function computeMovement(fromDate, toDate){
     // summed together before comparing against other rooms.
     let maxNights = 0;
     const roomNightTotals = {};
-    (entry.rooms || []).forEach(r=>{
+    (entry.rooms || []).forEach((r, i)=>{
       if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
       const nights = parseInt(r.count) || 1;
-      roomNightTotals[r.roomNo] = (roomNightTotals[r.roomNo] || 0) + nights;
+      // "N/A" rows are separate undecided rooms, not the same room split
+      // across rows, so each gets its own key instead of being summed.
+      const key = r.roomNo.toUpperCase() === 'N/A' ? ('na-' + i) : r.roomNo;
+      roomNightTotals[key] = (roomNightTotals[key] || 0) + nights;
     });
     Object.values(roomNightTotals).forEach(n=>{ if(n > maxNights) maxNights = n; });
     // Same "stay = actual checkin + booked nights" rule as everywhere else —
@@ -14965,10 +14975,13 @@ function computeExpectedCheckoutDate(entry){
   const stayStart = getDetailValue(entry, 'Actual Checkin') || entry.checkIn;
   if(!stayStart) return '';
   const roomNightTotals = {};
-  (entry.rooms || []).forEach(r=>{
+  (entry.rooms || []).forEach((r, i)=>{
     if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
     const nights = parseInt(r.count) || 1;
-    roomNightTotals[r.roomNo] = (roomNightTotals[r.roomNo] || 0) + nights;
+    // "N/A" rows are separate undecided rooms, not the same room split
+    // across rows, so each gets its own key instead of being summed.
+    const key = r.roomNo.toUpperCase() === 'N/A' ? ('na-' + i) : r.roomNo;
+    roomNightTotals[key] = (roomNightTotals[key] || 0) + nights;
   });
   let maxNights = 0;
   Object.values(roomNightTotals).forEach(n=>{ if(n > maxNights) maxNights = n; });
