@@ -1152,6 +1152,11 @@
   .hdr-row3 .navbtn{ font-size:13px; color:#555; padding:10px 0; }
   .hdr-row3 .navbtn:hover{ color:#1a73e8; }
   .hdr-row3 .navbtn.active{ color:#1a73e8; font-weight:700; border-bottom-color:#1a73e8; }
+  /* Golden nav buttons (Payment Report / Revenue Report) — gold in every
+     state so they stand out from the blue-accented rest of the nav. */
+  .hdr-row2 .navbtn.gold-nav, .hdr-row3 .navbtn.gold-nav{ color:var(--gold-deep); font-weight:600; }
+  .hdr-row2 .navbtn.gold-nav:hover, .hdr-row3 .navbtn.gold-nav:hover{ color:var(--gold-deep); }
+  .hdr-row2 .navbtn.gold-nav.active, .hdr-row3 .navbtn.gold-nav.active{ color:var(--gold-deep); font-weight:700; border-bottom-color:var(--gold-deep); }
   .view{
     display:none;
   }
@@ -2329,6 +2334,15 @@
   html[data-theme="dark"] .hdr-row3 .navbtn:hover{ color:var(--ink-fill); }
   html[data-theme="dark"] .hdr-row2 .navbtn.active,
   html[data-theme="dark"] .hdr-row3 .navbtn.active{ color:var(--ink-fill); border-bottom-color:var(--ink-fill); }
+  /* Golden nav buttons stay gold in dark mode too (--gold-deep flips to
+     the brighter #FBBF24 up top) — must re-state here because the generic
+     dark navbtn rules above out-rank the light-theme gold-nav rules. */
+  html[data-theme="dark"] .hdr-row2 .navbtn.gold-nav,
+  html[data-theme="dark"] .hdr-row3 .navbtn.gold-nav,
+  html[data-theme="dark"] .hdr-row2 .navbtn.gold-nav:hover,
+  html[data-theme="dark"] .hdr-row3 .navbtn.gold-nav:hover{ color:var(--gold-deep); }
+  html[data-theme="dark"] .hdr-row2 .navbtn.gold-nav.active,
+  html[data-theme="dark"] .hdr-row3 .navbtn.gold-nav.active{ color:var(--gold-deep); border-bottom-color:var(--gold-deep); }
   /* Header search: unlike ordinary form inputs (see the light-field rule
      below), this one sits in the header chrome itself rather than inside a
      data-entry panel, so it follows the dark theme instead of staying a
@@ -3413,6 +3427,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
       <button class="navbtn" id="topNavBreakfast" onclick="showView('breakfast')">Breakfast Report</button>
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
+      <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
       <button class="navbtn" id="topNavPaymentProof" onclick="showView('paymentrecord')" style="display:none; margin-left:auto;">Report SS</button>
       <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
       <button class="navbtn" id="topNavPosUnlock" onclick="posOpenDayLockPage()" style="display:none; margin-left:8px; padding:6px 8px;" title="POS Day Lock" aria-label="POS Day Lock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
@@ -3423,9 +3438,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <button class="navbtn active" id="topNavEntry" onclick="showView('entry')">Add Checkin/Reservation</button>
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
-      <button class="navbtn" id="topNavReport" onclick="showView('report')">Payment Report</button>
-      <button class="navbtn" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
-      <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
+      <button class="navbtn gold-nav" id="topNavReport" onclick="showView('report')">Payment Report</button>
+      <button class="navbtn gold-nav" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
       <button class="navbtn" id="topNavArrival" onclick="showView('arrival')" style="display:none; margin-left:auto;">Arrival</button>
       <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none;">Checkout/Pending</button>
     </div>
