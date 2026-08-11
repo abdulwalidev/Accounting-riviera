@@ -3327,8 +3327,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 </style>
 <script>
   (function(){
+    // Dark is the default look now — only an explicit past choice of
+    // "light" (saved by toggleTheme()) opts back out. A first-ever visit
+    // (no saved value at all) has never touched the toggle, so it gets
+    // dark same as anyone who never flips it.
     var saved = localStorage.getItem('theme');
-    if(saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    if(saved !== 'light') document.documentElement.setAttribute('data-theme', 'dark');
   })();
 </script>
 </head>
@@ -4489,6 +4493,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <button class="btn" onclick="exportInhouseExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printInhouse()">🖶 Print</button>
           <button class="btn secondary" onclick="showView('breakfast')">🥐 Breakfast Report</button>
+          <button class="btn secondary" onclick="setInhouseToday()">Today</button>
+        </div>
+        <div>
+          <label class="lbl-sm" style="margin-bottom:4px;">In-house as of</label>
+          <input type="date" id="ihDate">
+          <div class="date-readout" id="ihDateReadout"></div>
         </div>
         <div id="ihUnitSplit" class="dash-subtiles" style="max-width:480px; margin-top:0;"></div>
         <div>
@@ -6877,7 +6887,7 @@ function setStayDate(id, isoValue){
 // and Global Search. Kept as its own registry/setter rather than folding
 // into stayDatePickers/setStayDate so that already-proven code path stays
 // completely untouched.
-const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate', 'acnCheckinDate'];
+const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'ihDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate', 'acnCheckinDate'];
 const filterDatePickers = {};
 // Small closed-padlock glyph stamped on locked days in every payment date
 // picker — an SVG rather than an emoji so it renders identically (weight,
@@ -7209,6 +7219,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   setRangeDate('rvRange', 'rvFrom', 'rvTo', todayStr(), todayStr());
   document.getElementById('nsDate').addEventListener('input', renderNightSummary);
   setFilterDate('nsDate', todayStr());
+  document.getElementById('ihDate').addEventListener('input', renderInhouse);
+  setFilterDate('ihDate', todayStr());
   setFilterDate('b19From', '2026-07-19');
   updateDateReadout(document.getElementById('b19From'), document.getElementById('b19FromReadout'));
   document.getElementById('b19From').addEventListener('input', e=>{
@@ -7264,7 +7276,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   scheduleCheckinCutoffRollover();
   [
     'auditEntryDate','dNewDate','gsearchDate',
-    'dlDate','acDate','arDate','auditPageDate','rdDate','b19From','nsDate'
+    'dlDate','acDate','arDate','auditPageDate','rdDate','b19From','nsDate','ihDate'
   ].forEach(addDateStepper);
 });
 
@@ -8153,7 +8165,7 @@ function handleKarachiMidnightRollover(){
   // it, so its calendar display can't fall out of sync with the value.
   // checkInDate deliberately excluded — it rolls over at the check-in
   // cutoff time instead of plain midnight, see scheduleCheckinCutoffRollover().
-  ['gsearchDate','dNewDate','rdDate','nsDate','dlDate','auditEntryDate','auditPageDate','acDate','arDate'].forEach(id=>{
+  ['gsearchDate','dNewDate','rdDate','nsDate','ihDate','dlDate','auditEntryDate','auditPageDate','acDate','arDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el || el.value !== lastKnownToday) return;
     el.value = newToday;
@@ -14474,8 +14486,8 @@ function printNightSummary(){
 // who hasn't been checked out yet is still eating breakfast regardless of
 // whether their booking technically covers tonight.
 // =========================================================
-function buildInhouseReport(){
-  const today = todayStr();
+function buildInhouseReport(asOfDate){
+  const today = asOfDate || todayStr();
   // One row per occupied ROOM, not per guest — a guest holding more than
   // one room (an apartment plus an overflow room) shows as separate rows,
   // each with just that room's own Adults/Children. A room split across
@@ -14514,6 +14526,16 @@ function buildInhouseReport(){
   return { rows, roomCount, totalAdults, totalChildren, totalPax, roomTypeCount, apartmentTypeCount, typeBucketCounts };
 }
 
+function setInhouseToday(){
+  setFilterDate('ihDate', todayStr());
+  renderInhouse();
+}
+
+function getInhouseAsOfDate(){
+  const el = document.getElementById('ihDate');
+  return (el && el.value) || todayStr();
+}
+
 function renderInhouse(){
   const body = document.getElementById('ihBody');
   const unitSplit = document.getElementById('ihUnitSplit');
@@ -14525,9 +14547,12 @@ function renderInhouse(){
     return;
   }
 
-  document.getElementById('ihPrintHeaderSub').textContent = 'As of ' + formatDate(todayStr()) + '  ·  Generated ' + formatDate(todayStr());
+  const dateEl = document.getElementById('ihDate');
+  updateDateReadout(dateEl, document.getElementById('ihDateReadout'));
+  const asOfDate = getInhouseAsOfDate();
+  document.getElementById('ihPrintHeaderSub').textContent = 'As of ' + formatDate(asOfDate) + '  ·  Generated ' + formatDate(todayStr());
 
-  const data = buildInhouseReport();
+  const data = buildInhouseReport(asOfDate);
   if(unitSplit) unitSplit.innerHTML = `
     <div class="dash-subtile"><div class="dash-subtile-val">${data.roomTypeCount}</div><div class="dash-subtile-lbl">Room</div></div>
     <div class="dash-subtile"><div class="dash-subtile-val">${data.apartmentTypeCount}</div><div class="dash-subtile-lbl">Apartment</div></div>
@@ -14565,7 +14590,8 @@ function renderInhouse(){
 }
 
 function exportInhouseExcel(){
-  const data = buildInhouseReport();
+  const asOfDate = getInhouseAsOfDate();
+  const data = buildInhouseReport(asOfDate);
   if(data.rows.length === 0){ showNotice('No data to export.'); return; }
 
   const wb = XLSX.utils.book_new();
@@ -14575,7 +14601,7 @@ function exportInhouseExcel(){
   const ws = XLSX.utils.json_to_sheet(rowsData);
   ws['!cols'] = [{wch:12},{wch:22},{wch:10},{wch:10},{wch:12}];
   XLSX.utils.book_append_sheet(wb, ws, 'Inhouse');
-  XLSX.writeFile(wb, `inhouse-report-${todayStr()}.xlsx`);
+  XLSX.writeFile(wb, `inhouse-report-${asOfDate}.xlsx`);
 }
 
 function printInhouse(){
