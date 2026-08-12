@@ -1100,9 +1100,6 @@
     font-size:14px;
     letter-spacing:0.03em;
   }
-  #cloudStatus{
-    font-family:'Inter',sans-serif;
-    font-size:10px;
     font-weight:600;
     letter-spacing:0.02em;
   }
@@ -2851,12 +2848,6 @@
     .hdr-left, .hdr-right{ display:contents; }
     .hdr-brand{ order:1; flex-shrink:1; }
     .hdr-brand-suffix{ display:none; }
-    #cloudStatus{
-      order:2;
-      background:transparent;
-      padding:0;
-      font-size:12px;
-    }
     #themeToggle{
       order:3;
       margin-left:auto;
@@ -4119,7 +4110,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="hdr-left">
       <div class="hdr-brand">
         <span class="hdr-brand-name">RIVIERA<span class="hdr-brand-suffix"> RESORT</span></span>
-        <span id="cloudStatus"></span>
       </div>
       <div class="hdr-search-wrap">
         <input type="text" id="globalSearchInput" class="hdr-search" placeholder="Search anything..." autocomplete="off" oninput="renderGlobalSearch()" onkeydown="globalSearchKeydown(event)" onfocus="renderGlobalSearch()">
