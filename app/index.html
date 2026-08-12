@@ -1111,6 +1111,15 @@
     font-size:12px;
     font-weight:600;
   }
+  /* Compact "role(initial)" identity used only on phone view in place of
+     #whoami's full "username · role" text — see the phone-layout media
+     query below, which is the only place this is ever shown. */
+  .hdr-whoami-short{
+    display:none;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:600;
+  }
   .hdr-avatar{
     width:28px;
     height:28px;
@@ -2494,24 +2503,39 @@
        readable and an unreadable overlapping mess. */
     .hdr-row1{
       flex-wrap:wrap;
+      justify-content:flex-start;
       gap:8px;
       padding:8px 12px;
     }
-    .hdr-left{
-      flex-wrap:wrap;
-      width:100%;
-      gap:8px;
-    }
+    /* .hdr-left/.hdr-right are only grouping wrappers (each already forced
+       to width:100% below, which made them stack as two whole rows: brand
+       row, then search, THEN every hdr-right control together as a third
+       row). display:contents dissolves those two wrapper boxes so their
+       children become flex items of .hdr-row1 directly, letting the
+       explicit `order` below interleave hdr-right's date-pill/theme-toggle
+       BETWEEN hdr-left's brand and search — impossible while they were
+       still two separate same-parent boxes. */
+    .hdr-left, .hdr-right{ display:contents; }
+    .hdr-brand{ width:100%; order:1; }
+    .hdr-brand-suffix{ display:none; } /* "RIVIERA RESORT" -> "RIVIERA" to save header space */
+    #hdrDatePill{ order:2; }
+    #themeToggle{ order:3; }
     .hdr-search-wrap{
       width:100%;
       flex:1 1 100%;
+      order:4;
     }
     .hdr-search-kbd{ display:none; } /* "Ctrl + /" means nothing without a physical keyboard */
-    .hdr-right{
-      width:100%;
-      flex-wrap:wrap;
-      gap:8px;
-    }
+    #hdrFrontOfficeBadge, #hotelRestaurantSwitch, .hdr-whoami-short{ order:5; }
+    /* Pause Sync has no room on a phone header and isn't essential there —
+       dropped entirely rather than squeezed in. */
+    #pauseSyncBtn{ display:none; }
+    /* Full "username · role" text is too wide for a phone header; the
+       compact "role(initial)" span (populated in refreshRoleUI) replaces
+       it, and the separate avatar circle is redundant with that initial. */
+    #whoami, .hdr-avatar{ display:none; }
+    .hdr-whoami-short{ display:inline-block; }
+    #logoutBtn{ order:6; margin-left:auto; }
 
     /* Nav tabs (hdr-row2/hdr-row3) already horizontally scroll
        (overflow-x:auto) rather than wrap or clip — but with no visible
@@ -2576,6 +2600,11 @@
       min-width:0 !important;
       max-width:none !important;
     }
+    /* th{font-size:11px} is set unconditionally elsewhere and, unlike td,
+       isn't inherited from the table's own font-size — it has to be
+       overridden directly or headers stay full-size while body text
+       shrinks. */
+    th{ font-size:8px !important; }
 
     /* Restaurant/POS module (#view-restaurant and everything nested in
        it — page-pos-*, page-manage-parts, etc.) is out of scope for this
@@ -2600,6 +2629,21 @@
       width:auto !important;
       min-width:0 !important;
       max-width:none !important;
+    }
+    #view-restaurant th{ font-size:11px !important; }
+
+    /* Form fields (hotel side only — same #view-restaurant carve-out as
+       tables above): tighter padding/height so a stacked-to-1-column form
+       takes less vertical space on a phone screen. */
+    input, select{
+      padding:6px 8px;
+      font-size:12px;
+      min-height:30px;
+    }
+    #view-restaurant input, #view-restaurant select{
+      padding:8px 10px !important;
+      font-size:13px !important;
+      min-height:34px !important;
     }
 
     /* Headers pairing a title with filter/action controls: wrap onto
@@ -3439,7 +3483,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="hdr-row1">
     <div class="hdr-left">
       <div class="hdr-brand">
-        <span class="hdr-brand-name">RIVIERA RESORT</span>
+        <span class="hdr-brand-name">RIVIERA<span class="hdr-brand-suffix"> RESORT</span></span>
         <span id="cloudStatus"></span>
       </div>
       <div class="hdr-search-wrap">
@@ -3461,6 +3505,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"></path></svg>
       </button>
       <span id="whoami"></span>
+      <span id="whoamiShort" class="hdr-whoami-short"></span>
       <div class="hdr-avatar" id="hdrAvatar"></div>
       <button id="logoutBtn" title="Sign Out" aria-label="Sign Out">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -16826,6 +16871,8 @@ function applyRolePermissions(){
   updateHotelRestaurantSwitch();
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
+  const whoShort = document.getElementById('whoamiShort');
+  if(whoShort) whoShort.textContent = currentUser ? currentUser.role + '(' + currentUser.username.charAt(0).toUpperCase() + ')' : '';
   const avatar = document.getElementById('hdrAvatar');
   if(avatar) avatar.textContent = currentUser ? currentUser.username.charAt(0).toUpperCase() : '';
   document.documentElement.classList.toggle('role-viewer', isViewer());
