@@ -691,6 +691,13 @@
   .btn.success:hover{
     opacity:0.85;
   }
+  /* Save and Checkin on Add Checkin/Reservation: solid green in light mode
+     (dark mode keeps the blue rule below). */
+  html:not([data-theme="dark"]) #saveEntryBtn.success{
+    background:#10b981;
+    color:#fff;
+    border-bottom:4px solid #059669;
+  }
   .btn.edit-gold{
     background:#fff;
     color:#d97706;
