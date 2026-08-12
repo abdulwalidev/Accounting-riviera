@@ -15707,6 +15707,27 @@ function buildAutoCheckoutRows(asOfDate){
       });
     }
   });
+  // Same-day turnover: the room's one Extended slot is taken by today's
+  // incoming guest, so a previous guest whose last booked night was
+  // yesterday and whose checkout was never confirmed only exists as
+  // previousGuestPending — Room Detail shows them as a second row, but
+  // this page never saw them at all, so there was nothing to click
+  // Checkout on and they silently vanished from the due list the moment
+  // their room was rebooked. Fold them in exactly like an Extended guest.
+  statuses.filter(rs=> rs.previousGuestPending && rs.previousGuestPending.entry).forEach(rs=>{
+    const entry = rs.previousGuestPending.entry;
+    const guestId = entry.id;
+    if(dueByGuest.has(guestId)) return;
+    if(activeGuestIds.has(guestId)) return; // still genuinely inhouse elsewhere
+    const d = computeTotals(entry).due;
+    dueByGuest.set(guestId, {
+      roomNos: [rs.roomNo], guestId, guest: entry.guestName || '(no name)',
+      checkIn: entry.checkIn || '',
+      checkoutDate: addDaysToDateStr(rs.previousGuestPending.lastNightDate, 1),
+      due: d,
+      status: d === 0 ? 'ready' : 'pending'
+    });
+  });
   const due = Array.from(dueByGuest.values()).map(r=>{
     const sortedRoomNos = r.roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
     return {
@@ -15803,16 +15824,27 @@ function renderAutoCheckout(){
       return !!entry && getDetailValue(entry, 'Actual Checkout') === asOfDate;
     })
     .sort((a,b)=> (b.at || '').localeCompare(a.at || ''));
-  if(dayCheckouts.length === 0){
+  // editLogs is a same-session-only write log — a checkout done earlier
+  // today from another device/session/staff member has no log row here, so
+  // this list read "Nobody was checked out today" while the due list right
+  // above it plainly showed guests as Checked Out. Backfill from each
+  // entry's own Actual Checkout field (the same source of truth the due
+  // list uses); those rows just have no exact time/username to show.
+  const loggedIds = new Set(dayCheckouts.map(l=> l.guest_id));
+  const backfilled = all
+    .filter(entry=> !loggedIds.has(entry.id) && getDetailValue(entry, 'Actual Checkout') === asOfDate)
+    .map(entry=> ({ guest_id: entry.id, at: null, username: null }));
+  const allCheckouts = dayCheckouts.concat(backfilled);
+  if(allCheckouts.length === 0){
     logBody.innerHTML = '<div class="empty-note">Nobody was checked out ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
   } else {
     logBody.innerHTML = `
       <table>
         <thead><tr><th style="width:170px;">When</th><th>Guest</th><th style="width:160px;">By</th></tr></thead>
-        <tbody>${dayCheckouts.map(l=>{
+        <tbody>${allCheckouts.map(l=>{
           const entry = all.find(e=> e.id === l.guest_id);
           return `<tr style="cursor:pointer;" onclick="openDetail('${l.guest_id}')" title="Open this guest">
-            <td>${new Date(l.at).toLocaleString()}</td>
+            <td>${l.at ? new Date(l.at).toLocaleString() : formatDate(asOfDate)}</td>
             <td>${entry ? (entry.guestName || '(no name)') : '(deleted)'}</td>
             <td>${l.username || '-'}</td>
           </tr>`;
@@ -15945,16 +15977,24 @@ function renderArrival(){
       return !!entry && getDetailValue(entry, 'Actual Checkin') === asOfDate;
     })
     .sort((a,b)=> (b.at || '').localeCompare(a.at || ''));
-  if(dayCheckins.length === 0){
+  // Same cross-session backfill as Checkout/Pending's log: editLogs only
+  // covers THIS session, so check-ins confirmed elsewhere are filled in
+  // from each entry's own Actual Checkin field.
+  const loggedInIds = new Set(dayCheckins.map(l=> l.guest_id));
+  const backfilledIns = all
+    .filter(entry=> !loggedInIds.has(entry.id) && getDetailValue(entry, 'Actual Checkin') === asOfDate)
+    .map(entry=> ({ guest_id: entry.id, at: null, username: null }));
+  const allCheckins = dayCheckins.concat(backfilledIns);
+  if(allCheckins.length === 0){
     logBody.innerHTML = '<div class="empty-note">Nobody was checked in ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
   } else {
     logBody.innerHTML = `
       <table>
         <thead><tr><th style="width:170px;">When</th><th>Guest</th><th style="width:160px;">By</th></tr></thead>
-        <tbody>${dayCheckins.map(l=>{
+        <tbody>${allCheckins.map(l=>{
           const entry = all.find(e=> e.id === l.guest_id);
           return `<tr style="cursor:pointer;" onclick="openDetail('${l.guest_id}')" title="Open this guest">
-            <td>${new Date(l.at).toLocaleString()}</td>
+            <td>${l.at ? new Date(l.at).toLocaleString() : formatDate(asOfDate)}</td>
             <td>${entry ? (entry.guestName || '(no name)') : '(deleted)'}</td>
             <td>${l.username || '-'}</td>
           </tr>`;
