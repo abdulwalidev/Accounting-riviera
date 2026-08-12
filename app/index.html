@@ -7958,7 +7958,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     document.getElementById(id).addEventListener('input', renderMoneyHandover);
   });
   initRangeDatePicker('hoRange', 'hoFrom', 'hoTo', renderMoneyHandover);
-  setRangeDate('hoRange', 'hoFrom', 'hoTo', '2026-07-19', '2026-07-31');
+  setRangeDate('hoRange', 'hoFrom', 'hoTo', '2026-07-19', todayStr());
   ['nprFrom','nprTo'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderNPR);
   });
@@ -9390,7 +9390,7 @@ function updateDateReadout(input, readoutEl){
 // per-room/per-payment row dates have their own interaction and are left
 // alone.
 function addDateStepper(inputId, placement){
-  const disabledIds = ['cicoFrom', 'cicoTo', 'filterFrom', 'filterTo', 'rvFrom', 'rvTo', 'lgFrom', 'lgTo'];
+  const disabledIds = ['cicoFrom', 'cicoTo', 'filterFrom', 'filterTo', 'rvFrom', 'rvTo', 'lgFrom', 'lgTo', 'hoFrom', 'hoTo'];
   if(disabledIds.includes(inputId)) return;
   const input = document.getElementById(inputId);
   if(!input || input.dataset.stepperAdded) return;
@@ -13822,7 +13822,8 @@ function renderBefore19(){
 // Revenue Report's "Σ Summary" button: carry the report's current date
 // range over so the summary shows the same range you were just looking at.
 function openRevenueSummary(){
-  setRangeDate('hoRange', 'hoFrom', 'hoTo', document.getElementById('rvFrom').value, document.getElementById('rvTo').value);
+  const f = document.getElementById('rvFrom').value, t = document.getElementById('rvTo').value;
+  if(f && t) setRangeDate('hoRange', 'hoFrom', 'hoTo', f, t);
   showView('handover');
 }
 
