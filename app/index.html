@@ -981,6 +981,11 @@
     background:#F7EBC5;
     color:var(--gold-deep);
   }
+  .status.golden-guest{
+    background:#FEF3C7;
+    color:#D97706;
+    font-weight:600;
+  }
 
   /* ---- Layout ---- */
   .main{
@@ -2391,6 +2396,7 @@
   html[data-theme="dark"] .status.paid{ background:rgba(74,222,128,0.18); }
   html[data-theme="dark"] .status.partial{ background:rgba(240,208,120,0.18); }
   html[data-theme="dark"] .status.ooo{ background:rgba(255,255,255,0.12); color:#D1D5DB; }
+  html[data-theme="dark"] .status.golden-guest{ background:rgba(217,119,6,0.2); color:#FCD34D; }
   html[data-theme="dark"] tr.mode-cash td{ background:rgba(74,222,128,0.08); }
   html[data-theme="dark"] tr.mode-bank td{ background:rgba(96,165,250,0.08); }
   html[data-theme="dark"] tbody tr.mode-cash:nth-child(even) td{ background:rgba(74,222,128,0.14); }
@@ -9567,7 +9573,8 @@ function computeTotals(entry){
   const paid = (entry.payments || []).reduce((s,p)=> s + (parseFloat(p.total) || 0), 0);
   const due = bookingTotal - paid;
   let status = 'Pending';
-  if(bookingTotal > 0 && due <= 0) status = 'Paid';
+  if(bookingTotal === 0) status = 'Golden Guest';
+  else if(bookingTotal > 0 && due <= 0) status = 'Paid';
   else if(paid > 0) status = 'Partial';
   return { bookingTotal, paid, due: Math.max(due,0), status };
 }
@@ -9990,7 +9997,7 @@ function renderSearch(){
       </thead>
       <tbody>
         ${items.map(({entry, t, roomNos})=>{
-          const statusClass = t.status.toLowerCase();
+          const statusClass = t.status.toLowerCase().replace(/\s+/g, '-');
           const actualCheckout = getDetailValue(entry, 'Actual Checkout');
           return `<tr style="cursor:pointer;" onclick="openDetail('${entry.id}')" title="Open this guest">
             <td>${roomNos || '-'}</td>
