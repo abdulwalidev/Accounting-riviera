@@ -2652,23 +2652,6 @@
     opacity:0.85;
   }
   .theme-toggle svg{ width:17px; height:17px; }
-  .hdr-pause-btn{
-    display:none;
-    width:auto;
-    padding:0 10px;
-    font-family:'Inter',sans-serif;
-    font-size:11px;
-    font-weight:700;
-    text-transform:uppercase;
-    letter-spacing:0.03em;
-    white-space:nowrap;
-    background:transparent !important;
-    border:none !important;
-    border-bottom:none !important;
-    color:#fff !important;
-    opacity:1 !important;
-    border-radius:0 !important;
-  }
   .theme-toggle .icon-sun{ display:none; }
   html[data-theme="dark"] .theme-toggle .icon-moon{ display:none; }
   html[data-theme="dark"] .theme-toggle .icon-sun{ display:block; }
@@ -3992,10 +3975,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       width: 35px;
       height: 35px;
     }
-    .hdr-pause-btn {
-      padding: 0 8px;
-      font-size: 9px;
-    }
     .login-signin-btn {
       padding: 10px;
       font-size: 13px;
@@ -4123,7 +4102,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       </div>
     </div>
     <div class="hdr-right">
-      <button class="theme-toggle hdr-pause-btn" id="pauseSyncBtn" onclick="event.stopPropagation(); pauseAppForIdle();" title="Pause syncing with the cloud until you click to resume">Pause Sync</button>
       <button class="theme-toggle hdr-fo-badge" id="hdrFrontOfficeBadge" onclick="event.stopPropagation(); showView('frontoffice');" title="Front Office — uncollected restaurant charges" style="display:none; position:relative;">
         🔔<span id="hdrFrontOfficeCount" style="position:absolute; top:-4px; right:-4px; background:#dc2626; color:#fff; font-size:10px; font-weight:700; line-height:1; min-width:15px; height:15px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;">0</span>
       </button>
