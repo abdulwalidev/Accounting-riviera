@@ -1264,11 +1264,19 @@
     margin-top:20px;
   }
   .settings-nav{
-    position:sticky;
-    top:20px;
+    position:fixed;
+    left:16px;
+    top:80px;
+    width:240px;
     display:flex;
     flex-direction:column;
     gap:20px;
+    max-height:calc(100vh - 100px);
+    overflow-y:auto;
+    z-index:100;
+  }
+  .view:not(#view-settings) .settings-nav{
+    display:flex;
   }
   .settings-nav-section{
     display:flex;
@@ -6340,139 +6348,40 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   </div>
 
+  <nav class="settings-nav" id="globalSettingsNav" style="display:none;">
+    <div class="settings-nav-section">
+      <div class="settings-nav-heading">Pages</div>
+      <a class="settings-nav-item" onclick="showView('audit')">Full Audit</a>
+      <a class="settings-nav-item" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">Day Lock</a>
+      <a class="settings-nav-item" id="settingsPaymentRecordBtn" onclick="showView('paymentrecord')" style="display:none;">Report SS</a>
+      <a class="settings-nav-item" id="settingsFrontOfficeBtn" onclick="showView('frontoffice')" style="display:none;">Front Office</a>
+      <a class="settings-nav-item" onclick="showView('before19')">Before 19</a>
+      <a class="settings-nav-item" onclick="showView('handover')">Money Handover</a>
+      <a class="settings-nav-item" onclick="showView('npr')">NPR</a>
+      <a class="settings-nav-item" onclick="showView('cashcheck')">Cash Check</a>
+      <a class="settings-nav-item danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</a>
+    </div>
+    <div class="settings-nav-section">
+      <div class="settings-nav-heading">Data &amp; Sync</div>
+      <div class="settings-nav-info">
+        <div class="settings-nav-row">
+          <div class="settings-nav-title">Guests / Rooms / Payments</div>
+          <span class="settings-table-status settings-status-on">Always On</span>
+        </div>
+      </div>
+      <div class="settings-nav-info">
+        <div class="settings-nav-row">
+          <div class="settings-nav-title">🚨 Audit Log</div>
+          <span class="settings-table-status settings-status-off">Off</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
   <div class="view" id="view-settings">
 
     <h1>Settings</h1>
     <div class="sub">Admin tools and data/sync controls</div>
-
-    <div class="settings-shell">
-      <nav class="settings-nav">
-        <div class="settings-nav-section">
-          <div class="settings-nav-heading">Pages</div>
-          <a class="settings-nav-item" onclick="showView('audit')">Full Audit</a>
-          <a class="settings-nav-item" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">Day Lock</a>
-          <a class="settings-nav-item" id="settingsPaymentRecordBtn" onclick="showView('paymentrecord')" style="display:none;">Report SS</a>
-          <a class="settings-nav-item" id="settingsFrontOfficeBtn" onclick="showView('frontoffice')" style="display:none;">Front Office</a>
-          <a class="settings-nav-item" onclick="showView('before19')">Before 19</a>
-          <a class="settings-nav-item" onclick="showView('handover')">Money Handover</a>
-          <a class="settings-nav-item" onclick="showView('npr')">NPR</a>
-          <a class="settings-nav-item" onclick="showView('cashcheck')">Cash Check</a>
-          <a class="settings-nav-item danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</a>
-        </div>
-        <div class="settings-nav-section">
-          <div class="settings-nav-heading">Data &amp; Sync</div>
-          <div class="settings-nav-info">
-            <div class="settings-nav-row">
-              <div class="settings-nav-title">Guests / Rooms / Payments</div>
-              <span class="settings-table-status settings-status-on">Always On</span>
-            </div>
-          </div>
-          <div class="settings-nav-info">
-            <div class="settings-nav-row">
-              <div class="settings-nav-title">🚨 Audit Log</div>
-              <span class="settings-table-status settings-status-off">Off</span>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <div class="settings-content">
-        <div class="settings-card" id="settingsSecPages">
-          <div class="settings-card-head">
-            <h2>Pages</h2>
-            <div class="sub">Moved here to keep the main nav short</div>
-          </div>
-          <div class="settings-list">
-            <div class="settings-row clickable" onclick="showView('audit')">
-              <div>
-                <div class="settings-row-title">Full Audit</div>
-                <div class="settings-row-desc">Every entry created, edited, or paid — recorded automatically this session.</div>
-              </div>
-              <span class="settings-row-chevron">›</span>
-            </div>
-            <div class="settings-row clickable" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">
-              <div>
-                <div class="settings-row-title">Day Lock</div>
-                <div class="settings-row-desc">Lock a date so no new payment can be dated on it.</div>
-              </div>
-              <span class="settings-row-chevron">›</span>
-            </div>
-            <div class="settings-row clickable" id="settingsPaymentRecordBtn" onclick="showView('paymentrecord')" style="display:none;">
-              <div>
-                <div class="settings-row-title">Report SS</div>
-                <div class="settings-row-desc">Attach a bank/card payment's screenshot (auto-captioned), and download a day's screenshots as one PDF.</div>
-              </div>
-              <span class="settings-row-chevron">›</span>
-            </div>
-            <div class="settings-row clickable" id="settingsFrontOfficeBtn" onclick="showView('frontoffice')" style="display:none;">
-              <div>
-                <div class="settings-row-title">Front Office</div>
-                <div class="settings-row-desc">Restaurant charges sent from the POS, pending collection.</div>
-              </div>
-              <span class="settings-row-chevron">›</span>
-            </div>
-            <div class="settings-row clickable" onclick="showView('before19')">
-              <div>
-                <div class="settings-row-title">Before 19</div>
-                <div class="settings-row-desc">Payments received before a date that still funded a later room-night.</div>
-              </div>
-              <span class="settings-row-chevron">›</span>
-            </div>
-            <div class="settings-row clickable" onclick="showView('handover')">
-              <div>
-                <div class="settings-row-title">Money Handover</div>
-                <div class="settings-row-desc">Cash actually received against each room's rent for a date range.</div>
-              </div>
-              <span class="settings-row-chevron">›</span>
-            </div>
-            <div class="settings-row clickable" onclick="showView('npr')">
-              <div>
-                <div class="settings-row-title">NPR</div>
-                <div class="settings-row-desc">Night Posting Reconciliation — compare against an external nightly report.</div>
-              </div>
-              <span class="settings-row-chevron">›</span>
-            </div>
-            <div class="settings-row clickable" onclick="showView('cashcheck')">
-              <div>
-                <div class="settings-row-title">Cash Check</div>
-                <div class="settings-row-desc">Cross-check Revenue Cash against total Cash payments received.</div>
-              </div>
-              <span class="settings-row-chevron">›</span>
-            </div>
-            <div class="settings-row clickable danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">
-              <div>
-                <div class="settings-row-title">⚠ Delete Entity</div>
-                <div class="settings-row-desc">Remove an accidentally created entry — soft delete, admin only.</div>
-              </div>
-              <span class="settings-row-chevron">›</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-card" id="settingsSecSync">
-          <div class="settings-card-head">
-            <h2>Data &amp; Sync</h2>
-            <div class="sub">What this app fetches from the cloud database, and what it deliberately doesn't</div>
-          </div>
-          <div class="settings-list">
-            <div class="settings-row">
-              <div>
-                <div class="settings-row-title">Guests / Rooms / Payments</div>
-                <div class="settings-row-desc">The actual booking data — required for the app to function, always on.</div>
-              </div>
-              <span class="settings-table-status settings-status-on">Always On</span>
-            </div>
-            <div class="settings-row">
-              <div>
-                <div class="settings-row-title">🚨 Audit Log (guest_edits)</div>
-                <div class="settings-row-desc">Who-did-what history. Never fetched from the cloud — saves fetching an ever-growing table on every sync. Full Audit, the per-guest audit tab, and Checkout/Pending's "already checked out today" list only show actions taken on this device this session, not full history.</div>
-              </div>
-              <span class="settings-table-status settings-status-off">Off</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
   </div>
 
@@ -6917,7 +6826,10 @@ function showView(view, fromPopState){
   document.getElementById('topNavNightSummary').classList.toggle('active', view === 'nightsummary');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   document.getElementById('topNavArrival').classList.toggle('active', view === 'arrival');
-  document.getElementById('topNavSettings').classList.toggle('active', view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck');
+  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck' || view === 'paymentrecord' || view === 'frontoffice';
+  document.getElementById('topNavSettings').classList.toggle('active', isSettingsView);
+  const globalSettingsNav = document.getElementById('globalSettingsNav');
+  if(globalSettingsNav) globalSettingsNav.style.display = isSettingsView ? 'flex' : 'none';
   const topNavPaymentProof = document.getElementById('topNavPaymentProof');
   if(topNavPaymentProof) topNavPaymentProof.classList.toggle('active', view === 'paymentrecord');
   const hdrFrontOfficeBadge = document.getElementById('hdrFrontOfficeBadge');
