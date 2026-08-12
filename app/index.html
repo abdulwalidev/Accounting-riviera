@@ -246,6 +246,9 @@
      is actually wrong. max-width:100% keeps it from overflowing a
      container narrower than that on small screens. */
   .flatpickr-alt-input{ display:block; width:307.875px; max-width:100%; margin:0 auto; text-align:center; }
+  /* Payment Report's own Date Range box only — left-align instead of the
+     shared centered default above. */
+  #view-report .flatpickr-alt-input{ margin:0; text-align:left; }
   /* The calendar popup is appended to <body> as position:absolute — a
      max-width:100% here would resolve against the viewport, not against
      however narrow the box above actually is, so matching them on a
@@ -4784,7 +4787,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="filterFrom" style="display:none">
           <input type="date" id="filterTo" style="display:none">
         </div>
-        <div style="grid-column:span 2;">
+        <div>
           <label>Search (name, father name, CNIC, room no, type, mode)</label>
           <div class="search-clear-wrap">
             <input type="text" id="filterSearch" placeholder="Type to search..." autocomplete="off">
@@ -5042,13 +5045,20 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
 
     <div class="panel no-print accent-filters">
-      <h2>Date Range</h2>
+      <h2>Filters</h2>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
           <label>Date Range</label>
           <input type="text" id="rvRange" placeholder="Select a date range">
           <input type="date" id="rvFrom" style="display:none">
           <input type="date" id="rvTo" style="display:none">
+        </div>
+        <div>
+          <label>Search (name, room no, type)</label>
+          <div class="search-clear-wrap">
+            <input type="text" id="rvSearch" placeholder="Type to search..." autocomplete="off">
+            <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
+          </div>
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
@@ -7841,7 +7851,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
   initRangeDatePicker('lgRange', 'lgFrom', 'lgTo', renderLedgers);
   setRangeDate('lgRange', 'lgFrom', 'lgTo', todayStr(), todayStr());
-  ['rvFrom','rvTo'].forEach(id=>{
+  ['rvFrom','rvTo','rvSearch'].forEach(id=>{
     document.getElementById(id).addEventListener('input', renderRevenue);
   });
   initRangeDatePicker('rvRange', 'rvFrom', 'rvTo', renderRevenue);
@@ -14599,6 +14609,7 @@ function setRevenueToday(){
 
 function clearRevenueFilters(){
   setRangeDate('rvRange', 'rvFrom', 'rvTo', '', '');
+  document.getElementById('rvSearch').value = '';
   renderRevenue();
 }
 
@@ -14794,13 +14805,27 @@ function renderRevenue(){
   nightlySummary.textContent = data.distinctRoomTypeCount + (data.distinctRoomTypeCount === 1 ? ' room' : ' rooms') + '   ·   ' +
     data.distinctApartmentTypeCount + (data.distinctApartmentTypeCount === 1 ? ' apartment' : ' apartments') + '   ·   Total Room Rent: Rs. ' + data.totalRent.toLocaleString();
 
-  if(data.roomRows.length === 0){
-    roomsBody.innerHTML = '<div class="empty-note">No rooms occupied ' + dayWord + '.</div>';
+  const rvSearchVal = document.getElementById('rvSearch').value.trim().toLowerCase();
+  const filteredRoomRows = rvSearchVal
+    ? data.roomRows.filter(r=> [r.guest, r.roomNo, r.unitType].some(v=> (v || '').toLowerCase().includes(rvSearchVal)))
+    : data.roomRows;
+
+  if(filteredRoomRows.length === 0){
+    roomsBody.innerHTML = '<div class="empty-note">No rooms occupied ' + dayWord + (rvSearchVal ? ' matching this search.' : '.') + '</div>';
   } else {
-    roomsBody.innerHTML = buildRoomsTableHtml(data.roomRows, {
-      totalRent: data.totalRent, totalCollected: data.totalCollected, totalCash: data.totalCash,
-      totalMCB: data.totalMCB, totalHaji: data.totalHaji, totalAlfalah: data.totalAlfalah, totalDue: data.totalDue
-    }, showDateCol);
+    const filteredTotals = rvSearchVal
+      ? {
+          totalRent: filteredRoomRows.reduce((s,r)=> s + r.rent, 0),
+          totalCollected: filteredRoomRows.reduce((s,r)=> s + r.collected, 0),
+          totalCash: filteredRoomRows.reduce((s,r)=> s + r.cashTotal, 0),
+          totalMCB: filteredRoomRows.reduce((s,r)=> s + r.mcbTotal, 0),
+          totalHaji: filteredRoomRows.reduce((s,r)=> s + r.hajiTotal, 0),
+          totalAlfalah: filteredRoomRows.reduce((s,r)=> s + r.alfalahTotal, 0),
+          totalDue: filteredRoomRows.reduce((s,r)=> s + r.due, 0)
+        }
+      : { totalRent: data.totalRent, totalCollected: data.totalCollected, totalCash: data.totalCash,
+          totalMCB: data.totalMCB, totalHaji: data.totalHaji, totalAlfalah: data.totalAlfalah, totalDue: data.totalDue };
+    roomsBody.innerHTML = buildRoomsTableHtml(filteredRoomRows, filteredTotals, showDateCol);
   }
 
   // ---- Payments By Date: the same money as the Rooms total above, just
