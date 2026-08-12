@@ -15785,7 +15785,12 @@ function updateCloudIndicator(){
       el.textContent = '☁ Saving…';
       el.style.color = 'var(--gold-deep)';
     } else if(lastSyncAt){
-      el.textContent = '☁ Live — synced ' + lastSyncAt.toLocaleTimeString();
+      const isPhone = window.innerWidth < 768;
+      if(isPhone){
+        el.textContent = lastSyncAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      } else {
+        el.textContent = '☁ Live — synced ' + lastSyncAt.toLocaleTimeString();
+      }
       el.style.color = '#4ADE80';
     } else {
       el.textContent = '☁ Connecting…';
