@@ -735,7 +735,7 @@
   }
   .dash-grid{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    grid-template-columns:repeat(2,1fr);
     gap:14px;
     margin-top:16px;
   }
@@ -743,7 +743,7 @@
     .dash-grid{ grid-template-columns:repeat(2,1fr); }
   }
   @media (max-width: 560px){
-    .dash-grid{ grid-template-columns:1fr; }
+    .dash-grid{ grid-template-columns:repeat(2,1fr); gap:10px; }
   }
   .room-stats-grid{
     display:grid;
@@ -2606,6 +2606,33 @@
     html[data-theme="dark"] .hdr-row2::after{ background:linear-gradient(to right, transparent, var(--paper)); }
     html[data-theme="dark"] .hdr-row3::after{ background:linear-gradient(to right, transparent, #1A1A1A); }
 
+    /* Dashboard: reduce card sizes on phone for consistency with desktop */
+    .dash-card{
+      padding:12px;
+    }
+    .dash-card-val{
+      font-size:22px;
+      margin-top:10px;
+    }
+    .dash-card-icon{
+      width:28px;
+      height:28px;
+    }
+    .dash-card-icon svg{ width:14px; height:14px; }
+    .dash-card-lbl{
+      font-size:9px;
+    }
+    .dash-subtiles{
+      gap:6px;
+      margin-top:10px;
+    }
+    .dash-subtile-val{
+      font-size:14px;
+    }
+    .dash-subtile-lbl{
+      font-size:9px;
+    }
+
     /* Multi-column forms/info-grids stack to one column — two side-by-side
        fields under a phone keyboard is unusable. (.grid already auto-fits
        to 1 column at this width via its minmax(200px) floor in most cases;
@@ -3601,9 +3628,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         <h1>Dashboard</h1>
         <div class="sub">Today at a glance</div>
       </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn edit-gold" onclick="showView('roomdetail')">Room Detail</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between; width:100%;">
         <button class="btn" onclick="openAvailModal()">Check Availability</button>
+        <button class="btn edit-gold" onclick="showView('roomdetail')">Room Detail</button>
       </div>
     </div>
 
