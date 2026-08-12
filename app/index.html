@@ -8255,6 +8255,14 @@ roomBodyEl.addEventListener('focusout', e=>{
   setTimeout(()=>{ wrap.querySelector('.roomno-list').classList.remove('show'); }, 150);
 });
 
+// The list is position:fixed, so scrolling doesn't move it with its input —
+// close any open list on scroll instead of leaving it floating mid-screen.
+// Capture phase so scrolls inside nested scroll containers are caught too.
+document.addEventListener('scroll', e=>{
+  if(e.target instanceof Element && e.target.closest('.roomno-list')) return; // scrolling the list itself
+  document.querySelectorAll('.roomno-list.show').forEach(l=> l.classList.remove('show'));
+}, true);
+
 roomBodyEl.addEventListener('mousedown', e=>{
   const item = e.target.closest('.roomno-item');
   if(!item || !item.dataset.value) return;
@@ -10865,7 +10873,7 @@ function renderRoomDetail(){
           <td>${ng.entry.guestName || '(no name)'}</td>
         </tr>`;
       })() : '';
-      return mainRow + prevRow + nextRow;
+      return prevRow + mainRow + nextRow;
     }).join('');
     return `
       <div class="day-group">
@@ -10930,7 +10938,7 @@ function renderRoomDetail(){
           <span class="sr-guest">${ng.entry.guestName || '(no name)'}</span>
         </div>`;
       })() : '';
-      return mainRow + prevRow + nextRow;
+      return prevRow + mainRow + nextRow;
     }).join('');
     return `
       <div class="smart-panel">
