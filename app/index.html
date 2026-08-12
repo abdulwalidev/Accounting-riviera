@@ -2852,6 +2852,33 @@
       padding: 3px 4px;
     }
 
+    /* Revenue Summary on a phone: the desktop tables use fixed column
+       widths (130-180px each), which adds up to far wider than the screen.
+       Drop the fixed widths and shrink the text so the WHOLE table is
+       visible at once — no sideways scrolling needed. Desktop untouched. */
+    #view-handover #handoverBody table {
+      width: 100%;
+      table-layout: auto;
+      font-size: 9px;
+    }
+    #view-handover #handoverBody th {
+      width: auto !important;
+      font-size: 8px;
+      padding: 3px 3px;
+      white-space: normal;
+    }
+    #view-handover #handoverBody td {
+      font-size: 9px;
+      padding: 3px 3px;
+      white-space: nowrap;
+    }
+    #view-handover #handoverBody td:first-child {
+      white-space: normal;
+    }
+    #view-handover #hoSummary {
+      font-size: 12px;
+    }
+
     /* Header row 1 (brand/search/date-pill/theme-toggle/avatar/logout) is a
        single flex row with a hard-coded 375px search box — on a phone
        that's wider than the whole screen by itself, so every sibling
