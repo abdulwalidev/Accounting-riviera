@@ -2848,7 +2848,6 @@
       padding:0;
       border-radius:0;
     }
-    #hdrDatePill{ display:none; }
     .hdr-search-wrap{
       width:100%;
       flex:1 1 100%;
@@ -4109,7 +4108,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         🔔<span id="hdrFrontOfficeCount" style="position:absolute; top:-4px; right:-4px; background:#dc2626; color:#fff; font-size:10px; font-weight:700; line-height:1; min-width:15px; height:15px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;">0</span>
       </button>
       <span class="hdr-date-pill" id="hdrTimePill"></span>
-      <span class="hdr-date-pill" id="hdrDatePill"></span>
       <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
         <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 1020.354 15.354z"></path></svg>
@@ -8042,6 +8040,7 @@ function dedupeRoomsByNo(rooms){
 
 function detectUnitType(roomNo){
   const v = (roomNo || '').trim().toUpperCase();
+  if(/^[A-Z]-\d{2}$/.test(v)) return 'Apartment';
   if(ROOM_NUMBERS.includes(v)) return 'Room';
   if(APARTMENT_NUMBERS.includes(v)) return 'Apartment';
   return '';
@@ -10437,6 +10436,7 @@ const ROOM_TYPE_BY_SUFFIX = { '01': 'Suit Room', '02': 'VIP Deluxe' };
 function getRoomType(roomNo){
   const v = (roomNo || '').trim().toUpperCase();
   if(APARTMENT_NUMBERS.includes(v)) return '3 Bed Apartment';
+  if(/^[A-Z]-\d{2}$/.test(v)) return '1 Bed Apartment';
   if(ROOM_NUMBERS.includes(v)){
     const suffix = v.slice(-2);
     if(ROOM_TYPE_BY_SUFFIX[suffix]) return ROOM_TYPE_BY_SUFFIX[suffix];
@@ -10476,7 +10476,12 @@ function roomDetailTypeBucket(rs){
 function getRoomSection(roomNo){
   const v = (roomNo || '').trim().toUpperCase();
   if(ROOM_NUMBERS.includes(v)){
-    return v[0] === '2' ? '2ND FLOOR' : v[0] === '3' ? '3RD FLOOR' : v[0] === '4' ? '4TH FLOOR' : 'NA';
+    if(v[0] === '2') return '2ND FLOOR';
+    if(v[0] === '3') return '3RD FLOOR';
+    if(v[0] === '4') return '4TH FLOOR';
+    if(v[0] === 'C') return 'BLOCK C';
+    if(v[0] === 'D') return 'BLOCK D';
+    return 'NA';
   }
   if(APARTMENT_NUMBERS.includes(v)) return 'BLOCK ' + v[0];
   return 'NA';
@@ -16270,7 +16275,6 @@ let syncProblem = null;
 
 function updateHeaderDate(){
   const timeEl = document.getElementById('hdrTimePill');
-  const dateEl = document.getElementById('hdrDatePill');
 
   if(timeEl){
     const now = new Date();
