@@ -2516,25 +2516,29 @@
        BETWEEN hdr-left's brand and search — impossible while they were
        still two separate same-parent boxes. */
     .hdr-left, .hdr-right{ display:contents; }
-    .hdr-brand{ display:none; }
+    .hdr-brand{ order:1; flex-shrink:1; }
     .hdr-brand-suffix{ display:none; }
     #hdrTimePill{
-      order:1;
+      order:2;
       background:transparent;
       padding:0;
       border-radius:0;
+    }
+    #cloudStatus{
+      order:2;
+      margin-left:4px;
     }
     #hdrDatePill{ display:none; }
     #themeToggle{ display:none; }
     .hdr-search-wrap{
       width:100%;
       flex:1 1 100%;
-      order:5;
+      order:6;
     }
     .hdr-search-kbd{ display:none; }
     #hdrFrontOfficeBadge, #hotelRestaurantSwitch{ display:none; }
     .hdr-whoami-short{
-      order:2;
+      order:3;
       display:inline-flex;
       align-items:center;
       justify-content:center;
@@ -2550,7 +2554,7 @@
       margin:0 4px;
     }
     #whoamiRole{
-      order:3;
+      order:4;
       font-family:'Inter',sans-serif;
       font-size:12px;
       font-weight:600;
@@ -2560,7 +2564,7 @@
     #pauseSyncBtn{ display:none; }
     #whoami, .hdr-avatar{ display:none; }
     #logoutBtn{
-      order:4;
+      order:5;
       flex:0 0 auto;
       margin-left:auto;
     }
