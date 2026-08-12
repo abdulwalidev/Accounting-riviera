@@ -1477,6 +1477,12 @@
     font-weight:700;
     border-bottom-color:#1a73e8;
   }
+  .navbtn-separator{
+    width:1px;
+    height:24px;
+    background:#d4af37;
+    align-self:center;
+  }
   .search-row{
     display:flex;
     gap:12px;
@@ -3717,6 +3723,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search</button>
       <button class="navbtn gold-nav" id="topNavReport" onclick="showView('report')">Payment Report</button>
+      <div class="navbtn-separator"></div>
       <button class="navbtn gold-nav" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
       <button class="navbtn" id="topNavArrival" onclick="showView('arrival')" style="display:none; margin-left:auto;">Arrival</button>
       <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none;">Checkout/Pending</button>
