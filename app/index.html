@@ -8531,7 +8531,11 @@ function changeRooms(btn, delta){
 
 function calcRow(rentInput){
   const tr = rentInput.closest('tr');
-  const rent = parseFloat(rentInput.value) || 0;
+  // Comma-strip like every report already does (buildRevenueReport,
+  // buildLedgersRecords) — a typed "1,500" used to compute as Rs 1 here
+  // while the reports billed 1,500, so the entry's own totals never
+  // reconciled with Revenue/Ledgers.
+  const rent = parseFloat(String(rentInput.value).replace(/,/g, '')) || 0;
   const rooms = parseInt(tr.dataset.rooms) || 1;
   const total = rent * rooms;
   tr.querySelector('.rowtotal').textContent = total.toLocaleString();
@@ -9438,7 +9442,11 @@ async function reviewEntry(){
     if(origCheckin) extraDetails.unshift({ kind: 'Actual Checkin', value: origCheckin });
     const origCheckout = getDetailValue(originalEntryForEdit, 'Actual Checkout');
     if(origCheckout) extraDetails.unshift({ kind: 'Actual Checkout', value: origCheckout });
-  } else if(checkInEl.value && checkInEl.value === todayStr()){
+  } else if(checkInEl.value && (checkInEl.value === todayStr() || checkInEl.value === checkinTodayStr())){
+    // checkinTodayStr(): before the 11:49 AM cutoff the hotel's "today" is
+    // still the previous calendar day, so a 2 AM walk-in dated to the
+    // still-current hotel day must stamp too — same "today" the Save
+    // button's own Save-and-Checkin label uses.
     // Same-day walk-in: the guest is physically at the desk while being
     // typed in, so their arrival IS confirmed — stamp Actual Checkin now.
     // Without this, walk-ins forever showed Actual Checkin "—" (Arrival
@@ -9459,7 +9467,8 @@ async function reviewEntry(){
     // Per Day marks the room as occupied with zero rent, skipping the
     // "must be greater than 0" check that applies to paying guests.
     const isFreeGuest = rentInput.value.trim().toLowerCase() === 'guest';
-    const rent = isFreeGuest ? 0 : (parseFloat(rentInput.value) || 0);
+    // Comma-strip to match calcRow and the reports — "1,500" is 1500, not 1.
+    const rent = isFreeGuest ? 0 : (parseFloat(String(rentInput.value).replace(/,/g, '')) || 0);
     if(!roomNo && !isFreeGuest && rent === 0) continue; // untouched filler row — ignore silently
     if(!roomNo){
       showNotice('A rent amount was entered without a Room No / Apt No. Please pick a room for every row, or clear the rent.');
@@ -10627,7 +10636,9 @@ function computeRoomStatuses(asOfDate){
       if(priorNight){
         const prevEntry = all.find(e=> e.id === priorNight.guestId) || null;
         const prevCheckout = prevEntry ? getDetailValue(prevEntry, 'Actual Checkout') : '';
-        const resolved = !!(prevCheckout && prevCheckout >= priorNight.date);
+        // Any confirmed checkout resolves — same early-leaver rule as
+        // resolvedByCheckout below.
+        const resolved = !!prevCheckout;
         if(prevEntry && !resolved) previousGuestPending = { entry: prevEntry, lastNightDate: priorNight.date };
       }
     }
@@ -10671,7 +10682,14 @@ function computeRoomStatuses(asOfDate){
     // checking out — only this guest's own Actual Checkout date can resolve
     // Extended.
     const actualCheckoutDate = current ? getDetailValue(current, 'Actual Checkout') : '';
-    const resolvedByCheckout = !!(actualCheckoutDate && lastNightDate && actualCheckoutDate >= lastNightDate);
+    // ANY confirmed Actual Checkout resolves the stay — each visit is its
+    // own entry, so the date can only belong to this stay. Requiring it to
+    // be >= the last booked night left an EARLY leaver (checked out before
+    // their booked nights ran out, nights never trimmed) stuck reading
+    // Extended/Pending forever once those nights lapsed, despite a
+    // confirmed checkout days earlier. Re-extending a stay after a
+    // checkout is what Undo Checkout is for.
+    const resolvedByCheckout = !!actualCheckoutDate;
     // Extended is strictly a live/past-date state, never a forecast: for a
     // FUTURE refDate (Check Availability picking a day ahead), a guest who
     // is inhouse right now with no confirmed checkout must be assumed to
@@ -15754,19 +15772,33 @@ function buildAutoCheckoutRows(asOfDate){
   statuses.filter(rs=> rs.previousGuestPending && rs.previousGuestPending.entry).forEach(rs=>{
     const entry = rs.previousGuestPending.entry;
     const guestId = entry.id;
-    if(dueByGuest.has(guestId)) return;
-    if(activeGuestIds.has(guestId)) return; // still genuinely inhouse elsewhere
     // An advance reservation nobody ever confirmed in is an ARRIVAL that
     // never happened, not a checkout waiting to be confirmed — a guest
     // can't be due to check out of a room they were never checked into.
     if(isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
-    const d = computeTotals(entry).due;
+    const checkoutDate = addDaysToDateStr(rs.previousGuestPending.lastNightDate, 1);
+    // Same per-guest grouping as the extended path above: a guest pending
+    // in several turned-over rooms (or extended in one and pending in
+    // another) must fold every room into their ONE row — checkout marks
+    // all of a guest's rooms Dirty off this row's roomNos, so dropping a
+    // room here would leave it never marked Dirty.
+    const existing = dueByGuest.get(guestId);
+    if(existing){
+      if(!existing.roomNos.includes(rs.roomNo)) existing.roomNos.push(rs.roomNo);
+      if(checkoutDate > existing.checkoutDate) existing.checkoutDate = checkoutDate;
+      return;
+    }
+    // Still genuinely inhouse in another room (a room move): same treatment
+    // as the extended path — an informational Extended row, never dropped
+    // silently, never checkout-able while their other room is active.
+    const isExtendedStatus = activeGuestIds.has(guestId);
+    const d = isExtendedStatus ? 0 : computeTotals(entry).due;
     dueByGuest.set(guestId, {
       roomNos: [rs.roomNo], guestId, guest: entry.guestName || '(no name)',
       checkIn: entry.checkIn || '',
-      checkoutDate: addDaysToDateStr(rs.previousGuestPending.lastNightDate, 1),
+      checkoutDate,
       due: d,
-      status: d === 0 ? 'ready' : 'pending'
+      status: isExtendedStatus ? 'extended' : (d === 0 ? 'ready' : 'pending')
     });
   });
   const due = Array.from(dueByGuest.values()).map(r=>{
