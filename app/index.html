@@ -1220,26 +1220,9 @@
     border-bottom:1px solid #e0e0e0;
     padding:0 20px;
   }
-  .hdr-row3 .navbtn{
-    font-size:13px;
-    color:#1CB0F6;
-    padding:8px 10px;
-    background:#fff;
-    border:none;
-    border-bottom:4px solid #BBE7FC;
-    border-radius:10px;
-    font-weight:800;
-    transition:all 0.2s ease;
-  }
-  .hdr-row3 .navbtn:active{
-    transform:translateY(2px);
-    border-bottom:0;
-  }
-  .hdr-row3 .navbtn:hover{ opacity:0.9; }
-  .hdr-row3 .navbtn.active{
-    color:#1a73e8;
-    border-bottom-color:#3b82f6;
-  }
+  .hdr-row3 .navbtn{ font-size:13px; color:#555; padding:10px 0; }
+  .hdr-row3 .navbtn:hover{ color:#1a73e8; }
+  .hdr-row3 .navbtn.active{ color:#1a73e8; font-weight:700; border-bottom-color:#1a73e8; }
   /* Golden nav buttons (Payment Report / Revenue Report) — gold in every
      state so they stand out from the blue-accented rest of the nav. */
   .hdr-row2 .navbtn.gold-nav, .hdr-row3 .navbtn.gold-nav{ color:var(--gold-deep); font-weight:600; }
@@ -1579,26 +1562,21 @@
   .topnav .navbtn{
     font-family:'Inter',sans-serif;
     font-size:14px;
-    font-weight:800;
+    font-weight:500;
     border:none;
-    border-bottom:4px solid #BBE7FC;
-    background:#fff;
-    color:#1CB0F6;
-    padding:8px 12px;
+    border-bottom:3px solid transparent;
+    background:transparent;
+    color:#333;
+    padding:12px 0;
     cursor:pointer;
     white-space:nowrap;
     flex:0 0 auto;
-    border-radius:10px;
-    transition:all 0.2s ease;
   }
-  .topnav .navbtn:active{
-    transform:translateY(2px);
-    border-bottom:0;
-  }
-  .topnav .navbtn:hover{ opacity:0.9; }
+  .topnav .navbtn:hover{ color:#1a73e8; }
   .topnav .navbtn.active{
     color:#1a73e8;
-    border-bottom-color:#3b82f6;
+    font-weight:700;
+    border-bottom-color:#1a73e8;
   }
   .navbtn-separator{
     width:1px;
