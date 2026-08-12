@@ -1220,9 +1220,27 @@
     border-bottom:1px solid #e0e0e0;
     padding:0 20px;
   }
-  .hdr-row3 .navbtn{ font-size:13px; color:#555; padding:10px 0; }
-  .hdr-row3 .navbtn:hover{ color:#1a73e8; }
-  .hdr-row3 .navbtn.active{ color:#1a73e8; font-weight:700; border-bottom-color:#1a73e8; }
+  .hdr-row3 .navbtn{
+    font-size:13px;
+    color:#555;
+    padding:8px 10px;
+    background:#fff;
+    border:none;
+    border-bottom:4px solid #cfe9f3;
+    border-radius:10px;
+    font-weight:800;
+    transition:all 0.2s ease;
+  }
+  .hdr-row3 .navbtn:active{
+    transform:translateY(2px);
+    border-bottom:0;
+  }
+  .hdr-row3 .navbtn:hover{ opacity:0.9; }
+  .hdr-row3 .navbtn.active{
+    color:#1a73e8;
+    border-bottom-color:#1a73e8;
+    font-weight:800;
+  }
   /* Golden nav buttons (Payment Report / Revenue Report) — gold in every
      state so they stand out from the blue-accented rest of the nav. */
   .hdr-row2 .navbtn.gold-nav, .hdr-row3 .navbtn.gold-nav{ color:var(--gold-deep); font-weight:600; }
@@ -1562,21 +1580,27 @@
   .topnav .navbtn{
     font-family:'Inter',sans-serif;
     font-size:14px;
-    font-weight:500;
+    font-weight:800;
     border:none;
-    border-bottom:3px solid transparent;
-    background:transparent;
+    border-bottom:4px solid #cfe9f3;
+    background:#fff;
     color:#333;
-    padding:12px 0;
+    padding:8px 12px;
     cursor:pointer;
     white-space:nowrap;
     flex:0 0 auto;
+    border-radius:10px;
+    transition:all 0.2s ease;
   }
-  .topnav .navbtn:hover{ color:#1a73e8; }
+  .topnav .navbtn:active{
+    transform:translateY(2px);
+    border-bottom:0;
+  }
+  .topnav .navbtn:hover{ opacity:0.9; }
   .topnav .navbtn.active{
     color:#1a73e8;
-    font-weight:700;
     border-bottom-color:#1a73e8;
+    font-weight:800;
   }
   .navbtn-separator{
     width:1px;
@@ -2463,11 +2487,18 @@
   html[data-theme="dark"] .hdr-row2{ background:var(--paper); border-color:rgba(255,255,255,0.15); }
   html[data-theme="dark"] .hdr-row3{ background:#1A1A1A; border-color:rgba(255,255,255,0.15); }
   html[data-theme="dark"] .hdr-row2 .navbtn,
-  html[data-theme="dark"] .hdr-row3 .navbtn{ color:rgba(255,255,255,0.7); }
+  html[data-theme="dark"] .hdr-row3 .navbtn{
+    background:#fff;
+    color:#555;
+    border-bottom-color:#cfe9f3;
+  }
   html[data-theme="dark"] .hdr-row2 .navbtn:hover,
-  html[data-theme="dark"] .hdr-row3 .navbtn:hover{ color:var(--ink-fill); }
+  html[data-theme="dark"] .hdr-row3 .navbtn:hover{ opacity:0.9; }
   html[data-theme="dark"] .hdr-row2 .navbtn.active,
-  html[data-theme="dark"] .hdr-row3 .navbtn.active{ color:var(--ink-fill); border-bottom-color:var(--ink-fill); }
+  html[data-theme="dark"] .hdr-row3 .navbtn.active{
+    color:#1a73e8;
+    border-bottom-color:#1a73e8;
+  }
   /* Golden nav buttons stay gold in dark mode too (--gold-deep flips to
      the brighter #FBBF24 up top) — must re-state here because the generic
      dark navbtn rules above out-rank the light-theme gold-nav rules. */
