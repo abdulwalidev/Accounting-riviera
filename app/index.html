@@ -1150,17 +1150,14 @@
   .hdr-search-clear{ right:10px; }
   .hdr-search-results{
     display:none;
-    position:absolute;
-    top:calc(100% + 6px);
-    left:0;
-    right:0;
+    position:fixed;
     background:#fff;
     color:#111;
     border-radius:6px;
     box-shadow:0 8px 24px rgba(0,0,0,0.3);
     max-height:360px;
     overflow-y:auto;
-    z-index:50;
+    z-index:500;
     text-align:left;
   }
   .hdr-search-results.show{ display:block; }
@@ -4793,10 +4790,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="filterFrom" style="display:none">
           <input type="date" id="filterTo" style="display:none">
         </div>
-        <div style="max-width:220px;">
-          <label style="text-align:left;">Search</label>
+        <div style="max-width:220px; margin-left:auto;">
+          <label style="text-align:right;">Search</label>
           <div class="search-clear-wrap">
-            <input type="text" id="filterSearch" placeholder="Type to search..." autocomplete="off">
+            <input type="text" id="filterSearch" placeholder="Type to search..." autocomplete="off" style="text-align:right;">
             <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
           </div>
         </div>
@@ -5059,10 +5056,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="rvFrom" style="display:none">
           <input type="date" id="rvTo" style="display:none">
         </div>
-        <div style="max-width:220px;">
-          <label style="text-align:left;">Search</label>
+        <div style="max-width:220px; margin-left:auto;">
+          <label style="text-align:right;">Search</label>
           <div class="search-clear-wrap">
-            <input type="text" id="rvSearch" placeholder="Type to search..." autocomplete="off">
+            <input type="text" id="rvSearch" placeholder="Type to search..." autocomplete="off" style="text-align:right;">
             <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
           </div>
         </div>
@@ -10228,6 +10225,10 @@ function renderGlobalSearch(){
     }).join('');
     box.innerHTML = pageRows + guestRows;
   }
+  const wrapRect = document.querySelector('.hdr-search-wrap').getBoundingClientRect();
+  box.style.top = (wrapRect.bottom + 6) + 'px';
+  box.style.left = wrapRect.left + 'px';
+  box.style.width = wrapRect.width + 'px';
   box.classList.add('show');
 }
 
@@ -10757,9 +10758,9 @@ function renderRoomDetail(){
       <div style="font-size:18px; font-weight:700; color:var(--ink);">${val}</div>
     </div>`;
   unitBoxesEl.innerHTML = `
-    <div style="display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; width:100%;">
+    <div style="display:flex; flex-wrap:wrap; gap:16px;">
       <div style="display:flex;">${box('Room', roomTypeCount, true, false)}${box('Apartment', apartmentTypeCount, false, true)}</div>
-      <div style="display:flex; flex-wrap:wrap; justify-content:flex-end;">${TYPE_BUCKETS.map((label, i)=> box(label, bucketCounts[label], i === 0, i === TYPE_BUCKETS.length - 1)).join('')}</div>
+      <div style="display:flex; flex-wrap:wrap;">${TYPE_BUCKETS.map((label, i)=> box(label, bucketCounts[label], i === 0, i === TYPE_BUCKETS.length - 1)).join('')}</div>
     </div>`;
 
   if(rooms.length === 0){
