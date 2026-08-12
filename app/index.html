@@ -9148,6 +9148,8 @@ function updateDateReadout(input, readoutEl){
 // per-room/per-payment row dates have their own interaction and are left
 // alone.
 function addDateStepper(inputId){
+  const disabledIds = ['cicoFrom', 'cicoTo', 'filterFrom', 'filterTo', 'rvFrom', 'rvTo'];
+  if(disabledIds.includes(inputId)) return;
   const input = document.getElementById(inputId);
   if(!input || input.dataset.stepperAdded) return;
   input.dataset.stepperAdded = '1';
