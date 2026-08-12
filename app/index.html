@@ -7962,7 +7962,7 @@ function addRow(){
         <button onclick="changeRooms(this,1)">+</button>
       </div>
       <span class="roomCountMisc" style="display:none;">-</span>
-      <button type="button" class="split-rate-btn" onclick="openSplitRateModal(this)" title="Give one night of this room's stay a different rate">⚡ Split Rate</button>
+      <button type="button" class="split-rate-btn" onclick="openSplitRateModal(this)" title="Give one night of this room's stay a different rate">⚡ Change Rate</button>
     </td>
     <td class="rowtotal">0</td>
     <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'room')">✕</button></td>
@@ -8165,7 +8165,7 @@ function openSplitRateModal(btn){
   const tr = btn.closest('tr');
   const roomNo = tr.querySelector('.roomNo').value.trim();
   if(!roomNo){ showNotice('Pick a room first.'); return; }
-  if(isMiscRoomNo(roomNo)){ showNotice('Split Rate isn\'t for Miscellaneous charges — those are always a one-off, not a multi-night stay.'); return; }
+  if(isMiscRoomNo(roomNo)){ showNotice('Change Rate isn\'t for Miscellaneous charges — those are always a one-off, not a multi-night stay.'); return; }
   const count = parseInt(tr.dataset.rooms) || 1;
   if(count < 2){ showNotice('This room is only booked for 1 night — add more nights first, then split one out.'); return; }
   splitRatePendingRow = tr;
