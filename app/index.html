@@ -14941,16 +14941,15 @@ function renderRevenue(){
       <div class="rev-grandtotal-box">
         <div class="date-box-head">Revenue Grand Total</div>
         <table style="table-layout:fixed; width:100%;">
-          <thead><tr><th>Cash</th><th>Mcb</th><th>Alfalah</th><th>Haji Mcb</th><th>Miscellaneous</th><th>Account</th><th>Total</th></tr></thead>
+          <thead><tr><th>Cash</th><th>Mcb</th><th>Alfalah</th><th>Haji Mcb</th><th>Account</th><th>Total</th></tr></thead>
           <tbody>
             <tr class="day-foot-total">
               <td class="cash-amt">${data.paymentsByDateCashTotal.toLocaleString()}</td>
               <td class="account-amt">${data.totalMCB.toLocaleString()}</td>
               <td class="account-amt">${data.totalAlfalah.toLocaleString()}</td>
               <td class="account-amt">${data.totalHaji.toLocaleString()}</td>
-              <td>${data.totalMisc.toLocaleString()}</td>
               <td class="account-amt">${data.paymentsByDateAccountTotal.toLocaleString()}</td>
-              <td style="font-weight:700;">${(data.paymentsByDateGrandTotal + data.totalMisc).toLocaleString()}</td>
+              <td style="font-weight:700;">${data.paymentsByDateGrandTotal.toLocaleString()}</td>
             </tr>
           </tbody>
         </table>
