@@ -13843,56 +13843,51 @@ function renderMoneyHandover(){
 
   const data = buildRevenueReport(fromVal, toVal);
 
-  // One row per DAY the money actually arrived, one column per place it
-  // landed (Cash / each bank account — names read off the data itself, so
-  // a new account gets its own column automatically). Rent money comes
-  // from Table 1's chunks, keyed by the payment's own date; Revenue
-  // Report's "Other Payments" (advances, top-ups on older dues) are added
-  // to their day too, so each day reads as everything received that day.
-  const days = {};     // date -> { Cash: n, <bank>: n, ... }
-  const colSet = {};   // every source name seen
-  const bump = (date, name, amt)=>{
-    if(!(amt > 0)) return;
-    const d = date || '(no date)';
-    if(!days[d]) days[d] = {};
-    days[d][name] = (days[d][name] || 0) + amt;
-    colSet[name] = true;
-  };
-  data.roomRows.forEach(r=> r.chunks.forEach(c=>{
-    bump(c.date, 'Cash', c.cash);
-    Object.keys(c.banks || {}).forEach(b=> bump(c.date, b, c.banks[b]));
-  }));
-  data.unlinkedPayments.forEach(p=> bump(p.date, p.source || '-', p.amount));
-
-  const cols = Object.keys(colSet).sort((a,b)=> a === 'Cash' ? -1 : b === 'Cash' ? 1 : a.localeCompare(b));
-  const dayRows = Object.keys(days).sort().map(date=>{
-    const vals = cols.map(c=> Math.round(days[date][c] || 0));
-    return { date, vals, total: vals.reduce((s,v)=> s + v, 0) };
+  // Revenue Grand Total, sliced per night date: each row is one date in
+  // range, summing that date's room rows exactly like the Revenue Report's
+  // own Grand Total does over the whole range (money matched to each
+  // night's rent — cashTotal/mcbTotal/alfalahTotal/hajiTotal/collected per
+  // room-night). Account = everything non-cash; Total = all collected. The
+  // footer row therefore equals the Revenue Report's Grand Total for the
+  // same range, number for number.
+  const days = {}; // date -> { cash, mcb, alfalah, haji, account, total }
+  data.roomRows.forEach(r=>{
+    if(!days[r.date]) days[r.date] = { cash: 0, mcb: 0, alfalah: 0, haji: 0, account: 0, total: 0 };
+    const d = days[r.date];
+    d.cash += r.cashTotal;
+    d.mcb += r.mcbTotal;
+    d.alfalah += r.alfalahTotal;
+    d.haji += r.hajiTotal;
+    d.account += r.collected - r.cashTotal;
+    d.total += r.collected;
   });
-  const colTotals = cols.map((c,i)=> dayRows.reduce((s,r)=> s + r.vals[i], 0));
-  const grandTotal = colTotals.reduce((s,v)=> s + v, 0);
+  const dayRows = Object.keys(days).sort().map(date=>{
+    const d = days[date];
+    return { date, vals: [d.cash, d.mcb, d.alfalah, d.haji, d.account, d.total].map(v=> Math.round(v)) };
+  });
+  const COLS = ['Cash', 'Mcb', 'Alfalah', 'Haji Mcb', 'Account', 'Total'];
+  const colTotals = COLS.map((c,i)=> dayRows.reduce((s,r)=> s + r.vals[i], 0));
 
-  summaryEl.textContent = 'Rs. ' + grandTotal.toLocaleString() + ' received in total for ' + dayWord;
+  summaryEl.textContent = 'Rs. ' + colTotals[5].toLocaleString() + ' revenue collected for ' + dayWord;
 
   if(dayRows.length === 0 && data.totalRent === 0){
     container.innerHTML = '<div class="empty-note">No revenue for ' + dayWord + '.</div>';
     return;
   }
 
+  const fmtCell = (v, i, bold)=> '<td' + (i === 0 && v > 0 ? ' class="cash-amt"' : '') + '>' + (v > 0 ? (bold ? '<b>' : '') + v.toLocaleString() + (bold ? '</b>' : '') : '-') + '</td>';
   let html = `
     <table>
       <thead><tr>
         <th style="width:130px;">Date</th>
-        ${cols.map(c=> '<th style="width:140px;">' + c + '</th>').join('')}
-        <th style="width:150px;">Total</th>
+        ${COLS.map(c=> '<th style="width:130px;">' + c + '</th>').join('')}
       </tr></thead>
       <tbody>`;
   dayRows.forEach(r=>{
     html += `
       <tr>
-        <td>${r.date === '(no date)' ? '(no date)' : formatDateShort(r.date)}</td>
-        ${r.vals.map((v,i)=> '<td' + (cols[i] === 'Cash' && v > 0 ? ' class="cash-amt"' : '') + '>' + (v > 0 ? 'Rs. ' + v.toLocaleString() : '-') + '</td>').join('')}
-        <td><b>${r.total > 0 ? 'Rs. ' + r.total.toLocaleString() : '-'}</b></td>
+        <td>${formatDateShort(r.date)}</td>
+        ${r.vals.map((v,i)=> fmtCell(v, i, i === 5)).join('')}
       </tr>`;
   });
   html += `
@@ -13900,8 +13895,7 @@ function renderMoneyHandover(){
       <tfoot>
         <tr class="day-foot-total">
           <td>Total</td>
-          ${colTotals.map((v,i)=> '<td' + (cols[i] === 'Cash' ? ' class="cash-amt"' : '') + '>Rs. ' + v.toLocaleString() + '</td>').join('')}
-          <td>Rs. ${grandTotal.toLocaleString()}</td>
+          ${colTotals.map((v,i)=> '<td' + (i === 0 ? ' class="cash-amt"' : '') + '>' + v.toLocaleString() + '</td>').join('')}
         </tr>
       </tfoot>
     </table>`;
@@ -13922,7 +13916,7 @@ function renderMoneyHandover(){
       </tbody>
     </table>
     <div class="sub no-print" style="margin-top:12px;">
-      Each row is a day the money actually arrived, split by where it landed. It includes rent paid toward nights inside ${dayWord} (whenever received) plus other money received in range (advances, top-ups on older dues — the Revenue Report's Other Payments). Every number comes from the same calculation as the Revenue Report itself.
+      Each row is one night date in ${dayWord}: money collected toward that night's room rent, split by where it landed (Account = everything non-cash). The Total row at the bottom matches the Revenue Report's Grand Total for this same range, number for number.
     </div>`;
 
   container.innerHTML = html;
