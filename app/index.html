@@ -13809,35 +13809,38 @@ function renderMoneyHandover(){
 
   const data = buildRevenueReport(fromVal, toVal);
 
-  // By-source rollup. Column 1: rent for these nights (Table 1's chunks).
-  // Column 2: Revenue Report's "Other Payments" (in-range money not tied to
-  // an in-range night — advances, top-ups on older dues). Bank names are
-  // read off the data itself, so a new account shows up automatically.
-  const sources = {}; // name -> { rent, other }
-  const bump = (name, field, amt)=>{
+  // One row per DAY the money actually arrived, one column per place it
+  // landed (Cash / each bank account — names read off the data itself, so
+  // a new account gets its own column automatically). Rent money comes
+  // from Table 1's chunks, keyed by the payment's own date; Revenue
+  // Report's "Other Payments" (advances, top-ups on older dues) are added
+  // to their day too, so each day reads as everything received that day.
+  const days = {};     // date -> { Cash: n, <bank>: n, ... }
+  const colSet = {};   // every source name seen
+  const bump = (date, name, amt)=>{
     if(!(amt > 0)) return;
-    if(!sources[name]) sources[name] = { rent: 0, other: 0 };
-    sources[name][field] += amt;
+    const d = date || '(no date)';
+    if(!days[d]) days[d] = {};
+    days[d][name] = (days[d][name] || 0) + amt;
+    colSet[name] = true;
   };
   data.roomRows.forEach(r=> r.chunks.forEach(c=>{
-    bump('Cash', 'rent', c.cash);
-    Object.keys(c.banks || {}).forEach(b=> bump(b, 'rent', c.banks[b]));
+    bump(c.date, 'Cash', c.cash);
+    Object.keys(c.banks || {}).forEach(b=> bump(c.date, b, c.banks[b]));
   }));
-  data.unlinkedPayments.forEach(p=> bump(p.source || '-', 'other', p.amount));
+  data.unlinkedPayments.forEach(p=> bump(p.date, p.source || '-', p.amount));
 
-  const srcRows = Object.keys(sources)
-    .sort((a,b)=> a === 'Cash' ? -1 : b === 'Cash' ? 1 : a.localeCompare(b))
-    .map(name=>{
-      const s = sources[name];
-      return { name, rent: Math.round(s.rent), other: Math.round(s.other), total: Math.round(s.rent + s.other) };
-    });
-  const rentTotal = srcRows.reduce((s,r)=> s + r.rent, 0);
-  const otherTotal = srcRows.reduce((s,r)=> s + r.other, 0);
-  const grandTotal = rentTotal + otherTotal;
+  const cols = Object.keys(colSet).sort((a,b)=> a === 'Cash' ? -1 : b === 'Cash' ? 1 : a.localeCompare(b));
+  const dayRows = Object.keys(days).sort().map(date=>{
+    const vals = cols.map(c=> Math.round(days[date][c] || 0));
+    return { date, vals, total: vals.reduce((s,v)=> s + v, 0) };
+  });
+  const colTotals = cols.map((c,i)=> dayRows.reduce((s,r)=> s + r.vals[i], 0));
+  const grandTotal = colTotals.reduce((s,v)=> s + v, 0);
 
   summaryEl.textContent = 'Rs. ' + grandTotal.toLocaleString() + ' received in total for ' + dayWord;
 
-  if(srcRows.length === 0 && data.totalRent === 0){
+  if(dayRows.length === 0 && data.totalRent === 0){
     container.innerHTML = '<div class="empty-note">No revenue for ' + dayWord + '.</div>';
     return;
   }
@@ -13845,20 +13848,17 @@ function renderMoneyHandover(){
   let html = `
     <table>
       <thead><tr>
-        <th>Received In</th>
-        <th style="width:180px;">Room Rent (these nights)</th>
-        <th style="width:180px;">Other Payments</th>
-        <th style="width:180px;">Total</th>
+        <th style="width:130px;">Date</th>
+        ${cols.map(c=> '<th style="width:140px;">' + c + '</th>').join('')}
+        <th style="width:150px;">Total</th>
       </tr></thead>
       <tbody>`;
-  srcRows.forEach(r=>{
-    const cls = r.name === 'Cash' ? ' class="cash-amt"' : '';
+  dayRows.forEach(r=>{
     html += `
       <tr>
-        <td${cls}>${r.name}</td>
-        <td${cls}>${r.rent > 0 ? 'Rs. ' + r.rent.toLocaleString() : '-'}</td>
-        <td${cls}>${r.other > 0 ? 'Rs. ' + r.other.toLocaleString() : '-'}</td>
-        <td${cls}>${r.total > 0 ? 'Rs. ' + r.total.toLocaleString() : '-'}</td>
+        <td>${r.date === '(no date)' ? '(no date)' : formatDateShort(r.date)}</td>
+        ${r.vals.map((v,i)=> '<td' + (cols[i] === 'Cash' && v > 0 ? ' class="cash-amt"' : '') + '>' + (v > 0 ? 'Rs. ' + v.toLocaleString() : '-') + '</td>').join('')}
+        <td><b>${r.total > 0 ? 'Rs. ' + r.total.toLocaleString() : '-'}</b></td>
       </tr>`;
   });
   html += `
@@ -13866,8 +13866,7 @@ function renderMoneyHandover(){
       <tfoot>
         <tr class="day-foot-total">
           <td>Total</td>
-          <td>Rs. ${rentTotal.toLocaleString()}</td>
-          <td>Rs. ${otherTotal.toLocaleString()}</td>
+          ${colTotals.map((v,i)=> '<td' + (cols[i] === 'Cash' ? ' class="cash-amt"' : '') + '>Rs. ' + v.toLocaleString() + '</td>').join('')}
           <td>Rs. ${grandTotal.toLocaleString()}</td>
         </tr>
       </tfoot>
@@ -13889,7 +13888,7 @@ function renderMoneyHandover(){
       </tbody>
     </table>
     <div class="sub no-print" style="margin-top:12px;">
-      "Room Rent (these nights)" is money applied to nights inside ${dayWord} — whenever it was received. "Other Payments" is money received inside ${dayWord} that isn't rent for one of these nights (an advance for later, or a top-up on an older due) — same as the Revenue Report's Other Payments table. Every number here comes from the same calculation as the Revenue Report itself.
+      Each row is a day the money actually arrived, split by where it landed. It includes rent paid toward nights inside ${dayWord} (whenever received) plus other money received in range (advances, top-ups on older dues — the Revenue Report's Other Payments). Every number comes from the same calculation as the Revenue Report itself.
     </div>`;
 
   container.innerHTML = html;
