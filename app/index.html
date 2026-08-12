@@ -735,11 +735,8 @@
   }
   .roomno-list{
     display:none;
-    position:absolute;
-    top:calc(100% + 4px);
-    left:0;
-    right:0;
-    z-index:30;
+    position:fixed;
+    z-index:500;
     background:#fff;
     border:1px solid var(--ink);
     border-radius:4px;
@@ -8203,12 +8200,23 @@ function refreshDuplicateRoomHighlights(){
 // Event delegation so this works for every room row, including ones added later
 const roomBodyEl = document.getElementById('roomBody');
 
+// The list is position:fixed (an overflow/scroll ancestor was clipping it
+// when it was absolute inside the row), so it's placed against the input's
+// live on-screen rect every time it's shown.
+function positionRoomNoList(input, list){
+  const rect = input.getBoundingClientRect();
+  list.style.top = (rect.bottom + 4) + 'px';
+  list.style.left = rect.left + 'px';
+  list.style.width = Math.max(rect.width, 180) + 'px';
+}
+
 roomBodyEl.addEventListener('input', e=>{
   if(!e.target.classList.contains('roomNo')) return;
   const wrap = e.target.closest('.roomno-wrap');
   const tr = e.target.closest('tr');
   const list = wrap.querySelector('.roomno-list');
   renderRoomNoList(list, e.target.value, tr);
+  positionRoomNoList(e.target, list);
   list.classList.add('show');
   refreshDuplicateRoomHighlights();
   updateUnitType(tr);
@@ -8237,6 +8245,7 @@ roomBodyEl.addEventListener('focusin', e=>{
   const tr = e.target.closest('tr');
   const list = wrap.querySelector('.roomno-list');
   renderRoomNoList(list, e.target.value, tr);
+  positionRoomNoList(e.target, list);
   list.classList.add('show');
 });
 
