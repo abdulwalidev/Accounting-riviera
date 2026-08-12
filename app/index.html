@@ -2713,6 +2713,45 @@
     .addpay-form{ grid-template-columns:1fr; }
     .smart-grid{ grid-template-columns:1fr; }
 
+    /* Room Detail page optimization for phone */
+    #view-roomdetail .search-row{
+      flex-direction:column;
+      gap:12px;
+    }
+    #view-roomdetail .rd-occ-field{
+      flex:1;
+      min-width:auto;
+    }
+    #view-roomdetail .checkline{
+      margin-top:8px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    #view-roomdetail .checkline label{
+      font-size:12px;
+      margin:0;
+      white-space:normal;
+    }
+    #roomDetailUnitBoxes{
+      gap:12px !important;
+      row-gap:10px !important;
+    }
+    #view-roomdetail .room-summary{
+      font-size:12px;
+      gap:16px;
+      margin:0;
+    }
+    #view-roomdetail .rd-switch{
+      width:100%;
+      margin-top:8px;
+    }
+    #view-roomdetail .rd-switch-btn{
+      flex:1;
+      padding:8px 12px;
+      font-size:10px;
+    }
+
     /* Tables (hotel side only — see #view-restaurant carve-out below):
        shrink to fit the screen instead of scrolling sideways. Many of
        these tables are built in JS with inline table-layout:fixed and
