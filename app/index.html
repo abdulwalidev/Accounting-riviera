@@ -8414,12 +8414,15 @@ async function confirmRoomStatusChange(){
 // works off pendingCheckoutRoomNos, an array, always — never the single-
 // room pendingRoomStatusRoomNo Room Detail's own housekeeping modal uses.
 let pendingCheckoutRoomNos = [];
+// The guest being checked out, by id — NEVER re-derived from the room
+// number. After a same-day turnover the room's current computeRoomStatuses
+// slot already belongs to the INCOMING guest, so a room-number lookup here
+// would show (and then check out!) the wrong person entirely.
+let pendingCheckoutGuestId = null;
 function openCheckoutConfirmModal(){
   const roomNos = pendingCheckoutRoomNos;
-  if(!roomNos.length) return;
-  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNos[0]);
-  if(!rs || !rs.entry) return;
-  const entry = loadAllEntries().find(e=> e.id === rs.entry.id);
+  if(!roomNos.length || !pendingCheckoutGuestId) return;
+  const entry = loadAllEntries().find(e=> e.id === pendingCheckoutGuestId);
   if(!entry) return;
   const t = computeTotals(entry);
   // Nights Booked only reads cleanly for a single room — a guest holding
@@ -8489,20 +8492,21 @@ async function checkOutEntryRoom(entryId, roomNos, logAction, checkoutDate){
 
 async function confirmRoomCheckout(){
   const roomNos = pendingCheckoutRoomNos;
-  if(!roomNos.length) return;
-  const rs = computeRoomStatuses(todayStr()).find(r=> r.roomNo === roomNos[0]);
-  if(!rs || !rs.entry) return;
+  if(!roomNos.length || !pendingCheckoutGuestId) return;
+  const target = loadAllEntries().find(e=> e.id === pendingCheckoutGuestId);
+  if(!target) return;
   // Last line of defense — never write a checkout for a guest whose
   // balance isn't settled at exactly 0, no matter what UI path got here.
-  if(computeTotals(rs.entry).due !== 0){
+  if(computeTotals(target).due !== 0){
     showNotice('This guest\'s balance isn\'t settled at exactly 0 — checkout blocked.');
     return;
   }
   const checkoutDate = document.getElementById('ccCheckoutDate').value || todayStr();
-  const entry = await checkOutEntryRoom(rs.entry.id, roomNos, undefined, checkoutDate);
+  const entry = await checkOutEntryRoom(target.id, roomNos, undefined, checkoutDate);
   if(!entry) return;
   closeCheckoutConfirmModal();
   pendingCheckoutRoomNos = [];
+  pendingCheckoutGuestId = null;
   rerenderActiveView();
   showNotice((entry.guestName || 'Guest') + ' checked out (' + formatDate(checkoutDate) + ') — room ' + roomNos.join(', ') + ' marked Dirty.', 'success');
 }
@@ -15822,7 +15826,7 @@ function renderAutoCheckout(){
           const action = !isToday ? ''
             : r.status === 'checked_out' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoAutoCheckout('${r.guestId}')">Undo</button>`
             : r.status === 'extended' ? ''
-            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout([${r.roomNos.map(rn=> "'" + String(rn).replace(/'/g, "\\'") + "'").join(',')}], ${r.due})">Checkout</button>`;
+            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout('${r.guestId}', [${r.roomNos.map(rn=> "'" + String(rn).replace(/'/g, "\\'") + "'").join(',')}], ${r.due})">Checkout</button>`;
           return `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${r.roomNo}</td>
@@ -16126,12 +16130,13 @@ async function undoArrivalCheckin(guestId){
 // roomNos is always an array here — buildAutoCheckoutRows groups a guest
 // holding several rooms into one due-list row, so checking them out means
 // checking out of every one of those rooms together, not just the first.
-function startManualCheckout(roomNos, due){
+function startManualCheckout(guestId, roomNos, due){
   if(due !== 0){
     showNotice('This guest\'s balance isn\'t settled at exactly 0 (owed money, or paid ahead of what\'s booked) — Checkout/Pending never checks out a guest like this, even manually. Settle the balance first.');
     return;
   }
   pendingCheckoutRoomNos = roomNos;
+  pendingCheckoutGuestId = guestId;
   openCheckoutConfirmModal();
 }
 
