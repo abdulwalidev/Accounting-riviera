@@ -4412,7 +4412,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <div>
             <label>Actual Checkout</label>
             <input type="text" id="actualCheckoutDate" disabled title="Set automatically via Checkout/Pending — not editable here">
-            <div style="font-size:11px; color:var(--muted); margin-top:3px; text-align:center;">Auto-calculated</div>
+            <div style="font-size:11px; color:var(--muted); margin-top:3px; text-align:center;">Auto-calculated
+              <a id="stampEditLink" href="javascript:void(0)" onclick="editAutoStamps()" style="display:none; margin-left:6px; color:var(--blue); text-decoration:underline; cursor:pointer;" title="Manually fix the auto-stamped Actual Check-in / Actual Checkout (e.g. undo an accidental check-in)">✎ edit</a>
+            </div>
+            <div id="stampEditReadout" style="font-size:11px; color:#d97706; margin-top:2px; text-align:center;"></div>
           </div>
         </div>
       </div>
@@ -9551,6 +9554,36 @@ function toggleNA(fieldId){
   }
 }
 
+// ---- "✎ edit" next to Auto-calculated (edit mode only): manually fix the
+// auto-stamped Actual Checkin / Actual Checkout on the entry being edited —
+// e.g. undo an accidental check-in by clearing the stamp. Staged here and
+// only written when the entry is actually SAVED; Cancel Edit discards it.
+// null = untouched, so normal edits keep carrying the originals forward. ----
+let stampOverride = null;
+function updateStampEditReadout(){
+  const el = document.getElementById('stampEditReadout');
+  if(!stampOverride){ el.textContent = ''; return; }
+  const word = v => v ? formatDate(v) : 'none';
+  el.textContent = 'On save — Actual Check-in: ' + word(stampOverride.checkin) + ', Actual Checkout: ' + word(stampOverride.checkout);
+}
+function editAutoStamps(){
+  if(!editingEntryId){ showNotice('Open an entry for editing first (✎ Edit This Entry on the guest page).'); return; }
+  const entry = loadAllEntries().find(e=> e.id === editingEntryId);
+  if(!entry) return;
+  const okDate = v => v === '' || /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const curCi = stampOverride ? stampOverride.checkin : getDetailValue(entry, 'Actual Checkin');
+  const ci = prompt('Actual Check-in date (YYYY-MM-DD).\n\nLeave EMPTY and press OK to REMOVE it (undo an accidental check-in).\nPress Cancel to change nothing.', curCi || '');
+  if(ci === null) return;
+  if(!okDate(ci.trim())){ showNotice('That date isn\'t valid — use YYYY-MM-DD (e.g. 2026-08-12), or leave it empty to clear the stamp.'); return; }
+  const curCo = stampOverride ? stampOverride.checkout : getDetailValue(entry, 'Actual Checkout');
+  const co = prompt('Actual Checkout date (YYYY-MM-DD).\n\nLeave EMPTY and press OK to REMOVE it (guest counts as NOT checked out again).\nPress Cancel to change nothing.', curCo || '');
+  if(co === null) return;
+  if(!okDate(co.trim())){ showNotice('That date isn\'t valid — use YYYY-MM-DD (e.g. 2026-08-12), or leave it empty to clear the stamp.'); return; }
+  stampOverride = { checkin: ci.trim(), checkout: co.trim() };
+  updateStampEditReadout();
+  showNotice('Check-in/out stamps staged — they\'ll apply when you save this entry. Cancel Edit discards them.', 'success');
+}
+
 let pendingEntryData = null;
 
 async function reviewEntry(){
@@ -9637,9 +9670,11 @@ async function reviewEntry(){
   // brand new entry has neither yet.
   const originalEntryForEdit = editingEntryId ? loadAllEntries().find(e=> e.id === editingEntryId) : null;
   if(originalEntryForEdit){
-    const origCheckin = getDetailValue(originalEntryForEdit, 'Actual Checkin');
+    // stampOverride (the "✎ edit" link) replaces the originals when staged;
+    // an empty override value means the stamp is deliberately removed.
+    const origCheckin = stampOverride ? stampOverride.checkin : getDetailValue(originalEntryForEdit, 'Actual Checkin');
     if(origCheckin) extraDetails.unshift({ kind: 'Actual Checkin', value: origCheckin });
-    const origCheckout = getDetailValue(originalEntryForEdit, 'Actual Checkout');
+    const origCheckout = stampOverride ? stampOverride.checkout : getDetailValue(originalEntryForEdit, 'Actual Checkout');
     if(origCheckout) extraDetails.unshift({ kind: 'Actual Checkout', value: origCheckout });
   } else if(checkInEl.value && (checkInEl.value === todayStr() || checkInEl.value === checkinTodayStr())){
     // checkinTodayStr(): before the 11:49 AM cutoff the hotel's "today" is
@@ -10083,6 +10118,9 @@ function confirmSaveEntry(){
 
 // Clear the whole entry form for the next guest.
 function resetEntryForm(){
+  stampOverride = null;
+  updateStampEditReadout();
+  document.getElementById('stampEditLink').style.display = 'none';
   ['guestName','cnic','contactNo'].forEach(id=>{
     document.getElementById(id).value = '';
   });
@@ -10263,6 +10301,9 @@ function startEditEntry(entry){
   }
   editingEntryId = entry.id;
   editingBaseline = JSON.parse(JSON.stringify(entry));
+  stampOverride = null;
+  updateStampEditReadout();
+  document.getElementById('stampEditLink').style.display = 'inline';
 
   document.getElementById('guestName').value = entry.guestName || '';
   document.getElementById('fatherName').value = entry.fatherName || '';
