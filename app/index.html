@@ -2516,26 +2516,40 @@
        BETWEEN hdr-left's brand and search — impossible while they were
        still two separate same-parent boxes. */
     .hdr-left, .hdr-right{ display:contents; }
-    .hdr-brand{ width:100%; order:1; }
+    .hdr-brand{ order:1; flex-shrink:1; }
     .hdr-brand-suffix{ display:none; } /* "RIVIERA RESORT" -> "RIVIERA" to save header space */
-    #hdrDatePill{ order:2; }
-    #themeToggle{ order:3; }
+    #hdrTimePill{ order:2; }
+    #hdrDatePill{ order:3; }
+    #themeToggle{ display:none; } /* No room on phone, not essential */
     .hdr-search-wrap{
       width:100%;
       flex:1 1 100%;
-      order:4;
+      order:5;
     }
     .hdr-search-kbd{ display:none; } /* "Ctrl + /" means nothing without a physical keyboard */
-    #hdrFrontOfficeBadge, #hotelRestaurantSwitch, .hdr-whoami-short{ order:5; }
+    #hdrFrontOfficeBadge, #hotelRestaurantSwitch{ display:none; } /* No room on phone */
+    .hdr-whoami-short{
+      order:4;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:28px;
+      height:28px;
+      background:#fff;
+      color:#1a73e8;
+      border-radius:50%;
+      font-family:'Inter',sans-serif;
+      font-weight:700;
+      font-size:13px;
+      flex:0 0 auto;
+    }
     /* Pause Sync has no room on a phone header and isn't essential there —
        dropped entirely rather than squeezed in. */
     #pauseSyncBtn{ display:none; }
-    /* Full "username · role" text is too wide for a phone header; the
-       compact "role(initial)" span (populated in refreshRoleUI) replaces
-       it, and the separate avatar circle is redundant with that initial. */
+    /* Full "username · role" text is too wide for a phone header; show
+       just the initial in a circle badge instead. */
     #whoami, .hdr-avatar{ display:none; }
-    .hdr-whoami-short{ display:inline-block; }
-    #logoutBtn{ order:6; margin-left:auto; }
+    #logoutBtn{ order:6; flex:0 0 auto; }
 
     /* Nav tabs (hdr-row2/hdr-row3) already horizontally scroll
        (overflow-x:auto) rather than wrap or clip — but with no visible
@@ -3498,6 +3512,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <button class="theme-toggle hdr-fo-badge" id="hdrFrontOfficeBadge" onclick="event.stopPropagation(); showView('frontoffice');" title="Front Office — uncollected restaurant charges" style="display:none; position:relative;">
         🔔<span id="hdrFrontOfficeCount" style="position:absolute; top:-4px; right:-4px; background:#dc2626; color:#fff; font-size:10px; font-weight:700; line-height:1; min-width:15px; height:15px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;">0</span>
       </button>
+      <span class="hdr-date-pill" id="hdrTimePill"></span>
       <span class="hdr-date-pill" id="hdrDatePill"></span>
       <button class="theme-toggle hdr-pause-btn" id="hotelRestaurantSwitch" onclick="event.stopPropagation(); toggleHotelRestaurantMode();" title="Switch between Hotel and Restaurant" style="display:none;">Restaurant</button>
       <button class="theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
@@ -15730,11 +15745,23 @@ let lastSyncAt = null;
 let syncProblem = null;
 
 function updateHeaderDate(){
-  const el = document.getElementById('hdrDatePill');
-  if(!el) return;
+  const timeEl = document.getElementById('hdrTimePill');
+  const dateEl = document.getElementById('hdrDatePill');
   const iso = todayStr();
-  const weekday = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'long' });
-  el.textContent = '📅 ' + weekday + ', ' + formatDate(iso);
+
+  if(timeEl){
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    timeEl.textContent = hours + ':' + minutes;
+  }
+
+  if(dateEl){
+    const weekday = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'short' });
+    const day = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit' });
+    const month = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { month:'short' });
+    dateEl.textContent = weekday + ', ' + day + ' ' + month;
+  }
 }
 
 function updateCloudIndicator(){
@@ -16597,6 +16624,7 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && appSt
 // regardless of this interval. Other devices' changes also arrive instantly
 // via the realtime subscription below — this is only a fallback.
 setInterval(()=>{ if(appStarted){ pushPendingNow(); if(!appPaused){ pullFreshFromCloud(); fetchFrontOfficeOnly(); if(typeof posAppBooted !== 'undefined' && posAppBooted) posPullFromCloud(); } } }, 300000);
+setInterval(updateHeaderDate, 60000); // update time every minute
 scheduleMidnightAutoLock();
 
 // ---- Idle pause: 2 minutes with no activity stops the poll and covers the
@@ -16872,7 +16900,7 @@ function applyRolePermissions(){
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
   const whoShort = document.getElementById('whoamiShort');
-  if(whoShort) whoShort.textContent = currentUser ? currentUser.role + '(' + currentUser.username.charAt(0).toUpperCase() + ')' : '';
+  if(whoShort) whoShort.textContent = currentUser ? currentUser.username.charAt(0).toUpperCase() : '';
   const avatar = document.getElementById('hdrAvatar');
   if(avatar) avatar.textContent = currentUser ? currentUser.username.charAt(0).toUpperCase() : '';
   document.documentElement.classList.toggle('role-viewer', isViewer());
