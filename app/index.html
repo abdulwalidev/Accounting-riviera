@@ -2518,18 +2518,18 @@
     .hdr-left, .hdr-right{ display:contents; }
     .hdr-brand{ order:1; flex-shrink:1; }
     .hdr-brand-suffix{ display:none; } /* "RIVIERA RESORT" -> "RIVIERA" to save header space */
-    #hdrTimePill{ order:2; }
-    #hdrDatePill{ order:3; }
+    #hdrTimePill{ order:4; }
+    #hdrDatePill{ order:5; }
     #themeToggle{ display:none; } /* No room on phone, not essential */
     .hdr-search-wrap{
       width:100%;
       flex:1 1 100%;
-      order:5;
+      order:7;
     }
     .hdr-search-kbd{ display:none; } /* "Ctrl + /" means nothing without a physical keyboard */
     #hdrFrontOfficeBadge, #hotelRestaurantSwitch{ display:none; } /* No room on phone */
     .hdr-whoami-short{
-      order:4;
+      order:2;
       display:inline-flex;
       align-items:center;
       justify-content:center;
@@ -2549,7 +2549,7 @@
     /* Full "username · role" text is too wide for a phone header; show
        just the initial in a circle badge instead. */
     #whoami, .hdr-avatar{ display:none; }
-    #logoutBtn{ order:6; flex:0 0 auto; }
+    #logoutBtn{ order:3; flex:0 0 auto; }
 
     /* Nav tabs (hdr-row2/hdr-row3) already horizontally scroll
        (overflow-x:auto) rather than wrap or clip — but with no visible
