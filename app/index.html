@@ -4318,7 +4318,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
     <div class="panel accent-guest">
       <h2>Customer Detail</h2>
-      <div class="grid" style="grid-template-columns:minmax(160px,2.2fr) minmax(160px,2.2fr) minmax(160px,2.2fr) minmax(140px,2.2fr) minmax(60px,0.7fr) minmax(60px,0.7fr);">
+      <div class="grid" style="grid-template-columns:repeat(4, minmax(140px,1fr));">
         <div>
           <label>Guest Name <span class="req">*</span></label>
           <input type="text" id="guestName" placeholder="Full name" autocomplete="off" required>
@@ -4337,7 +4337,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <label>Contact No</label>
           <input type="text" id="contactNo" placeholder="03XXXXXXXXX" autocomplete="off" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
         </div>
-        <div class="grid" style="grid-column:1 / -1;">
+        <div class="grid" style="grid-column:1 / -1; grid-template-columns:repeat(3, minmax(140px,1fr));">
           <div>
             <label>Check-in Date</label>
             <input type="text" id="checkInDate" placeholder="Pick a date..." autocomplete="off" title="Reference only — does not affect any amount">
