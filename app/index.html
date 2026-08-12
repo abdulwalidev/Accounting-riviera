@@ -9417,6 +9417,15 @@ async function reviewEntry(){
     if(origCheckin) extraDetails.unshift({ kind: 'Actual Checkin', value: origCheckin });
     const origCheckout = getDetailValue(originalEntryForEdit, 'Actual Checkout');
     if(origCheckout) extraDetails.unshift({ kind: 'Actual Checkout', value: origCheckout });
+  } else if(checkInEl.value && checkInEl.value === todayStr()){
+    // Same-day walk-in: the guest is physically at the desk while being
+    // typed in, so their arrival IS confirmed — stamp Actual Checkin now.
+    // Without this, walk-ins forever showed Actual Checkin "—" (Arrival
+    // never gates them, so nothing else would ever set it), which left
+    // holes downstream: no row in "Checked in Today", and nothing for
+    // checkout-side logic keyed off Actual Checkin to hold on to. New
+    // entries only — never backfilled onto existing/edited records.
+    extraDetails.unshift({ kind: 'Actual Checkin', value: checkInEl.value });
   }
 
   const roomRows = Array.from(document.querySelectorAll('#roomBody tr'));
@@ -10800,7 +10809,7 @@ function renderRoomDetail(){
       const guestCell = goesToGuest
         ? (r.entry.guestName || '(no name)')
         : (showGuestInfo ? `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>` : '-');
-      const statusLabel = r.arrivalPending ? 'Arrival' : isCheckoutPending ? 'Pending' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
+      const statusLabel = r.arrivalPending ? 'Arrival' : isCheckoutPending ? 'Pending<br>Checkout' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
       const statusCls = r.arrivalPending ? 'arrivaldue' : isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
       const mainRow = `<tr style="cursor:pointer;" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
@@ -10823,7 +10832,7 @@ function renderRoomDetail(){
           <td>${roomDetailTypeLabel(r.type) || '-'}</td>
           <td>${pg.entry.checkIn ? formatDateShort(pg.entry.checkIn) : '-'}</td>
           <td>${pgDue.toLocaleString()}</td>
-          <td><span class="status checkoutdue">Pending</span></td>
+          <td><span class="status checkoutdue">Pending<br>Checkout</span></td>
           <td>${pg.entry.guestName || '(no name)'}</td>
         </tr>`;
       })() : '';
@@ -10875,7 +10884,7 @@ function renderRoomDetail(){
       const guestText = goesToGuest
         ? (r.entry.guestName || '')
         : (showGuestInfo ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
-      const statusText = r.arrivalPending ? 'arrival' : isCheckoutPending ? 'pending' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
+      const statusText = r.arrivalPending ? 'arrival' : isCheckoutPending ? 'pending checkout' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
       const statusCls = r.arrivalPending ? 'arrivaldue' : isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
       const guestCls = goesToGuest ? '' : ' sr-guest-muted';
@@ -10892,7 +10901,7 @@ function renderRoomDetail(){
         return `<div class="smart-row clickable" onclick="openDetail('${pg.entry.id}')" title="Open this guest">
           <span class="sr-room">${r.roomNo}</span>
           <span class="sr-type">${roomDetailTypeLabel(r.type) || ''}</span>
-          <span class="sr-status checkoutdue">pending</span>
+          <span class="sr-status checkoutdue">pending checkout</span>
           <span class="sr-arrival">${pg.entry.checkIn ? formatDateShort(pg.entry.checkIn) : ''}</span>
           <span class="sr-guest">${pg.entry.guestName || '(no name)'}</span>
         </div>`;
@@ -15692,6 +15701,13 @@ function buildAutoCheckoutRows(asOfDate){
   // actually ends — the point at which the whole guest is done).
   const dueByGuest = new Map();
   statuses.filter(rs=> rs.extended && rs.entry).forEach(rs=>{
+    // A guest can only be DUE OUT if they were ever actually IN: an advance
+    // reservation nobody confirmed via Arrival never occupied the room
+    // (that's the whole Arrival gate), so their passed booked nights are a
+    // no-show, not a pending checkout. Walk-ins (never Arrival-gated) are
+    // unaffected. Display-only — no stored data is read differently
+    // anywhere else or written here.
+    if(isAdvanceReservation(rs.entry) && !getDetailValue(rs.entry, 'Actual Checkin')) return;
     const guestId = rs.entry.id;
     const isExtendedStatus = activeGuestIds.has(guestId);
     const d = isExtendedStatus ? 0 : computeTotals(rs.entry).due;
@@ -15719,6 +15735,10 @@ function buildAutoCheckoutRows(asOfDate){
     const guestId = entry.id;
     if(dueByGuest.has(guestId)) return;
     if(activeGuestIds.has(guestId)) return; // still genuinely inhouse elsewhere
+    // An advance reservation nobody ever confirmed in is an ARRIVAL that
+    // never happened, not a checkout waiting to be confirmed — a guest
+    // can't be due to check out of a room they were never checked into.
+    if(isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
     const d = computeTotals(entry).due;
     dueByGuest.set(guestId, {
       roomNos: [rs.roomNo], guestId, guest: entry.guestName || '(no name)',
