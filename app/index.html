@@ -4271,9 +4271,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <label>&nbsp;</label>
           <button class="btn secondary" onclick="setCicoToday()">Today</button>
         </div>
-        <div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
           <label>&nbsp;</label>
-          <div id="cicoRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em; min-height:34px; display:flex; align-items:center;"></div>
+          <div id="cicoRangeReadout" style="font-size:28px; font-weight:700; color:var(--ink); letter-spacing:0.02em; min-height:34px; display:flex; align-items:center; justify-content:center; text-align:center; width:100%;"></div>
         </div>
       </div>
     </div>
@@ -4468,8 +4468,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
     <div class="panel accent-guest">
       <div class="search-row">
-        <div class="grow">
-          <label>Search (name, father name, CNIC, room no)</label>
+        <div style="max-width:220px; min-width:220px;">
+          <label>Search</label>
           <div class="search-clear-wrap">
             <input type="text" id="resvSearchInput" placeholder="Type to search..." autocomplete="off">
             <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
@@ -4494,8 +4494,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="panel accent-payments">
       <h2>Step 1 — Find The Guest</h2>
       <div class="search-row">
-        <div class="grow">
-          <label>Search (name, father name, CNIC, room no)</label>
+        <div style="max-width:220px; min-width:220px;">
+          <label>Search</label>
           <div class="search-clear-wrap">
             <input type="text" id="apSearchInput" placeholder="Type to search..." autocomplete="off">
             <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
@@ -4932,7 +4932,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
             <label for="lgSimplify" style="margin:0;">Simplify</label>
           </div>
         </div>
-        <div id="lgRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+        <div id="lgRangeReadout" style="flex:1; display:flex; align-items:center; justify-content:center; text-align:center; font-size:28px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportLedgersExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printLedgers()">🖶 Print</button>
@@ -5200,22 +5200,24 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
 
     <div class="panel no-print accent-filters">
-      <div class="actions" style="justify-content:center; gap:24px;">
+      <div class="actions" style="gap:24px;">
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportInhouseExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printInhouse()">🖶 Print</button>
           <button class="btn secondary" onclick="showView('breakfast')">🥐 Breakfast Report</button>
           <button class="btn secondary" onclick="setInhouseToday()">Today</button>
         </div>
-        <div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
           <label class="lbl-sm" style="margin-bottom:4px;">In-house as of</label>
           <input type="date" id="ihDate">
-          <div class="date-readout" id="ihDateReadout"></div>
+          <div class="date-readout" id="ihDateReadout" style="font-size:24px;"></div>
         </div>
-        <div id="ihUnitSplit" class="dash-subtiles" style="max-width:480px; margin-top:0;"></div>
-        <div>
-          <label class="lbl-sm" style="margin-bottom:4px;">In-house Guests</label>
-          <div id="ihGuestSplit" class="dash-subtiles" style="max-width:160px; margin-top:0;"></div>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
+          <div id="ihUnitSplit" class="dash-subtiles" style="max-width:480px; margin-top:0;"></div>
+          <div>
+            <label class="lbl-sm" style="margin-bottom:4px;">In-house Guests</label>
+            <div id="ihGuestSplit" class="dash-subtiles" style="max-width:160px; margin-top:0;"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -5242,6 +5244,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <button class="btn secondary" onclick="printBreakfastReport()">🖶 Print</button>
           <button class="btn secondary" id="bfSimpleBtn" onclick="toggleBreakfastSimpleView()">Full View</button>
         </div>
+        <div id="bfTodayDate" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
       </div>
     </div>
 
@@ -7917,15 +7920,15 @@ document.addEventListener('DOMContentLoaded', ()=>{
   scheduleCheckinCutoffRollover();
   [
     'auditEntryDate','dNewDate','gsearchDate',
-    'dlDate','acDate','arDate','auditPageDate','rdDate','b19From','nsDate',
+    'dlDate','acDate','arDate','auditPageDate','rdDate','b19From',
     'cicoFrom','cicoTo','filterFrom','filterTo','hoFrom','hoTo','lgFrom','lgTo',
     'nprFrom','nprTo','parFrom','parTo','rvFrom','rvTo',
     'csFromDate','csToDate','qsFromDate','qsToDate',
     'posInvoiceDate','receiptsDateFilter','printedOnlyDateFilter',
     'frontOfficeDateFilter','deletedDateFilter','pendingPaymentsDateFilter',
-    'posDlDate','ccCheckoutDate','acnCheckinDate','checkInDate'
+    'posDlDate','ccCheckoutDate','acnCheckinDate'
   ].forEach(addDateStepper);
-  addDateStepper('ihDate', 'after');
+  addDateStepper('nsDate', 'after');
 });
 
 let rowCount = 0;
@@ -9162,7 +9165,7 @@ function updateDateReadout(input, readoutEl){
 // per-room/per-payment row dates have their own interaction and are left
 // alone.
 function addDateStepper(inputId, placement){
-  const disabledIds = ['cicoFrom', 'cicoTo', 'filterFrom', 'filterTo', 'rvFrom', 'rvTo'];
+  const disabledIds = ['cicoFrom', 'cicoTo', 'filterFrom', 'filterTo', 'rvFrom', 'rvTo', 'lgFrom', 'lgTo'];
   if(disabledIds.includes(inputId)) return;
   const input = document.getElementById(inputId);
   if(!input || input.dataset.stepperAdded) return;
@@ -15364,6 +15367,7 @@ function renderBreakfastReport(){
   }
 
   document.getElementById('bfPrintHeaderSub').textContent = 'As of ' + formatDate(todayStr()) + '  ·  Generated ' + formatDate(todayStr());
+  document.getElementById('bfTodayDate').textContent = formatDate(todayStr());
 
   const data = buildBreakfastReport();
   summary.textContent = data.roomCount + (data.roomCount === 1 ? ' room' : ' rooms') + ' in-house — ' +
