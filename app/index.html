@@ -4351,6 +4351,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <div id="extraDetailList"></div>
       <div class="actions" style="margin-top:12px;">
         <button class="btn secondary" onclick="addExtraDetailRow()">+ Detail</button>
+        <button class="btn secondary" onclick="addSecondCustomerRows()" title="Add a second person's details to this same entry (e.g. someone paying for another guest)">+ Customer</button>
       </div>
     </div>
 
@@ -5261,6 +5262,18 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="panel accent-report">
       <h2>Cash Received, Per Day</h2>
       <div id="cashCheckBody" style="overflow-x:auto; margin-top:10px;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-misc">
+
+    <h1>Miscellaneous</h1>
+    <div class="sub">Every Miscellaneous charge (Snooker, BBQ, Bonfire, Mattress) billed through guest entries — nothing else, no room-nights. Amounts are the billed charge on the entry, listed by the guest's check-in date.</div>
+
+    <div class="panel accent-report">
+      <h2>Miscellaneous Charges</h2>
+      <div id="miscReportBody" style="overflow-x:auto; margin-top:10px;"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -6719,6 +6732,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <a class="settings-nav-item" onclick="showView('handover')">Money Handover</a>
       <a class="settings-nav-item" onclick="showView('npr')">NPR</a>
       <a class="settings-nav-item" onclick="showView('cashcheck')">Cash Check</a>
+      <a class="settings-nav-item" onclick="showView('misc')">Miscellaneous</a>
       <a class="settings-nav-item danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</a>
     </div>
     <div class="settings-nav-section">
@@ -7092,7 +7106,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -7186,7 +7200,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavNightSummary').classList.toggle('active', view === 'nightsummary');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   document.getElementById('topNavArrival').classList.toggle('active', view === 'arrival');
-  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck' || view === 'paymentrecord' || view === 'frontoffice';
+  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck' || view === 'misc' || view === 'paymentrecord' || view === 'frontoffice';
   document.getElementById('topNavSettings').classList.toggle('active', isSettingsView);
   const globalSettingsNav = document.getElementById('globalSettingsNav');
   if(globalSettingsNav) globalSettingsNav.style.display = isSettingsView ? 'flex' : 'none';
@@ -7212,6 +7226,7 @@ function showView(view, fromPopState){
   if(view === 'revenue') renderRevenue();
   if(view === 'nightsummary') renderNightSummary();
   if(view === 'cashcheck') renderCashCheck();
+  if(view === 'misc') renderMiscReport();
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
   if(view === 'paymentrecord') renderPaymentRecord();
@@ -9139,8 +9154,21 @@ function calcSummary(){
 const EXTRA_DETAIL_KINDS = [
   'Address', 'Nationality', 'Company Name', 'Profession',
   'Emergency No', 'Car No', 'Date of Arrival', 'Date of Departure', 'Extra Remarks',
-  'Owner\'s Guest'
+  'Owner\'s Guest',
+  '2nd Guest Name', '2nd Father Name', '2nd CNIC', '2nd Contact No'
 ];
+
+// "+ Customer" — one entry, two people (e.g. one person paying for another).
+// Just pre-adds the four 2nd-person detail rows; they save/sync/display
+// exactly like any other extra detail, nothing new in the database.
+function addSecondCustomerRows(){
+  const have = new Set([...document.querySelectorAll('#extraDetailList .edKind')].map(s=> s.value));
+  ['2nd Guest Name', '2nd Father Name', '2nd CNIC', '2nd Contact No'].forEach(k=>{
+    if(!have.has(k)) addExtraDetailRow(k, '');
+  });
+  const first = [...document.querySelectorAll('#extraDetailList .edKind')].find(s=> s.value === '2nd Guest Name');
+  if(first) first.closest('.extra-detail-row').querySelector('.edValue').focus();
+}
 
 function addExtraDetailRow(kind, value){
   const row = document.createElement('div');
@@ -15079,6 +15107,52 @@ function renderCashCheck(){
           <td>Grand Total</td>
           <td style="text-align:right;">${data.totalReportCash.toLocaleString()}</td>
           <td style="text-align:right;">${data.totalReportCash.toLocaleString()}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
+// =========================================================
+// MISCELLANEOUS — Settings page listing only the Miscellaneous rows
+// (Snooker/BBQ/Bonfire/Mattress) from guest entries, newest first.
+// Read-only view of what's already saved; touches nothing.
+// =========================================================
+function renderMiscReport(){
+  const body = document.getElementById('miscReportBody');
+  if(!initialLoadDone){ body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>'; return; }
+  const rows = [];
+  loadAllEntries().forEach(entry=>{
+    (entry.rooms || []).forEach(r=>{
+      if(!isMiscRoomNo(r.roomNo)) return;
+      rows.push({
+        date: entry.checkIn || '',
+        guest: entry.guestName || '(no name)',
+        guestId: entry.id,
+        facility: r.unitType || 'Miscellaneous',
+        amount: parseFloat(String(r.rent).replace(/,/g,'')) || 0
+      });
+    });
+  });
+  if(rows.length === 0){
+    body.innerHTML = '<div class="empty-note">No Miscellaneous charges recorded.</div>';
+    return;
+  }
+  rows.sort((a,b)=> b.date.localeCompare(a.date));
+  const total = rows.reduce((s,r)=> s + r.amount, 0);
+  body.innerHTML = `
+    <table class="cashcheck-table">
+      <thead><tr><th>Date</th><th>Guest</th><th>Facility</th><th style="text-align:right;">Amount</th></tr></thead>
+      <tbody>${rows.map(r=> `
+        <tr>
+          <td>${r.date ? formatDate(r.date) : '-'}</td>
+          <td><a href="#" onclick="openDetail('${r.guestId}'); return false;">${r.guest}</a></td>
+          <td>${r.facility}</td>
+          <td style="text-align:right;">${r.amount.toLocaleString()}</td>
+        </tr>`).join('')}</tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="3">Total</td>
+          <td style="text-align:right;">${total.toLocaleString()}</td>
         </tr>
       </tfoot>
     </table>`;
