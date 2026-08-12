@@ -1258,7 +1258,7 @@
      other page. ---- */
   .settings-shell{
     display:grid;
-    grid-template-columns:216px 1fr;
+    grid-template-columns:240px 1fr;
     gap:32px;
     align-items:start;
     margin-top:20px;
@@ -1268,7 +1268,23 @@
     top:20px;
     display:flex;
     flex-direction:column;
-    gap:2px;
+    gap:20px;
+  }
+  .settings-nav-section{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .settings-nav-heading{
+    display:block;
+    padding:8px 0;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--ink);
+    margin-bottom:2px;
   }
   .settings-nav-item{
     display:block;
@@ -1290,8 +1306,32 @@
     font-weight:700;
     border-left-color:var(--ink);
   }
+  .settings-nav-item.danger{ color:var(--danger); }
+  .settings-nav-item.danger:hover{ background:rgba(185,28,28,0.06); }
   html[data-theme="dark"] .settings-nav-item:hover{ background:rgba(125,211,252,0.08); }
   html[data-theme="dark"] .settings-nav-item.active{ background:rgba(125,211,252,0.12); }
+  .settings-nav-info{
+    padding:8px 12px;
+    border-radius:6px;
+    background:rgba(2,132,199,0.03);
+    border:1px solid rgba(0,0,0,0.06);
+  }
+  html[data-theme="dark"] .settings-nav-info{
+    background:rgba(125,211,252,0.05);
+    border-color:rgba(255,255,255,0.08);
+  }
+  .settings-nav-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    font-size:12px;
+  }
+  .settings-nav-title{
+    font-weight:600;
+    color:var(--ink);
+    flex:1;
+  }
 
   .settings-content{ display:flex; flex-direction:column; gap:24px; min-width:0; }
   .settings-card{
@@ -1344,17 +1384,9 @@
   .settings-row-desc{ font-size:12.5px; color:var(--muted); margin-top:2px; max-width:520px; line-height:1.5; }
   .settings-row-chevron{ flex:none; color:var(--muted); font-size:18px; line-height:1; }
   @media (max-width: 720px){
-    .settings-shell{ grid-template-columns:1fr; gap:16px; }
-    .settings-nav{
-      position:static;
-      flex-direction:row;
-      overflow-x:auto;
-      gap:6px;
-      padding-bottom:4px;
-      -webkit-overflow-scrolling:touch;
-    }
-    .settings-nav-item{ white-space:nowrap; border-left:none; border-bottom:2px solid transparent; }
-    .settings-nav-item.active{ border-left-color:transparent; border-bottom-color:var(--ink); }
+    .settings-shell{ grid-template-columns:200px 1fr; gap:16px; }
+    .settings-nav{ gap:16px; }
+    .settings-nav-section{ gap:4px; }
   }
   .rpt-grandtotal-box{
     border:2px solid #000;
@@ -3045,6 +3077,9 @@
      hidden, regardless of whatever per-button display rule
      applyRolePermissions() would otherwise set. See isRestaurantRole(). */
   .role-restaurant .topnav .navbtn:not(#topNavRestaurant):not(#topNavPosUnlock){
+    display:none !important;
+  }
+  .role-restaurant .navbtn-separator{
     display:none !important;
   }
 
@@ -6313,8 +6348,33 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
     <div class="settings-shell">
       <nav class="settings-nav">
-        <a class="settings-nav-item active" onclick="settingsNavTo(this,'settingsSecPages')">Pages</a>
-        <a class="settings-nav-item" onclick="settingsNavTo(this,'settingsSecSync')">Data &amp; Sync</a>
+        <div class="settings-nav-section">
+          <div class="settings-nav-heading">Pages</div>
+          <a class="settings-nav-item" onclick="showView('audit')">Full Audit</a>
+          <a class="settings-nav-item" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">Day Lock</a>
+          <a class="settings-nav-item" id="settingsPaymentRecordBtn" onclick="showView('paymentrecord')" style="display:none;">Report SS</a>
+          <a class="settings-nav-item" id="settingsFrontOfficeBtn" onclick="showView('frontoffice')" style="display:none;">Front Office</a>
+          <a class="settings-nav-item" onclick="showView('before19')">Before 19</a>
+          <a class="settings-nav-item" onclick="showView('handover')">Money Handover</a>
+          <a class="settings-nav-item" onclick="showView('npr')">NPR</a>
+          <a class="settings-nav-item" onclick="showView('cashcheck')">Cash Check</a>
+          <a class="settings-nav-item danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</a>
+        </div>
+        <div class="settings-nav-section">
+          <div class="settings-nav-heading">Data &amp; Sync</div>
+          <div class="settings-nav-info">
+            <div class="settings-nav-row">
+              <div class="settings-nav-title">Guests / Rooms / Payments</div>
+              <span class="settings-table-status settings-status-on">Always On</span>
+            </div>
+          </div>
+          <div class="settings-nav-info">
+            <div class="settings-nav-row">
+              <div class="settings-nav-title">🚨 Audit Log</div>
+              <span class="settings-table-status settings-status-off">Off</span>
+            </div>
+          </div>
+        </div>
       </nav>
 
       <div class="settings-content">
