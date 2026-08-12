@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Phone view disabled: fixed 1200px viewport makes phones render the
+     desktop layout (pinch-zoomable) instead of the <=600px phone CSS,
+     which stays in the stylesheet but never matches at this width.
+     Restore phone view by putting back: width=device-width, initial-scale=1.0 -->
+<meta name="viewport" content="width=1200">
 <!-- Matches .hdr-row1's own background (#1a73e8) — without this, mobile
      browsers tint their own address-bar/status-bar strip white/default
      instead of the app's blue, leaving a mismatched seam above the
@@ -4197,6 +4201,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
       <button class="navbtn" id="topNavBreakfast" onclick="showView('breakfast')">Breakfast Report</button>
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
+      <button class="navbtn" id="topNavRevSummary" onclick="showView('handover')">Revenue Summary</button>
       <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
       <button class="navbtn" id="topNavPaymentProof" onclick="showView('paymentrecord')" style="display:none; margin-left:auto;">Report SS</button>
       <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
@@ -7262,9 +7267,10 @@ function showView(view, fromPopState){
   document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
   document.getElementById('topNavNightSummary').classList.toggle('active', view === 'nightsummary');
+  document.getElementById('topNavRevSummary').classList.toggle('active', view === 'handover');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   document.getElementById('topNavArrival').classList.toggle('active', view === 'arrival');
-  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'handover' || view === 'npr' || view === 'cashcheck' || view === 'misc' || view === 'paymentrecord' || view === 'frontoffice';
+  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'npr' || view === 'cashcheck' || view === 'misc' || view === 'paymentrecord' || view === 'frontoffice';
   document.getElementById('topNavSettings').classList.toggle('active', isSettingsView);
   const globalSettingsNav = document.getElementById('globalSettingsNav');
   if(globalSettingsNav) globalSettingsNav.style.display = isSettingsView ? 'flex' : 'none';
