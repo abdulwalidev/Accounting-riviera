@@ -3827,6 +3827,81 @@ html[data-theme="dark"] #posPostEditConfirmInput{ background:#0A0A0A !important;
 html[data-theme="dark"] #posDeleteModal button[onclick="posCancelDelete()"],
 html[data-theme="dark"] #posPostModal button[onclick="posCancelPost()"],
 html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm()"]{ background:#1a1c20 !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
+
+  /* Clear Filters, Today, Extra buttons: always show in active/hover state */
+  button[onclick="clearFilters()"],
+  button[onclick="setFiltersToday()"],
+  #reportExtraBtn {
+    opacity: 0.9;
+  }
+
+  /* Desktop: Scale action buttons to 80% size, excluding navigation buttons */
+  @media (min-width: 601px) {
+    .btn:not(.navbtn) {
+      height: 35px;
+      padding: 7px 13px;
+      font-size: 10px;
+      border-radius: 12px;
+    }
+    .btn-primary, .btn-outline {
+      padding: 7px 14px;
+      font-size: 11px;
+    }
+    .theme-toggle, #logoutBtn {
+      width: 35px;
+      height: 35px;
+    }
+    .hdr-pause-btn {
+      padding: 0 8px;
+      font-size: 9px;
+    }
+    .login-signin-btn {
+      padding: 10px;
+      font-size: 13px;
+    }
+    .search-clear-btn {
+      width: 20px;
+      height: 20px;
+      font-size: 10px;
+    }
+    .btn.secondary:not(.navbtn) {
+      height: 35px;
+      padding: 7px 13px;
+      font-size: 10px;
+    }
+    .btn.danger:not(.navbtn) {
+      padding: 3px 6px;
+      font-size: 10px;
+    }
+    .btn.success:not(.navbtn) {
+      height: 35px;
+      padding: 7px 13px;
+      font-size: 10px;
+    }
+    .btn.edit-gold:not(.navbtn) {
+      height: 35px;
+      padding: 7px 13px;
+      font-size: 10px;
+    }
+    .btn.danger-solid:not(.navbtn) {
+      height: 35px;
+      padding: 7px 13px;
+      font-size: 10px;
+    }
+    #page-pos-invoice .btn-menu {
+      padding: 6px 13px;
+      font-size: 11px;
+    }
+    #page-pos-invoice .btn-addline {
+      padding: 5px 11px;
+      font-size: 11px;
+    }
+    table.rep { font-size: 11px; }
+    table.parts { font-size: 11px; }
+    .line-table { font-size: 11px; }
+    .riviera-folio-table { font-size: 9px; }
+    #view-nightsummary .ns-table { font-size: 11px; }
+  }
 </style>
 <script>
   (function(){
