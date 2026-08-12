@@ -6933,8 +6933,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
 <div class="modal-backdrop" id="splitRateModalBackdrop">
   <div class="modal" style="width:320px;">
-    <h3>Different Rate for One Night</h3>
-    <div class="sub" style="margin-bottom:14px;">Pick which night of this room's stay should have a different rate — the row splits automatically, the rest of the stay keeps its usual rate.</div>
+    <h3>Change Rate / Change Room</h3>
+    <div class="sub" style="margin-bottom:14px;">Pick the night where the change happens — the row splits automatically and the rest of the stay keeps its usual rate. For a rate change, enter the new rate. For a room change, pick the new room number on the [new] row afterwards — the rest of the stay moves with it.</div>
     <label for="splitRateNightSelect">Night</label>
     <select id="splitRateNightSelect"></select>
     <label for="splitRateAmountInput" style="margin-top:10px;">Rate for that night</label>
@@ -8481,7 +8481,7 @@ function addRow(){
         <button onclick="changeRooms(this,1)">+</button>
       </div>
       <span class="roomCountMisc" style="display:none;">-</span>
-      <button type="button" class="split-rate-btn" onclick="openSplitRateModal(this)" title="Give one night of this room's stay a different rate — or change the room mid-stay: split at the move night, then pick the new room on the [new] row">⚡ Change Rate</button>
+      <button type="button" class="split-rate-btn" onclick="openSplitRateModal(this)" title="Change the rate for one night, or change the room mid-stay: split at the night it happens, then adjust the rate — or pick a different room — on the [new] row">⚡ Rate / Room</button>
     </td>
     <td class="rowtotal">0</td>
     <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'room')">✕</button></td>
@@ -8692,7 +8692,7 @@ function openSplitRateModal(btn){
   const tr = btn.closest('tr');
   const roomNo = tr.querySelector('.roomNo').value.trim();
   if(!roomNo){ showNotice('Pick a room first.'); return; }
-  if(isMiscRoomNo(roomNo)){ showNotice('Change Rate isn\'t for Miscellaneous charges — those are always a one-off, not a multi-night stay.'); return; }
+  if(isMiscRoomNo(roomNo)){ showNotice('Rate / Room isn\'t for Miscellaneous charges — those are always a one-off, not a multi-night stay.'); return; }
   const count = parseInt(tr.dataset.rooms) || 1;
   if(count < 2){ showNotice('This room is only booked for 1 night — add more nights first, then split one out.'); return; }
   splitRatePendingRow = tr;
