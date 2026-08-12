@@ -246,9 +246,11 @@
      is actually wrong. max-width:100% keeps it from overflowing a
      container narrower than that on small screens. */
   .flatpickr-alt-input{ display:block; width:307.875px; max-width:100%; margin:0 auto; text-align:center; }
-  /* Payment Report's own Date Range box only — left-align instead of the
-     shared centered default above. */
-  #view-report .flatpickr-alt-input{ margin:0; text-align:left; }
+  /* Payment Report's and Revenue Report's own Date Range box only —
+     left-align instead of the shared centered default above, matching
+     their label (also left-aligned below). */
+  #view-report .flatpickr-alt-input, #view-revenue .flatpickr-alt-input{ margin:0; text-align:left; }
+  #view-report .filters-date-label, #view-revenue .filters-date-label{ text-align:left; }
   /* The calendar popup is appended to <body> as position:absolute — a
      max-width:100% here would resolve against the viewport, not against
      however narrow the box above actually is, so matching them on a
@@ -4782,7 +4784,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <h2>Filters</h2>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
-          <label>Date Range</label>
+          <label class="filters-date-label">Date Range</label>
           <input type="text" id="filterRange" placeholder="Select a date range">
           <input type="date" id="filterFrom" style="display:none">
           <input type="date" id="filterTo" style="display:none">
@@ -5048,7 +5050,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <h2>Filters</h2>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
         <div>
-          <label>Date Range</label>
+          <label class="filters-date-label">Date Range</label>
           <input type="text" id="rvRange" placeholder="Select a date range">
           <input type="date" id="rvFrom" style="display:none">
           <input type="date" id="rvTo" style="display:none">
@@ -7915,7 +7917,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   scheduleCheckinCutoffRollover();
   [
     'auditEntryDate','dNewDate','gsearchDate',
-    'dlDate','acDate','arDate','auditPageDate','rdDate','b19From','nsDate','ihDate',
+    'dlDate','acDate','arDate','auditPageDate','rdDate','b19From','nsDate',
     'cicoFrom','cicoTo','filterFrom','filterTo','hoFrom','hoTo','lgFrom','lgTo',
     'nprFrom','nprTo','parFrom','parTo','rvFrom','rvTo',
     'csFromDate','csToDate','qsFromDate','qsToDate',
@@ -7923,6 +7925,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     'frontOfficeDateFilter','deletedDateFilter','pendingPaymentsDateFilter',
     'posDlDate','ccCheckoutDate','acnCheckinDate','checkInDate'
   ].forEach(addDateStepper);
+  addDateStepper('ihDate', 'after');
 });
 
 let rowCount = 0;
@@ -9158,7 +9161,7 @@ function updateDateReadout(input, readoutEl){
 // the custom stay-date pickers (Check-in/Check-out/Actual Checkout) and the
 // per-room/per-payment row dates have their own interaction and are left
 // alone.
-function addDateStepper(inputId){
+function addDateStepper(inputId, placement){
   const disabledIds = ['cicoFrom', 'cicoTo', 'filterFrom', 'filterTo', 'rvFrom', 'rvTo'];
   if(disabledIds.includes(inputId)) return;
   const input = document.getElementById(inputId);
@@ -9192,7 +9195,11 @@ function addDateStepper(inputId){
   prevBtn.addEventListener('click', ()=> step(-1));
   nextBtn.addEventListener('click', ()=> step(1));
   twoFwdBtn.addEventListener('click', ()=> step(2));
-  input.parentElement.insertAdjacentElement('afterbegin', wrap);
+  if(placement === 'after'){
+    input.insertAdjacentElement('afterend', wrap);
+  } else {
+    input.parentElement.insertAdjacentElement('afterbegin', wrap);
+  }
 }
 
 function collectExtraDetails(){
