@@ -2633,6 +2633,42 @@
       font-size:9px;
     }
 
+    /* Entry form tables: convert to card layout on phone */
+    #view-entry table{
+      display:block;
+      border-collapse:collapse;
+      width:100%;
+    }
+    #view-entry thead{ display:none; }
+    #view-entry tbody tr{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:8px;
+      padding:12px;
+      margin-bottom:12px;
+      gap:12px;
+      align-items:start;
+    }
+    #view-entry tbody td{
+      display:flex;
+      flex-direction:column;
+      padding:0;
+      border:none;
+      font-size:13px;
+    }
+    #view-entry tbody td:nth-child(n+9){
+      grid-column:1 / -1;
+    }
+    #view-entry tbody td input,
+    #view-entry tbody td select,
+    #view-entry tbody td button{
+      width:100%;
+      box-sizing:border-box;
+      margin-top:4px;
+    }
+
     /* Multi-column forms/info-grids stack to one column — two side-by-side
        fields under a phone keyboard is unusable. (.grid already auto-fits
        to 1 column at this width via its minmax(200px) floor in most cases;
