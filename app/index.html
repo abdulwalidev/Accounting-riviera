@@ -2685,6 +2685,72 @@
      rules for the same selectors (table, .topnav, .grid, etc). */
   @media (max-width:600px){
 
+    /* Revert all Duolingo button styling for mobile view */
+    .btn, .btn.secondary, .btn.danger, .btn.success, .btn.edit-gold, .btn.danger-solid {
+      background: var(--ink-fill);
+      color: var(--paper);
+      border: 1px solid var(--ink-fill);
+      border-bottom: none;
+      border-radius: 4px;
+      opacity: 1;
+      height: auto;
+      padding: 9px 16px;
+      font-weight: 600;
+    }
+    .btn-primary, .btn-outline {
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      opacity: 1;
+      padding: 9px 18px;
+    }
+    .theme-toggle, #logoutBtn {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--ink);
+      background: transparent;
+      border-bottom: none;
+      opacity: 1;
+    }
+    .search-clear-btn {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--danger);
+      color: #fff;
+      border: none;
+      border-bottom: none;
+      opacity: 1;
+    }
+    .login-signin-btn {
+      background: var(--login-accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      opacity: 1;
+      padding: 12px;
+      font-weight: bold;
+    }
+    #page-pos-invoice .btn-menu {
+      background: #17a2b8;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      opacity: 1;
+      padding: 8px 16px;
+    }
+    #page-pos-invoice .btn-addline {
+      background: #fff;
+      color: var(--green);
+      border: 1px solid var(--green);
+      border-radius: 6px;
+      opacity: 1;
+      padding: 7px 14px;
+      border-bottom: none;
+    }
+
     /* Header row 1 (brand/search/date-pill/theme-toggle/avatar/logout) is a
        single flex row with a hard-coded 375px search box — on a phone
        that's wider than the whole screen by itself, so every sibling
