@@ -2518,27 +2518,30 @@
     .hdr-left, .hdr-right{ display:contents; }
     .hdr-brand{ order:1; flex-shrink:1; }
     .hdr-brand-suffix{ display:none; }
-    #hdrTimePill{
+    #cloudStatus{
       order:2;
       background:transparent;
       padding:0;
-      border-radius:0;
+      font-size:12px;
     }
-    #cloudStatus{
-      order:2;
-      margin-left:4px;
+    #hdrTimePill{
+      order:3;
+      background:transparent;
+      padding:0;
+      border-radius:0;
+      margin-left:auto;
     }
     #hdrDatePill{ display:none; }
     #themeToggle{ display:none; }
     .hdr-search-wrap{
       width:100%;
       flex:1 1 100%;
-      order:6;
+      order:7;
     }
     .hdr-search-kbd{ display:none; }
     #hdrFrontOfficeBadge, #hotelRestaurantSwitch{ display:none; }
     .hdr-whoami-short{
-      order:3;
+      order:5;
       display:inline-flex;
       align-items:center;
       justify-content:center;
@@ -2564,9 +2567,8 @@
     #pauseSyncBtn{ display:none; }
     #whoami, .hdr-avatar{ display:none; }
     #logoutBtn{
-      order:5;
+      order:6;
       flex:0 0 auto;
-      margin-left:auto;
     }
 
     /* Nav tabs (hdr-row2/hdr-row3) already horizontally scroll
