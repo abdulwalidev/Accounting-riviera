@@ -2633,7 +2633,7 @@
       font-size:9px;
     }
 
-    /* Entry form tables: convert to card layout on phone */
+    /* Entry form tables: convert to form layout on phone */
     #view-entry table{
       display:block;
       border-collapse:collapse;
@@ -2658,6 +2658,37 @@
       border:none;
       font-size:13px;
     }
+    #view-entry tbody td::before{
+      font-weight:700;
+      font-size:10px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:0.04em;
+      margin-bottom:6px;
+      display:block;
+    }
+    /* Room table headers */
+    #roomBody td:nth-child(1)::before{ content:'#'; }
+    #roomBody td:nth-child(2)::before{ content:'Room No'; }
+    #roomBody td:nth-child(3)::before{ content:'Type'; }
+    #roomBody td:nth-child(4)::before{ content:'Rent / Amount'; }
+    #roomBody td:nth-child(5)::before{ content:'Adults'; }
+    #roomBody td:nth-child(6)::before{ content:'Children'; }
+    #roomBody td:nth-child(7)::before{ content:'Inc. Breakfast'; }
+    #roomBody td:nth-child(8)::before{ content:'No of Days'; }
+    #roomBody td:nth-child(9)::before{ content:'Total'; }
+    #roomBody td:nth-child(10)::before{ content:''; }
+    /* Payment table headers */
+    #payBody td:nth-child(1)::before{ content:'#'; }
+    #payBody td:nth-child(2)::before{ content:'Date'; }
+    #payBody td:nth-child(3)::before{ content:'Type'; }
+    #payBody td:nth-child(4)::before{ content:'Mode'; }
+    #payBody td:nth-child(5)::before{ content:'Bank'; }
+    #payBody td:nth-child(6)::before{ content:'Remarks'; }
+    #payBody td:nth-child(7)::before{ content:'Cash Amount'; }
+    #payBody td:nth-child(8)::before{ content:'Account Amount'; }
+    #payBody td:nth-child(9)::before{ content:'Row Total'; }
+    #payBody td:nth-child(10)::before{ content:''; }
     #view-entry tbody td:nth-child(n+9){
       grid-column:1 / -1;
     }
@@ -2666,7 +2697,6 @@
     #view-entry tbody td button{
       width:100%;
       box-sizing:border-box;
-      margin-top:4px;
     }
 
     /* Multi-column forms/info-grids stack to one column — two side-by-side
