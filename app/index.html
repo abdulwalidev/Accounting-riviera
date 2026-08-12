@@ -910,6 +910,10 @@
     padding:8px 4px;
     text-align:center;
   }
+  #ihUnitSplit .dash-subtile, #ihGuestSplit .dash-subtile{
+    flex:0 0 auto;
+    min-width:70px;
+  }
   .dash-subtile-val{
     font-family:'Inter',sans-serif;
     font-size:17px;
@@ -4790,7 +4794,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="filterTo" style="display:none">
         </div>
         <div style="max-width:220px;">
-          <label>Search</label>
+          <label style="text-align:left;">Search</label>
           <div class="search-clear-wrap">
             <input type="text" id="filterSearch" placeholder="Type to search..." autocomplete="off">
             <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
@@ -4918,9 +4922,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="lgFrom" style="display:none">
           <input type="date" id="lgTo" style="display:none">
         </div>
-        <div style="grid-column:span 2;">
-          <label>Guest (detailed ledger for one guest — leave blank for everyone)</label>
-          <select id="lgPersonSelect" onchange="renderLedgers()"></select>
+        <div style="grid-column:span 2; display:flex; flex-direction:column; align-items:flex-end;">
+          <label style="text-align:right; width:40%;">Select Guest</label>
+          <select id="lgPersonSelect" onchange="renderLedgers()" style="width:40%;"></select>
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
@@ -5056,7 +5060,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="rvTo" style="display:none">
         </div>
         <div style="max-width:220px;">
-          <label>Search</label>
+          <label style="text-align:left;">Search</label>
           <div class="search-clear-wrap">
             <input type="text" id="rvSearch" placeholder="Type to search..." autocomplete="off">
             <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">✕</button>
@@ -5212,11 +5216,11 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="ihDate">
           <div class="date-readout" id="ihDateReadout" style="font-size:24px;"></div>
         </div>
-        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
-          <div id="ihUnitSplit" class="dash-subtiles" style="max-width:480px; margin-top:0;"></div>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:flex-end; margin-left:auto;">
+          <div id="ihUnitSplit" class="dash-subtiles" style="max-width:480px; margin-top:0; justify-content:flex-end;"></div>
           <div>
-            <label class="lbl-sm" style="margin-bottom:4px;">In-house Guests</label>
-            <div id="ihGuestSplit" class="dash-subtiles" style="max-width:160px; margin-top:0;"></div>
+            <label class="lbl-sm" style="margin-bottom:4px; text-align:right;">In-house Guests</label>
+            <div id="ihGuestSplit" class="dash-subtiles" style="max-width:160px; margin-top:0; justify-content:flex-end;"></div>
           </div>
         </div>
       </div>
@@ -6795,7 +6799,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         <div class="room-summary" id="roomDetailSummary" style="margin:0;"></div>
         <div class="rd-switch">
           <button type="button" class="rd-switch-btn" id="rdModeSmart" onclick="setRoomDetailMode('smart')">SMART</button>
-          <button type="button" class="rd-switch-btn active" id="rdModeMunchi" onclick="setRoomDetailMode('munchi')">MUNCHI</button>
+          <button type="button" class="rd-switch-btn active" id="rdModeMunchi" onclick="setRoomDetailMode('munchi')">CLASSIC</button>
         </div>
       </div>
       <div id="roomDetailUnitBoxes" style="display:flex; flex-wrap:wrap; gap:20px; row-gap:12px; margin-top:12px;"></div>
@@ -10753,9 +10757,9 @@ function renderRoomDetail(){
       <div style="font-size:18px; font-weight:700; color:var(--ink);">${val}</div>
     </div>`;
   unitBoxesEl.innerHTML = `
-    <div style="display:flex; flex-wrap:wrap; gap:16px;">
+    <div style="display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; width:100%;">
       <div style="display:flex;">${box('Room', roomTypeCount, true, false)}${box('Apartment', apartmentTypeCount, false, true)}</div>
-      <div style="display:flex; flex-wrap:wrap;">${TYPE_BUCKETS.map((label, i)=> box(label, bucketCounts[label], i === 0, i === TYPE_BUCKETS.length - 1)).join('')}</div>
+      <div style="display:flex; flex-wrap:wrap; justify-content:flex-end;">${TYPE_BUCKETS.map((label, i)=> box(label, bucketCounts[label], i === 0, i === TYPE_BUCKETS.length - 1)).join('')}</div>
     </div>`;
 
   if(rooms.length === 0){
