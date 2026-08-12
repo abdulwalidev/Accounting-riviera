@@ -606,7 +606,7 @@
     font-family:'Inter',sans-serif;
     background:#1CB0F6;
     color:#fff;
-    border:2px solid #fff;
+    border:none;
     border-bottom:4px solid #fff;
     padding:9px 16px;
     border-radius:15px;
@@ -639,7 +639,7 @@
   .btn.secondary{
     background:#1CB0F6;
     color:#fff;
-    border:2px solid #fff;
+    border:none;
     border-bottom:4px solid #fff;
   }
   .btn.secondary{
@@ -1234,17 +1234,17 @@
     transition:all 0.2s ease;
   }
 
-  /* Room Detail button - golden styling */
-  button[onclick="showView('roomdetail')"] {
+  /* Room Detail button in dashboard - golden styling (not the nav button) */
+  button.btn.edit-gold[onclick="showView('roomdetail')"] {
     background:#d97706 !important;
     color:#fff !important;
-    border:2px solid #fff !important;
+    border:none !important;
     border-bottom:4px solid #fff !important;
   }
-  button[onclick="showView('roomdetail')"]:hover {
+  button.btn.edit-gold[onclick="showView('roomdetail')"]:hover {
     opacity: 0.85;
   }
-  button[onclick="showView('roomdetail')"]:active {
+  button.btn.edit-gold[onclick="showView('roomdetail')"]:active {
     transform: translateY(2px);
     border-bottom: 0 !important;
   }
@@ -2550,9 +2550,10 @@
   html[data-theme="dark"] td{ border-color:rgba(255,255,255,0.08); }
   html[data-theme="dark"] tbody tr:nth-child(even) td{ background:rgba(255,255,255,0.035); }
   html[data-theme="dark"] .btn{
-    background:#fff;
-    color:#1CB0F6;
-    border-bottom-color:#BBE7FC;
+    background:#1CB0F6;
+    color:#fff;
+    border:none;
+    border-bottom:4px solid #fff;
   }
   html[data-theme="dark"] .roomctrl button:hover,
   html[data-theme="dark"] .btn.secondary:hover,
@@ -2605,19 +2606,22 @@
      read as neon on a solid button fill, so the button keeps the deep
      light-theme green (#166534) instead of following --cash here. */
   html[data-theme="dark"] .btn.success{
-    background:#fff;
-    color:#10b981;
-    border-bottom-color:#a7f3d0;
+    background:#1CB0F6;
+    color:#fff;
+    border:none;
+    border-bottom:4px solid #fff;
   }
   html[data-theme="dark"] .btn.danger-solid{
-    background:#fff;
-    color:#ef4444;
-    border-bottom-color:#fca5a5;
+    background:#1CB0F6;
+    color:#fff;
+    border:none;
+    border-bottom:4px solid #fff;
   }
   html[data-theme="dark"] .btn.edit-gold{
-    background:#fff;
-    color:#d97706;
-    border-bottom-color:#fed7aa;
+    background:#d97706;
+    color:#fff;
+    border:none;
+    border-bottom:4px solid #fff;
   }
 
   .theme-toggle{
@@ -2627,7 +2631,7 @@
     width:44px;
     height:44px;
     border-radius:15px;
-    border:2px solid #fff;
+    border:none;
     border-bottom:4px solid #fff;
     background:#1CB0F6;
     color:#fff;
@@ -2648,6 +2652,7 @@
   }
   .theme-toggle svg{ width:17px; height:17px; }
   .hdr-pause-btn{
+    display:none;
     width:auto;
     padding:0 10px;
     font-family:'Inter',sans-serif;
@@ -3619,11 +3624,11 @@
 #page-receipts .chk {display:flex; align-items:center; gap:8px; font-size:13px;}
 #page-receipts .chk input {accent-color:var(--blue); width:15px; height:15px;}
 #page-receipts .actions-row {display:flex; gap:10px; margin-bottom:16px;}
-#page-receipts .btn-primary {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #BBE7FC; border-radius:15px; padding:9px 18px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;}
+#page-receipts .btn-primary {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #fff; border-radius:15px; padding:9px 18px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;}
 .btn-primary {opacity:0.9;}
 .btn-primary:active {transform:translateY(2px); border-bottom:0;}
 .btn-primary:hover {opacity:0.85;}
-#page-receipts .btn-outline {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #BBE7FC; border-radius:15px; padding:9px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:800; transition:all 0.2s ease;}
+#page-receipts .btn-outline {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #fff; border-radius:15px; padding:9px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:800; transition:all 0.2s ease;}
 .btn-outline {opacity:0.9;}
 .btn-outline:active {transform:translateY(2px); border-bottom:0;}
 .btn-outline:hover {opacity:0.85;}
@@ -3666,11 +3671,11 @@
 #page-charges-summary .chk input {accent-color:var(--blue); width:15px; height:15px;}
 #page-charges-summary .subtotal-chk {font-size:13px; display:flex; align-items:center; gap:8px; margin-top:4px;}
 #page-charges-summary .actions-row {display:flex; gap:10px; margin-bottom:16px;}
-#page-charges-summary .btn-primary {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #BBE7FC; border-radius:15px; padding:9px 18px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;}
+#page-charges-summary .btn-primary {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #fff; border-radius:15px; padding:9px 18px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;}
 .btn-primary {opacity:0.9;}
 .btn-primary:active {transform:translateY(2px); border-bottom:0;}
 .btn-primary:hover {opacity:0.85;}
-#page-charges-summary .btn-outline {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #BBE7FC; border-radius:15px; padding:9px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:800; transition:all 0.2s ease;}
+#page-charges-summary .btn-outline {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #fff; border-radius:15px; padding:9px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:800; transition:all 0.2s ease;}
 .btn-outline {opacity:0.9;}
 .btn-outline:active {transform:translateY(2px); border-bottom:0;}
 .btn-outline:hover {opacity:0.85;}
@@ -3719,11 +3724,11 @@
 #page-qty-summary .toggle::after {content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:.15s;}
 #page-qty-summary .toggle.on {background:var(--blue);}
 #page-qty-summary .toggle.on::after {left:18px;}
-#page-qty-summary .btn-primary {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #BBE7FC; border-radius:15px; padding:9px 18px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;}
+#page-qty-summary .btn-primary {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #fff; border-radius:15px; padding:9px 18px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s ease;}
 .btn-primary {opacity:0.9;}
 .btn-primary:active {transform:translateY(2px); border-bottom:0;}
 .btn-primary:hover {opacity:0.85;}
-#page-qty-summary .btn-outline {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #BBE7FC; border-radius:15px; padding:9px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:800; transition:all 0.2s ease;}
+#page-qty-summary .btn-outline {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #fff; border-radius:15px; padding:9px 16px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; font-weight:800; transition:all 0.2s ease;}
 .btn-outline {opacity:0.9;}
 .btn-outline:active {transform:translateY(2px); border-bottom:0;}
 .btn-outline:hover {opacity:0.85;}
@@ -3892,7 +3897,7 @@
 #page-manage-parts .filters-grid2 label {display:block; font-size:12.5px; color:var(--text); margin-bottom:6px;}
 #page-manage-parts .filters-grid2 select {width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px;}
 #page-manage-parts .toolbar {display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap;}
-#page-manage-parts .btn-outline {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #BBE7FC; border-radius:15px; padding:7px 14px; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-weight:800; transition:all 0.2s ease;}
+#page-manage-parts .btn-outline {background:#1CB0F6; color:#fff; border:none; border-bottom:4px solid #fff; border-radius:15px; padding:7px 14px; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-weight:800; transition:all 0.2s ease;}
 #page-manage-parts .btn-outline:active {transform:translateY(2px); border-bottom:0;}
 #page-manage-parts .btn-outline:hover {opacity:0.9;}
 #page-manage-parts .btn-outline.on {background:#fff; color:#1CB0F6; border-bottom-color:#BBE7FC;}
