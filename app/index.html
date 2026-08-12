@@ -2516,18 +2516,23 @@
        BETWEEN hdr-left's brand and search — impossible while they were
        still two separate same-parent boxes. */
     .hdr-left, .hdr-right{ display:contents; }
-    .hdr-brand{ order:1; flex-shrink:1; }
-    .hdr-brand-suffix{ display:none; } /* "RIVIERA RESORT" -> "RIVIERA" to save header space */
-    #hdrTimePill{ order:4; }
-    #hdrDatePill{ order:5; }
-    #themeToggle{ display:none; } /* No room on phone, not essential */
+    .hdr-brand{ display:none; }
+    .hdr-brand-suffix{ display:none; }
+    #hdrTimePill{
+      order:1;
+      background:transparent;
+      padding:0;
+      border-radius:0;
+    }
+    #hdrDatePill{ display:none; }
+    #themeToggle{ display:none; }
     .hdr-search-wrap{
       width:100%;
       flex:1 1 100%;
-      order:7;
+      order:5;
     }
-    .hdr-search-kbd{ display:none; } /* "Ctrl + /" means nothing without a physical keyboard */
-    #hdrFrontOfficeBadge, #hotelRestaurantSwitch{ display:none; } /* No room on phone */
+    .hdr-search-kbd{ display:none; }
+    #hdrFrontOfficeBadge, #hotelRestaurantSwitch{ display:none; }
     .hdr-whoami-short{
       order:2;
       display:inline-flex;
@@ -2542,14 +2547,23 @@
       font-weight:700;
       font-size:13px;
       flex:0 0 auto;
+      margin:0 4px;
     }
-    /* Pause Sync has no room on a phone header and isn't essential there —
-       dropped entirely rather than squeezed in. */
+    #whoamiRole{
+      order:3;
+      font-family:'Inter',sans-serif;
+      font-size:12px;
+      font-weight:600;
+      color:#fff;
+      white-space:nowrap;
+    }
     #pauseSyncBtn{ display:none; }
-    /* Full "username · role" text is too wide for a phone header; show
-       just the initial in a circle badge instead. */
     #whoami, .hdr-avatar{ display:none; }
-    #logoutBtn{ order:3; flex:0 0 auto; }
+    #logoutBtn{
+      order:4;
+      flex:0 0 auto;
+      margin-left:auto;
+    }
 
     /* Nav tabs (hdr-row2/hdr-row3) already horizontally scroll
        (overflow-x:auto) rather than wrap or clip — but with no visible
@@ -3521,6 +3535,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       </button>
       <span id="whoami"></span>
       <span id="whoamiShort" class="hdr-whoami-short"></span>
+      <span id="whoamiRole"></span>
       <div class="hdr-avatar" id="hdrAvatar"></div>
       <button id="logoutBtn" title="Sign Out" aria-label="Sign Out">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -15747,20 +15762,19 @@ let syncProblem = null;
 function updateHeaderDate(){
   const timeEl = document.getElementById('hdrTimePill');
   const dateEl = document.getElementById('hdrDatePill');
-  const iso = todayStr();
 
   if(timeEl){
     const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    timeEl.textContent = hours + ':' + minutes;
-  }
-
-  if(dateEl){
-    const weekday = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'short' });
-    const day = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit' });
-    const month = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { month:'short' });
-    dateEl.textContent = weekday + ', ' + day + ' ' + month;
+    const isPhone = window.innerWidth < 768;
+    if(isPhone){
+      timeEl.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    } else {
+      const iso = todayStr();
+      const weekday = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'short' });
+      const day = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit' });
+      const month = new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { month:'short' });
+      timeEl.textContent = weekday + ', ' + day + ' ' + month;
+    }
   }
 }
 
@@ -16906,6 +16920,8 @@ function applyRolePermissions(){
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
   const whoShort = document.getElementById('whoamiShort');
   if(whoShort) whoShort.textContent = currentUser ? currentUser.username.charAt(0).toUpperCase() : '';
+  const whoRole = document.getElementById('whoamiRole');
+  if(whoRole) whoRole.textContent = currentUser ? currentUser.role : '';
   const avatar = document.getElementById('hdrAvatar');
   if(avatar) avatar.textContent = currentUser ? currentUser.username.charAt(0).toUpperCase() : '';
   document.documentElement.classList.toggle('role-viewer', isViewer());
