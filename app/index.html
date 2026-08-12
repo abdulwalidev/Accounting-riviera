@@ -4789,7 +4789,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="filterFrom" style="display:none">
           <input type="date" id="filterTo" style="display:none">
         </div>
-        <div>
+        <div style="max-width:220px;">
           <label>Search</label>
           <div class="search-clear-wrap">
             <input type="text" id="filterSearch" placeholder="Type to search..." autocomplete="off">
@@ -4803,7 +4803,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <button class="btn secondary" onclick="setFiltersToday()">Today</button>
           <button class="btn secondary" id="reportExtraBtn" onclick="toggleReportExtra()">Extra</button>
         </div>
-        <div id="filterRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+        <div id="filterRangeReadout" style="flex:1; display:flex; align-items:center; justify-content:center; text-align:center; font-size:28px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <input type="text" id="filterCashSearch" placeholder="type total amount" style="width:180px;" autocomplete="off">
           <!-- <button class="btn secondary" onclick="showView('graphs')">📊 Detailed Graphs</button> -->
@@ -5055,7 +5055,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="rvFrom" style="display:none">
           <input type="date" id="rvTo" style="display:none">
         </div>
-        <div>
+        <div style="max-width:220px;">
           <label>Search</label>
           <div class="search-clear-wrap">
             <input type="text" id="rvSearch" placeholder="Type to search..." autocomplete="off">
@@ -5068,7 +5068,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <button class="btn secondary" onclick="setRevenueToday()">Today</button>
           <button class="btn secondary" onclick="clearRevenueFilters()">Clear Filter (All Days)</button>
         </div>
-        <div id="rvRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+        <div id="rvRangeReadout" style="flex:1; display:flex; align-items:center; justify-content:center; text-align:center; font-size:28px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportRevenueExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printRevenue()">🖶 Print</button>
