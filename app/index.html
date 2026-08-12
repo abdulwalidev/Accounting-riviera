@@ -8841,8 +8841,7 @@ function addDateStepper(inputId){
   prevBtn.addEventListener('click', ()=> step(-1));
   nextBtn.addEventListener('click', ()=> step(1));
   twoFwdBtn.addEventListener('click', ()=> step(2));
-  const readout = input.parentElement.querySelector('.date-readout');
-  (readout || input).insertAdjacentElement('afterend', wrap);
+  input.parentElement.insertAdjacentElement('afterbegin', wrap);
 }
 
 function collectExtraDetails(){
