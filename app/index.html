@@ -565,6 +565,27 @@
     white-space:nowrap;
   }
   .split-rate-btn:hover{ text-decoration:underline; }
+  /* Tag under the Sr number on the row Change Rate just created, so the
+     desk can tell the new split row from the original at a glance. Pure
+     display — never saved, never read back. */
+  .split-new-tag{
+    display:block;
+    font-size:9px;
+    font-weight:700;
+    color:#10b981;
+    letter-spacing:0.05em;
+    margin-top:2px;
+  }
+  /* Expected/Actual Checkout boxes match the Check-in flatpickr box's
+     exact width (307.875px, see .flatpickr-alt-input above) so all three
+     date fields in Customer Detail line up at the same size. */
+  #checkOutDate, #actualCheckoutDate{
+    display:block;
+    width:307.875px;
+    max-width:100%;
+    margin:0 auto;
+    text-align:center;
+  }
   input.duplicate, select.duplicate{
     border-color:var(--danger) !important;
     background:var(--danger-bg) !important;
@@ -4346,12 +4367,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <div>
             <label>Expected Checkout</label>
             <input type="text" id="checkOutDate" disabled title="Auto-calculated from check-in + the longest room's booked nights">
-            <div style="font-size:11px; color:var(--muted); margin-top:3px;">Auto-calculated</div>
+            <div style="font-size:11px; color:var(--muted); margin-top:3px; text-align:center;">Auto-calculated</div>
           </div>
           <div>
             <label>Actual Checkout</label>
             <input type="text" id="actualCheckoutDate" disabled title="Set automatically via Checkout/Pending — not editable here">
-            <div style="font-size:11px; color:var(--muted); margin-top:3px;">Auto-calculated</div>
+            <div style="font-size:11px; color:var(--muted); margin-top:3px; text-align:center;">Auto-calculated</div>
           </div>
         </div>
       </div>
@@ -7974,10 +7995,98 @@ function updateExpectedCheckoutDisplay(){
     const key = roomNo.toUpperCase() === 'N/A' ? ('na-' + i) : roomNo;
     roomNightTotals[key] = (roomNightTotals[key] || 0) + nights;
   });
+  // A moved-into room's nights don't start at check-in — its chain ends at
+  // its start offset + its own nights, and the stay runs to the latest end.
+  const moveOffsets = getDomRoomMoveOffsets();
   let maxNights = 0;
-  Object.values(roomNightTotals).forEach(n=>{ if(n > maxNights) maxNights = n; });
+  Object.entries(roomNightTotals).forEach(([key, n])=>{
+    const end = (moveOffsets[String(key).toUpperCase()] || 0) + n;
+    if(end > maxNights) maxNights = end;
+  });
   const computed = (ci && maxNights > 0) ? addDaysToDateStr(ci, maxNights) : '';
   el.value = computed ? formatDate(computed) : '—';
+}
+
+// ---- Room change support, built on top of Change Rate's split rows. ----
+// The night-chaining everywhere (Ledgers/Revenue/occupancy/etc) starts a
+// room's nights at check-in unless the same room already appeared. A room
+// CHANGE mid-stay ("moved from 205 to 302 on night 3") is expressed by
+// changing the room number on a Change Rate split row — the new room's
+// nights must then start at the move night, not back at check-in (which
+// would double-occupy both rooms on the same dates). Persisted as a hidden
+// 'Room Move' extraDetail ("302 from night 3") on the entry itself —
+// extra_details is free-form jsonb that already syncs, so no DB change.
+// Forward-only: entries without the detail behave exactly as before.
+function getRoomMoveOffsets(entry){
+  const map = {};
+  ((entry && entry.extraDetails) || []).forEach(d=>{
+    if(d.kind !== 'Room Move') return;
+    const m = /^(.+?) from night (\d+)$/.exec(String(d.value || '').trim());
+    if(m) map[m[1].trim().toUpperCase()] = Math.max(0, parseInt(m[2]) - 1);
+  });
+  return map;
+}
+
+// Same offsets read off the LIVE form rows: split-group siblings whose room
+// number differs from the group's first row are a room move, starting after
+// however many nights precede them in that group. Merged with the saved
+// offsets when editing an existing entry (split groups don't survive a
+// reload — the saved 'Room Move' details do).
+function getDomRoomMoveOffsets(){
+  const offsets = {};
+  const groups = {};
+  document.querySelectorAll('#roomBody tr').forEach(tr=>{
+    const g = tr.dataset.splitGroup;
+    if(!g) return;
+    (groups[g] = groups[g] || []).push(tr);
+  });
+  Object.values(groups).forEach(rows=>{
+    const firstRoom = (rows[0].querySelector('.roomNo').value || '').trim().toUpperCase();
+    let nightsSoFar = 0;
+    rows.forEach(row=>{
+      const roomNo = (row.querySelector('.roomNo').value || '').trim();
+      const key = roomNo.toUpperCase();
+      if(roomNo && key !== 'N/A' && !isMiscRoomNo(roomNo) && key !== firstRoom && offsets[key] === undefined){
+        offsets[key] = nightsSoFar;
+      }
+      nightsSoFar += parseInt(row.dataset.rooms) || 1;
+    });
+  });
+  if(typeof editingEntryId !== 'undefined' && editingEntryId){
+    const orig = loadAllEntries().find(e=> e.id === editingEntryId);
+    if(orig) Object.entries(getRoomMoveOffsets(orig)).forEach(([k, v])=>{ if(offsets[k] === undefined) offsets[k] = v; });
+  }
+  return offsets;
+}
+
+// Changing the room on one split row means the guest moved — every LATER
+// row of the same split group still sitting on the old room is the rest of
+// that same stay, so it follows automatically (otherwise the tail of the
+// stay stays chained to the old room and the dates double-book both rooms).
+function propagateSplitRoomChange(tr){
+  if(!tr || !tr.dataset.splitGroup) return;
+  const group = tr.dataset.splitGroup;
+  const newRoom = tr.querySelector('.roomNo').value.trim();
+  const oldRoom = (tr.dataset.origRoom || '').trim();
+  if(!newRoom || !oldRoom || newRoom.toUpperCase() === oldRoom.toUpperCase()) return;
+  tr.dataset.origRoom = newRoom;
+  let after = false, changed = 0;
+  document.querySelectorAll('#roomBody tr').forEach(row=>{
+    if(row === tr){ after = true; return; }
+    if(!after || row.dataset.splitGroup !== group) return;
+    const inp = row.querySelector('.roomNo');
+    if(inp.value.trim().toUpperCase() === oldRoom.toUpperCase()){
+      inp.value = newRoom;
+      row.dataset.origRoom = newRoom;
+      updateUnitType(row);
+      changed++;
+    }
+  });
+  if(changed > 0){
+    showNotice('Room change: the rest of the stay after this night was moved to ' + newRoom + ' too. Change any row back manually if that\'s not what you meant.');
+  }
+  refreshDuplicateRoomHighlights();
+  updateExpectedCheckoutDisplay();
 }
 
 // Actual Checkout is never auto-filled or hand-typed — it's a genuine
@@ -8275,6 +8384,8 @@ roomBodyEl.addEventListener('focusout', e=>{
   if(!e.target.classList.contains('roomNo')) return;
   const wrap = e.target.closest('.roomno-wrap');
   setTimeout(()=>{ wrap.querySelector('.roomno-list').classList.remove('show'); }, 150);
+  // A room typed by hand (no list pick) commits when the field is left.
+  propagateSplitRoomChange(e.target.closest('tr'));
 });
 
 // The list is position:fixed, so scrolling doesn't move it with its input —
@@ -8294,6 +8405,7 @@ roomBodyEl.addEventListener('mousedown', e=>{
   wrap.querySelector('.roomno-list').classList.remove('show');
   refreshDuplicateRoomHighlights();
   updateUnitType(wrap.closest('tr'));
+  propagateSplitRoomChange(wrap.closest('tr'));
 });
 
 roomBodyEl.addEventListener('keydown', e=>{
@@ -8314,6 +8426,7 @@ roomBodyEl.addEventListener('keydown', e=>{
       list.classList.remove('show');
       refreshDuplicateRoomHighlights();
       updateUnitType(tr);
+      propagateSplitRoomChange(tr);
     }
     tr.querySelector('.rent').focus();
     return;
@@ -8368,7 +8481,7 @@ function addRow(){
         <button onclick="changeRooms(this,1)">+</button>
       </div>
       <span class="roomCountMisc" style="display:none;">-</span>
-      <button type="button" class="split-rate-btn" onclick="openSplitRateModal(this)" title="Give one night of this room's stay a different rate">⚡ Change Rate</button>
+      <button type="button" class="split-rate-btn" onclick="openSplitRateModal(this)" title="Give one night of this room's stay a different rate — or change the room mid-stay: split at the move night, then pick the new room on the [new] row">⚡ Change Rate</button>
     </td>
     <td class="rowtotal">0</td>
     <td class="del"><button class="btn danger" onclick="requestDeleteRow(this,'room')">✕</button></td>
@@ -8611,6 +8724,7 @@ function confirmSplitRate(){
 }
 
 function splitRoomRowRate(tr, nightIdx, rate){
+  const splitRoomNo = tr.querySelector('.roomNo').value.trim();
   const baseRent = tr.querySelector('.rent').value;
   const totalNights = parseInt(tr.dataset.rooms) || 1;
   const before = nightIdx - 1;
@@ -8626,13 +8740,21 @@ function splitRoomRowRate(tr, nightIdx, rate){
   const splitGroup = 'sg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
   const specs = [];
   if(before > 0) specs.push({ rent: baseRent, count: before });
-  specs.push({ rent: String(rate), count: 1 });
+  specs.push({ rent: String(rate), count: 1, isNew: true });
   if(after > 0) specs.push({ rent: baseRent, count: after });
 
   const newRows = specs.map((spec, i)=>{
     const clone = tr.cloneNode(true);
     clone.dataset.rooms = spec.count;
     clone.dataset.splitGroup = splitGroup;
+    // Remembered so a later room-number change on this row is recognised as
+    // a room MOVE (see propagateSplitRoomChange).
+    clone.dataset.origRoom = splitRoomNo;
+    // Tag the freshly split-out night's row "[new]" so it's obvious which
+    // row Change Rate just made vs the original stay rows. Splitting an
+    // already-tagged row re-tags only the newest split, so strip first.
+    clone.querySelectorAll('.split-new-tag').forEach(t=> t.remove());
+    if(spec.isNew) clone.querySelector('.rmno').insertAdjacentHTML('beforeend', '<span class="split-new-tag">[new]</span>');
     // cloneNode also copies data-room-id (the existing DB row this room
     // was saved as, if editing a saved entry) onto every split row — left
     // as-is, saving would upsert 2-3 rows sharing the same id in one
@@ -9300,7 +9422,7 @@ function formatExtraDetail(d){
 // the cloud table already has a JSON column for that array, so this needs
 // no schema change. These helpers move them between the fixed fields and
 // that array, and keep them out of the generic "+ Detail" list/dropdown.
-const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Actual Checkin', 'Adults', 'Children'];
+const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Actual Checkin', 'Adults', 'Children', 'Room Move'];
 function getDetailValue(entry, kind){
   const d = (entry.extraDetails || []).find(d=> d.kind === kind);
   return d ? d.value : '';
@@ -9492,6 +9614,16 @@ async function reviewEntry(){
     extraDetails.unshift({ kind: 'Actual Checkin', value: checkInEl.value });
   }
 
+  // Room change (a Change Rate split row whose room number was switched to
+  // a different room): persisted as hidden 'Room Move' details so every
+  // report knows the new room's nights start at the move night, not back
+  // at check-in. getDomRoomMoveOffsets() already carries forward the moves
+  // saved on the original entry when this is an edit.
+  const saveMoveOffsets = getDomRoomMoveOffsets();
+  Object.entries(saveMoveOffsets).forEach(([room, offset])=>{
+    extraDetails.unshift({ kind: 'Room Move', value: room + ' from night ' + (offset + 1) });
+  });
+
   const roomRows = Array.from(document.querySelectorAll('#roomBody tr'));
   const cleanRooms = [];
   for(const tr of roomRows){
@@ -9591,7 +9723,7 @@ async function reviewEntry(){
     for(const r of cleanRooms){
       if(isMiscRoomNo(r.roomNo)) continue;
       const nightsCount = parseInt(r.count) || 1;
-      const rowStart = roomCursor[r.roomNo] || checkInEl.value;
+      const rowStart = roomCursor[r.roomNo] || addDaysToDateStr(checkInEl.value, saveMoveOffsets[r.roomNo.trim().toUpperCase()] || 0);
       for(let i = 0; i < nightsCount; i++){
         thisEntryNights.push({ roomNo: r.roomNo, date: addDaysToDateStr(rowStart, i) });
       }
@@ -12577,11 +12709,13 @@ function classifyPaymentsByNightRange(fromDate, toDate){
 
     const nights = [];
     const roomCursor = {};
+    // Moved-into rooms start at the move night — see buildLedgersRecords.
+    const moveOffsets = getRoomMoveOffsets(entry);
     (entry.rooms || []).forEach(r=>{
       if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
       const nightsCount = parseInt(r.count) || 1;
       const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
-      const rowStart = roomCursor[r.roomNo] || startDate;
+      const rowStart = roomCursor[r.roomNo] || addDaysToDateStr(startDate, moveOffsets[r.roomNo.trim().toUpperCase()] || 0);
       for(let i = 0; i < nightsCount; i++){
         nights.push({ date: addDaysToDateStr(rowStart, i), rent });
       }
@@ -14181,12 +14315,16 @@ function buildLedgersRecords(includeUnconfirmed){
     // one-off facility charges, not nights, so they're excluded from this
     // chaining and just start on check-in each time.
     const roomCursor = {};
+    // A room the guest MOVED into mid-stay (hidden 'Room Move' detail set
+    // by the Change Rate room-change flow) starts its nights at the move
+    // night instead of back at check-in.
+    const moveOffsets = getRoomMoveOffsets(entry);
     (entry.rooms || []).forEach(r=>{
       if(!r.roomNo) return;
       const nightsCount = parseInt(r.count) || 1;
       const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
       const isMisc = isMiscRoomNo(r.roomNo);
-      const rowStart = isMisc ? startDate : (roomCursor[r.roomNo] || startDate);
+      const rowStart = isMisc ? startDate : (roomCursor[r.roomNo] || addDaysToDateStr(startDate, moveOffsets[r.roomNo.trim().toUpperCase()] || 0));
       for(let i = 0; i < nightsCount; i++){
         nights.push({ date: addDaysToDateStr(rowStart, i), roomNo: r.roomNo, unitType: r.unitType, rent, received: 0, receivedOn: null, guestId: entry.id, guest });
       }
@@ -14448,11 +14586,13 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
     // Same room split across more than one row chains onto its own previous
     // row instead of restarting at check-in — see buildLedgersRecords.
     const roomCursor = {};
+    // Moved-into rooms start at the move night — see buildLedgersRecords.
+    const moveOffsets = getRoomMoveOffsets(entry);
     (entry.rooms || []).forEach(r=>{
       if(!r.roomNo || isMiscRoomNo(r.roomNo)) return; // Snooker/BBQ/Bonfire are facility charges, not room-nights
       const nightsCount = parseInt(r.count) || 1;
       const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
-      const rowStart = roomCursor[r.roomNo] || startDate;
+      const rowStart = roomCursor[r.roomNo] || addDaysToDateStr(startDate, moveOffsets[r.roomNo.trim().toUpperCase()] || 0);
       for(let i = 0; i < nightsCount; i++){
         nights.push({ date: addDaysToDateStr(rowStart, i), roomNo: r.roomNo, unitType: r.unitType, rent });
       }
@@ -15797,8 +15937,14 @@ function computeExpectedCheckoutDate(entry){
     const key = r.roomNo.toUpperCase() === 'N/A' ? ('na-' + i) : r.roomNo;
     roomNightTotals[key] = (roomNightTotals[key] || 0) + nights;
   });
+  // A moved-into room's chain ends at its move-night offset + its own
+  // nights; the stay runs to whichever room's chain ends latest.
+  const moveOffsets = getRoomMoveOffsets(entry);
   let maxNights = 0;
-  Object.values(roomNightTotals).forEach(n=>{ if(n > maxNights) maxNights = n; });
+  Object.entries(roomNightTotals).forEach(([key, n])=>{
+    const end = (moveOffsets[String(key).toUpperCase()] || 0) + n;
+    if(end > maxNights) maxNights = end;
+  });
   return maxNights > 0 ? addDaysToDateStr(stayStart, maxNights) : '';
 }
 
