@@ -6711,9 +6711,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="acDate">
           <div class="date-readout" id="acDateReadout"></div>
         </div>
-        <div>
-          <label>Total Checkouts</label>
-          <div id="acCheckoutCount" style="font-size:28px; font-weight:700; color:var(--accent); letter-spacing:0.02em;">0</div>
+        <div style="display:flex; align-items:center;">
+          <div class="dash-subtile" style="margin-top:0; min-width:120px;"><div class="dash-subtile-val" id="acCheckoutCount">0</div><div class="dash-subtile-lbl">Total Checkouts</div></div>
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
@@ -16204,7 +16203,11 @@ function renderAutoCheckout(){
   // Checkout/Undo only ever act on today — a past or future date here is
   // for review only, so nothing can be checked out under the wrong date.
 
-  const rows = buildAutoCheckoutRows(asOfDate);
+  // Display order only: guests already Checked Out float to the top, the
+  // still-pending ones below — within each group the original room order
+  // is kept (Array.prototype.sort is stable).
+  const rows = buildAutoCheckoutRows(asOfDate)
+    .sort((a,b)=> (a.status === 'checked_out' ? 0 : 1) - (b.status === 'checked_out' ? 0 : 1));
   const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'] };
   if(rows.length === 0){
     dueBody.innerHTML = '<div class="empty-note">Nobody\'s checkout was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
