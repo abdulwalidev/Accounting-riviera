@@ -9672,7 +9672,18 @@ async function reviewEntry(){
   if(originalEntryForEdit){
     // stampOverride (the "✎ edit" link) replaces the originals when staged;
     // an empty override value means the stamp is deliberately removed.
-    const origCheckin = stampOverride ? stampOverride.checkin : getDetailValue(originalEntryForEdit, 'Actual Checkin');
+    let origCheckin = stampOverride ? stampOverride.checkin : getDetailValue(originalEntryForEdit, 'Actual Checkin');
+    // A same-day walk-in's auto-stamp just mirrors its booked Check-in. If
+    // this edit CHANGES the booked Check-in and the stamp still equals the
+    // old one, move the stamp along with it — otherwise the stay's nights
+    // keep counting from the abandoned date and the guest drops out of Room
+    // Detail/occupancy on the nights they actually hold. A stamp that
+    // differs from the old booked Check-in (Arrival set a real arrival day,
+    // or ✎ edit staged one) is never touched.
+    if(!stampOverride && origCheckin && origCheckin === originalEntryForEdit.checkIn
+       && checkInEl.value && checkInEl.value !== originalEntryForEdit.checkIn){
+      origCheckin = checkInEl.value;
+    }
     if(origCheckin) extraDetails.unshift({ kind: 'Actual Checkin', value: origCheckin });
     const origCheckout = stampOverride ? stampOverride.checkout : getDetailValue(originalEntryForEdit, 'Actual Checkout');
     if(origCheckout) extraDetails.unshift({ kind: 'Actual Checkout', value: origCheckout });
