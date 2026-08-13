@@ -5314,6 +5314,11 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <button class="btn" onclick="exportBreakfastExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printBreakfastReport()">🖶 Print</button>
           <button class="btn secondary" id="bfSimpleBtn" onclick="toggleBreakfastSimpleView()">Full View</button>
+          <button class="btn secondary" onclick="setBreakfastToday()">Today</button>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <label class="lbl-sm" style="margin-bottom:4px;">Breakfast as of</label>
+          <input type="date" id="bfDate">
         </div>
         <div id="bfTodayDate" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
       </div>
@@ -7617,7 +7622,7 @@ function setStayDate(id, isoValue){
 // and Global Search. Kept as its own registry/setter rather than folding
 // into stayDatePickers/setStayDate so that already-proven code path stays
 // completely untouched.
-const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'ihDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate', 'acnCheckinDate'];
+const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'ihDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate', 'acnCheckinDate', 'bfDate'];
 const filterDatePickers = {};
 // Small closed-padlock glyph stamped on locked days in every payment date
 // picker — an SVG rather than an emoji so it renders identically (weight,
@@ -7950,6 +7955,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('nsDate').addEventListener('input', renderNightSummary);
   setFilterDate('nsDate', todayStr());
   document.getElementById('ihDate').addEventListener('input', renderInhouse);
+  document.getElementById('bfDate').addEventListener('input', renderBreakfastReport);
   setFilterDate('ihDate', todayStr());
   setFilterDate('b19From', '2026-07-19');
   updateDateReadout(document.getElementById('b19From'), document.getElementById('b19FromReadout'));
@@ -15677,8 +15683,8 @@ function printInhouse(){
 // Kept as its own page (not extra columns on Inhouse) so Inhouse stays a
 // quick headcount check and this stays the detailed breakfast breakdown.
 // =========================================================
-function buildBreakfastReport(){
-  const today = todayStr();
+function buildBreakfastReport(asOfDate){
+  const today = asOfDate || todayStr();
   const roomsByEntity = {};
   let roomCount = 0;
   computeRoomStatuses(today)
@@ -15728,6 +15734,11 @@ function buildBreakfastReport(){
 // breakfast at all stays in the list (so it's clear it wasn't missed) but
 // reads struck-through rather than as a normal row.
 let bfSimpleView = true;
+function setBreakfastToday(){
+  setFilterDate('bfDate', todayStr());
+  renderBreakfastReport();
+}
+
 function toggleBreakfastSimpleView(){
   bfSimpleView = !bfSimpleView;
   document.getElementById('bfSimpleBtn').textContent = bfSimpleView ? 'Full View' : 'Simple';
@@ -15743,10 +15754,12 @@ function renderBreakfastReport(){
     return;
   }
 
-  document.getElementById('bfPrintHeaderSub').textContent = 'As of ' + formatDate(todayStr()) + '  ·  Generated ' + formatDate(todayStr());
-  document.getElementById('bfTodayDate').textContent = formatDate(todayStr());
+  const bfDateEl = document.getElementById('bfDate');
+  const asOfDate = (bfDateEl && bfDateEl.value) || todayStr();
+  document.getElementById('bfPrintHeaderSub').textContent = 'As of ' + formatDate(asOfDate) + '  ·  Generated ' + formatDate(todayStr());
+  document.getElementById('bfTodayDate').textContent = formatDate(asOfDate);
 
-  const data = buildBreakfastReport();
+  const data = buildBreakfastReport(asOfDate);
   summary.textContent = data.roomCount + (data.roomCount === 1 ? ' room' : ' rooms') + ' in-house — ' +
     data.totals.breakfastTotal + ' having breakfast, ' + data.totals.withoutBreakfast + ' without';
 
@@ -15828,7 +15841,8 @@ function renderBreakfastReport(){
 }
 
 function exportBreakfastExcel(){
-  const data = buildBreakfastReport();
+  const bfDateEl = document.getElementById('bfDate');
+  const data = buildBreakfastReport((bfDateEl && bfDateEl.value) || todayStr());
   if(data.rows.length === 0){ showNotice('No data to export.'); return; }
 
   const wb = XLSX.utils.book_new();
