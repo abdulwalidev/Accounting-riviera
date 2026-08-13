@@ -6711,8 +6711,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="acDate">
           <div class="date-readout" id="acDateReadout"></div>
         </div>
-        <div style="display:flex; align-items:center;">
-          <div class="dash-subtile" style="margin-top:0; flex:0 0 auto; width:auto; min-width:150px; max-width:190px; padding:10px 18px;"><div class="dash-subtile-val" id="acCheckoutCount" style="font-size:26px;">0</div><div class="dash-subtile-lbl" style="font-size:13px; font-weight:700;">Total Checkouts</div></div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div class="dash-subtile" style="margin-top:0; flex:0 0 auto; width:auto; min-width:150px; max-width:190px; padding:10px 18px;"><div class="dash-subtile-val" id="acCheckoutCount" style="font-size:26px; color:#d4a017;">0</div><div class="dash-subtile-lbl" style="font-size:13px; font-weight:700; color:#d4a017;">Total Checkouts</div></div>
+          <div class="dash-subtile" style="margin-top:0; flex:0 0 auto; width:auto; min-width:150px; max-width:190px; padding:10px 18px;"><div class="dash-subtile-val" id="acRemainingCount" style="font-size:26px; color:#d4a017;">0</div><div class="dash-subtile-lbl" style="font-size:13px; font-weight:700; color:#d4a017;">Remaining</div></div>
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
@@ -16208,6 +16209,9 @@ function renderAutoCheckout(){
   // is kept (Array.prototype.sort is stable).
   const rows = buildAutoCheckoutRows(asOfDate)
     .sort((a,b)=> (a.status === 'checked_out' ? 0 : 1) - (b.status === 'checked_out' ? 0 : 1));
+  // Remaining = due-list guests not yet checked out (Ready/Pending/Extended).
+  const remainingEl = document.getElementById('acRemainingCount');
+  if(remainingEl) remainingEl.textContent = rows.filter(r=> r.status !== 'checked_out').length;
   const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'] };
   if(rows.length === 0){
     dueBody.innerHTML = '<div class="empty-note">Nobody\'s checkout was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
