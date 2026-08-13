@@ -6713,6 +6713,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <input type="date" id="acDate">
           <div class="date-readout" id="acDateReadout"></div>
         </div>
+        <div>
+          <label>Total Checkouts</label>
+          <div id="acCheckoutCount" style="font-size:28px; font-weight:700; color:var(--accent); letter-spacing:0.02em;">0</div>
+        </div>
       </div>
       <div class="actions" style="margin-top:12px;">
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -16251,16 +16255,22 @@ function renderAutoCheckout(){
     .filter(entry=> !loggedIds.has(entry.id) && getDetailValue(entry, 'Actual Checkout') === asOfDate)
     .map(entry=> ({ guest_id: entry.id, at: null, username: null }));
   const allCheckouts = dayCheckouts.concat(backfilled);
+  // Total Checkouts readout in the As Of Date panel — counts only guests
+  // whose own Actual Checkout is actually this date (same list as below),
+  // so undone checkouts never inflate it.
+  const countEl = document.getElementById('acCheckoutCount');
+  if(countEl) countEl.textContent = allCheckouts.length;
   if(allCheckouts.length === 0){
     logBody.innerHTML = '<div class="empty-note">Nobody was checked out ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
   } else {
     logBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:170px;">When</th><th>Guest</th><th style="width:160px;">By</th></tr></thead>
+        <thead><tr><th style="width:170px;">When</th><th style="width:140px;">Room No</th><th>Guest</th><th style="width:160px;">By</th></tr></thead>
         <tbody>${allCheckouts.map(l=>{
           const entry = all.find(e=> e.id === l.guest_id);
           return `<tr style="cursor:pointer;" onclick="openDetail('${l.guest_id}')" title="Open this guest">
             <td>${l.at ? new Date(l.at).toLocaleString() : formatDate(asOfDate)}</td>
+            <td>${entry ? (formatRoomChain(entry.rooms) || '-') : '-'}</td>
             <td>${entry ? (entry.guestName || '(no name)') : '(deleted)'}</td>
             <td>${l.username || '-'}</td>
           </tr>`;
