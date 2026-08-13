@@ -3077,10 +3077,11 @@
     #roomBody td:nth-child(4)::before{ content:'Rent / Amount'; }
     #roomBody td:nth-child(5)::before{ content:'Adults'; }
     #roomBody td:nth-child(6)::before{ content:'Children'; }
-    #roomBody td:nth-child(7)::before{ content:'Inc. Breakfast'; }
-    #roomBody td:nth-child(8)::before{ content:'No of Days'; }
-    #roomBody td:nth-child(9)::before{ content:'Total'; }
-    #roomBody td:nth-child(10)::before{ content:''; }
+    #roomBody td:nth-child(7)::before{ content:'Breakfast Adults'; }
+    #roomBody td:nth-child(8)::before{ content:'Breakfast Children'; }
+    #roomBody td:nth-child(9)::before{ content:'No of Days'; }
+    #roomBody td:nth-child(10)::before{ content:'Total'; }
+    #roomBody td:nth-child(11)::before{ content:''; }
     /* Payment table headers */
     #payBody td:nth-child(1)::before{ content:'#'; }
     #payBody td:nth-child(2)::before{ content:'Date'; }
@@ -4438,7 +4439,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
             <th style="width:130px;">Rent Per Day / Amount (Other)</th>
             <th style="width:90px;">Adults</th>
             <th style="width:90px;">Children</th>
-            <th style="width:100px;">Inc. Breakfast</th>
+            <th style="width:90px;">Breakfast Adults</th>
+            <th style="width:90px;">Breakfast Children</th>
             <th style="width:120px;">No of Days</th>
             <th style="width:120px;">Total</th>
             <th style="width:40px;"></th>
@@ -8519,12 +8521,8 @@ function addRow(){
     <td><input type="text" inputmode="decimal" placeholder="0 or Guest" class="rent" oninput="calcRow(this)"></td>
     <td><input type="text" inputmode="numeric" placeholder="Adults" class="roomAdults" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
     <td><input type="text" inputmode="numeric" placeholder="Children" class="roomChildren" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
-    <td style="text-align:center;">
-      <div class="bf-check-wrap">
-        <span class="bf-check-emoji" aria-hidden="true">🥐🍪</span>
-        <input type="checkbox" class="roomIncBreakfast" title="Whole room's Adults+Children are having breakfast">
-      </div>
-    </td>
+    <td><input type="text" inputmode="numeric" placeholder="🥐 Adults" class="roomBfAdults" title="Exact number of adults having breakfast in this room" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
+    <td><input type="text" inputmode="numeric" placeholder="🥐 Children" class="roomBfChildren" title="Exact number of children having breakfast in this room" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></td>
     <td>
       <div class="roomctrl">
         <button onclick="changeRooms(this,-1)">-</button>
@@ -8849,7 +8847,8 @@ function isRowEmpty(tr, kind){
            !tr.querySelector('.rent').value.trim() &&
            !tr.querySelector('.roomAdults').value.trim() &&
            !tr.querySelector('.roomChildren').value.trim() &&
-           !tr.querySelector('.roomIncBreakfast').checked;
+           !tr.querySelector('.roomBfAdults').value.trim() &&
+           !tr.querySelector('.roomBfChildren').value.trim();
   }
   if(kind === 'payment'){
     return !tr.querySelector('.payRemarks').value.trim() &&
@@ -8893,7 +8892,8 @@ function requestDeleteRow(btn, kind){
         <div><div class="confirm-lbl">Rent Per Day</div><div class="confirm-val">${(parseFloat(tr.querySelector('.rent').value) || 0).toLocaleString()}</div></div>
         <div><div class="confirm-lbl">Adults</div><div class="confirm-val">${tr.querySelector('.roomAdults').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">Children</div><div class="confirm-val">${tr.querySelector('.roomChildren').value.trim() || '-'}</div></div>
-        <div><div class="confirm-lbl">Inc. Breakfast</div><div class="confirm-val">${tr.querySelector('.roomIncBreakfast').checked ? 'Yes' : 'No'}</div></div>
+        <div><div class="confirm-lbl">Breakfast Adults</div><div class="confirm-val">${tr.querySelector('.roomBfAdults').value.trim() || '-'}</div></div>
+        <div><div class="confirm-lbl">Breakfast Children</div><div class="confirm-val">${tr.querySelector('.roomBfChildren').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${isMiscRoomNo(tr.querySelector('.roomNo').value) ? '-' : (tr.dataset.rooms || 1)}</div></div>
         <div><div class="confirm-lbl">Total</div><div class="confirm-val">${tr.querySelector('.rowtotal').textContent || 0}</div></div>
       </div>`;
@@ -9752,16 +9752,14 @@ async function reviewEntry(){
       focusError(typeSel);
       return;
     }
-    // Inc. Breakfast is a whole-room switch (except the Miscellaneous
-    // facility rows — BBQ/Bonfire/Snooker aren't a stay anyone eats
-    // breakfast as part of): it's never half the room eating and half not,
-    // so ticking it just sends that room's own Adults/Children counts
-    // straight through as the breakfast counts.
-    const roomAdultsNum = parseInt(tr.querySelector('.roomAdults').value) || 0;
-    const roomChildrenNum = parseInt(tr.querySelector('.roomChildren').value) || 0;
-    const incBreakfast = !isMiscRoomNo(roomNo) && tr.querySelector('.roomIncBreakfast').checked;
-    const breakfastAdultsVal = incBreakfast ? String(roomAdultsNum) : '0';
-    const breakfastChildrenVal = incBreakfast ? String(roomChildrenNum) : '0';
+    // Breakfast Adults/Children are typed in exactly per room (the old
+    // whole-room checkbox just copied Adults/Children through; the stored
+    // fields are the same breakfastAdults/breakfastChildren either way, so
+    // every existing entry loads and saves unchanged). Blank = 0, same value
+    // an unticked checkbox used to save. Miscellaneous facility rows
+    // (BBQ/Bonfire/Snooker) aren't a stay anyone eats breakfast as part of.
+    const breakfastAdultsVal = String(parseInt(tr.querySelector('.roomBfAdults').value) || 0);
+    const breakfastChildrenVal = String(parseInt(tr.querySelector('.roomBfChildren').value) || 0);
     const roomObj = {
       roomNo, unitType, rentInput, tr,
       rent: isFreeGuest ? 0 : rentInput.value,
@@ -9954,7 +9952,7 @@ function openConfirmModal(data){
   const box = document.getElementById('confirmBody');
 
   const roomRowsHtml = data.rooms.map(r=>`
-    <tr><td>${displayRoomNo(r.roomNo, r.unitType)}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : ((parseInt(r.breakfastAdults) || parseInt(r.breakfastChildren)) ? 'Yes' : 'No')}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
+    <tr><td>${displayRoomNo(r.roomNo, r.unitType)}</td><td>${r.unitType || detectUnitType(r.roomNo) || '-'}</td><td>${Number(r.rent).toLocaleString()}</td><td>${r.adults || '0'}</td><td>${r.children || '0'}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : (parseInt(r.breakfastAdults) || 0)}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : (parseInt(r.breakfastChildren) || 0)}</td><td>${isMiscRoomNo(r.roomNo) ? '-' : r.count}</td><td class="rowtotal">${(parseFloat(String(r.total).replace(/,/g,'')) || 0).toLocaleString()}</td></tr>
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
@@ -9980,7 +9978,7 @@ function openConfirmModal(data){
       ${visibleExtraDetails(data).map(d=>`<div><div class="confirm-lbl">${d.kind}</div><div class="confirm-val">${formatExtraDetail(d)}</div></div>`).join('')}
     </div>
     <table style="margin-bottom:14px;">
-      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Adults</th><th>Children</th><th>Inc. Breakfast</th><th>Days</th><th>Total</th></tr></thead>
+      <thead><tr><th>Room No</th><th>Type</th><th>Rent/Day</th><th>Adults</th><th>Children</th><th>Breakfast Adults</th><th>Breakfast Children</th><th>Days</th><th>Total</th></tr></thead>
       <tbody>${roomRowsHtml}</tbody>
     </table>
     <table style="margin-bottom:14px;">
@@ -10372,7 +10370,8 @@ function startEditEntry(entry){
     tr.querySelector('.rent').value = (r.rent === 0 || r.rent === '0') ? 'Guest' : (r.rent || '');
     tr.querySelector('.roomAdults').value = r.adults || '';
     tr.querySelector('.roomChildren').value = r.children || '';
-    tr.querySelector('.roomIncBreakfast').checked = !!((parseInt(r.breakfastAdults) || 0) || (parseInt(r.breakfastChildren) || 0));
+    tr.querySelector('.roomBfAdults').value = (parseInt(r.breakfastAdults) || 0) ? String(parseInt(r.breakfastAdults)) : '';
+    tr.querySelector('.roomBfChildren').value = (parseInt(r.breakfastChildren) || 0) ? String(parseInt(r.breakfastChildren)) : '';
     updateUnitType(tr);
     const typeSel = tr.querySelector('.unitType');
     if(!typeSel.disabled && r.unitType){
