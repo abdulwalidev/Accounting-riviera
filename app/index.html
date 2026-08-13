@@ -16182,6 +16182,10 @@ function buildAutoCheckoutRows(asOfDate){
   return due.concat(checkedOut).sort((a,b)=> a.guest.localeCompare(b.guest, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
+// Per-date cache of the cloud guest_edits checked_out rows for the Checked
+// Out list's times — see the fetch inside renderAutoCheckout.
+let acCheckoutLogCache = { date: null, rows: [], fetching: false };
+
 function renderAutoCheckout(){
   const dateEl = document.getElementById('acDate');
   const dueBody = document.getElementById('autoCheckoutDueBody');
@@ -16248,19 +16252,41 @@ function renderAutoCheckout(){
   // up every already-undone entry logged before this fix, not just new
   // ones going forward.
   const all = loadAllEntries();
-  const dayCheckouts = editLogs
+  // editLogs is a same-session-only write log — a checkout done earlier
+  // today from another device/session has no row in it, so those guests
+  // showed no time. Pull that day's checked_out rows from guest_edits once
+  // per date (read-only, cached) and merge them in; this is the one page
+  // that fetches from the audit log, and only this thin slice of it.
+  if(sb && acCheckoutLogCache.date !== asOfDate && !acCheckoutLogCache.fetching){
+    acCheckoutLogCache.fetching = true;
+    const winStart = addDaysToDateStr(asOfDate, -1) + 'T00:00:00Z';
+    const winEnd = addDaysToDateStr(asOfDate, 2) + 'T00:00:00Z';
+    sb.from('guest_edits').select('guest_id, username, at, action')
+      .eq('action', 'checked_out').gte('at', winStart).lt('at', winEnd)
+      .then(({ data, error })=>{
+        acCheckoutLogCache = { date: error ? null : asOfDate, rows: data || [], fetching: false };
+        if(!error && currentView === 'autocheckout') renderAutoCheckout();
+      });
+  }
+  const cloudLogs = acCheckoutLogCache.date === asOfDate ? acCheckoutLogCache.rows : [];
+  const seenLogIds = new Set();
+  const dayCheckouts = editLogs.concat(pendingEditLogs).concat(cloudLogs)
     .filter(l=> l.action === 'checked_out' && l.at && toKarachiDateStr(l.at) === asOfDate)
     .filter(l=>{
       const entry = all.find(e=> e.id === l.guest_id);
       return !!entry && getDetailValue(entry, 'Actual Checkout') === asOfDate;
     })
-    .sort((a,b)=> (b.at || '').localeCompare(a.at || ''));
-  // editLogs is a same-session-only write log — a checkout done earlier
-  // today from another device/session/staff member has no log row here, so
-  // this list read "Nobody was checked out today" while the due list right
-  // above it plainly showed guests as Checked Out. Backfill from each
-  // entry's own Actual Checkout field (the same source of truth the due
-  // list uses); those rows just have no exact time/username to show.
+    // one row per guest — a checkout that was undone and redone keeps only
+    // the latest time
+    .sort((a,b)=> (b.at || '').localeCompare(a.at || ''))
+    .filter(l=>{
+      if(seenLogIds.has(l.guest_id)) return false;
+      seenLogIds.add(l.guest_id);
+      return true;
+    });
+  // Any checkout still missing from the log entirely gets backfilled from
+  // the entry's own Actual Checkout field (same source of truth as the due
+  // list); those rows just have no exact time to show.
   const loggedIds = new Set(dayCheckouts.map(l=> l.guest_id));
   const backfilled = all
     .filter(entry=> !loggedIds.has(entry.id) && getDetailValue(entry, 'Actual Checkout') === asOfDate)
@@ -16276,14 +16302,13 @@ function renderAutoCheckout(){
   } else {
     logBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:170px;">When</th><th style="width:140px;">Room No</th><th>Guest</th><th style="width:160px;">By</th></tr></thead>
+        <thead><tr><th style="width:190px;">When</th><th style="width:160px;">Room No</th><th>Guest</th></tr></thead>
         <tbody>${allCheckouts.map(l=>{
           const entry = all.find(e=> e.id === l.guest_id);
           return `<tr style="cursor:pointer;" onclick="openDetail('${l.guest_id}')" title="Open this guest">
-            <td>${l.at ? new Date(l.at).toLocaleString() : formatDate(asOfDate)}</td>
+            <td>${l.at ? fmtLogTime(l.at) : formatDate(asOfDate)}</td>
             <td>${entry ? (formatRoomChain(entry.rooms) || '-') : '-'}</td>
             <td>${entry ? (entry.guestName || '(no name)') : '(deleted)'}</td>
-            <td>${l.username || '-'}</td>
           </tr>`;
         }).join('')}</tbody>
       </table>`;
