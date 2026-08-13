@@ -15566,8 +15566,13 @@ function buildInhouseReport(asOfDate){
       const relevantRooms = dedupeRoomsByNo((rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo));
       const adultsDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
       const childrenDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
+      // Rent per day for this room — a rate-split room has several rows for
+      // the same room number, so show the latest (current) rate.
+      const allRoomRows = (rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo);
+      const rent = allRoomRows.length ? (parseFloat(String(allRoomRows[allRoomRows.length - 1].rent).replace(/,/g,'')) || 0) : 0;
       return {
         roomNo: rs.roomNo,
+        rent,
         guest: rs.entry.guestName || '(no name)',
         guestId: rs.entry.id,
         checkIn: getDetailValue(rs.entry, 'Actual Checkin') || rs.entry.checkIn || '',
@@ -15636,7 +15641,7 @@ function renderInhouse(){
   }
   body.innerHTML = `
     <table>
-      <thead><tr><th style="width:50px;">Sr</th><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Checkin</th><th style="width:110px;">Checkout</th><th style="width:110px;">Adults</th><th style="width:110px;">Children</th><th style="width:130px;">Total Individuals</th></tr></thead>
+      <thead><tr><th style="width:50px;">Sr</th><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Checkin</th><th style="width:110px;">Checkout</th><th style="width:110px;">Room Rent</th><th style="width:110px;">Adults</th><th style="width:110px;">Children</th><th style="width:130px;">Total Individuals</th></tr></thead>
       <tbody>${data.rows.map((r, idx)=> `
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${idx + 1}</td>
@@ -15644,6 +15649,7 @@ function renderInhouse(){
           <td>${r.guest}</td>
           <td>${r.checkIn ? formatDate(r.checkIn) : '-'}</td>
           <td>${r.checkOut ? formatDate(r.checkOut) : '-'}</td>
+          <td>${(r.rent || 0).toLocaleString()}</td>
           <td>${r.adultsDisplay}</td>
           <td>${r.childrenDisplay}</td>
           <td style="font-weight:700;">${r.pax}</td>
@@ -15652,6 +15658,7 @@ function renderInhouse(){
       <tfoot>
         <tr class="day-foot-total">
           <td colspan="5">Total</td>
+          <td>${data.rows.reduce((s,r)=> s + (r.rent || 0), 0).toLocaleString()}</td>
           <td>${data.totalAdults}</td>
           <td>${data.totalChildren}</td>
           <td>${data.totalPax}</td>
@@ -15667,10 +15674,10 @@ function exportInhouseExcel(){
 
   const wb = XLSX.utils.book_new();
   const rowsData = data.rows.map(r=> ({
-    'Room No': r.roomNo, 'Guest': r.guest, 'Checkin': r.checkIn ? formatDate(r.checkIn) : '-', 'Checkout': r.checkOut ? formatDate(r.checkOut) : '-', 'Adults': r.adultsDisplay, 'Children': r.childrenDisplay, 'Total Individuals': r.pax
+    'Room No': r.roomNo, 'Guest': r.guest, 'Checkin': r.checkIn ? formatDate(r.checkIn) : '-', 'Checkout': r.checkOut ? formatDate(r.checkOut) : '-', 'Room Rent': r.rent || 0, 'Adults': r.adultsDisplay, 'Children': r.childrenDisplay, 'Total Individuals': r.pax
   }));
   const ws = XLSX.utils.json_to_sheet(rowsData);
-  ws['!cols'] = [{wch:12},{wch:22},{wch:12},{wch:12},{wch:10},{wch:10},{wch:12}];
+  ws['!cols'] = [{wch:12},{wch:22},{wch:12},{wch:12},{wch:12},{wch:10},{wch:10},{wch:12}];
   XLSX.utils.book_append_sheet(wb, ws, 'Inhouse');
   XLSX.writeFile(wb, `inhouse-report-${asOfDate}.xlsx`);
 }
