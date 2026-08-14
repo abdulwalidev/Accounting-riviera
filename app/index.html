@@ -4287,10 +4287,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       white-space:nowrap !important;
       padding:0 2px !important;
     }
-    /* Payment Report / Revenue Report: use the same size as the desktop-
-       view toggle (i.e. plain desktop table sizing), not the phone-shrunk
-       sizing every other hotel table gets — scoped by container id so
-       nothing else is affected. */
+    /* Payment Report / Revenue Report: keep the same desktop proportions
+       (font/padding ratios) instead of the phone-shrunk sizing every other
+       hotel table gets, but scaled down via JS (fitTableToContainer, see
+       script section) as small as needed to fit the screen with no
+       scrolling — table-layout/min-width here just give it its natural
+       desktop width so that JS can measure and scale it correctly. */
     #reportBody table, #rvRoomsBody table{
       font-size:13px !important;
       table-layout:auto !important;
@@ -4311,8 +4313,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       padding:revert !important;
     }
     #reportBody, #rvRoomsBody{
-      overflow-x:auto !important;
-      -webkit-overflow-scrolling:touch;
+      overflow:hidden !important;
+    }
+    #reportBody table, #rvRoomsBody table{
+      zoom:1;
     }
     /* Sr/# row-number column: 1-3 digits never needs more than a tight
        fixed width, and the forced nowrap above already stops it wrapping
@@ -18396,12 +18400,49 @@ function toggleDesktopSim(){
       btn.setAttribute('aria-label', 'Switch to full desktop view');
     }
   }
+  ['reportBody', 'rvRoomsBody'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el && typeof fitTableToContainer === 'function') fitTableToContainer(el);
+  });
 }
 (function(){
   var btn = document.getElementById('desktopSimBtn');
   if(btn && window.screen && window.screen.width < 768){
     btn.style.display = 'flex';
   }
+})();
+
+// ---- Payment Report / Revenue Report: shrink desktop-sized table to fit
+// the phone screen (no scrolling), only as small as it needs to be. Since
+// these tables render with plain desktop font/padding on phone (see the
+// #reportBody/#rvRoomsBody CSS override) they can be wider than the
+// screen; `zoom` scales the whole table (font included) down uniformly,
+// keeping the same look just smaller, rather than truncating anything. */
+function fitTableToContainer(container){
+  var table = container && container.querySelector('table');
+  if(!table) return;
+  if(!document.body.classList.contains('desktop-sim') && window.innerWidth < 768){
+    table.style.zoom = '1';
+    var natural = table.scrollWidth;
+    var avail = container.clientWidth;
+    table.style.zoom = (natural > avail && natural > 0) ? String(avail / natural) : '1';
+  } else {
+    table.style.zoom = '1';
+  }
+}
+(function(){
+  ['reportBody', 'rvRoomsBody'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    var mo = new MutationObserver(function(){ fitTableToContainer(el); });
+    mo.observe(el, { childList:true, subtree:true });
+  });
+  window.addEventListener('resize', function(){
+    ['reportBody', 'rvRoomsBody'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) fitTableToContainer(el);
+    });
+  });
 })();
 
 // start with 1 room row and 1 payment row
