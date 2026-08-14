@@ -2056,14 +2056,14 @@
       overflow-x:auto;
       -webkit-overflow-scrolling:touch;
       max-width:100%;
-      font-size:9px;
+      font-size:7.2px;
     }
     /* Cells wrapping onto several lines makes rows tall and ragged - at
        this font size everything fits on one line per cell, and anyone who
        needs it bigger can just pinch-zoom (viewport allows it, see meta
        tag), so force nowrap instead of letting text stack. */
     .view table th, .view table td{ padding:3px 4px; white-space:nowrap; }
-    .view table th{ font-size:8px; letter-spacing:0; padding:3px 3px; }
+    .view table th{ font-size:6.4px; letter-spacing:0; padding:3px 3px; }
     .topnav{ gap:16px; }
     .topnav .navbtn{ font-size:12.5px; }
     .panel{ padding:12px; }
@@ -18248,11 +18248,25 @@ function toggleDesktopSim(){
   var btn = document.getElementById('desktopSimBtn');
   var forced = document.body.classList.toggle('desktop-sim');
   if(forced){
+    // width=1200 makes the browser zoom the WHOLE page (including this
+    // fixed-position button) down to fit the physical screen, so the
+    // button would visually shrink along with everything else. Counter-
+    // scale it up by the same ratio, measured before the viewport switch,
+    // so it stays the same physical size on screen either way.
+    var ratio = 1200 / document.documentElement.clientWidth;
     meta.setAttribute('content', 'width=1200');
-    if(btn) btn.classList.add('active');
+    if(btn){
+      btn.classList.add('active');
+      btn.style.transform = 'scale(' + ratio + ')';
+      btn.style.transformOrigin = 'bottom right';
+    }
   } else {
     meta.setAttribute('content', 'width=device-width, initial-scale=1.0');
-    if(btn) btn.classList.remove('active');
+    if(btn){
+      btn.classList.remove('active');
+      btn.style.transform = '';
+      btn.style.transformOrigin = '';
+    }
   }
 }
 (function(){
