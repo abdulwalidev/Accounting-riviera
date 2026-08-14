@@ -1287,7 +1287,7 @@
   button.btn.edit-gold[onclick="showView('roomdetail')"] {
     background:#d97706 !important;
     color:#fff !important;
-    border:1px solid rgba(255,255,255,0.5) !important;
+    border:6px solid #fff !important;
     border-bottom:4px solid rgba(217, 119, 6, 0.15) !important;
   }
   button.btn.edit-gold[onclick="showView('roomdetail')"]:hover {
@@ -1304,7 +1304,7 @@
   button.btn[onclick="openAvailModal()"] {
     background:var(--ink-fill) !important;
     color:#fff !important;
-    border:2px solid #fff !important;
+    border:6px solid #fff !important;
     border-bottom:4px solid rgba(14, 165, 233, 0.15) !important;
   }
   button.btn[onclick="openAvailModal()"]:hover {
@@ -18435,9 +18435,9 @@ addPayRow();
   var roomDetail = document.querySelector('button.btn.edit-gold[onclick="showView(\'roomdetail\')"]');
   [avail, roomDetail].forEach(function(btn){
     if(!btn) return;
-    btn.style.setProperty('border-top', '2px solid #fff', 'important');
-    btn.style.setProperty('border-left', '2px solid #fff', 'important');
-    btn.style.setProperty('border-right', '2px solid #fff', 'important');
+    btn.style.setProperty('border-top', '6px solid #fff', 'important');
+    btn.style.setProperty('border-left', '6px solid #fff', 'important');
+    btn.style.setProperty('border-right', '6px solid #fff', 'important');
   });
 })();
 
