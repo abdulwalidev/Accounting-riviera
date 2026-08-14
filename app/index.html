@@ -2042,6 +2042,9 @@
   }
   #desktopSimBtn svg{ width:22px; height:22px; }
   #desktopSimBtn.active{ background:#0f9d58; }
+  #desktopSimBtn .icon-phone{ display:none; }
+  #desktopSimBtn.active .icon-desktop{ display:none; }
+  #desktopSimBtn.active .icon-phone{ display:block; }
   .lbl-short{ display:none; }
 
   /* ---- Phone view: general hotel table shrink ----
@@ -4352,7 +4355,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
      reports - a media query keyed off that same viewport would hide the
      button the instant it's used to unforce the phone view. -->
 <button id="desktopSimBtn" onclick="toggleDesktopSim()" title="Switch to full desktop view" aria-label="Switch to full desktop view" style="display:none;">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="18" x2="12" y2="21"></line></svg>
+  <svg class="icon-desktop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="18" x2="12" y2="21"></line></svg>
+  <svg class="icon-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><rect x="6" y="2" width="12" height="20" rx="2"></rect><line x1="11" y1="18" x2="13" y2="18"></line></svg>
 </button>
 
 <div id="loginOverlay">
@@ -18379,6 +18383,8 @@ function toggleDesktopSim(){
       btn.classList.add('active');
       btn.style.transform = 'scale(' + ratio + ')';
       btn.style.transformOrigin = 'bottom right';
+      btn.title = 'Switch back to phone view';
+      btn.setAttribute('aria-label', 'Switch back to phone view');
     }
   } else {
     meta.setAttribute('content', 'width=device-width, initial-scale=1.0');
@@ -18386,6 +18392,8 @@ function toggleDesktopSim(){
       btn.classList.remove('active');
       btn.style.transform = '';
       btn.style.transformOrigin = '';
+      btn.title = 'Switch to full desktop view';
+      btn.setAttribute('aria-label', 'Switch to full desktop view');
     }
   }
 }
