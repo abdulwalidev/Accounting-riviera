@@ -2024,6 +2024,25 @@
     .smart-grid{ grid-template-columns:1fr; }
   }
 
+  #desktopSimBtn{
+    position:fixed;
+    right:16px;
+    bottom:16px;
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    background:#1a73e8;
+    color:#fff;
+    border:none;
+    box-shadow:0 2px 10px rgba(0,0,0,.35);
+    z-index:500;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+  }
+  #desktopSimBtn svg{ width:22px; height:22px; }
+  #desktopSimBtn.active{ background:#0f9d58; }
+
   /* ---- Phone view: general hotel table shrink ----
      Restaurant/POS (#restaurantNative, .app-page) is out of scope — this
      only targets hotel .view pages. Rather than hand-tune every one of the
@@ -2037,10 +2056,14 @@
       overflow-x:auto;
       -webkit-overflow-scrolling:touch;
       max-width:100%;
-      font-size:10.5px;
+      font-size:9px;
     }
-    .view table th, .view table td{ padding:4px 5px; }
-    .view table th{ font-size:9px; letter-spacing:0; padding:4px 3px; white-space:nowrap; }
+    /* Cells wrapping onto several lines makes rows tall and ragged - at
+       this font size everything fits on one line per cell, and anyone who
+       needs it bigger can just pinch-zoom (viewport allows it, see meta
+       tag), so force nowrap instead of letting text stack. */
+    .view table th, .view table td{ padding:3px 4px; white-space:nowrap; }
+    .view table th{ font-size:8px; letter-spacing:0; padding:3px 3px; }
     .topnav{ gap:16px; }
     .topnav .navbtn{ font-size:12.5px; }
     .panel{ padding:12px; }
@@ -2998,10 +3021,15 @@
     }
     #logoutBtn svg{ width:11px; height:11px; }
     #themeToggle{
-      width:21px;
-      min-height:21px;
+      width:28px;
+      height:28px;
+      min-height:0;
+      padding:0;
+      border-radius:50%;
+      align-self:center;
+      flex:0 0 auto;
     }
-    #themeToggle svg{ width:11px; height:11px; }
+    #themeToggle svg{ width:13px; height:13px; }
     .hdr-whoami-short{
       width:18px;
       height:18px;
@@ -3107,6 +3135,13 @@
       text-align:center;
       white-space:normal;
       max-width:52px;
+    }
+
+    /* Search(due) isn't usable on phone yet - gray it out instead of
+       leaving a live button that opens a broken/unusable layout. */
+    #topNavSearch{
+      opacity:0.4;
+      pointer-events:none;
     }
 
     /* Entry form tables: convert to form layout on phone */
@@ -4182,6 +4217,23 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 </head>
 
 <body>
+
+<!-- Phone-only floating button: fake "landscape/desktop view" toggle.
+     Doesn't touch the accelerometer/real orientation - it just forces the
+     viewport meta back to the fixed-1200 width the whole desktop stylesheet
+     is written for, so a phone gets the pinch-zoomable desktop layout on
+     demand instead of the shrunk phone tables. Real physical rotation to
+     landscape already works correctly without this: with the default
+     device-width viewport, a genuine landscape width is reported to CSS
+     media queries as-is (usually >700px on modern phones), which already
+     clears our phone breakpoint on its own. Visibility uses screen.width
+     (physical screen size) rather than a max-width media query, because
+     the whole point of this button is to change what the layout viewport
+     reports - a media query keyed off that same viewport would hide the
+     button the instant it's used to unforce the phone view. -->
+<button id="desktopSimBtn" onclick="toggleDesktopSim()" title="Switch to full desktop view" aria-label="Switch to full desktop view" style="display:none;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="18" x2="12" y2="21"></line></svg>
+</button>
 
 <div id="loginOverlay">
   <div class="login-topbar">
@@ -14233,6 +14285,10 @@ function startNprAdd(date, roomNo, guest){
 
 function formatDate(iso){
   const d = new Date(iso + 'T00:00:00');
+  // Phone-width tables are tight on space and this hotel only runs a
+  // 3-month season, so the year is redundant clutter there - desktop
+  // keeps it since report/print tables have room and may span years.
+  if(window.innerWidth < 768) return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short' });
   return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
 }
 
@@ -18185,6 +18241,26 @@ function toggleTheme(){
 }
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 document.getElementById('loginThemeToggle').addEventListener('click', toggleTheme);
+
+// ---- Phone-only "desktop view" toggle (see #desktopSimBtn comment) ----
+function toggleDesktopSim(){
+  var meta = document.querySelector('meta[name="viewport"]');
+  var btn = document.getElementById('desktopSimBtn');
+  var forced = document.body.classList.toggle('desktop-sim');
+  if(forced){
+    meta.setAttribute('content', 'width=1200');
+    if(btn) btn.classList.add('active');
+  } else {
+    meta.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    if(btn) btn.classList.remove('active');
+  }
+}
+(function(){
+  var btn = document.getElementById('desktopSimBtn');
+  if(btn && window.screen && window.screen.width < 768){
+    btn.style.display = 'flex';
+  }
+})();
 
 // start with 1 room row and 1 payment row
 addRow();
