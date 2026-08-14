@@ -4238,6 +4238,54 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     .riviera-folio-table { font-size: 9px; }
     #view-nightsummary .ns-table { font-size: 11px; }
   }
+
+  /* ---- Final phone-table override, kept last on purpose ----
+     Several older dormant phone rules scattered earlier in this file
+     (table.rep, .ns-table, .line-table, thead th, etc. — all leftovers
+     from before phone view was ever turned on) sit at equal-or-higher
+     specificity than the hotel .view table rules added this session, so
+     depending on source order they were silently winning the cascade on
+     specific pages (Payment Report, Revenue Report) even though other
+     pages (Inhouse) looked right. Putting one final !important pass here,
+     last in the file, guarantees every hotel table matches — regardless
+     of what any earlier rule (with or without !important) tried to set —
+     since among equal-specificity !important rules, the one that comes
+     last in the stylesheet always wins. */
+  @media (max-width: 700px){
+    .view table, .view table.rep, .view table.parts, .view .ns-table, .view .line-table{
+      font-size:7.2px !important;
+    }
+    .view table th, .view table thead th{
+      font-size:6.4px !important;
+      padding:3px 3px !important;
+      letter-spacing:0 !important;
+      white-space:nowrap !important;
+    }
+    .view table td{
+      font-size:7.2px !important;
+      padding:3px 4px !important;
+      white-space:nowrap !important;
+    }
+    .view table td *, .view table th *{
+      font-size:inherit !important;
+      white-space:nowrap !important;
+    }
+    /* Sr/# row-number column (id'd tables that actually start with a row
+       number, not e.g. Room No/Guest — scoped by id so this can't squash
+       a name column on tables where the first column isn't Sr/#): 1-3
+       digits never needs more than a tight fixed width, and the forced
+       nowrap above already stops it wrapping onto its own line. */
+    #reportBody table td:first-child, #reportBody table th:first-child,
+    #rvRoomsBody table td:first-child, #rvRoomsBody table th:first-child,
+    #ihBody table td:first-child, #ihBody table th:first-child{
+      width:16px !important;
+      min-width:16px !important;
+      max-width:20px !important;
+      padding-left:2px !important;
+      padding-right:2px !important;
+      text-align:center !important;
+    }
+  }
 </style>
 <script>
   (function(){
