@@ -2,11 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<!-- Phone view disabled: fixed 1200px viewport makes phones render the
-     desktop layout (pinch-zoomable) instead of the <=600px phone CSS,
-     which stays in the stylesheet but never matches at this width.
-     Restore phone view by putting back: width=device-width, initial-scale=1.0 -->
-<meta name="viewport" content="width=1200">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!-- Matches .hdr-row1's own background (#1a73e8) — without this, mobile
      browsers tint their own address-bar/status-bar strip white/default
      instead of the app's blue, leaving a mismatched seam above the
@@ -2026,6 +2022,28 @@
   }
   @media (max-width: 520px){
     .smart-grid{ grid-template-columns:1fr; }
+  }
+
+  /* ---- Phone view: general hotel table shrink ----
+     Restaurant/POS (#restaurantNative, .app-page) is out of scope — this
+     only targets hotel .view pages. Rather than hand-tune every one of the
+     dozens of report tables in this file, shrink font/padding everywhere
+     and let each table scroll horizontally within itself (table set to
+     display:block so its own overflow-x:auto applies to just that table,
+     not the whole page) as a fallback for tables too wide to fully fit. */
+  @media (max-width: 700px){
+    .view table{
+      display:block;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      max-width:100%;
+      font-size:11.5px;
+    }
+    .view table th, .view table td{ padding:5px 6px; }
+    .topnav{ gap:16px; }
+    .topnav .navbtn{ font-size:12.5px; }
+    .panel{ padding:12px; }
+    h1{ font-size:20px; }
   }
 
   /* ---- Confirm & Save modal ---- */
