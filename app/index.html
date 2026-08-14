@@ -961,7 +961,12 @@
     text-transform:uppercase;
     letter-spacing:0.04em;
     margin-top:2px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
   }
+  .dash-subtile-lbl svg{ width:10px; height:10px; flex:0 0 auto; }
   .cico-grid{
     display:grid;
     grid-template-columns:repeat(2,1fr);
@@ -1299,7 +1304,7 @@
   button.btn[onclick="openAvailModal()"] {
     background:var(--ink-fill) !important;
     color:#fff !important;
-    border:1px solid #fff !important;
+    border:2px solid #fff !important;
     border-bottom:4px solid rgba(14, 165, 233, 0.15) !important;
   }
   button.btn[onclick="openAvailModal()"]:hover {
@@ -4374,7 +4379,17 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   </div>
 
   <div class="login-container">
-    <div class="login-icon-circle">🏨</div>
+    <div class="login-icon-circle">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 21h18"></path>
+        <path d="M5 21V7l7-4 7 4v14"></path>
+        <path d="M9 9h1"></path>
+        <path d="M14 9h1"></path>
+        <path d="M9 13h1"></path>
+        <path d="M14 13h1"></path>
+        <path d="M10 21v-4h4v4"></path>
+      </svg>
+    </div>
     <h1 class="login-hero-title">Riviera Resort</h1>
 
     <div class="login-card">
@@ -4529,10 +4544,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <span class="dash-card-lbl">Room Status</span>
         </div>
         <div class="dash-subtiles">
-          <div class="dash-subtile"><div class="dash-subtile-val" id="dashOcc">0</div><div class="dash-subtile-lbl">Occ</div></div>
-          <div class="dash-subtile"><div class="dash-subtile-val" id="dashReady">0</div><div class="dash-subtile-lbl">Vacant</div></div>
-          <div class="dash-subtile"><div class="dash-subtile-val" id="dashDirty">0</div><div class="dash-subtile-lbl">Dirty</div></div>
-          <div class="dash-subtile"><div class="dash-subtile-val" id="dashOOO">0</div><div class="dash-subtile-lbl">OOO</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashOcc">0</div><div class="dash-subtile-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>Occ</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashReady">0</div><div class="dash-subtile-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Vacant</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashDirty">0</div><div class="dash-subtile-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c1.5-1.5 2-3 2-5"/><path d="M9 21c1.5-1.5 2-3 2-5"/><path d="M15 21c1.5-1.5 2-3 2-5"/><path d="M4 16c0-6 4-10 8-13 4 3 8 7 8 13"/></svg>Dirty</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashOOO">0</div><div class="dash-subtile-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="6" y1="6" x2="18" y2="18"/></svg>OOO</div></div>
         </div>
       </div>
 
