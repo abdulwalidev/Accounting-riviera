@@ -18426,6 +18426,21 @@ function toggleDesktopSim(){
 addRow();
 addPayRow();
 
+// Force the Dashboard Check Availability / Room Detail buttons' white
+// border via setProperty(...,'important') so nothing in the stylesheet
+// cascade (however it resolves) can hide it — JS-set !important always
+// wins over CSS !important.
+(function(){
+  var avail = document.querySelector('button.btn[onclick="openAvailModal()"]');
+  var roomDetail = document.querySelector('button.btn.edit-gold[onclick="showView(\'roomdetail\')"]');
+  [avail, roomDetail].forEach(function(btn){
+    if(!btn) return;
+    btn.style.setProperty('border-top', '2px solid #fff', 'important');
+    btn.style.setProperty('border-left', '2px solid #fff', 'important');
+    btn.style.setProperty('border-right', '2px solid #fff', 'important');
+  });
+})();
+
 // ---------------------------------------------------------------
 // POS module-scope state that MUST exist before init() below runs, moved
 // up from their original spots further down in the POS section. init()
