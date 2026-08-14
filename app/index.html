@@ -4277,13 +4277,36 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       white-space:nowrap !important;
       padding:0 2px !important;
     }
-    /* Sr/# row-number column (id'd tables that actually start with a row
-       number, not e.g. Room No/Guest — scoped by id so this can't squash
-       a name column on tables where the first column isn't Sr/#): 1-3
-       digits never needs more than a tight fixed width, and the forced
-       nowrap above already stops it wrapping onto its own line. */
-    #reportBody table td:first-child, #reportBody table th:first-child,
-    #rvRoomsBody table td:first-child, #rvRoomsBody table th:first-child,
+    /* Payment Report / Revenue Report: use the same size as the desktop-
+       view toggle (i.e. plain desktop table sizing), not the phone-shrunk
+       sizing every other hotel table gets — scoped by container id so
+       nothing else is affected. */
+    #reportBody table, #rvRoomsBody table{
+      font-size:13px !important;
+      table-layout:auto !important;
+      min-width:max-content !important;
+    }
+    #reportBody table th, #rvRoomsBody table th{
+      font-size:11px !important;
+      padding:10px 8px !important;
+      letter-spacing:0.05em !important;
+    }
+    #reportBody table td, #rvRoomsBody table td{
+      font-size:13px !important;
+      padding:6px 8px !important;
+    }
+    #reportBody table td *, #reportBody table th *,
+    #rvRoomsBody table td *, #rvRoomsBody table th *{
+      font-size:inherit !important;
+      padding:revert !important;
+    }
+    #reportBody, #rvRoomsBody{
+      overflow-x:auto !important;
+      -webkit-overflow-scrolling:touch;
+    }
+    /* Sr/# row-number column: 1-3 digits never needs more than a tight
+       fixed width, and the forced nowrap above already stops it wrapping
+       onto its own line. */
     #ihBody table td:first-child, #ihBody table th:first-child{
       width:16px !important;
       min-width:16px !important;
