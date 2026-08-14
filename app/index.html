@@ -4148,10 +4148,14 @@
    non-standard @page down onto whatever paper is actually loaded, which
    is what kept clipping the receipt's right edge no matter how narrow
    the content got. A4 is a real page the driver won't rescale. */
-@page pos-receipt{ size:A4 portrait; margin:8mm; }
+@page pos-receipt{ size:A4 portrait; margin:3mm 8mm; }
 @media print{
   body.pos-printing-receipt > *:not(#posReceiptPrintArea){ display:none !important; }
-  body.pos-printing-receipt #posReceiptPrintArea{ display:block !important; page:pos-receipt; break-inside:avoid; page-break-inside:avoid; }
+  /* The app-wide print rules put padding on body/.main; with those
+     inherited the receipt starts well down the page instead of at the
+     very top, so zero them out for receipt prints specifically. */
+  html:has(body.pos-printing-receipt), body.pos-printing-receipt{ margin:0 !important; padding:0 !important; }
+  body.pos-printing-receipt #posReceiptPrintArea{ display:block !important; page:pos-receipt; margin-top:0 !important; padding-top:0 !important; break-inside:avoid; page-break-inside:avoid; }
   body.pos-printing-receipt #posReceiptPrintArea *{ break-inside:avoid; page-break-inside:avoid; }
 }
 
@@ -21100,7 +21104,7 @@ function posBuildReceiptHtml(record){
     '<div class="rc-foot">Riviera Resort · Restaurant</div>';
 }
 
-var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sans-serif; font-size:13px; font-weight:600; line-height:1.4; width:68mm; margin:0 auto; padding:1mm 3mm 1mm; color:#000; zoom:2.2; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;} ' +
+var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sans-serif; font-size:13px; font-weight:600; line-height:1.4; width:68mm; margin:0 auto; padding:1mm 3mm 1mm; color:#000; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;} ' +
   '#posReceiptPrintArea *{ -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }' +
   '#posReceiptPrintArea .rc-logo{display:block; width:30mm; max-width:60%; margin:0 auto 1.5mm;} ' +
   '#posReceiptPrintArea .rc-brand{text-align:center; font-size:18px; font-weight:700; letter-spacing:.04em; margin-bottom:1mm;} ' +
@@ -21157,8 +21161,30 @@ function posPrintRecord(record){
     pageOverride.id = 'posReceiptPageOverride';
     document.head.appendChild(pageOverride);
   }
-  pageOverride.textContent = '@page{size:80mm auto; margin:0;}';
+  // This unnamed @page is what every print engine actually honors (named
+  // @page support is unreliable, see above) — so it, not the named
+  // "pos-receipt" rule, is what really decides the sheet. A4 portrait:
+  // a real page size the driver won't rescale-and-clip.
+  pageOverride.textContent = '@page{size:A4 portrait; margin:3mm 8mm;}';
   document.body.classList.add('pos-printing-receipt');
+  // Scale the receipt up as far as it can go while still fitting on ONE
+  // page. A flat 2.2x zoom overflows onto extra sheets as soon as the
+  // order has more than a few lines, so cap it by measured content size.
+  // The area is display:none on screen, so it has to be laid out (kept
+  // invisible + out of flow) for a moment to measure its natural size.
+  area.style.zoom = '';
+  area.style.cssText += ';display:block; position:absolute; left:-10000px; top:0; visibility:hidden;';
+  var MM = 96 / 25.4;
+  var availW = (210 - 16) * MM;   // A4 width  minus the 8mm side margins
+  var availH = (297 - 6) * MM;    // A4 height minus the 3mm top/bottom
+  var natW = area.scrollWidth, natH = area.scrollHeight;
+  area.style.display = '';
+  area.style.position = '';
+  area.style.left = '';
+  area.style.top = '';
+  area.style.visibility = '';
+  var fit = Math.min(2.2, natW ? availW / natW : 2.2, natH ? availH / natH : 2.2);
+  area.style.zoom = Math.max(1, fit);
   // window.print() doesn't wait for pending image requests — calling it
   // right after setting innerHTML would print before the logo (first time,
   // uncached) has actually finished loading, leaving a blank gap instead
