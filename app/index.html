@@ -2046,16 +2046,13 @@
 
   /* ---- Phone view: general hotel table shrink ----
      Restaurant/POS (#restaurantNative, .app-page) is out of scope — this
-     only targets hotel .view pages. Rather than hand-tune every one of the
-     dozens of report tables in this file, shrink font/padding everywhere
-     and let each table scroll horizontally within itself (table set to
-     display:block so its own overflow-x:auto applies to just that table,
-     not the whole page) as a fallback for tables too wide to fully fit. */
+     only targets hotel .view pages. No horizontal scroll — tables are
+     shrunk small enough to fit the screen width outright; anyone who
+     needs to read fine detail can pinch-zoom the whole page instead. */
   @media (max-width: 700px){
     .view table{
-      display:block;
-      overflow-x:auto;
-      -webkit-overflow-scrolling:touch;
+      width:100%;
+      table-layout:fixed;
       max-width:100%;
       font-size:7.2px;
     }
@@ -4253,22 +4250,29 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
      last in the stylesheet always wins. */
   @media (max-width: 700px){
     .view table, .view table.rep, .view table.parts, .view .ns-table, .view .line-table{
-      font-size:7.2px !important;
+      font-size:8px !important;
+      width:100% !important;
+      table-layout:fixed !important;
     }
     .view table th, .view table thead th{
-      font-size:6.4px !important;
-      padding:3px 3px !important;
+      font-size:7px !important;
+      padding:2px 2px !important;
       letter-spacing:0 !important;
       white-space:nowrap !important;
+      overflow:hidden !important;
+      text-overflow:clip !important;
     }
     .view table td{
-      font-size:7.2px !important;
-      padding:3px 4px !important;
+      font-size:8px !important;
+      padding:2px 3px !important;
       white-space:nowrap !important;
+      overflow:hidden !important;
+      text-overflow:clip !important;
     }
     .view table td *, .view table th *{
       font-size:inherit !important;
       white-space:nowrap !important;
+      padding:0 2px !important;
     }
     /* Sr/# row-number column (id'd tables that actually start with a row
        number, not e.g. Room No/Guest — scoped by id so this can't squash
