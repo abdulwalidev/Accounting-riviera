@@ -2842,11 +2842,21 @@
   @media (max-width:600px){
 
     /* Revert all Duolingo button styling for mobile view */
-    .btn, .btn.secondary, .btn.danger, .btn.success, .btn.edit-gold, .btn.danger-solid {
+    .btn.danger, .btn.success, .btn.edit-gold, .btn.danger-solid {
       background: var(--ink-fill);
       color: var(--paper);
       border: 1px solid var(--ink-fill);
       border-bottom: none;
+      border-radius: 4px;
+      opacity: 1;
+      height: auto;
+      padding: 9px 16px;
+      font-weight: 600;
+    }
+    /* Blue buttons keep the same collapsing bottom-border press effect as
+       desktop (see .btn/.btn.secondary base rules) — only radius/sizing
+       revert for mobile here. */
+    .btn, .btn.secondary {
       border-radius: 4px;
       opacity: 1;
       height: auto;
