@@ -3578,9 +3578,9 @@
 #page-pos-invoice .btn-addline {opacity:0.9;}
 #page-pos-invoice .btn-addline:active {transform:translateY(2px); border-bottom:0;}
 #page-pos-invoice .btn-addline:hover {opacity:0.85;}
-#page-pos-invoice .grp-label {color:var(--muted); font-size:12px; font-weight:600; margin-left:8px;}
-#page-pos-invoice .grp-pills {display:flex; gap:4px; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; padding-bottom:4px;}
-#page-pos-invoice .grp-pill {border:1px solid var(--blue); color:var(--blue); border-radius:12px; padding:2px 8px; font-size:10px; background:#fff; cursor:pointer; user-select:none; white-space:nowrap; flex:0 0 auto;}
+#page-pos-invoice .grp-label {color:var(--muted); font-size:18px; font-weight:600; margin-left:8px;}
+#page-pos-invoice .grp-pills {display:flex; gap:8px; flex-wrap:wrap; overflow:visible; padding-bottom:4px;}
+#page-pos-invoice .grp-pill {border:1px solid var(--blue); color:var(--blue); border-radius:18px; padding:6px 16px; font-size:15px; background:#fff; cursor:pointer; user-select:none; white-space:nowrap; flex:0 0 auto;}
 #page-pos-invoice .grp-pill:hover {background:#eaf2ff;}
 #page-pos-invoice .grp-pill.active {background:var(--blue); color:#fff;}
 #page-pos-invoice .menu-panel-row {cursor:pointer;}
@@ -6831,7 +6831,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <a class="settings-nav-item" onclick="showView('misc')">Miscellaneous</a>
       <a class="settings-nav-item danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</a>
     </div>
-    <div class="settings-nav-section">
+    <div class="settings-nav-section" id="settingsDataSyncSection">
       <div class="settings-nav-heading">Data &amp; Sync</div>
       <div class="settings-nav-info">
         <div class="settings-nav-row">
@@ -7310,7 +7310,19 @@ function showView(view, fromPopState){
   if(topNavRestaurant) topNavRestaurant.classList.toggle('active', view === 'restaurant');
   updateHotelRestaurantSwitch();
   if(view === 'frontoffice') renderFrontOffice();
-  if(view === 'restaurant') posBootApp();
+  if(view === 'restaurant'){
+    posBootApp();
+    // The Restaurant nav button is meant to always return to Point of
+    // Sale — but if the view was already active (e.g. the user was on
+    // Charges Summary/Settings inside the module), the ROUTABLE_VIEWS
+    // toggle above is a no-op and posBootApp() short-circuits on
+    // posAppBooted, so nothing else visibly happened when clicked.
+    var posInvoicePage = document.getElementById('page-pos-invoice');
+    if(posInvoicePage && !posInvoicePage.classList.contains('visible')){
+      var posInvoiceNavBtn = document.querySelector('#appSidebar button[onclick*="page-pos-invoice"]');
+      posShowApp('page-pos-invoice', posInvoiceNavBtn);
+    }
+  }
   if(view === 'report') renderReport();
   if(view === 'graphs') renderGraphs();
   if(view === 'reservations') renderReservations();
@@ -17983,12 +17995,14 @@ function applyRolePermissions(){
   const settingsFrontOfficeBtn = document.getElementById('settingsFrontOfficeBtn');
   if(settingsFrontOfficeBtn) settingsFrontOfficeBtn.style.display = isAdmin() ? '' : 'none';
   const hdrFrontOfficeBadge = document.getElementById('hdrFrontOfficeBadge');
-  if(hdrFrontOfficeBadge) hdrFrontOfficeBadge.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
+  if(hdrFrontOfficeBadge) hdrFrontOfficeBadge.style.display = (isAdmin() || isRestaurantRole()) ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const posUnlockNav = document.getElementById('topNavPosUnlock');
   if(posUnlockNav) posUnlockNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
+  const settingsDataSyncSection = document.getElementById('settingsDataSyncSection');
+  if(settingsDataSyncSection) settingsDataSyncSection.style.display = isRestaurantRole() ? 'none' : '';
   updateHotelRestaurantSwitch();
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
@@ -20732,8 +20746,8 @@ var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sa
   '#posReceiptPrintArea table.rc-items{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:1mm;} ' +
   '#posReceiptPrintArea table.rc-items th{text-align:left; font-size:11px; letter-spacing:.03em; padding:0 0 1.5mm; font-weight:700;} ' +
   '#posReceiptPrintArea table.rc-items th.rc-num{text-align:right;} ' +
+  '#posReceiptPrintArea table.rc-items th:first-child, #posReceiptPrintArea table.rc-items td:first-child{width:9mm; padding-right:3mm;} ' +
   '#posReceiptPrintArea table.rc-items td{padding:1.4mm 0; vertical-align:top;} ' +
-  '#posReceiptPrintArea table.rc-items td:first-child{padding-right:4px;} ' +
   '#posReceiptPrintArea .rc-num{text-align:right;} ' +
   '#posReceiptPrintArea table.rc-taxdetail{width:100%; border-collapse:collapse; font-size:11.5px; color:#333;} ' +
   '#posReceiptPrintArea table.rc-taxdetail td{padding:1px 0;} ' +
