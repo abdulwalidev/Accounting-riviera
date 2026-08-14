@@ -2042,6 +2042,7 @@
   }
   #desktopSimBtn svg{ width:22px; height:22px; }
   #desktopSimBtn.active{ background:#0f9d58; }
+  .lbl-short{ display:none; }
 
   /* ---- Phone view: general hotel table shrink ----
      Restaurant/POS (#restaurantNative, .app-page) is out of scope — this
@@ -3143,6 +3144,13 @@
       opacity:0.4;
       pointer-events:none;
     }
+
+    /* Date stepper (<< < > >>) next to date pickers - not needed on
+       phone, the date input itself already opens the native picker. */
+    .date-stepper{ display:none; }
+
+    .lbl-full{ display:none; }
+    .lbl-short{ display:inline; }
 
     /* Entry form tables: convert to form layout on phone */
     #view-entry table{
@@ -15773,7 +15781,7 @@ function renderInhouse(){
   if(guestSplit) guestSplit.innerHTML = `
     <div class="dash-subtile"><div class="dash-subtile-val">${data.totalAdults}</div><div class="dash-subtile-lbl">Adults</div></div>
     <div class="dash-subtile"><div class="dash-subtile-val">${data.totalChildren}</div><div class="dash-subtile-lbl">Children</div></div>
-    <div class="dash-subtile"><div class="dash-subtile-val">${data.totalPax}</div><div class="dash-subtile-lbl">Total Individuals</div></div>`;
+    <div class="dash-subtile"><div class="dash-subtile-val">${data.totalPax}</div><div class="dash-subtile-lbl"><span class="lbl-full">Total Individuals</span><span class="lbl-short">Total</span></div></div>`;
 
   if(data.rows.length === 0){
     body.innerHTML = '<div class="empty-note">Nobody in-house right now.</div>';
@@ -15781,7 +15789,7 @@ function renderInhouse(){
   }
   body.innerHTML = `
     <table>
-      <thead><tr><th style="width:50px;">Sr</th><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Checkin</th><th style="width:110px;">Checkout</th><th style="width:110px;">Room Rent</th><th style="width:110px;">Adults</th><th style="width:110px;">Children</th><th style="width:130px;">Total Individuals</th></tr></thead>
+      <thead><tr><th style="width:50px;">Sr</th><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Checkin</th><th style="width:110px;">Checkout</th><th style="width:110px;">Room Rent</th><th style="width:110px;">Adults</th><th style="width:110px;">Children</th><th style="width:130px;"><span class="lbl-full">Total Individuals</span><span class="lbl-short">Total</span></th></tr></thead>
       <tbody>${data.rows.map((r, idx)=> `
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${idx + 1}</td>
@@ -15956,7 +15964,7 @@ function renderBreakfastReport(){
         <th>Guest</th>
         <th style="width:90px;">Adults</th>
         <th style="width:90px;">Children</th>
-        <th style="width:130px;">Total Individuals</th>
+        <th style="width:130px;"><span class="lbl-full">Total Individuals</span><span class="lbl-short">Total</span></th>
         <th class="th-green" style="width:120px;">Breakfast Adults</th>
         <th class="th-green" style="width:120px;">Breakfast Children</th>
         <th class="th-purple" style="width:130px;">Without Breakfast</th>
