@@ -4144,7 +4144,7 @@
 
 /* ===== POS receipt print area — see posPrintRecord ===== */
 #posReceiptPrintArea{ display:none; background:#fff; }
-@page pos-receipt{ size:80mm auto; margin:0; }
+@page pos-receipt{ size:auto; margin:0; }
 @media print{
   body.pos-printing-receipt > *:not(#posReceiptPrintArea){ display:none !important; }
   body.pos-printing-receipt #posReceiptPrintArea{ display:block !important; page:pos-receipt; }
@@ -4375,12 +4375,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 </style>
 <script>
   (function(){
-    // Dark is the default look now — only an explicit past choice of
-    // "light" (saved by toggleTheme()) opts back out. A first-ever visit
+    // Light is the default look now — only an explicit past choice of
+    // "dark" (saved by toggleTheme()) opts into dark. A first-ever visit
     // (no saved value at all) has never touched the toggle, so it gets
-    // dark same as anyone who never flips it.
+    // light same as anyone who never flips it.
     var saved = localStorage.getItem('theme');
-    if(saved !== 'light') document.documentElement.setAttribute('data-theme', 'dark');
+    if(saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   })();
 </script>
 </head>
@@ -21095,7 +21095,7 @@ function posBuildReceiptHtml(record){
     '<div class="rc-foot">Riviera Resort · Restaurant</div>';
 }
 
-var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.4; width:74mm; margin:0 auto; padding:3mm 3mm 6mm; color:#000;} ' +
+var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.4; width:74mm; margin:0 auto; padding:1mm 3mm 1mm; color:#000; zoom:2.2;} ' +
   '#posReceiptPrintArea .rc-logo{display:block; width:30mm; max-width:60%; margin:0 auto 1.5mm;} ' +
   '#posReceiptPrintArea .rc-brand{text-align:center; font-size:18px; font-weight:700; letter-spacing:.04em; margin-bottom:1mm;} ' +
   '#posReceiptPrintArea .rc-sub{text-align:center; font-size:12px; letter-spacing:.06em; color:#000; margin-bottom:3mm;} ' +
