@@ -1292,6 +1292,23 @@
     transform: translateY(2px);
     border-bottom: 0 !important;
   }
+  /* Check Availability button in dashboard - same border/press logic as
+     the Room Detail button next to it (see above), pinned with !important
+     so nothing else in the cascade (mobile size/border resets, etc) can
+     silently flatten it. */
+  button.btn[onclick="openAvailModal()"] {
+    background:var(--ink-fill) !important;
+    color:#fff !important;
+    border:1px solid rgba(255,255,255,0.5) !important;
+    border-bottom:4px solid rgba(14, 165, 233, 0.15) !important;
+  }
+  button.btn[onclick="openAvailModal()"]:hover {
+    opacity: 0.85;
+  }
+  button.btn[onclick="openAvailModal()"]:active {
+    transform: translateY(2px);
+    border-bottom: 0 !important;
+  }
   #logoutBtn{
     opacity:0.9;
   }
