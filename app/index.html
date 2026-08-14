@@ -18108,8 +18108,17 @@ if(sb && typeof sb.channel === 'function'){
       .on('postgres_changes', { event: '*', schema: 'public', table: 'guest_payments' }, applyPaymentRealtimeEvent)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'locked_days' }, ()=> fetchLockedDaysOnly())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_attachments' }, ()=> fetchPaymentAttachmentsOnly())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_invoices' }, ()=> { fetchFrontOfficeOnly(); if(typeof posAppBooted !== 'undefined' && posAppBooted) posPullFromCloud(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_invoice_items' }, ()=> { fetchFrontOfficeOnly(); if(typeof posAppBooted !== 'undefined' && posAppBooted) posPullFromCloud(); })
+      // Patched incrementally from the payload, exactly like guests/rooms/
+      // payments above — these used to trigger a full posPullFromCloud()
+      // per event, i.e. a complete re-download of every invoice ever for
+      // each line item of each invoice anyone posted anywhere.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_invoices' }, payload => {
+        if(typeof posAppBooted !== 'undefined' && posAppBooted && typeof applyPosInvoiceRealtimeEvent === 'function') applyPosInvoiceRealtimeEvent(payload);
+        else fetchFrontOfficeOnly(); // POS not booted on this device — the hotel's Front Office view still mirrors these rows
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_invoice_items' }, payload => {
+        if(typeof posAppBooted !== 'undefined' && posAppBooted && typeof applyPosInvoiceItemRealtimeEvent === 'function') applyPosInvoiceItemRealtimeEvent(payload);
+      })
       // Same instant cross-device sync locked_days already gets — without
       // this, a Day Lock/unlock made on one device only reached other open
       // tabs on the next 5-minute poll instead of immediately.
@@ -18634,6 +18643,21 @@ function posItemPayload(record){
   });
 }
 
+// lineNo is carried through onto the local item so a realtime item event
+// can find and replace the exact line it refers to. Item rows have no
+// natural key other than their position, so without it an incremental
+// patch has nothing to match on.
+function posItemFromDb(it){
+  return {
+    lineNo: Number(it.line_no) || 0,
+    name: it.name,
+    notes: it.notes || '',
+    qty: Number(it.qty) || 0,
+    price: Number(it.price) || 0,
+    pct: Number(it.pct) || 0
+  };
+}
+
 function posRowFromDb(row, items){
   return {
     id: row.id,
@@ -18721,6 +18745,14 @@ async function posPushNewInvoiceRaw(record){
     var itemRes = await sb.from('pos_invoice_items').upsert(items, { onConflict: 'id' });
     if (itemRes.error) console.error('POS item save failed', itemRes.error);
   }
+  // Item rows are keyed by line number, and an upsert only ever writes the
+  // lines that still exist — so editing an invoice DOWN (5 lines to 3)
+  // used to leave rows 3 and 4 orphaned on the server, and the next full
+  // pull resurrected them as phantom items on the receipt. Drop anything
+  // past the current last line.
+  var delRes = await sb.from('pos_invoice_items').delete()
+    .eq('invoice_id', record.id).gte('line_no', items.length);
+  if (delRes.error) console.error('POS stale item cleanup failed', delRes.error);
   posMutationStamp++;
   return true;
 }
@@ -18884,7 +18916,7 @@ async function posPullFromCloud(){
       posInvoices = (invRes.data || []).map(function(row){
         var items = (itemsByInvoice[row.id] || [])
           .sort(function(a, b){ return (a.line_no || 0) - (b.line_no || 0); })
-          .map(function(it){ return { name: it.name, notes: it.notes || '', qty: Number(it.qty) || 0, price: Number(it.price) || 0, pct: Number(it.pct) || 0 }; });
+          .map(posItemFromDb);
         return posRowFromDb(row, items);
       });
       // Isolated from the try/catch above on purpose — the pos_locked_days
@@ -18893,16 +18925,7 @@ async function posPullFromCloud(){
       // keeps everything safely locked either way.
       await posFetchLockedDays();
       await posAutoLockPastDays();
-      posRenderRecentInvoices();
-      receiptsRefresh();
-      printedOnlyRefresh();
-      frontOfficeRefresh();
-      deletedRefresh();
-      pendingPaymentsRefresh();
-      prevDayRefresh();
-      renderChargesSummary();
-      renderQuantitySummary();
-      posRenderDayLockPage();
+      posRerenderAll();
       posFlushPendingPosWrites(); // a successful pull is a strong signal the connection is back — retry queued writes right away instead of waiting for the next interval tick
       console.log('[POS] pull complete. posInvoices.length =', posInvoices.length);
     }catch(e){
@@ -18913,6 +18936,118 @@ async function posPullFromCloud(){
     }
   })();
   return posPullInFlight;
+}
+
+// Every POS surface that shows invoice data, refreshed in one call — used
+// by the full pull and by the realtime patchers below so the two can never
+// drift out of step (the pull used to inline this list, so a page added to
+// one path was silently missing from the other).
+function posRerenderAll(){
+  posRenderRecentInvoices();
+  receiptsRefresh();
+  printedOnlyRefresh();
+  frontOfficeRefresh();
+  deletedRefresh();
+  pendingPaymentsRefresh();
+  prevDayRefresh();
+  renderChargesSummary();
+  renderQuantitySummary();
+  posRenderDayLockPage();
+}
+
+// ---- POS realtime incremental patching ----
+// Same approach the hotel side already uses (see "Realtime incremental
+// patching" above): apply the changed row straight out of the realtime
+// payload instead of re-downloading every invoice and every line item on
+// every change from every connected device. Posting one 10-line invoice
+// used to fire 11 realtime events, each triggering a FULL re-pull of the
+// entire invoice history — that's what made the restaurant side feel
+// slower and burn far more egress than the hotel side.
+// A pending local write always wins: an echo of someone else's change can
+// never stomp an edit this device hasn't successfully pushed yet.
+function posHasPendingWrite(id){
+  return posPendingInvoiceSaves.has(id) || posPendingInvoiceUpdates.has(id);
+}
+
+function applyPosInvoiceRealtimeEvent(payload){
+  var row = (payload.new && payload.new.id) ? payload.new : payload.old;
+  if (!row || !row.id || posHasPendingWrite(row.id)) return;
+  var idx = posInvoices.findIndex(function(r){ return r.id === row.id; });
+  if (payload.eventType === 'DELETE'){
+    if (idx !== -1){ posInvoices.splice(idx, 1); posRerenderAll(); fetchFrontOfficeOnly(); }
+    return;
+  }
+  // Line items arrive as their own separate events — keep whatever this
+  // invoice already has locally rather than blanking it out.
+  var existingItems = idx !== -1 ? (posInvoices[idx].items || []) : [];
+  var mapped = posRowFromDb(row, existingItems);
+  if (idx !== -1) posInvoices[idx] = mapped;
+  else posInvoices.unshift(mapped); // list is ordered newest-first
+  posRerenderAll();
+  fetchFrontOfficeOnly(); // the hotel's Front Office view mirrors these rows
+  // A DELETE payload from Postgres carries only the primary key unless the
+  // table is set to REPLICA IDENTITY FULL, so a removed line item's
+  // invoice_id can be missing and its event gets skipped below. An edit
+  // that removes lines always updates the invoice row too, so reconcile
+  // this one invoice's items here — a single targeted query, not a pull.
+  if (idx !== -1) posRefreshInvoiceItems(row.id);
+}
+
+// Re-reads just one invoice's line items.
+async function posRefreshInvoiceItems(id){
+  if (!sb || !id) return;
+  try{
+    var res = await sb.from('pos_invoice_items').select('*').eq('invoice_id', id);
+    if (res.error) return;
+    if (posHasPendingWrite(id)) return; // local edit landed mid-flight — it wins
+    var record = posInvoices.find(function(r){ return r.id === id; });
+    if (!record) return;
+    record.items = (res.data || [])
+      .sort(function(a, b){ return (a.line_no || 0) - (b.line_no || 0); })
+      .map(posItemFromDb);
+    posRerenderAll();
+  }catch(e){ console.error('[POS] item reconcile failed', e); }
+}
+
+function applyPosInvoiceItemRealtimeEvent(payload){
+  var it = (payload.new && payload.new.id) ? payload.new : payload.old;
+  if (!it || !it.invoice_id || posHasPendingWrite(it.invoice_id)) return;
+  var record = posInvoices.find(function(r){ return r.id === it.invoice_id; });
+  // The invoice itself isn't loaded locally yet (its item event beat its
+  // invoice event here) — pull that one invoice rather than dropping the
+  // update on the floor.
+  if (!record){ posFetchSingleInvoice(it.invoice_id); return; }
+  record.items = record.items || [];
+  var line = Number(it.line_no) || 0;
+  var idx = record.items.findIndex(function(x){ return x.lineNo === line; });
+  if (payload.eventType === 'DELETE'){
+    if (idx !== -1) record.items.splice(idx, 1);
+  } else {
+    var mapped = posItemFromDb(it);
+    if (idx !== -1) record.items[idx] = mapped; else record.items.push(mapped);
+  }
+  record.items.sort(function(a, b){ return (a.lineNo || 0) - (b.lineNo || 0); });
+  posRerenderAll();
+}
+
+// Fetches one invoice (with its items) — the targeted repair used when a
+// realtime event references an invoice this device hasn't seen yet.
+async function posFetchSingleInvoice(id){
+  if (!sb || !id) return;
+  try{
+    var invRes = await sb.from('pos_invoices').select('*').eq('id', id).maybeSingle();
+    if (invRes.error || !invRes.data) return;
+    var itemsRes = await sb.from('pos_invoice_items').select('*').eq('invoice_id', id);
+    if (itemsRes.error) return;
+    if (posHasPendingWrite(id)) return; // a local edit landed while this was in flight — don't stomp it
+    var items = (itemsRes.data || [])
+      .sort(function(a, b){ return (a.line_no || 0) - (b.line_no || 0); })
+      .map(posItemFromDb);
+    var mapped = posRowFromDb(invRes.data, items);
+    var idx = posInvoices.findIndex(function(r){ return r.id === id; });
+    if (idx !== -1) posInvoices[idx] = mapped; else posInvoices.unshift(mapped);
+    posRerenderAll();
+  }catch(e){ console.error('[POS] single-invoice fetch failed', e); }
 }
 
 function posRenderRecentInvoices(){
