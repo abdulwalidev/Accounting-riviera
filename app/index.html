@@ -633,7 +633,7 @@
     font-family:'Inter',sans-serif;
     background:var(--ink-fill);
     color:#fff;
-    border:none;
+    border:1px solid rgba(255,255,255,0.5);
     border-bottom:4px solid rgba(14, 165, 233, 0.15);
     padding:9px 16px;
     border-radius:15px;
@@ -666,7 +666,7 @@
   .btn.secondary{
     background:var(--ink-fill);
     color:#fff;
-    border:none;
+    border:1px solid rgba(255,255,255,0.5);
     border-bottom:4px solid rgba(14, 165, 233, 0.15);
   }
   .btn.secondary{
@@ -2698,7 +2698,7 @@
   html[data-theme="dark"] .btn{
     background:var(--ink-fill);
     color:#fff;
-    border:none;
+    border:1px solid rgba(255,255,255,0.5);
     border-bottom:4px solid #fff;
   }
   html[data-theme="dark"] .roomctrl button:hover,
@@ -2754,13 +2754,13 @@
   html[data-theme="dark"] .btn.success{
     background:var(--ink-fill);
     color:#fff;
-    border:none;
+    border:1px solid rgba(255,255,255,0.5);
     border-bottom:4px solid #fff;
   }
   html[data-theme="dark"] .btn.danger-solid{
     background:var(--ink-fill);
     color:#fff;
-    border:none;
+    border:1px solid rgba(255,255,255,0.5);
     border-bottom:4px solid #fff;
   }
   html[data-theme="dark"] .btn.edit-gold{
@@ -2777,7 +2777,7 @@
     width:44px;
     height:44px;
     border-radius:15px;
-    border:none;
+    border:1px solid rgba(255,255,255,0.5);
     border-bottom:4px solid rgba(14, 165, 233, 0.15);
     background:var(--ink-fill);
     color:#fff;
@@ -8261,7 +8261,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
     'frontOfficeDateFilter','deletedDateFilter','pendingPaymentsDateFilter',
     'posDlDate','ccCheckoutDate','acnCheckinDate'
   ].forEach(addDateStepper);
-  addDateStepper('nsDate', 'after');
 });
 
 let rowCount = 0;
@@ -18376,6 +18375,8 @@ function toggleDesktopSim(){
   var btn = document.getElementById('desktopSimBtn');
   if(btn && window.screen && window.screen.width < 768){
     btn.style.display = 'flex';
+    // Default to desktop-sim ON for phones, every load (including refresh).
+    toggleDesktopSim();
   }
 })();
 
