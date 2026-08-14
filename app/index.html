@@ -2095,6 +2095,13 @@
     .topnav .navbtn{ font-size:15px; padding:14px 0; }
     .panel{ padding:12px; }
     h1{ font-size:20px; }
+    /* Guest detail page: header block (name/meta/FOLIO/RESV/Edit) and the
+       Customer Detail card - shrink the whole div to 80%, not just the
+       text, so it takes 80% of the vertical/horizontal space too. */
+    #view-detail > div:nth-of-type(1),
+    #view-detail .panel.accent-guest{
+      zoom:0.8;
+    }
   }
 
   /* ---- Confirm & Save modal ---- */
