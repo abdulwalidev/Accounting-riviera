@@ -7056,7 +7056,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="view" id="view-arrival">
 
     <h1 class="no-print">Arrival</h1>
+    <!-- [FUTURE: No Show] restore this line when re-enabling — see future-implementations/no-show.md
     <div class="sub no-print">Advance reservations whose check-in date is on file for today — confirm they've actually shown up before their room reads as occupied, or mark them No Show if they never came. Walk-ins entered today don't appear here; entering them already is the confirmation.</div>
+    -->
+    <div class="sub no-print">Advance reservations whose check-in date is on file for today — confirm they've actually shown up before their room reads as occupied. Walk-ins entered today don't appear here; entering them already is the confirmation.</div>
 
     <div class="panel no-print accent-filters">
       <h2>As Of Date</h2>
@@ -7077,7 +7080,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
     <div class="panel accent-filters">
       <h2>Arrivals <span id="arDueDateLabel"></span></h2>
+      <!-- [FUTURE: No Show] restore this line when re-enabling — see future-implementations/no-show.md
       <div class="sub" style="margin-top:-6px;">Advance reservations with a check-in date on file for this day. "Arrival Due" rooms don't count as occupied anywhere until confirmed here. If the guest never turns up, mark them No Show — their room is released for the rest of the booking and can be sold to somebody else. Both Check-in and No Show can be undone from this page.</div>
+      -->
+      <div class="sub" style="margin-top:-6px;">Advance reservations with a check-in date on file for this day. "Arrival Due" rooms don't count as occupied anywhere until confirmed here.</div>
       <div id="arrivalDueBody" style="overflow-x:auto; margin-top:14px;"><div class="empty-note">No data yet.</div></div>
     </div>
 
@@ -9846,7 +9852,8 @@ function formatExtraDetail(d){
 // the cloud table already has a JSON column for that array, so this needs
 // no schema change. These helpers move them between the fixed fields and
 // that array, and keep them out of the generic "+ Detail" list/dropdown.
-const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Actual Checkin', 'Adults', 'Children', 'Room Move', 'No Show'];
+// [FUTURE: No Show] add 'No Show' back to this list when re-enabling.
+const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Actual Checkin', 'Adults', 'Children', 'Room Move'];
 function getDetailValue(entry, kind){
   const d = (entry.extraDetails || []).find(d=> d.kind === kind);
   return d ? d.value : '';
@@ -9864,6 +9871,10 @@ function isAdvanceReservation(entry){
   return !!(entry && entry.savedAt && entry.checkIn && toKarachiDateStr(entry.savedAt) < entry.checkIn);
 }
 
+// [FUTURE: No Show] ---- DISABLED, kept for re-enabling. Every site is
+// tagged '[FUTURE: No Show]'; the checklist lives in
+// future-implementations/no-show.md. Uncomment this block first.
+/*
 // A reservation the guest never turned up for, marked No Show on the Arrival
 // page. Stored as a hidden 'No Show' extraDetail holding the date it was
 // marked — extra_details is free-form jsonb that already syncs, same as
@@ -9883,6 +9894,7 @@ function isAdvanceReservation(entry){
 function isNoShowEntry(entry){
   return !!getDetailValue(entry, 'No Show');
 }
+*/
 
 // Auto-inserts dashes as digits are typed (XXXXX-XXXXXXX-X). Strips any
 // characters the user typed (dashes in the wrong place included) and
@@ -11958,11 +11970,11 @@ function renderDetail(){
   }
   document.getElementById('detailName').textContent = entry.guestName || '(no name)';
   const metaParts = [];
-  // A no-show's rooms read free everywhere else, so the entry would look
-  // ordinary here with no hint why — 'No Show' is a hidden detail kind, so
-  // it never shows up in the Extra Details list below either.
-  const noShowOn = getDetailValue(entry, 'No Show');
-  if(noShowOn) metaParts.push('NO SHOW — marked ' + formatDate(noShowOn));
+  // [FUTURE: No Show] uncomment — a no-show's rooms read free everywhere
+  // else, so the entry would look ordinary here with no hint why ('No Show'
+  // is a hidden detail kind, so it never shows in Extra Details either).
+  // const noShowOn = getDetailValue(entry, 'No Show');
+  // if(noShowOn) metaParts.push('NO SHOW — marked ' + formatDate(noShowOn));
   if(entry.savedAt) metaParts.push('Entered ' + formatDate(toKarachiDateStr(entry.savedAt)) + (entry.savedBy ? ' by ' + entry.savedBy : ''));
   if(entry.editedAt) metaParts.push('Last edited ' + formatDate(toKarachiDateStr(entry.editedAt)) + (entry.editedBy ? ' by ' + entry.editedBy : ''));
   document.getElementById('detailMeta').textContent = metaParts.join('  ·  ');
@@ -12042,7 +12054,8 @@ function renderDetail(){
 
 // Every recorded action on this entry, newest first: who did what, when.
 // The log is append-only on the server — nothing in the app can rewrite it.
-const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added', checked_out: 'Checked Out', checked_in: 'Checked In', res_no_show: 'Marked No Show', res_reactivated: 'No Show undone' };
+// [FUTURE: No Show] add back: res_no_show: 'Marked No Show', res_reactivated: 'No Show undone'
+const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added', checked_out: 'Checked Out', checked_in: 'Checked In' };
 
 function renderChangeLog(entry){
   const box = document.getElementById('detailChangeLog');
@@ -14832,10 +14845,12 @@ function addMonthsToDateStr(dateStr, months){
 // been confirmed yet). Every other caller — the actual Ledgers report, NPR,
 // Revenue's occupancy stat — wants the gated, confirmed-only picture.
 //
+// [FUTURE: No Show] the second parameter and the gate below are the heart of
+// the No Show feature — see future-implementations/no-show.md.
 // includeNoShows=true is narrower still: ONE caller (Undo No Show's
 // re-clash check) needs to see the room-nights a no-show booking WOULD
 // have, to warn before handing its room back. Nothing else ever wants them.
-function buildLedgersRecords(includeUnconfirmed, includeNoShows){
+function buildLedgersRecords(includeUnconfirmed /*, includeNoShows */){
   const all = loadAllEntries();
   const records = [];
   all.forEach(entry=>{
@@ -14843,7 +14858,8 @@ function buildLedgersRecords(includeUnconfirmed, includeNoShows){
     // exist — not even for includeUnconfirmed callers (computeRoomStatuses
     // and the save-time double-booking check both want the room to read
     // genuinely free so it can be sold to someone who actually turned up).
-    if(!includeNoShows && isNoShowEntry(entry)) return;
+    // [FUTURE: No Show]
+    // if(!includeNoShows && isNoShowEntry(entry)) return;
     // An advance reservation that hasn't been confirmed on Arrival yet isn't
     // an actual stay — it shouldn't contribute room-nights here (its payment
     // still shows on the Report page, which is status-agnostic by design;
@@ -16816,10 +16832,12 @@ function buildArrivalRows(asOfDate){
     // that exact day and that nobody has confirmed in yet. No stale-history
     // flood risk here: this branch only ever looks at one future date.
     all.forEach(entry=>{
-      // A no-show is not still due — the whole point of marking it is that
-      // nobody is coming. (Today's branch below needs no such test: a
-      // no-show has no room-nights left, so arrivalPending can't fire.)
-      if(entry.checkIn === asOfDate && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin') && !isNoShowEntry(entry) && !dueSeen.has(entry.id)){
+      // [FUTURE: No Show] restore `&& !isNoShowEntry(entry)` in the test
+      // below when re-enabling — a no-show is not still due, the whole point
+      // of marking it is that nobody is coming. (Today's branch below needs
+      // no such test: a no-show has no room-nights left, so arrivalPending
+      // can't fire.)
+      if(entry.checkIn === asOfDate && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin') && !dueSeen.has(entry.id)){
         dueSeen.add(entry.id);
         due.push(toRow(entry, 'due'));
       }
@@ -16837,13 +16855,16 @@ function buildArrivalRows(asOfDate){
   const checkedIn = all
     .filter(entry=> isAdvanceReservation(entry) && getDetailValue(entry, 'Actual Checkin') === asOfDate)
     .map(entry=> toRow(entry, 'checked_in'));
+  // [FUTURE: No Show] uncomment, and concat `noShows` into the return below.
   // Marked No Show ON asOfDate, by the same rule — they leave the due list
   // the moment they're marked, so without this they'd simply vanish off the
   // page with nothing to click Undo on and no record of the decision.
+  /*
   const noShows = all
     .filter(entry=> !dueSeen.has(entry.id) && getDetailValue(entry, 'No Show') === asOfDate)
     .map(entry=> toRow(entry, 'no_show'));
-  return due.concat(checkedIn, noShows)
+  */
+  return due.concat(checkedIn /*, noShows */)
     .sort((a,b)=> a.roomNos.localeCompare(b.roomNos, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
@@ -16868,17 +16889,21 @@ function renderArrival(){
   // only, so nobody can be checked in under the wrong date.
 
   const rows = buildArrivalRows(asOfDate);
-  const STATUS_BADGE = { due: ['arrivaldue', 'Arrival Due'], checked_in: ['paid', 'Checked In'], no_show: ['checkoutdue', 'No Show'] };
+  // [FUTURE: No Show] add back: no_show: ['checkoutdue', 'No Show']
+  const STATUS_BADGE = { due: ['arrivaldue', 'Arrival Due'], checked_in: ['paid', 'Checked In'] };
   if(rows.length === 0){
     dueBody.innerHTML = '<div class="empty-note">Nobody\'s check-in was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
   } else {
     dueBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:140px;">CNIC</th><th style="width:110px;">Check-in</th><th style="width:110px;">Status</th><th style="width:190px;"></th></tr></thead>
+        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:140px;">CNIC</th><th style="width:110px;">Check-in</th><th style="width:110px;">Status</th><th style="width:110px;"></th></tr></thead>
         <tbody>${rows.map(r=>{
           const [cls, label] = STATUS_BADGE[r.status];
-          // Both confirmed states get an Undo; only a still-due row offers
-          // the two ways to resolve it — they turned up, or they didn't.
+          // [FUTURE: No Show] widen the last <th> back to 190px and swap the
+          // `action` below for the commented-out version — both confirmed
+          // states get an Undo; only a still-due row offers the two ways to
+          // resolve it: they turned up, or they didn't.
+          /*
           const action = !isToday ? ''
             : r.status === 'checked_in' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoArrivalCheckin('${r.guestId}')">Undo</button>`
             : r.status === 'no_show' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoArrivalNoShow('${r.guestId}')">Undo</button>`
@@ -16886,6 +16911,10 @@ function renderArrival(){
                  <button class="btn" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startArrivalCheckin('${r.guestId}')">Check-in</button>
                  <button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); markArrivalNoShow('${r.guestId}')">No Show</button>
                </div>`;
+          */
+          const action = !isToday ? ''
+            : r.status === 'checked_in' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoArrivalCheckin('${r.guestId}')">Undo</button>`
+            : `<button class="btn" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startArrivalCheckin('${r.guestId}')">Check-in</button>`;
           return `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${r.roomNos}</td>
@@ -17024,6 +17053,9 @@ async function undoArrivalCheckin(guestId){
   showNotice((entry.guestName || 'Guest') + '\'s check-in was undone.', 'success');
 }
 
+// [FUTURE: No Show] ---- DISABLED, kept for re-enabling. Uncomment this
+// whole block (both functions) — see future-implementations/no-show.md.
+/*
 // The other way an Arrival Due row resolves: the guest never came. Frees the
 // room for the rest of the booking straight away (isNoShowEntry drops the
 // booking's room-nights) instead of leaving it reading Arrival Due today and
@@ -17101,6 +17133,7 @@ async function undoArrivalNoShow(guestId){
   rerenderActiveView();
   showNotice((target.guestName || 'Guest') + '\'s No Show was undone — they are back on the Arrivals list.', 'success');
 }
+*/
 
 // The per-row manual button — never opens the checkout-confirm modal for a
 // guest whose balance isn't settled at exactly 0. This is the same rule
