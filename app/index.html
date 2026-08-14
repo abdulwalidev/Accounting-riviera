@@ -15240,7 +15240,7 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
   // the browser's auto layout algorithm distribute the panel's leftover
   // space across the columns instead of respecting the narrow hints.
   const HASH_W = 30, DATE_W = 92, ROOMNO_W = 44, GUEST_W = 80, RENT_W = 60,
-    CASH_W = 60, MCB_W = 52, HAJI_W = 122, ALFALAH_W = 92, DUE_W = 52, SS_W = 60;
+    CASH_W = 60, MCB_W = 52, HAJI_W = 112, ALFALAH_W = 92, DUE_W = 56, SS_W = 60;
   const totalW = HASH_W + (showDateCol ? DATE_W : 0) + ROOMNO_W + GUEST_W + RENT_W + (PAYMENT_COL_W * maxChunks) + CASH_W + MCB_W + HAJI_W + ALFALAH_W + DUE_W + SS_W;
   const dateTh = showDateCol ? `<th style="width:${DATE_W}px; white-space:nowrap;">Date</th>` : '';
   const dateTd = (r)=> showDateCol ? `<td>${formatDate(r.date)}</td>` : '';
