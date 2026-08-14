@@ -4144,7 +4144,7 @@
 
 /* ===== POS receipt print area — see posPrintRecord ===== */
 #posReceiptPrintArea{ display:none; background:#fff; }
-@page pos-receipt{ size:auto; margin:0; }
+@page pos-receipt{ size:176mm auto; margin:0; }
 @media print{
   body.pos-printing-receipt > *:not(#posReceiptPrintArea){ display:none !important; }
   body.pos-printing-receipt #posReceiptPrintArea{ display:block !important; page:pos-receipt; }
