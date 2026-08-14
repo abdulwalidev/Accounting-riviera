@@ -2563,13 +2563,22 @@
        (text included) down to fit — neither is "perfect." Overriding
        every table back to auto/shrink-to-fit for print lets columns
        narrow and cell text wrap instead, at full readable font size. */
-    #rvRoomsBody table, .rpt-day-group table{
+    #rvRoomsBody table, .rpt-day-group table, #ihBody table, #reportBody table,
+    #bfBody table, #ledgersBody table{
       table-layout:auto !important;
       min-width:0 !important;
       width:100% !important;
     }
     table{ table-layout:auto; }
     th, td{ word-break:break-word; }
+    /* Long report tables (Inhouse, Revenue, Payment, Breakfast) span many
+       pages — without these the header only prints once at the very top,
+       rows split mid-row across a page break, and there's nothing to keep
+       a totals row attached to its table, all of which read as "the print
+       is broken/too big" even though every row IS actually there. */
+    thead{ display:table-header-group; }
+    tfoot{ display:table-footer-group; }
+    tr{ break-inside:avoid; page-break-inside:avoid; }
 
     /* A black-and-white printer converts saturated color to grayscale by
        luminance, not by how dark it reads on screen — a mid-blue label, a
