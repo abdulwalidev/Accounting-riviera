@@ -4144,7 +4144,11 @@
 
 /* ===== POS receipt print area — see posPrintRecord ===== */
 #posReceiptPrintArea{ display:none; background:#fff; }
-@page pos-receipt{ size:176mm 900mm; margin:0; }
+/* A4 portrait rather than a custom page size: print drivers scale a
+   non-standard @page down onto whatever paper is actually loaded, which
+   is what kept clipping the receipt's right edge no matter how narrow
+   the content got. A4 is a real page the driver won't rescale. */
+@page pos-receipt{ size:A4 portrait; margin:8mm; }
 @media print{
   body.pos-printing-receipt > *:not(#posReceiptPrintArea){ display:none !important; }
   body.pos-printing-receipt #posReceiptPrintArea{ display:block !important; page:pos-receipt; break-inside:avoid; page-break-inside:avoid; }
