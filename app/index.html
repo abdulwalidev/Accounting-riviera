@@ -2590,14 +2590,24 @@
     #bfBody table th:nth-child(2), #bfBody table td:nth-child(2){
       min-width:110px !important;
     }
+    /* Inhouse Report specifically prints smaller/tighter than the app-wide
+       11px/default-padding table above — its rows are simple headcount
+       data (no long text), so there's no readability cost to shrinking it
+       and it means fewer pages for a full house. */
+    #ihBody table{ font-size:9px; }
+    #ihBody table th, #ihBody table td{ padding:3px 4px; }
     /* Long report tables (Inhouse, Revenue, Payment, Breakfast) span many
        pages — without this the header only prints once at the very top and
        rows split mid-row across a page break, both reading as "the print
        is broken/too big" even though every row IS actually there.
-       tfoot deliberately stays plain (not table-footer-group) — that
-       display value repeats the Total row at the bottom of EVERY page,
-       not just the last one. */
+       tfoot is forced to display:table-row-group (i.e. behave like a
+       plain tbody) rather than left as a real <tfoot> — browsers repeat
+       an actual <tfoot> at the bottom of every printed page as native
+       table-fragmentation behavior, independent of its CSS display value,
+       so only stripping its footer semantics entirely stops the Total
+       row printing on every page instead of once at the end. */
     thead{ display:table-header-group; }
+    tfoot{ display:table-row-group; }
     tr{ break-inside:avoid; page-break-inside:avoid; }
 
     /* A black-and-white printer converts saturated color to grayscale by
