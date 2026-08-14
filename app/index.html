@@ -2586,12 +2586,13 @@
       min-width:110px !important;
     }
     /* Long report tables (Inhouse, Revenue, Payment, Breakfast) span many
-       pages — without these the header only prints once at the very top,
-       rows split mid-row across a page break, and there's nothing to keep
-       a totals row attached to its table, all of which read as "the print
-       is broken/too big" even though every row IS actually there. */
+       pages — without this the header only prints once at the very top and
+       rows split mid-row across a page break, both reading as "the print
+       is broken/too big" even though every row IS actually there.
+       tfoot deliberately stays plain (not table-footer-group) — that
+       display value repeats the Total row at the bottom of EVERY page,
+       not just the last one. */
     thead{ display:table-header-group; }
-    tfoot{ display:table-footer-group; }
     tr{ break-inside:avoid; page-break-inside:avoid; }
 
     /* A black-and-white printer converts saturated color to grayscale by
