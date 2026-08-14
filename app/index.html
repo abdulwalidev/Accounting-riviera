@@ -2570,7 +2570,21 @@
       width:100% !important;
     }
     table{ table-layout:auto; }
-    th, td{ word-break:break-word; }
+    /* word-break:break-word (not word-break:normal + overflow-wrap) lets the
+       browser break ANY column mid-word — including ones that never need
+       it, like a Guest name column — down to a single-letter width if the
+       auto layout algorithm decides another column needs the space more.
+       That's what was producing a Guest column reading top-to-bottom one
+       letter per line. overflow-wrap only kicks in as a last resort, when
+       a single word truly doesn't fit even at the column's full width. */
+    th, td{ word-break:normal; overflow-wrap:break-word; }
+    /* Guest/name columns specifically need a real floor so auto-layout
+       doesn't starve them for space in favor of narrower numeric columns
+       next to them. */
+    #ihBody table th:nth-child(3), #ihBody table td:nth-child(3),
+    #bfBody table th:nth-child(2), #bfBody table td:nth-child(2){
+      min-width:110px !important;
+    }
     /* Long report tables (Inhouse, Revenue, Payment, Breakfast) span many
        pages — without these the header only prints once at the very top,
        rows split mid-row across a page break, and there's nothing to keep
