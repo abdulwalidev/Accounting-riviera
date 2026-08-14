@@ -39,6 +39,7 @@
     --line:rgba(0,0,0,0.55); /* solid-reading black border — panels/cards need to visibly separate from the white page */
     --amber:#E7C55A;      /* gold accent — table headers, highlights */
     --gold-deep:#A16207;  /* darker gold for text/borders on light bg */
+    --gold-nav:#B8860B;   /* true golden (not orange) for the gold-nav buttons on light bg */
     --danger:#B91C1C;
     --danger-bg:#FEE2E2;
     /* legacy aliases so nothing else in the file breaks */
@@ -1319,9 +1320,9 @@
   .hdr-row3 .navbtn.active{ color:#1a73e8; font-weight:700; border-bottom-color:#1a73e8; }
   /* Golden nav buttons (Payment Report / Revenue Report) — gold in every
      state so they stand out from the blue-accented rest of the nav. */
-  .hdr-row2 .navbtn.gold-nav, .hdr-row3 .navbtn.gold-nav{ color:var(--gold-deep); font-weight:600; }
-  .hdr-row2 .navbtn.gold-nav:hover, .hdr-row3 .navbtn.gold-nav:hover{ color:var(--gold-deep); }
-  .hdr-row2 .navbtn.gold-nav.active, .hdr-row3 .navbtn.gold-nav.active{ color:var(--gold-deep); font-weight:700; border-bottom-color:var(--gold-deep); }
+  .hdr-row2 .navbtn.gold-nav, .hdr-row3 .navbtn.gold-nav{ color:var(--gold-nav); font-weight:600; }
+  .hdr-row2 .navbtn.gold-nav:hover, .hdr-row3 .navbtn.gold-nav:hover{ color:var(--gold-nav); }
+  .hdr-row2 .navbtn.gold-nav.active, .hdr-row3 .navbtn.gold-nav.active{ color:var(--gold-nav); font-weight:700; border-bottom-color:var(--gold-nav); }
   .view{
     display:none;
   }
@@ -1540,6 +1541,20 @@
     .settings-shell{ grid-template-columns:200px 1fr; gap:16px; }
     .settings-nav{ gap:16px; }
     .settings-nav-section{ gap:4px; }
+  }
+  /* Settings-family pages (Full Audit, Day Lock, Before 19, etc.) are plain
+     .view divs, not .settings-shell grids — the fixed .settings-nav sidebar
+     would otherwise sit on top of their content. Push that content clear of
+     it whenever the sidebar is showing (body.settings-nav-open, toggled in
+     showView). Skip #view-settings itself: its own .settings-shell already
+     reserves the left column via the grid. */
+  body.settings-nav-open .view.active:not(#view-settings){
+    padding-left:288px;
+    box-sizing:border-box;
+  }
+  @media (max-width: 900px){
+    body.settings-nav-open .view.active:not(#view-settings){ padding-left:0; }
+    body.settings-nav-open .settings-nav{ position:static; width:auto; max-height:none; margin:16px 0; }
   }
   .rpt-grandtotal-box{
     border:2px solid #000;
@@ -2527,6 +2542,7 @@
     --line:rgba(255,255,255,0.14);
     --amber:#F0D078;
     --gold-deep:#FBBF24;
+    --gold-nav:#FBBF24;
     --danger:#F87171;
     --danger-bg:#3A1414;
     --bg:var(--paper);
@@ -2571,9 +2587,9 @@
   html[data-theme="dark"] .hdr-row2 .navbtn.gold-nav,
   html[data-theme="dark"] .hdr-row3 .navbtn.gold-nav,
   html[data-theme="dark"] .hdr-row2 .navbtn.gold-nav:hover,
-  html[data-theme="dark"] .hdr-row3 .navbtn.gold-nav:hover{ color:var(--gold-deep); }
+  html[data-theme="dark"] .hdr-row3 .navbtn.gold-nav:hover{ color:var(--gold-nav); }
   html[data-theme="dark"] .hdr-row2 .navbtn.gold-nav.active,
-  html[data-theme="dark"] .hdr-row3 .navbtn.gold-nav.active{ color:var(--gold-deep); border-bottom-color:var(--gold-deep); }
+  html[data-theme="dark"] .hdr-row3 .navbtn.gold-nav.active{ color:var(--gold-nav); border-bottom-color:var(--gold-nav); }
   /* Header search: unlike ordinary form inputs (see the light-field rule
      below), this one sits in the header chrome itself rather than inside a
      data-entry panel, so it follows the dark theme instead of staying a
@@ -7285,6 +7301,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavSettings').classList.toggle('active', isSettingsView);
   const globalSettingsNav = document.getElementById('globalSettingsNav');
   if(globalSettingsNav) globalSettingsNav.style.display = isSettingsView ? 'flex' : 'none';
+  document.body.classList.toggle('settings-nav-open', isSettingsView);
   const topNavPaymentProof = document.getElementById('topNavPaymentProof');
   if(topNavPaymentProof) topNavPaymentProof.classList.toggle('active', view === 'paymentrecord');
   const hdrFrontOfficeBadge = document.getElementById('hdrFrontOfficeBadge');
@@ -21399,13 +21416,19 @@ function posBootApp(){
   try { posLoadPendingWritesFromStorage(); } catch (e) { console.error('[POS] posLoadPendingWritesFromStorage failed', e); }
 
   posSyncSidebarOffset();
-  // Re-measure a moment later too — web fonts/late layout shifts can change
-  // the header's real height slightly after the very first measurement,
-  // which would otherwise leave the sidebar starting a few px too high
-  // (rendering under the header) until something else triggered a resize.
-  setTimeout(posSyncSidebarOffset, 400);
-  setTimeout(posSyncSidebarOffset, 1500);
-  window.addEventListener('resize', posSyncSidebarOffset);
+  // Web fonts/late layout shifts can change the header's real height
+  // slightly after the very first measurement. Re-measuring on a couple of
+  // guessed timeouts (the old approach) fixed the position eventually but
+  // made the sidebar visibly snap/jump partway through the first second or
+  // two on every load. A ResizeObserver reacts the instant the header's
+  // actual box changes instead of guessing when that might happen, so the
+  // offset settles in the same frame rather than jumping later.
+  if (typeof ResizeObserver !== 'undefined') {
+    var posHeaderEl = document.querySelector('.app-header');
+    if (posHeaderEl) new ResizeObserver(posSyncSidebarOffset).observe(posHeaderEl);
+  } else {
+    window.addEventListener('resize', posSyncSidebarOffset);
+  }
   document.querySelectorAll('#page-pos-invoice .pos-item-input').forEach(function(inp){ posSetupAutocomplete(inp); });
   // Each wrapped separately — one throwing (a bug, a missing element, a
   // localStorage quirk) must never take out everything after it in this
