@@ -476,7 +476,7 @@
   table{
     width:100%;
     border-collapse:collapse;
-    border-radius:8px;
+    border-radius:9px;
     overflow:hidden;
     font-size:13px;
   }
@@ -976,7 +976,7 @@
   @media (max-width:900px){
     .cico-grid{ grid-template-columns:1fr; }
   }
-  .cico-grid table{ font-size:12.5px; border-radius:8px; overflow:hidden; }
+  .cico-grid table{ font-size:12.5px; border-radius:9px; overflow:hidden; }
   .graphs-grid{
     display:grid;
     grid-template-columns:repeat(2,1fr);
@@ -1287,8 +1287,8 @@
   button.btn.edit-gold[onclick="showView('roomdetail')"] {
     background:#d97706 !important;
     color:#fff !important;
-    border:6px solid #fff !important;
-    border-bottom:4px solid rgba(217, 119, 6, 0.15) !important;
+    border:1px solid #fff !important;
+    border-bottom:1px solid #fff !important;
   }
   button.btn.edit-gold[onclick="showView('roomdetail')"]:hover {
     opacity: 0.85;
@@ -1304,8 +1304,8 @@
   button.btn[onclick="openAvailModal()"] {
     background:var(--ink-fill) !important;
     color:#fff !important;
-    border:6px solid #fff !important;
-    border-bottom:4px solid rgba(14, 165, 233, 0.15) !important;
+    border:1px solid #fff !important;
+    border-bottom:1px solid #fff !important;
   }
   button.btn[onclick="openAvailModal()"]:hover {
     opacity: 0.85;
@@ -3480,7 +3480,7 @@
   #view-nightsummary .ns-occ-sub{
     position:absolute; left:0; right:0; bottom:12px; text-align:center; font-size:11px; color:#2f6fed !important;
   }
-  #view-nightsummary .ns-table{ width:100%; border-collapse:collapse; font-size:12.5px; border-radius:8px; overflow:hidden; }
+  #view-nightsummary .ns-table{ width:100%; border-collapse:collapse; font-size:12.5px; border-radius:9px; overflow:hidden; }
   #view-nightsummary .ns-table thead th{
     text-align:left; color:#666 !important; font-weight:600; font-size:11px; padding:6px 8px;
     border:none !important; border-bottom:1px solid #ddd !important; background:transparent !important;
@@ -12409,7 +12409,7 @@ const RIVIERA_FOLIO_CSS = `
   .riviera-folio-content{ padding:6mm 15mm 14mm; font-size:11.5px; line-height:1.5; }
   .riviera-folio-guestinfo{ display:grid; grid-template-columns:1fr 1fr; gap:4px 18px; margin-bottom:14px; }
   .riviera-folio-section-title{ font-weight:bold; font-size:13px; margin:16px 0 8px; border-bottom:1px solid #ccc; padding-bottom:3px; }
-  .riviera-folio-table{ width:100%; border-collapse:collapse; font-size:11px; border-radius:8px; overflow:hidden; }
+  .riviera-folio-table{ width:100%; border-collapse:collapse; font-size:11px; border-radius:9px; overflow:hidden; }
   .riviera-folio-table th, .riviera-folio-table td{ border:1px solid #ccc; padding:5px 7px; text-align:left; }
   .riviera-folio-table th{ background:#f2f2f2; font-weight:bold; }
   .riviera-folio-table td.num, .riviera-folio-table th.num{ text-align:right; font-family:Arial,Helvetica,sans-serif; font-variant-numeric:lining-nums; }
@@ -18435,9 +18435,9 @@ addPayRow();
   var roomDetail = document.querySelector('button.btn.edit-gold[onclick="showView(\'roomdetail\')"]');
   [avail, roomDetail].forEach(function(btn){
     if(!btn) return;
-    btn.style.setProperty('border-top', '6px solid #fff', 'important');
-    btn.style.setProperty('border-left', '6px solid #fff', 'important');
-    btn.style.setProperty('border-right', '6px solid #fff', 'important');
+    btn.style.setProperty('border-top', '1px solid #fff', 'important');
+    btn.style.setProperty('border-left', '1px solid #fff', 'important');
+    btn.style.setProperty('border-right', '1px solid #fff', 'important');
   });
 })();
 
