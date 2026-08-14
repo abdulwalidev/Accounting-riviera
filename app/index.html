@@ -2052,8 +2052,9 @@
   @media (max-width: 700px){
     .view table{
       width:100%;
-      table-layout:auto;
+      table-layout:fixed;
       max-width:100%;
+      min-width:0;
       font-size:7.2px;
     }
     /* Cells wrapping onto several lines makes rows tall and ragged - at
@@ -4252,7 +4253,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     .view table, .view table.rep, .view table.parts, .view .ns-table, .view .line-table{
       font-size:8px !important;
       width:100% !important;
-      table-layout:auto !important;
+      max-width:100% !important;
+      min-width:0 !important;
+      table-layout:fixed !important;
     }
     .view table th, .view table thead th{
       font-size:7px !important;
