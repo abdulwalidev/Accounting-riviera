@@ -3067,12 +3067,46 @@
     .dash-subtiles{
       gap:6px;
       margin-top:10px;
+      flex-wrap:wrap;
     }
     .dash-subtile-val{
       font-size:14px;
     }
     .dash-subtile-lbl{
       font-size:9px;
+    }
+    /* Inhouse's per-type occupancy tiles (River View, Mountain View, Couple
+       Suite, VIP Deluxe...) are fixed-min-width and don't wrap on desktop
+       (fine there, six fit in a row) — on a phone-width screen six 70px
+       tiles plus gaps is wider than the screen itself, so they need to
+       shrink and actually wrap instead of overflowing their container. */
+    #ihUnitSplit, #ihGuestSplit{ max-width:100% !important; }
+    #ihUnitSplit .dash-subtile, #ihGuestSplit .dash-subtile{
+      min-width:56px;
+      padding:6px 3px;
+    }
+
+    /* Status badges (PENDING, CHECKED-IN, etc): uppercase + letter-spacing
+       + 3px/10px padding is sized for desktop table rows — on a phone-width
+       column it's often wider than the column itself. */
+    .status{
+      font-size:9.5px;
+      padding:2px 6px;
+      letter-spacing:0.01em;
+      white-space:nowrap;
+    }
+
+    /* Header date pill + theme toggle: shrink further and stop the pill's
+       full date/time text from forcing the header row wider than the
+       screen — two short lines (day, month) fit; one long inline string
+       doesn't. */
+    #hdrTimePill{
+      font-size:10px;
+      padding:2px 6px;
+      line-height:1.25;
+      text-align:center;
+      white-space:normal;
+      max-width:52px;
     }
 
     /* Entry form tables: convert to form layout on phone */
