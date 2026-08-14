@@ -1419,7 +1419,11 @@
     gap:20px;
     max-height:calc(100vh - 190px);
     overflow-y:auto;
-    z-index:100;
+    /* Must stay BELOW .app-header's z-index:40 — otherwise this fixed
+       sidebar visually overlaps the header on shorter viewports and
+       silently eats clicks on header buttons (e.g. the Restaurant nav
+       button) instead of letting them through. */
+    z-index:20;
   }
   .view:not(#view-settings) .settings-nav{
     display:flex;
@@ -3649,13 +3653,13 @@
    everywhere except the New Receipt action, same "look but can't touch"
    intent as the hotel's own read-only guest-entry display. */
 #page-pos-invoice.pos-locked-view > .wrap > .card:not(.list-card) {opacity:.55; pointer-events:none;}
-#page-pos-invoice.pos-locked-view .action-bar button:not(#posPrintOnlyBtn) {opacity:.4; pointer-events:none;}
+#page-pos-invoice.pos-locked-view .action-bar button:not(#posPrintOnlyBtn):not(#posPrintBtn) {opacity:.4; pointer-events:none;}
 /* Any other (unlocked, not-collected) invoice opened for viewing starts
    the exact same "look but can't touch" — same intent as opening a guest
    entry: you land on a read-only view first, and editing is something you
    explicitly opt into via the Edit button, never just by opening it. */
 #page-pos-invoice.pos-view-only > .wrap > .card:not(.list-card) {opacity:.55; pointer-events:none;}
-#page-pos-invoice.pos-view-only .action-bar button:not(#posEditRecordBtn):not(#posPrintOnlyBtn) {opacity:.4; pointer-events:none;}
+#page-pos-invoice.pos-view-only .action-bar button:not(#posEditRecordBtn):not(#posPrintOnlyBtn):not(#posPrintBtn) {opacity:.4; pointer-events:none;}
 #page-pos-invoice .list-card {padding:16px 20px;}
 #page-pos-invoice .list-card .lc-title {font-size:15px; font-weight:600; margin-bottom:12px;}
 #page-pos-invoice table.simple {width:100%; border-collapse:collapse; font-size:12.5px; border-radius:8px; overflow:hidden;}
@@ -5690,6 +5694,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <button type="button" class="ab-blue" id="posPostBtn" onclick="posRequestPost('post')">Post</button>
     <button type="button" class="ab-blue" onclick="posRequestPost('printpost')">Print & Post</button>
     <button type="button" class="ab-gray-outline" id="posPrintOnlyBtn" onclick="posRequestPost('printonly')">Print-Only</button>
+    <button type="button" class="ab-gray-outline" id="posPrintBtn" onclick="posPrintViewingRecord()" style="display:none;">Print</button>
     <button type="button" class="ab-blue-outline" onclick="posSendToFrontOffice()">Send to Front Office</button>
     <button type="button" class="ab-yellow" onclick="posRequestNewForm()">New</button>
   </div>
@@ -20164,6 +20169,21 @@ function posOpenRecordInForm(record){
   if (editRecordBtn) editRecordBtn.style.display = isLockedRecord ? 'none' : '';
   var editRecordBtnTop = document.getElementById('posEditRecordBtnTop');
   if (editRecordBtnTop) editRecordBtnTop.style.display = isLockedRecord ? 'none' : '';
+
+  // Print-Only exists so an unconfirmed order can be reprinted/adjusted
+  // before posting (see the button's own comment history) — once a record
+  // is actually posted, "Print-Only" no longer applies: reprinting it must
+  // never re-save it as a fresh unposted draft. Swap to a plain Print
+  // button for any already-posted record being viewed.
+  var printOnlyBtn = document.getElementById('posPrintOnlyBtn');
+  var printBtn = document.getElementById('posPrintBtn');
+  if (record.posted) {
+    if (printOnlyBtn) printOnlyBtn.style.display = 'none';
+    if (printBtn) printBtn.style.display = '';
+  } else {
+    if (printOnlyBtn) printOnlyBtn.style.display = '';
+    if (printBtn) printBtn.style.display = 'none';
+  }
   posUpdateAdjacentInvoiceButtons();
 
   var posBtn = document.querySelector('.sidebar button[onclick*="page-pos-invoice"]');
@@ -20746,7 +20766,7 @@ var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sa
   '#posReceiptPrintArea table.rc-items{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:1mm;} ' +
   '#posReceiptPrintArea table.rc-items th{text-align:left; font-size:11px; letter-spacing:.03em; padding:0 0 1.5mm; font-weight:700;} ' +
   '#posReceiptPrintArea table.rc-items th.rc-num{text-align:right;} ' +
-  '#posReceiptPrintArea table.rc-items th:first-child, #posReceiptPrintArea table.rc-items td:first-child{width:9mm; padding-right:3mm;} ' +
+  '#posReceiptPrintArea table.rc-items th:first-child, #posReceiptPrintArea table.rc-items td:first-child{width:12mm; padding-right:6mm; box-sizing:content-box;} ' +
   '#posReceiptPrintArea table.rc-items td{padding:1.4mm 0; vertical-align:top;} ' +
   '#posReceiptPrintArea .rc-num{text-align:right;} ' +
   '#posReceiptPrintArea table.rc-taxdetail{width:100%; border-collapse:collapse; font-size:11.5px; color:#333;} ' +
@@ -20812,6 +20832,15 @@ window.addEventListener('afterprint', function(){
   var pageOverride = document.getElementById('posReceiptPageOverride');
   if (pageOverride) pageOverride.textContent = '';
 });
+
+// Reprints a posted invoice as-is — unlike Print-Only (posRequestPost),
+// this never saves anything, so it can never turn an already-posted
+// invoice back into a fresh unposted draft. See posOpenRecordInForm,
+// which swaps Print-Only out for this button once a viewed record is posted.
+function posPrintViewingRecord(){
+  if (!posViewingRecord) return;
+  posPrintRecord(posViewingRecord);
+}
 
 async function posPostInvoice(mode){
   function abort(msg){
@@ -21142,6 +21171,10 @@ function posResetForm(){
   if (editRecordBtn) editRecordBtn.style.display = 'none';
   var editRecordBtnTop = document.getElementById('posEditRecordBtnTop');
   if (editRecordBtnTop) editRecordBtnTop.style.display = 'none';
+  var printOnlyBtn = document.getElementById('posPrintOnlyBtn');
+  if (printOnlyBtn) printOnlyBtn.style.display = '';
+  var printBtn = document.getElementById('posPrintBtn');
+  if (printBtn) printBtn.style.display = 'none';
   posUpdateAdjacentInvoiceButtons();
   posFullPaymentReset();
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
