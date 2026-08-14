@@ -7056,7 +7056,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="view" id="view-arrival">
 
     <h1 class="no-print">Arrival</h1>
-    <div class="sub no-print">Advance reservations whose check-in date is on file for today — confirm they've actually shown up before their room reads as occupied. Walk-ins entered today don't appear here; entering them already is the confirmation.</div>
+    <div class="sub no-print">Advance reservations whose check-in date is on file for today — confirm they've actually shown up before their room reads as occupied, or mark them No Show if they never came. Walk-ins entered today don't appear here; entering them already is the confirmation.</div>
 
     <div class="panel no-print accent-filters">
       <h2>As Of Date</h2>
@@ -7077,7 +7077,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
     <div class="panel accent-filters">
       <h2>Arrivals <span id="arDueDateLabel"></span></h2>
-      <div class="sub" style="margin-top:-6px;">Advance reservations with a check-in date on file for this day. "Arrival Due" rooms don't count as occupied anywhere until confirmed here.</div>
+      <div class="sub" style="margin-top:-6px;">Advance reservations with a check-in date on file for this day. "Arrival Due" rooms don't count as occupied anywhere until confirmed here. If the guest never turns up, mark them No Show — their room is released for the rest of the booking and can be sold to somebody else. Both Check-in and No Show can be undone from this page.</div>
       <div id="arrivalDueBody" style="overflow-x:auto; margin-top:14px;"><div class="empty-note">No data yet.</div></div>
     </div>
 
@@ -8406,6 +8406,51 @@ function getRoomMoveOffsets(entry){
     if(m) map[m[1].trim().toUpperCase()] = Math.max(0, parseInt(m[2]) - 1);
   });
   return map;
+}
+
+// The other half of a room move: the room the guest moved OUT of. Their
+// nights there ended mid-stay, but that is NOT an unconfirmed departure —
+// the entry itself says where they went, so the old room is free from the
+// move date and must never read Extended / pending checkout (it used to,
+// forever: Actual Checkout is one guest-level field, so it can't be set
+// while the guest is still in-house in the new room, and Checkout/Pending
+// deliberately refuses to offer a checkout button for a guest whose other
+// room is still active — leaving the vacated room stuck as occupied on
+// Room Detail, Dashboard, Inhouse and the breakfast covers).
+//
+// A room only counts as vacated-by-move when another room's nights pick up
+// EXACTLY where this one's ended — a genuine handoff. That distinction
+// matters: a guest holding several rooms at once, one of which simply ran
+// out of booked nights early, has no handoff, so it still reads Extended
+// and still needs a real checkout. Forward-only, same as the offsets: no
+// 'Room Move' detail, no vacated rooms, behaviour identical to before.
+// Returns { ROOMKEY: 'YYYY-MM-DD' } — the date the guest left that room
+// (the first night of the room they moved into).
+function getRoomMoveVacatedRooms(entry){
+  const offsets = getRoomMoveOffsets(entry);
+  if(!Object.keys(offsets).length) return {};
+  // Same stay start as buildLedgersRecords — nights are laid out from the
+  // confirmed Actual Checkin when there is one, so the vacated date has to
+  // be measured from the same origin or it lands a day out on a late arrival.
+  const startDate = getDetailValue(entry, 'Actual Checkin') || entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
+  if(!startDate) return {};
+  // Nights per room, summed across split rows — a rate change mid-stay
+  // chains onto the same room rather than restarting it (roomCursor in
+  // buildLedgersRecords), so 2 nights + 1 night in 205 is one 3-night run.
+  const nightsByRoom = {};
+  (entry.rooms || []).forEach(r=>{
+    if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
+    const key = r.roomNo.trim().toUpperCase();
+    if(key === 'N/A') return;
+    nightsByRoom[key] = (nightsByRoom[key] || 0) + (parseInt(r.count) || 1);
+  });
+  const vacated = {};
+  Object.keys(nightsByRoom).forEach(key=>{
+    const endOffset = (offsets[key] || 0) + nightsByRoom[key];
+    const movedInto = Object.keys(offsets).find(m=> m !== key && offsets[m] === endOffset);
+    if(movedInto) vacated[key] = addDaysToDateStr(startDate, endOffset);
+  });
+  return vacated;
 }
 
 // Same offsets read off the LIVE form rows: split-group siblings whose room
@@ -9801,7 +9846,7 @@ function formatExtraDetail(d){
 // the cloud table already has a JSON column for that array, so this needs
 // no schema change. These helpers move them between the fixed fields and
 // that array, and keep them out of the generic "+ Detail" list/dropdown.
-const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Actual Checkin', 'Adults', 'Children', 'Room Move'];
+const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Actual Checkin', 'Adults', 'Children', 'Room Move', 'No Show'];
 function getDetailValue(entry, kind){
   const d = (entry.extraDetails || []).find(d=> d.kind === kind);
   return d ? d.value : '';
@@ -9817,6 +9862,26 @@ function visibleExtraDetails(entry){
 // the desk to confirm the guest actually showed up on the day.
 function isAdvanceReservation(entry){
   return !!(entry && entry.savedAt && entry.checkIn && toKarachiDateStr(entry.savedAt) < entry.checkIn);
+}
+
+// A reservation the guest never turned up for, marked No Show on the Arrival
+// page. Stored as a hidden 'No Show' extraDetail holding the date it was
+// marked — extra_details is free-form jsonb that already syncs, same as
+// Actual Checkin / Actual Checkout / Room Move, so no DB change.
+//
+// The one thing this decides is that the booking's ROOM-NIGHTS never
+// happened (see the gate at the top of buildLedgersRecords): the room frees
+// up immediately everywhere occupancy is read — Room Detail, Dashboard,
+// Inhouse, breakfast covers, availability, Ledgers, Revenue — and stops
+// warning about a double-booking when the desk rebooks it to a real guest.
+// It deliberately does NOT touch the entry's money: whether a no-show
+// forfeits their deposit or gets charged a night is a front-desk decision,
+// so the booking total, payments and balance are all left exactly as they
+// are, and any deposit already taken still shows on the Report page (which
+// is status-agnostic by design). Fully reversible — Undo on the Arrival
+// page drops the detail and every room-night comes straight back.
+function isNoShowEntry(entry){
+  return !!getDetailValue(entry, 'No Show');
 }
 
 // Auto-inserts dashes as digits are typed (XXXXX-XXXXXXX-X). Strips any
@@ -10334,6 +10399,34 @@ function closeConfirmModal(){
   pendingEntryData = null;
 }
 
+// A room a guest moved out of is free the moment the move takes effect, so
+// it needs cleaning exactly like a real checkout does (checkOutEntryRoom
+// marks its rooms Dirty) — otherwise the room quietly goes bookable without
+// housekeeping ever being told.
+//
+// This must be safe to re-run, since it fires on EVERY save of the entry
+// (adding a payment, extending the stay), and a room move recorded ahead of
+// its own date has to be picked up by a later save rather than dropped. So
+// rather than "did this save create the move", the test is "has anyone
+// touched this room's housekeeping status since the guest left it" — a
+// cleaner's Ready is never clobbered, and a room nobody has touched since
+// the move still gets flagged however many saves later.
+function markRoomsVacatedByMoveDirty(savedEntry, originalEntry){
+  const nowVacated = getRoomMoveVacatedRooms(savedEntry);
+  const alreadyVacated = originalEntry ? getRoomMoveVacatedRooms(originalEntry) : {};
+  Object.entries(nowVacated).forEach(([roomNo, vacatedOn])=>{
+    // A move recorded ahead of time leaves the room alone until the day it
+    // actually happens — the guest is still sleeping in it tonight.
+    if(vacatedOn > todayStr()) return;
+    const hk = roomStatusMap[roomNo];
+    const touchedSinceMove = !!(hk && hk.updated_at && toKarachiDateStr(hk.updated_at) >= vacatedOn);
+    // Same move as before this edit AND already dealt with by somebody
+    // (this function's own earlier Dirty, or a housekeeper since) — leave it.
+    if(alreadyVacated[roomNo] === vacatedOn && touchedSinceMove) return;
+    upsertRoomStatus(roomNo, 'Dirty');
+  });
+}
+
 function confirmSaveEntry(){
   if(!pendingEntryData) return;
 
@@ -10427,6 +10520,7 @@ function confirmSaveEntry(){
     all[idx] = data;
     logGuestAction(data.id, 'edited');
     queueEntryPush(data.id);
+    markRoomsVacatedByMoveDirty(data, original);
     if(carriedFromElsewhere > 0){
       showNotice(carriedFromElsewhere + ' room/payment row(s) added from another device while you were editing were kept in the entry.', 'success');
     }
@@ -10452,6 +10546,7 @@ function confirmSaveEntry(){
   entries.push(data);
   logGuestAction(data.id, 'created');
   queueEntryPush(data.id);
+  markRoomsVacatedByMoveDirty(data, null);
 
   closeConfirmModal();
   resetEntryForm();
@@ -11231,8 +11326,12 @@ function computeRoomStatuses(asOfDate){
         const prevEntry = all.find(e=> e.id === priorNight.guestId) || null;
         const prevCheckout = prevEntry ? getDetailValue(prevEntry, 'Actual Checkout') : '';
         // Any confirmed checkout resolves — same early-leaver rule as
-        // resolvedByCheckout below.
-        const resolved = !!prevCheckout;
+        // resolvedByCheckout below. So does a room move: if this room is one
+        // the previous guest moved OUT of (and it was rebooked the same day),
+        // they're accounted for in their new room and were never pending
+        // here — see resolvedByMove below.
+        const prevVacatedByMove = prevEntry ? (getRoomMoveVacatedRooms(prevEntry)[roomNo] || '') : '';
+        const resolved = !!prevCheckout || (!!prevVacatedByMove && prevVacatedByMove <= refDate);
         if(prevEntry && !resolved) previousGuestPending = { entry: prevEntry, lastNightDate: priorNight.date };
       }
     }
@@ -11284,13 +11383,21 @@ function computeRoomStatuses(asOfDate){
     // confirmed checkout days earlier. Re-extending a stay after a
     // checkout is what Undo Checkout is for.
     const resolvedByCheckout = !!actualCheckoutDate;
+    // ...and so does a room the guest MOVED OUT of. The entry records where
+    // they went (getRoomMoveVacatedRooms), so this room's nights didn't end
+    // in an unconfirmed departure — the guest is accounted for, in another
+    // room, from that date on. Without this the old room reads Extended
+    // indefinitely with no way out: the guest can't be checked out while
+    // they're still staying, and there is no per-room checkout to reach for.
+    const vacatedByMove = current ? (getRoomMoveVacatedRooms(current)[roomNo] || '') : '';
+    const resolvedByMove = !!vacatedByMove && vacatedByMove <= refDate;
     // Extended is strictly a live/past-date state, never a forecast: for a
     // FUTURE refDate (Check Availability picking a day ahead), a guest who
     // is inhouse right now with no confirmed checkout must be assumed to
     // leave when their booked nights end — otherwise every unconfirmed
     // departure blocks its room on every future date forever and
     // availability reads permanently full.
-    const extended = !todayNight && !!lastNightDate && lastNightDate < refDate && !resolvedByCheckout && refDate <= todayStr();
+    const extended = !todayNight && !!lastNightDate && lastNightDate < refDate && !resolvedByCheckout && !resolvedByMove && refDate <= todayStr();
     // Arrival gate — today only, and only for an advance reservation (booked
     // ahead of its own check-in date). A walk-in entered the same day as its
     // check-in date is its own confirmation — the front desk was looking at
@@ -11317,6 +11424,10 @@ function computeRoomStatuses(asOfDate){
       occupied: !!todayNight && (!isLiveToday || !needsArrivalConfirm || confirmedCheckin),
       arrivalPending,
       extended,
+      // The date this room's guest moved out of it into another room, '' for
+      // everything else. Purely informational for the UI ("moved to 302")
+      // — the occupancy decision already happened, in `extended` above.
+      vacatedByMove,
       previousGuestPending,
       nextGuestPending,
       housekeepingStatus,
@@ -11847,6 +11958,11 @@ function renderDetail(){
   }
   document.getElementById('detailName').textContent = entry.guestName || '(no name)';
   const metaParts = [];
+  // A no-show's rooms read free everywhere else, so the entry would look
+  // ordinary here with no hint why — 'No Show' is a hidden detail kind, so
+  // it never shows up in the Extra Details list below either.
+  const noShowOn = getDetailValue(entry, 'No Show');
+  if(noShowOn) metaParts.push('NO SHOW — marked ' + formatDate(noShowOn));
   if(entry.savedAt) metaParts.push('Entered ' + formatDate(toKarachiDateStr(entry.savedAt)) + (entry.savedBy ? ' by ' + entry.savedBy : ''));
   if(entry.editedAt) metaParts.push('Last edited ' + formatDate(toKarachiDateStr(entry.editedAt)) + (entry.editedBy ? ' by ' + entry.editedBy : ''));
   document.getElementById('detailMeta').textContent = metaParts.join('  ·  ');
@@ -11926,7 +12042,7 @@ function renderDetail(){
 
 // Every recorded action on this entry, newest first: who did what, when.
 // The log is append-only on the server — nothing in the app can rewrite it.
-const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added', checked_out: 'Checked Out', checked_in: 'Checked In' };
+const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added', checked_out: 'Checked Out', checked_in: 'Checked In', res_no_show: 'Marked No Show', res_reactivated: 'No Show undone' };
 
 function renderChangeLog(entry){
   const box = document.getElementById('detailChangeLog');
@@ -14715,10 +14831,19 @@ function addMonthsToDateStr(dateStr, months){
 // should still warn about a clash even if the other booking on it hasn't
 // been confirmed yet). Every other caller — the actual Ledgers report, NPR,
 // Revenue's occupancy stat — wants the gated, confirmed-only picture.
-function buildLedgersRecords(includeUnconfirmed){
+//
+// includeNoShows=true is narrower still: ONE caller (Undo No Show's
+// re-clash check) needs to see the room-nights a no-show booking WOULD
+// have, to warn before handing its room back. Nothing else ever wants them.
+function buildLedgersRecords(includeUnconfirmed, includeNoShows){
   const all = loadAllEntries();
   const records = [];
   all.forEach(entry=>{
+    // A no-show never occupied anything, so its room-nights simply don't
+    // exist — not even for includeUnconfirmed callers (computeRoomStatuses
+    // and the save-time double-booking check both want the room to read
+    // genuinely free so it can be sold to someone who actually turned up).
+    if(!includeNoShows && isNoShowEntry(entry)) return;
     // An advance reservation that hasn't been confirmed on Arrival yet isn't
     // an actual stay — it shouldn't contribute room-nights here (its payment
     // still shows on the Report page, which is status-agnostic by design;
@@ -16691,7 +16816,10 @@ function buildArrivalRows(asOfDate){
     // that exact day and that nobody has confirmed in yet. No stale-history
     // flood risk here: this branch only ever looks at one future date.
     all.forEach(entry=>{
-      if(entry.checkIn === asOfDate && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin') && !dueSeen.has(entry.id)){
+      // A no-show is not still due — the whole point of marking it is that
+      // nobody is coming. (Today's branch below needs no such test: a
+      // no-show has no room-nights left, so arrivalPending can't fire.)
+      if(entry.checkIn === asOfDate && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin') && !isNoShowEntry(entry) && !dueSeen.has(entry.id)){
         dueSeen.add(entry.id);
         due.push(toRow(entry, 'due'));
       }
@@ -16709,7 +16837,13 @@ function buildArrivalRows(asOfDate){
   const checkedIn = all
     .filter(entry=> isAdvanceReservation(entry) && getDetailValue(entry, 'Actual Checkin') === asOfDate)
     .map(entry=> toRow(entry, 'checked_in'));
-  return due.concat(checkedIn)
+  // Marked No Show ON asOfDate, by the same rule — they leave the due list
+  // the moment they're marked, so without this they'd simply vanish off the
+  // page with nothing to click Undo on and no record of the decision.
+  const noShows = all
+    .filter(entry=> !dueSeen.has(entry.id) && getDetailValue(entry, 'No Show') === asOfDate)
+    .map(entry=> toRow(entry, 'no_show'));
+  return due.concat(checkedIn, noShows)
     .sort((a,b)=> a.roomNos.localeCompare(b.roomNos, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
@@ -16734,18 +16868,24 @@ function renderArrival(){
   // only, so nobody can be checked in under the wrong date.
 
   const rows = buildArrivalRows(asOfDate);
-  const STATUS_BADGE = { due: ['arrivaldue', 'Arrival Due'], checked_in: ['paid', 'Checked In'] };
+  const STATUS_BADGE = { due: ['arrivaldue', 'Arrival Due'], checked_in: ['paid', 'Checked In'], no_show: ['checkoutdue', 'No Show'] };
   if(rows.length === 0){
     dueBody.innerHTML = '<div class="empty-note">Nobody\'s check-in was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
   } else {
     dueBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:140px;">CNIC</th><th style="width:110px;">Check-in</th><th style="width:110px;">Status</th><th style="width:110px;"></th></tr></thead>
+        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:140px;">CNIC</th><th style="width:110px;">Check-in</th><th style="width:110px;">Status</th><th style="width:190px;"></th></tr></thead>
         <tbody>${rows.map(r=>{
           const [cls, label] = STATUS_BADGE[r.status];
+          // Both confirmed states get an Undo; only a still-due row offers
+          // the two ways to resolve it — they turned up, or they didn't.
           const action = !isToday ? ''
             : r.status === 'checked_in' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoArrivalCheckin('${r.guestId}')">Undo</button>`
-            : `<button class="btn" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startArrivalCheckin('${r.guestId}')">Check-in</button>`;
+            : r.status === 'no_show' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoArrivalNoShow('${r.guestId}')">Undo</button>`
+            : `<div style="display:flex; gap:6px; flex-wrap:wrap;">
+                 <button class="btn" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startArrivalCheckin('${r.guestId}')">Check-in</button>
+                 <button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); markArrivalNoShow('${r.guestId}')">No Show</button>
+               </div>`;
           return `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${r.roomNos}</td>
@@ -16882,6 +17022,84 @@ async function undoArrivalCheckin(guestId){
   queueEntryPush(entry.id);
   renderArrival();
   showNotice((entry.guestName || 'Guest') + '\'s check-in was undone.', 'success');
+}
+
+// The other way an Arrival Due row resolves: the guest never came. Frees the
+// room for the rest of the booking straight away (isNoShowEntry drops the
+// booking's room-nights) instead of leaving it reading Arrival Due today and
+// then silently Extended once those nights lapse, blocking a room nobody
+// ever slept in. Money is deliberately untouched — see isNoShowEntry.
+async function markArrivalNoShow(guestId){
+  const entry = loadAllEntries().find(e=> e.id === guestId);
+  if(!entry) return;
+  const rooms = formatRoomChain(entry.rooms);
+  const t = computeTotals(entry);
+  // A deposit already taken is exactly the thing staff need to think about
+  // before marking this, so say it out loud rather than making them go and
+  // look — nothing here refunds or writes off anything by itself.
+  const paidNote = t.paid > 0
+    ? '\n\nThey have already paid ' + t.paid.toLocaleString() + '. Marking No Show does NOT refund or write off anything — the booking total, payments and balance all stay exactly as they are. Sort the money out separately.'
+    : '';
+  const ok = await showConfirmModal(
+    'Mark ' + (entry.guestName || 'this guest') + ' as a No Show?' +
+    (rooms ? '\n\nRoom ' + rooms + ' is released immediately — it stops counting as occupied everywhere and can be booked to someone else.' : '') +
+    paidNote +
+    '\n\nThis can be undone from this page if they turn up after all.',
+    { title: 'No Show', okText: 'Mark No Show', danger: true }
+  );
+  if(!ok) return;
+  // Re-read: the confirm modal is awaited, so a cloud pull could have
+  // replaced the entry object underneath us while it was open.
+  const target = loadAllEntries().find(e=> e.id === guestId);
+  if(!target) return;
+  const extraDetails = (target.extraDetails || []).filter(d=> d.kind !== 'No Show');
+  extraDetails.unshift({ kind: 'No Show', value: todayStr() });
+  target.extraDetails = extraDetails;
+  target.editedAt = new Date().toISOString();
+  target.editedBy = currentUser ? currentUser.username : '';
+  logGuestAction(target.id, 'res_no_show');
+  queueEntryPush(target.id);
+  rerenderActiveView();
+  showNotice((target.guestName || 'Guest') + ' marked No Show' + (rooms ? ' — room ' + rooms + ' is free again' : '') + '.', 'success');
+}
+
+async function undoArrivalNoShow(guestId){
+  const entry = loadAllEntries().find(e=> e.id === guestId);
+  if(!entry) return;
+  // Handing the room back can collide with whoever was given it in the
+  // meantime — that's the whole reason it was freed. buildLedgersRecords'
+  // includeNoShows pass is the only way to see the nights this booking
+  // WOULD have; every other no-show in the system is filtered back out so a
+  // second cancelled booking on the same room never reads as a clash.
+  const withNoShows = buildLedgersRecords(true, true);
+  const noShowIds = new Set(loadAllEntries().filter(e=> e.id !== guestId && isNoShowEntry(e)).map(e=> e.id));
+  const mine = withNoShows.filter(n=> n.guestId === guestId && !isMiscRoomNo(n.roomNo));
+  const others = withNoShows.filter(n=> n.guestId !== guestId && !noShowIds.has(n.guestId));
+  const clashes = [];
+  mine.forEach(n=>{
+    const hit = others.find(o=> o.roomNo.trim().toUpperCase() === n.roomNo.trim().toUpperCase() && o.date === n.date);
+    if(hit && !clashes.some(c=> c.roomNo === n.roomNo && c.date === n.date)) clashes.push({ roomNo: n.roomNo, date: n.date, guest: hit.guest });
+  });
+  const clashNote = clashes.length
+    ? '\n\nWARNING — their room has been given to somebody else since:\n' +
+      clashes.slice(0, 5).map(c=> 'Room ' + c.roomNo + ' on ' + formatDate(c.date) + ' — now ' + c.guest).join('\n') +
+      (clashes.length > 5 ? '\n...and ' + (clashes.length - 5) + ' more' : '') +
+      '\nUndoing puts both bookings on the same room for those nights. Move one of them first unless that is really what you want.'
+    : '';
+  const ok = await showConfirmModal(
+    'Undo ' + (entry.guestName || 'this guest') + '\'s No Show? Their booking goes back to Arrival Due and their room reads as booked again.' + clashNote,
+    { title: 'Undo No Show', okText: 'Undo', danger: true }
+  );
+  if(!ok) return;
+  const target = loadAllEntries().find(e=> e.id === guestId);
+  if(!target) return;
+  target.extraDetails = (target.extraDetails || []).filter(d=> d.kind !== 'No Show');
+  target.editedAt = new Date().toISOString();
+  target.editedBy = currentUser ? currentUser.username : '';
+  logGuestAction(target.id, 'res_reactivated');
+  queueEntryPush(target.id);
+  rerenderActiveView();
+  showNotice((target.guestName || 'Guest') + '\'s No Show was undone — they are back on the Arrivals list.', 'success');
 }
 
 // The per-row manual button — never opens the checkout-confirm modal for a
