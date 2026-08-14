@@ -4151,9 +4151,11 @@
   body.pos-printing-receipt > *:not(#posReceiptPrintArea){ display:none !important; }
   /* The app-wide print rules put padding on body/.main; with those
      inherited the receipt starts well down the page instead of at the
-     very top, so zero them out for receipt prints specifically. */
-  html:has(body.pos-printing-receipt), body.pos-printing-receipt{ margin:0 !important; padding:0 !important; }
-  body.pos-printing-receipt #posReceiptPrintArea{ display:block !important; page:pos-receipt; margin-top:0 !important; padding-top:0 !important; break-inside:avoid; page-break-inside:avoid; }
+     very top, so zero them out for receipt prints specifically. The
+     class is set on <html> as well as <body> — targeting the root via
+     :has() is not reliably evaluated by print engines. */
+  html.pos-printing-receipt, body.pos-printing-receipt{ margin:0 !important; padding:0 !important; }
+  body.pos-printing-receipt #posReceiptPrintArea{ display:block !important; page:pos-receipt; margin:0 !important; padding-top:0 !important; break-inside:avoid; page-break-inside:avoid; }
   body.pos-printing-receipt #posReceiptPrintArea *{ break-inside:avoid; page-break-inside:avoid; }
 }
 
@@ -21101,7 +21103,7 @@ function posBuildReceiptHtml(record){
     '<div class="rc-foot">Riviera Resort · Restaurant</div>';
 }
 
-var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:600; line-height:1.35; width:64mm; margin:0 auto; padding:1mm 4mm 0; color:#000; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;} ' +
+var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:600; line-height:1.35; width:66mm; margin:0; padding:0 3mm 0; color:#000; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;} ' +
   '#posReceiptPrintArea *{ -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }' +
   '#posReceiptPrintArea .rc-brand{text-align:center; font-size:22px; font-weight:700; letter-spacing:.04em; margin-bottom:0.5mm;} ' +
   '#posReceiptPrintArea .rc-sub{text-align:center; font-size:15px; letter-spacing:.06em; color:#000; margin-bottom:1.5mm;} ' +
@@ -21158,6 +21160,7 @@ function posPrintRecord(record){
     document.head.appendChild(pageOverride);
   }
   document.body.classList.add('pos-printing-receipt');
+  document.documentElement.classList.add('pos-printing-receipt');
   // Measure the receipt, then cut the SHEET to fit it rather than dropping
   // it onto a fixed A4 page — a fixed page leaves a big empty run above and
   // below a short receipt, and splits a long one across sheets. The area is
@@ -21202,6 +21205,7 @@ function posPrintRecord(record){
 }
 window.addEventListener('afterprint', function(){
   document.body.classList.remove('pos-printing-receipt');
+  document.documentElement.classList.remove('pos-printing-receipt');
   var pageOverride = document.getElementById('posReceiptPageOverride');
   if (pageOverride) pageOverride.textContent = '';
 });
