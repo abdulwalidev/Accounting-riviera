@@ -2065,6 +2065,15 @@
        tag), so force nowrap instead of letting text stack. */
     .view table th, .view table td{ padding:3px 4px; white-space:nowrap; }
     .view table th{ font-size:6.4px; letter-spacing:0; padding:3px 3px; }
+    /* Report/Revenue tables set inline style="width:120px" (etc) on <th>
+       per column - that pixel width is pinned regardless of font-size, so
+       shrinking the font alone barely shrank these tables at all. Force
+       every column back to its content's real width so the smaller font
+       actually narrows the table instead of leaving dead padding. */
+    .view table th[style*="width"], .view table td[style*="width"]{
+      width:auto !important;
+      min-width:0 !important;
+    }
     .topnav{ gap:16px; }
     .topnav .navbtn{ font-size:12.5px; }
     .panel{ padding:12px; }
