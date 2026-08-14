@@ -2064,7 +2064,14 @@
        needs it bigger can just pinch-zoom (viewport allows it, see meta
        tag), so force nowrap instead of letting text stack. */
     .view table th, .view table td{ padding:3px 4px; white-space:nowrap; }
-    .view table th{ font-size:6.4px; letter-spacing:0; padding:3px 3px; }
+    /* !important because plenty of older page-specific rules (table.rep,
+       .ns-table, .line-table, total/subtotal rows, etc.) set their own
+       font-size at equal or higher CSS specificity and come later in the
+       file, so a plain override here loses the cascade to them. */
+    .view table th{ font-size:6.4px !important; letter-spacing:0; padding:3px 3px !important; }
+    .view table td{ font-size:7.2px !important; }
+    .view table tr.subtotal td, .view table tr.total-row td, .view table .rowtotal,
+    .view table tr.grand td{ font-size:7.2px !important; }
     /* Badges/pills (.status, .mode-badge, .guest-badge, etc.) inside a
        cell are their own inline-block boxes with their own font-size and
        padding - nowrap on the <td> alone doesn't shrink or unwrap them.
