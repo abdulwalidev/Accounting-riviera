@@ -5656,11 +5656,18 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
     <div class="panel no-print accent-filters">
       <div class="actions" style="gap:24px;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn" onclick="exportInhouseExcel()">⬇ Export</button>
-          <button class="btn secondary" onclick="printInhouse()">🖶 Print</button>
-          <button class="btn secondary" onclick="showView('breakfast')">🥐 Breakfast Report</button>
-          <button class="btn secondary" onclick="setInhouseToday()">Today</button>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn" onclick="exportInhouseExcel()">⬇ Export</button>
+            <button class="btn secondary" onclick="printInhouse()">🖶 Print</button>
+            <button class="btn secondary" onclick="showView('breakfast')">🥐 Breakfast Report</button>
+            <button class="btn secondary" onclick="setInhouseToday()">Today</button>
+          </div>
+          <div class="checkline">
+            <input type="checkbox" id="ihHideZero">
+            <label for="ihHideZero" style="margin:0;">Hide 0Rs guests</label>
+            <span id="ihHiddenNote" style="text-transform:none; letter-spacing:0; color:var(--muted);"></span>
+          </div>
         </div>
         <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
           <label class="lbl-sm" style="margin-bottom:4px;">In-house as of</label>
@@ -8373,6 +8380,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('nsDate').addEventListener('input', renderNightSummary);
   setFilterDate('nsDate', todayStr());
   document.getElementById('ihDate').addEventListener('input', renderInhouse);
+  document.getElementById('ihHideZero').addEventListener('change', renderInhouse);
   document.getElementById('bfDate').addEventListener('input', renderBreakfastReport);
   setFilterDate('ihDate', todayStr());
   setFilterDate('b19From', '2026-07-19');
@@ -16102,7 +16110,15 @@ function printNightSummary(){
 // who hasn't been checked out yet is still eating breakfast regardless of
 // whether their booking technically covers tonight.
 // =========================================================
-function buildInhouseReport(asOfDate){
+// hideFreeStays: drop the non-paying rooms — the owner's guests, whose rent
+// is typed as "Guest" (or left at 0) and so reads as 0 here. Same idea as
+// Search's "Show 0Rs guests", applied per ROOM rather than per booking
+// because this report is one row per room: a free room inside an otherwise
+// paying booking is still a free room for headcount purposes. Everything
+// derived below — the totals, the guest split, the room-type tiles — comes
+// off the filtered rows, so the whole page reflects the toggle rather than
+// just the table.
+function buildInhouseReport(asOfDate, hideFreeStays){
   const today = asOfDate || todayStr();
   // One row per occupied ROOM, not per guest — a guest holding more than
   // one room (an apartment plus an overflow room) shows as separate rows,
@@ -16111,7 +16127,7 @@ function buildInhouseReport(asOfDate){
   // headcount broken out separately) still sums onto its one room-row here
   // rather than appearing twice.
   const occupiedRs = computeRoomStatuses(today).filter(rs=> (rs.occupied || rs.extended) && rs.entry);
-  const rows = occupiedRs
+  let rows = occupiedRs
     .map(rs=>{
       const relevantRooms = dedupeRoomsByNo((rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo));
       const adultsDisplay = relevantRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
@@ -16121,6 +16137,7 @@ function buildInhouseReport(asOfDate){
       const allRoomRows = (rs.entry.rooms || []).filter(r=> r.roomNo === rs.roomNo);
       const rent = allRoomRows.length ? (parseFloat(String(allRoomRows[allRoomRows.length - 1].rent).replace(/,/g,'')) || 0) : 0;
       return {
+        rs,
         roomNo: rs.roomNo,
         rent,
         guest: rs.entry.guestName || '(no name)',
@@ -16133,6 +16150,8 @@ function buildInhouseReport(asOfDate){
       };
     })
     .sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
+  const freeStayCount = rows.filter(r=> !(r.rent > 0)).length;
+  if(hideFreeStays) rows = rows.filter(r=> r.rent > 0);
   const roomCount = rows.length;
   const totalAdults = rows.reduce((s,r)=> s + r.adultsDisplay, 0);
   const totalChildren = rows.reduce((s,r)=> s + r.childrenDisplay, 0);
@@ -16142,11 +16161,11 @@ function buildInhouseReport(asOfDate){
   // Same four-way room-type split as Room Detail (see roomDetailTypeBucket)
   const typeBucketCounts = {};
   ROOM_TYPE_BUCKETS.forEach(b=> typeBucketCounts[b] = 0);
-  occupiedRs.forEach(rs=>{
-    const label = roomDetailTypeBucket(rs);
+  rows.forEach(r=>{
+    const label = roomDetailTypeBucket(r.rs);
     if(Object.prototype.hasOwnProperty.call(typeBucketCounts, label)) typeBucketCounts[label]++;
   });
-  return { rows, roomCount, totalAdults, totalChildren, totalPax, roomTypeCount, apartmentTypeCount, typeBucketCounts };
+  return { rows, roomCount, totalAdults, totalChildren, totalPax, roomTypeCount, apartmentTypeCount, typeBucketCounts, freeStayCount };
 }
 
 function setInhouseToday(){
@@ -16157,6 +16176,11 @@ function setInhouseToday(){
 function getInhouseAsOfDate(){
   const el = document.getElementById('ihDate');
   return (el && el.value) || todayStr();
+}
+
+function inhouseHideZero(){
+  const el = document.getElementById('ihHideZero');
+  return !!(el && el.checked);
 }
 
 function renderInhouse(){
@@ -16175,7 +16199,13 @@ function renderInhouse(){
   const asOfDate = getInhouseAsOfDate();
   document.getElementById('ihPrintHeaderSub').textContent = 'As of ' + formatDate(asOfDate) + '  ·  Generated ' + formatDate(todayStr());
 
-  const data = buildInhouseReport(asOfDate);
+  const data = buildInhouseReport(asOfDate, inhouseHideZero());
+  const hiddenNote = document.getElementById('ihHiddenNote');
+  if(hiddenNote){
+    hiddenNote.textContent = data.freeStayCount
+      ? (inhouseHideZero() ? '— ' + data.freeStayCount + ' hidden' : '— ' + data.freeStayCount + ' in-house right now')
+      : '';
+  }
   if(unitSplit) unitSplit.innerHTML = `
     <div class="dash-subtile"><div class="dash-subtile-val" style="color:#d4a017;">${data.roomTypeCount}</div><div class="dash-subtile-lbl" style="color:#d4a017;">Room</div></div>
     <div class="dash-subtile"><div class="dash-subtile-val" style="color:#d4a017;">${data.apartmentTypeCount}</div><div class="dash-subtile-lbl" style="color:#d4a017;">Apartment</div></div>
@@ -16219,7 +16249,7 @@ function renderInhouse(){
 
 function exportInhouseExcel(){
   const asOfDate = getInhouseAsOfDate();
-  const data = buildInhouseReport(asOfDate);
+  const data = buildInhouseReport(asOfDate, inhouseHideZero()); // export what's on screen, filter and all
   if(data.rows.length === 0){ showNotice('No data to export.'); return; }
 
   const wb = XLSX.utils.book_new();
