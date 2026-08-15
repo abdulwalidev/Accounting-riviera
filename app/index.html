@@ -5946,7 +5946,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <div class="table-wrap" style="padding:0 4px 0;">
       <table class="parts" id="posMenuPanelTable">
-        <thead><tr><th style="width:34px;"></th><th style="width:88px;">Part #</th><th>Item</th><th class="num" style="width:100px;">Price</th><th style="width:130px;">Qty</th></tr></thead>
+        <thead><tr><th style="width:88px;">Part #</th><th>Item</th><th class="num" style="width:100px;">Price</th><th style="width:130px;">Qty</th><th style="width:34px;"></th></tr></thead>
         <tbody id="posMenuPanelBody"></tbody>
       </table>
     </div>
@@ -20582,13 +20582,13 @@ function posOpenMenuGroup(groupKey, title, pillEl){
     row.dataset.name = name;
     row.dataset.price = String(parseFloat(priceText.replace(/,/g, '')) || 0);
     row.innerHTML =
-      '<td class="mp-check"><input type="checkbox" class="mp-box" tabindex="-1" aria-label="Pick ' + posEscapeHtml(name) + '"></td>' +
       '<td>' + partNo + '</td><td>' + name + '</td><td class="num">' + priceText + '</td>' +
       '<td class="mp-qty"><div class="qty-stepper">' +
         '<button type="button" class="qs-btn" data-step="-1" tabindex="-1" aria-label="Less">−</button>' +
         '<input type="text" class="qs-val" inputmode="numeric" value="1" aria-label="Quantity">' +
         '<button type="button" class="qs-btn" data-step="1" tabindex="-1" aria-label="More">+</button>' +
-      '</div></td>';
+      '</div></td>' +
+      '<td class="mp-check"><input type="checkbox" class="mp-box" tabindex="-1" aria-label="Pick ' + posEscapeHtml(name) + '"></td>';
     // The whole row is the tick target — a thumb on a counter shouldn't have
     // to find a 16px box. The qty stepper is carved out of it so pressing
     // +/− never also unticks the row you're setting a quantity on.
