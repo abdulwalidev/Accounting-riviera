@@ -17052,6 +17052,27 @@ function buildArrivalRows(asOfDate){
         due.push(toRow(rs.entry, 'due'));
       }
     });
+    // computeRoomStatuses buckets room-nights by room NUMBER and surfaces one
+    // guest per bucket — but "N/A" isn't a physical room, it's "undecided",
+    // so every N/A booking in the hotel shares that single bucket. Of two
+    // guests both due into N/A rooms today, only whichever landed first in
+    // the night list ever came back arrivalPending; the rest silently never
+    // appeared here, with no row to click Check-in on. They're checked
+    // straight against the same test instead: a booked N/A night landing on
+    // today, on an advance reservation nobody has confirmed in yet (exactly
+    // what arrivalPending means, minus the one-guest-per-room bottleneck).
+    // Today-only, matching arrivalPending's own live-day gate above.
+    if(asOfDate === todayStr()){
+      const naDueIds = new Set(buildLedgersRecords(true)
+        .filter(n=> n.date === asOfDate && (n.roomNo || '').trim().toUpperCase() === 'N/A')
+        .map(n=> n.guestId));
+      all.forEach(entry=>{
+        if(!naDueIds.has(entry.id) || dueSeen.has(entry.id)) return;
+        if(!isAdvanceReservation(entry) || getDetailValue(entry, 'Actual Checkin')) return;
+        dueSeen.add(entry.id);
+        due.push(toRow(entry, 'due'));
+      });
+    }
   }
   // Checked in ON asOfDate specifically — lets the As Of Date filter show
   // what was confirmed that day, same as Checkout/Pending's log merge.
