@@ -2969,8 +2969,8 @@
       padding: 8px 16px;
     }
     #page-pos-invoice .btn-addline {
-      background: #fff;
-      color: var(--green);
+      background: var(--green);
+      color: #fff;
       border: 1px solid var(--green);
       border-radius: 6px;
       opacity: 1;
@@ -3732,6 +3732,20 @@
 #page-pos-invoice .lbl-input label {white-space:nowrap; font-size:11px; color:#4b5b73; font-weight:600; width:110px; text-align:right; flex-shrink:0;}
 #page-pos-invoice .lbl-input input, #page-pos-invoice .lbl-input select {flex:1; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px; background:#fff; color:#111;}
 #page-pos-invoice .lbl-input .with-pick {display:flex; flex:1; gap:8px;}
+/* Order No(QT) is required, with an N/A opt-out for orders that genuinely
+   don't carry one — same pattern (and the same focusError red) as the
+   hotel's CNIC field. The hotel's own .req/.na-check/.field-error rules are
+   scoped to its markup and lose to "#page-pos-invoice .lbl-input input"
+   anyway, so the look is restated here rather than reached for. */
+#page-pos-invoice .pos-req {color:var(--red);}
+/* N/A rides on the label line rather than under the input, so the field
+   keeps the exact height of its neighbours and the row stays aligned. */
+#page-pos-invoice .pos-label-row {display:flex; align-items:center; justify-content:space-between; gap:8px;}
+#page-pos-invoice .lbl-input label.pos-na-check {display:flex; align-items:center; gap:4px; font-size:11px; font-weight:400; color:var(--muted); width:auto; text-align:left; cursor:pointer;}
+#page-pos-invoice .lbl-input label.pos-na-check input[type="checkbox"] {flex:0 0 auto; width:auto; min-height:0; margin:0; padding:0; accent-color:var(--blue); cursor:pointer;}
+#page-pos-invoice .lbl-input input.field-error,
+#page-pos-invoice .lbl-input input.field-error:focus {outline:2px solid var(--red); outline-offset:0; border-color:var(--red); background:#fee2e2;}
+#page-pos-invoice .lbl-input input:disabled {background:#eef0f2; color:#8a919c; cursor:not-allowed;}
 #page-pos-invoice .lbl-input.disabled label {color:#b8bfc9;}
 #page-pos-invoice .lbl-input.disabled input,
 #page-pos-invoice .lbl-input.disabled select,
@@ -3791,7 +3805,12 @@
 #page-pos-invoice .btn-menu:hover {opacity:0.85;}
 #page-pos-invoice .pos-modal-close {display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; border:1px solid var(--border-strong); background:transparent; color:var(--muted); cursor:pointer; flex-shrink:0; transition:background .12s, color .12s;}
 #page-pos-invoice .pos-modal-close:hover {background:#c53030; border-color:#c53030; color:#fff;}
-#page-pos-invoice .btn-addline {background:#fff; color:#10b981; border:none; border-bottom:4px solid #a7f3d0; border-radius:15px; padding:7px 14px; font-size:13px; cursor:pointer; font-weight:800; transition:all 0.2s ease;}
+/* Inverted vs the other pill buttons here — solid green with white text,
+   since "+ Add line" is the one control on this form staff hit dozens of
+   times an order and it should read as the primary action, not an outline.
+   The bottom edge keeps the same 4px lift, in a darker green so the
+   pressed-in effect still shows against the fill. */
+#page-pos-invoice .btn-addline {background:#10b981; color:#fff; border:none; border-bottom:4px solid #059669; border-radius:15px; padding:7px 14px; font-size:13px; cursor:pointer; font-weight:800; transition:all 0.2s ease;}
 #page-pos-invoice .btn-addline {opacity:0.9;}
 #page-pos-invoice .btn-addline:active {transform:translateY(2px); border-bottom:0;}
 #page-pos-invoice .btn-addline:hover {opacity:0.85;}
@@ -3903,6 +3922,16 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-charges-summary table.rep td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
 #page-pos-invoice table.simple td a {color:var(--blue); text-decoration:none;}
 #page-pos-invoice .neg {color:var(--muted);}
+/* Recent Invoices / Guests list every row of which is already posted, so a
+   Posted/Not-Posted badge would say nothing — these show where the money
+   is instead (see posPaymentStatus). Same pill shape and palette as the
+   Receipts and Charges Summary badges. */
+#page-pos-invoice .status-badge {display:inline-block; border-radius:12px; padding:3px 10px; font-size:11px; font-weight:700; letter-spacing:.02em; white-space:nowrap;}
+#page-pos-invoice .status-badge.paid {background:#dcfce7; color:#15803d;}
+#page-pos-invoice .status-badge.partial {background:#fdf1dc; color:#b45309;}
+#page-pos-invoice .status-badge.pending {background:#fde2e2; color:#c53030;}
+#page-pos-invoice .status-badge.at-fo {background:#dbeafe; color:#1d4ed8;}
+#page-pos-invoice .status-badge.collected {background:#dcfce7; color:#15803d;}
 
 /* ===== POS Receipts ===== */
 #page-receipts {
@@ -4163,6 +4192,11 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-pos-settings .settings-row .label {font-size:14px; color:var(--text); font-weight:500;}
 #page-pos-settings .settings-row .sub {font-size:12px; color:var(--muted); margin-top:2px;}
 #page-pos-settings .settings-row .arrow {color:var(--muted);}
+#page-pos-settings .settings-field {display:flex; align-items:center; justify-content:space-between; gap:20px; padding:14px 12px;}
+#page-pos-settings .settings-field .label {font-size:14px; color:var(--text); font-weight:500;}
+#page-pos-settings .settings-field .sub {font-size:12px; color:var(--muted); margin-top:2px; max-width:560px; line-height:1.5;}
+#page-pos-settings .settings-field input {width:90px; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px; text-align:center; letter-spacing:.08em; background:#fff; color:#111;}
+#page-pos-settings .settings-field .save-btn {background:var(--blue); color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;}
 
 /* The shared .flatpickr-alt-input box (hotel-wide, near the top of this
    stylesheet) is a fixed 307.875px — sized for a single date. POS's range
@@ -5754,7 +5788,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   </div>
   <div style="display:flex; gap:10px; justify-content:flex-end;">
     <button type="button" onclick="posCancelPost()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
-    <button type="button" id="posPostConfirmBtn" onclick="posConfirmPost()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;" autofocus>Confirm (Enter)</button>
+    <button type="button" id="posPostConfirmBtn" onclick="posConfirmPost()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;" autofocus>Confirm</button>
   </div>
 </div>
 
@@ -5787,6 +5821,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 <nav class="sidebar" id="appSidebar">
   <div class="sidebar-label">MODULES</div>
   <button class="active" onclick="posShowApp('page-pos-invoice', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg><span class="sb-text">Point of Sale</span></button>
+  <button onclick="posShowApp('page-receipts', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg><span class="sb-text">All Receipts</span></button>
   <button onclick="posShowApp('page-charges-summary', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><span class="sb-text">Charges Summary</span></button>
   <button onclick="posShowApp('page-qty-summary', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><span class="sb-text">Quantity Summary</span></button>
   <button onclick="posShowApp('page-printed-only', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg><span class="sb-text">Printed-Only</span><span class="sb-count" id="printedOnlyNavCount" style="display:none;"></span></button>
@@ -5834,8 +5869,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>CUSTOMER 🔍</label>
         <div class="search-wrap" style="flex:1;"><input type="text" id="posCustomer" value="Walkin Customer" autocomplete="off" oninput="posRecalcAll()" style="width:100%;"><div class="ac-menu"></div></div>
       </div>
-      <div class="lbl-input" style="flex:0 0 170px;"><label>ORDER NO(QT)</label><input type="text" id="posOrderNo"></div>
-      <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><div class="search-wrap" style="flex:1;"><input type="text" id="posRoomNoField" autocomplete="off" oninput="posRoomNoChanged(this)" style="width:100%;"><div class="ac-menu room-ac-menu"></div></div></div>
+      <div class="lbl-input" style="flex:0 0 170px;"><div class="pos-label-row"><label>ORDER NO(QT) <span class="pos-req">*</span></label><label class="pos-na-check"><input type="checkbox" id="posOrderNoNA" onchange="posToggleOrderNoNA()"> N/A</label></div><input type="text" id="posOrderNo" inputmode="numeric" maxlength="5" autocomplete="off" oninput="posOrderNoInput(this)"></div>
+      <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><div class="search-wrap" style="flex:1;"><input type="text" id="posRoomNoField" autocomplete="off" oninput="posRoomNoChanged(this, true)" style="width:100%;"><div class="ac-menu room-ac-menu"></div></div></div>
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>Discription(extra notes)</label><input type="text" id="posLineDescription"></div>
       <div class="lbl-input" style="flex:0 0 170px;"><label>Invoice Date</label><input type="date" id="posInvoiceDate"></div>
     </div>
@@ -6034,7 +6069,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card">
     <div class="lc-title">Recent Invoices</div>
     <table class="simple">
-      <thead><tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th style="width:36px;">#</th><th style="width:120px;">STATUS</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
       <tbody id="recentInvoicesBody"></tbody>
     </table>
   </div>
@@ -6042,7 +6077,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card" id="guestInvoicesCard" style="display:none; margin-top:14px;">
     <div class="lc-title">Guests (Non-Paying)</div>
     <table class="simple">
-      <thead><tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th style="width:36px;">#</th><th style="width:120px;">STATUS</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
       <tbody id="guestInvoicesBody"></tbody>
     </table>
   </div>
@@ -6484,10 +6519,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="h-sub">Less-frequently-used pages, moved here to keep the main sidebar short.</div>
 
   <div class="card">
-    <div class="settings-row" onclick="posShowApp('page-receipts', this)">
-      <div><div class="label">All Receipts</div><div class="sub">Every posted invoice, filterable by status</div></div>
-      <span class="arrow">›</span>
-    </div>
     <div class="settings-row" onclick="posShowApp('page-front-office', this)">
       <div><div class="label">Front Office Pending</div><div class="sub">Invoices sent to Front Office</div></div>
       <span class="arrow">›</span>
@@ -6503,6 +6534,19 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="settings-row" onclick="posShowApp('page-manage-parts', this)">
       <div><div class="label">Manage Menu</div><div class="sub">Full restaurant menu — prices and categories</div></div>
       <span class="arrow">›</span>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="settings-field">
+      <div>
+        <div class="label">Order No(QT) prefix</div>
+        <div class="sub">Every new receipt opens with this already typed in and locked — staff key only the rest of the 5 digits. Max 4 digits; empty for no prefix. Saved on this device.</div>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; flex-shrink:0;">
+        <input type="text" id="posQtPrefixInput" inputmode="numeric" maxlength="4" placeholder="44" autocomplete="off">
+        <button type="button" class="save-btn" onclick="posSaveQtPrefix()">Save</button>
+      </div>
     </div>
   </div>
 
@@ -19517,7 +19561,7 @@ function posRenderRecentInvoices(){
     if (record.deleted || !record.posted) return; // print-only drafts don't belong in Recent Invoices — only actually posted ones
     var isGuest = /guest/i.test(record.customer || '');
     var rowNum = isGuest ? ++guestNum : ++recentNum;
-    var row = posBuildInvoiceRow(record, false, true, true, rowNum);
+    var row = posBuildInvoiceRow(record, false, true, true, rowNum, true);
     if (isGuest && guestBody) { guestBody.appendChild(row); hasGuest = true; }
     else recentBody.appendChild(row);
   });
@@ -19540,6 +19584,7 @@ function posShowApp(id, btn){
   if (id === 'page-charges-summary') renderChargesSummary();
   if (id === 'page-qty-summary') renderQuantitySummary();
   if (id === 'page-pos-daylock') posRenderDayLockPage();
+  if (id === 'page-pos-settings') posLoadQtPrefixInput();
   if (id === 'page-pos-invoice') window.scrollTo(0, 0);
   posPushHistoryForPage(id);
 }
@@ -20155,7 +20200,7 @@ function posSetupRoomAutocomplete(){
           e.preventDefault();
           input.value = r.no;
           close();
-          posRoomNoChanged(input);
+          posRoomNoChanged(input, true);
         });
         menu.appendChild(row);
       });
@@ -20176,12 +20221,134 @@ function posSetupRoomAutocomplete(){
   input.addEventListener('blur', function(){ setTimeout(close, 120); });
 }
 
-function posRoomNoChanged(input){
+// ---------- Order No(QT): prefix, fixed length, N/A ----------
+// Every QT number here is 5 digits and shares a leading run that only changes
+// when the restaurant's book rolls over (44xxx today) — so the prefix is
+// configured once in Settings, pre-typed into every new receipt and locked
+// against editing, and staff only key the digits that actually differ.
+// Device-local, like the rest of the POS's own settings (menu overrides,
+// extras): each terminal's book can be on a different prefix.
+var POS_QT_PREFIX_KEY = 'pos_qt_prefix_v1';
+var POS_QT_LENGTH = 5;
+
+function posGetQtPrefix(){
+  try { return (localStorage.getItem(POS_QT_PREFIX_KEY) || '').replace(/\D/g, '').slice(0, POS_QT_LENGTH - 1); }
+  catch(e) { return ''; }
+}
+
+function posLoadQtPrefixInput(){
+  var el = document.getElementById('posQtPrefixInput');
+  if (el) el.value = posGetQtPrefix();
+}
+
+function posSaveQtPrefix(){
+  var el = document.getElementById('posQtPrefixInput');
+  if (!el) return;
+  var val = (el.value || '').replace(/\D/g, '');
+  if (val.length > POS_QT_LENGTH - 1) {
+    posShowToast('The prefix can be at most ' + (POS_QT_LENGTH - 1) + ' digits — a QT number is ' + POS_QT_LENGTH + ' digits and staff still need at least one to type.', 'error');
+    return;
+  }
+  try { localStorage.setItem(POS_QT_PREFIX_KEY, val); }
+  catch(e) { posShowToast('Could not save the prefix on this device.', 'error'); return; }
+  el.value = val;
+  posShowToast(val ? 'QT prefix set to ' + val + ' — new receipts will start with it.' : 'QT prefix cleared.');
+  // Only re-seed a receipt that hasn't been started yet, so changing the
+  // setting can't rewrite a QT number already typed on an open invoice.
+  var orderInput = document.getElementById('posOrderNo');
+  if (orderInput && !posFormDirty && !posViewingRecord && !posEditingRecord) posApplyQtPrefixToField();
+}
+
+// Seeds the empty field with the prefix. Never touches a field that already
+// has something in it, and never fights the N/A checkbox.
+function posApplyQtPrefixToField(){
+  var orderInput = document.getElementById('posOrderNo');
+  var naBox = document.getElementById('posOrderNoNA');
+  if (!orderInput || orderInput.disabled || (naBox && naBox.checked)) return;
+  if ((orderInput.value || '').trim()) return;
+  orderInput.value = posGetQtPrefix();
+}
+
+// Keeps the field digits-only, at most POS_QT_LENGTH long, and with the
+// configured prefix un-erasable: whatever the edit was, the value is rebuilt
+// as prefix + the digits that came after it. Backspacing into the prefix
+// therefore just stops, rather than letting a 4-digit or wrong-series number
+// through. Caret goes to the end because every edit here is a digit typed at
+// the end anyway.
+function posOrderNoInput(el){
+  var prefix = posGetQtPrefix();
+  var digits = (el.value || '').replace(/\D/g, '');
+  var matched = 0;
+  while (matched < prefix.length && matched < digits.length && digits.charAt(matched) === prefix.charAt(matched)) matched++;
+  var rest = digits.slice(matched).slice(0, POS_QT_LENGTH - prefix.length);
+  el.value = prefix + rest;
+  try { el.setSelectionRange(el.value.length, el.value.length); } catch(e) {}
+}
+
+// Same pattern as the hotel's CNIC N/A box (toggleNA): ticking it fills in
+// "N/A" and locks the field, unticking clears it back to the prefix and puts
+// the cursor there.
+function posToggleOrderNoNA(){
+  var input = document.getElementById('posOrderNo');
+  var box = document.getElementById('posOrderNoNA');
+  if (!input || !box) return;
+  input.classList.remove('field-error');
+  if (box.checked) {
+    input.value = 'N/A';
+    input.disabled = true;
+  } else {
+    input.disabled = false;
+    input.value = posGetQtPrefix();
+    input.focus();
+    try { input.setSelectionRange(input.value.length, input.value.length); } catch(e) {}
+  }
+}
+
+// New receipt → the cursor is already in Order No(QT), after the prefix, so
+// the first thing typed is the number. Deferred a frame: posGoToNewReceipt
+// may still be switching pages, and focusing a field on a page that isn't
+// shown yet does nothing.
+function posFocusOrderNo(){
+  setTimeout(function(){
+    var input = document.getElementById('posOrderNo');
+    var page = document.getElementById('page-pos-invoice');
+    if (!input || input.disabled || !page || !page.classList.contains('visible')) return;
+    if (page.classList.contains('pos-view-only') || page.classList.contains('pos-locked-view')) return;
+    input.focus();
+    try { input.setSelectionRange(input.value.length, input.value.length); } catch(e) {}
+  }, 0);
+}
+
+var POS_DEFAULT_CUSTOMER = 'Walkin Customer';
+var POS_ROOM_SERVICE_CUSTOMER = 'Room Service';
+
+// A room number on the invoice means the food went upstairs, so the customer
+// is Room Service — filled in automatically instead of being retyped on every
+// room order. Only ever overwrites the untouched default, never a name staff
+// actually typed, and clearing the room puts the default back (but only if
+// it's still sitting on the auto-filled "Room Service"). Staff remain free to
+// type anything over either.
+function posSyncCustomerToRoom(roomVal){
+  var cust = document.getElementById('posCustomer');
+  if (!cust) return;
+  var cur = (cust.value || '').trim().toLowerCase();
+  if (roomVal) {
+    if (!cur || cur === POS_DEFAULT_CUSTOMER.toLowerCase()) cust.value = POS_ROOM_SERVICE_CUSTOMER;
+  } else if (cur === POS_ROOM_SERVICE_CUSTOMER.toLowerCase()) {
+    cust.value = POS_DEFAULT_CUSTOMER;
+  }
+}
+
+// fromUser: true only when the room field was actually typed in or picked
+// from its dropdown. Restoring a saved invoice/draft calls this too, and
+// must never rewrite the customer that was stored with it.
+function posRoomNoChanged(input, fromUser){
   var val = (input.value || '').trim();
   var isValid = !val || POS_ROOMS.some(function(r){ return r.no.toLowerCase() === val.toLowerCase(); });
   input.style.borderColor = isValid ? '' : '#dc2626';
   input.style.background = isValid ? '' : '#fdecec';
   input.style.color = isValid ? '' : '#7a1d1d';
+  if (fromUser) posSyncCustomerToRoom(val);
   posRecalcAll();
 }
 
@@ -20564,14 +20731,33 @@ async function posNextInvoiceNo(){
   }catch(e){ console.error('POS invoice numbering failed', e); return null; }
 }
 
-function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum){
+// Where an already-posted invoice's money currently stands. Only meaningful
+// for posted records — everywhere a list mixes posted and unposted rows the
+// Posted/Not Posted badge (showStatus) is the useful one instead.
+function posPaymentStatus(record){
+  if (record.collected) return { cls: 'collected', label: 'Collected', title: 'Collected by Front Office' + (record.collectedBy ? ' — ' + record.collectedBy : '') };
+  if (record.sentToFrontOffice) return { cls: 'at-fo', label: 'At Front Office', title: 'Sent to Front Office — waiting to be collected' };
+  var bal = (record.amount || 0) - (record.paid || 0);
+  if (bal <= 0.004) return { cls: 'paid', label: 'Paid', title: 'Paid in full' };
+  if ((record.paid || 0) > 0.004) return { cls: 'partial', label: 'Partial', title: 'Partly paid — ' + bal.toFixed(2) + ' still outstanding' };
+  return { cls: 'pending', label: 'Pending', title: 'Nothing paid yet — ' + bal.toFixed(2) + ' outstanding' };
+}
+
+// showPayStatus: swaps the INVOICE # column for the payment-status pill
+// above. Recent Invoices/Guests only ever list posted invoices, so the
+// number was dead weight there — the row still opens the invoice on click
+// and names it in the row tooltip.
+function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, showPayStatus){
   var tr = document.createElement('tr');
   tr.dataset.invoiceId = record.id;
   tr.className = 'fo-row';
   tr.title = 'Click to open ' + record.no + ' in Point of Sale';
   var itemsText = (record.items || []).map(function(it){ return it.name; }).filter(Boolean).join(', ');
+  var payStatus = showPayStatus ? posPaymentStatus(record) : null;
   tr.innerHTML = (rowNum != null ? '<td>' + rowNum + '</td>' : '') +
-    '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>' +
+    (payStatus
+      ? '<td><span class="status-badge ' + payStatus.cls + '" title="' + posEscapeHtml(payStatus.title) + '">' + payStatus.label + '</span></td>'
+      : '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>') +
     (showOrderNo ? '<td>' + posEscapeHtml(record.orderNo || '') + '</td>' : '') +
     '<td>' + posEscapeHtml(record.date) + '</td>' +
     '<td>' + posEscapeHtml(record.room) + '</td>' +
@@ -21308,7 +21494,15 @@ function posOpenRecordInForm(record){
   var tableInput = document.getElementById('posTable');
   if (tableInput) tableInput.value = record.table || '';
   var orderInput = document.getElementById('posOrderNo');
-  if (orderInput) orderInput.value = record.orderNo || '';
+  var orderNABox = document.getElementById('posOrderNoNA');
+  var recOrderNo = record.orderNo || '';
+  var recOrderNA = recOrderNo.trim().toUpperCase() === 'N/A';
+  if (orderNABox) orderNABox.checked = recOrderNA;
+  if (orderInput) {
+    orderInput.classList.remove('field-error');
+    orderInput.value = recOrderNo;
+    orderInput.disabled = recOrderNA;
+  }
   var roomNoInput = document.getElementById('posRoomNoField');
   if (roomNoInput) { roomNoInput.value = record.roomNo || ''; posRoomNoChanged(roomNoInput); }
   var invoiceDateInput = document.getElementById('posInvoiceDate');
@@ -21360,18 +21554,69 @@ function posOpenRecordInForm(record){
 // modal is open (those handle their own Escape), and no autocomplete
 // dropdown is open (that Escape just closes the dropdown, same as clicking
 // away, not the whole edit).
-function posEscCancelEdit(e){
-  if (e.key !== 'Escape') return;
-  if (!posEditingRecord) return;
+function posAnyModalOpen(){
   var openModalIds = ['posDeleteModal', 'posPostModal', 'posDayLockModal', 'posMenuPanel', 'posMenuEditModal'];
-  var modalOpen = openModalIds.some(function(id){
+  return openModalIds.some(function(id){
     var el = document.getElementById(id);
     return el && el.style.display && el.style.display !== 'none';
   });
-  if (modalOpen) return;
+}
+
+function posEscCancelEdit(e){
+  if (e.key !== 'Escape') return;
+  if (!posEditingRecord) return;
+  if (posAnyModalOpen()) return;
   var wrap = e.target.closest && e.target.closest('.search-wrap');
   if (wrap && wrap.querySelector('.ac-menu.show')) return;
   posResetForm();
+}
+
+// Fields that only ever hold digits — the POS number inputs. Typing a letter
+// into one is already a no-op, so single-letter shortcuts are free to fire
+// while the cursor sits in them.
+function posIsDigitsOnlyField(el){
+  if (!el || el.tagName !== 'INPUT') return false;
+  if (el.id === 'posOrderNo' || el.id === 'posQtPrefixInput') return true;
+  return el.classList.contains('qty-input') || el.classList.contains('price-input') || el.classList.contains('pct-input');
+}
+
+// N anywhere in the restaurant presses whatever "＋ New" button the page
+// you're on is showing — same shortcut from Receipts, Charges Summary,
+// Front Office Pending or the invoice form itself, no reaching for the
+// mouse between orders. Deliberately narrow about when it fires: never
+// while a field has focus (typing "Naan" must stay typing), never with a
+// modifier held (Ctrl/Cmd+N is the browser's), and never while a modal or
+// confirm dialog is up — those own the keyboard until they're answered.
+function posNewReceiptHotkey(e){
+  if (e.key !== 'n' && e.key !== 'N') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  var t = e.target;
+  if (t && (t.isContentEditable || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+  // A digits-only field can't be receiving a literal "n", so the shortcut
+  // still fires from inside one. This matters more than it sounds: a new
+  // receipt parks the cursor in Order No(QT), so without this exemption the
+  // very next N would be swallowed by the field it just landed in.
+  if (t && t.tagName === 'INPUT' && !posIsDigitsOnlyField(t)) return;
+  if (posAnyModalOpen() || confirmDialogActive) return;
+  // Only while the restaurant module is the view on screen — .view.active is
+  // the app's own show/hide switch (see showView). NOT an offsetParent check:
+  // that reads null for plenty of on-screen elements and killed the shortcut
+  // outright.
+  var restaurantView = document.getElementById('view-restaurant');
+  if (!restaurantView || !restaurantView.classList.contains('active')) return;
+  var page = document.querySelector('#restaurantNative .app-page.visible');
+  if (!page) return;
+  e.preventDefault();
+  // On the invoice form itself an unsaved order is at stake, so go through
+  // the action bar's own New — the header "＋ New" wipes the form outright,
+  // which is fine for a deliberate click but too sharp for a stray N.
+  // posRequestNewForm only asks when there's actually something to lose.
+  if (page.id === 'page-pos-invoice' && posFormDirty) { posRequestNewForm(); return; }
+  var newBtn = page.querySelector('[onclick*="posGoToNewReceipt"]');
+  if (newBtn) newBtn.click(); else posGoToNewReceipt();
+  // Pressed on an already-blank Point of Sale, everything above is a no-op on
+  // screen — without a word from the app that reads as a dead shortcut.
+  posShowToast('New receipt — type the Order No(QT).');
 }
 
 // The explicit "open a view-only invoice up for actual editing" step —
@@ -22134,8 +22379,25 @@ function posRequestPost(mode){
   var totals = posRecalcAll();
   if (totals.balance < -0.004) { posShowToast('Payments (' + totals.paid.toFixed(2) + ') exceed the total (' + totals.grandTotal.toFixed(2) + ') — fix the payment amount before posting.', 'error'); return; }
 
+  // Order No(QT) is required now, not a "flagged but allowed" omission — the
+  // N/A box is the sanctioned way past it, exactly like the hotel's CNIC.
+  // Same red field (focusError) as the hotel's own required fields.
   var orderInput = document.getElementById('posOrderNo');
+  var orderNABox = document.getElementById('posOrderNoNA');
+  var orderIsNA = !!(orderNABox && orderNABox.checked);
   var orderNoVal = orderInput ? orderInput.value.trim() : '';
+  if (!orderIsNA) {
+    if (!orderNoVal) {
+      posShowToast('Enter the Order No(QT) — or tick N/A if this order genuinely doesn\'t have one.', 'error');
+      if (orderInput) focusError(orderInput);
+      return;
+    }
+    if (!/^\d+$/.test(orderNoVal) || orderNoVal.length !== POS_QT_LENGTH) {
+      posShowToast('Order No(QT) must be exactly ' + POS_QT_LENGTH + ' digits — "' + orderNoVal + '" is ' + orderNoVal.length + '.', 'error');
+      if (orderInput) focusError(orderInput);
+      return;
+    }
+  }
 
   var roomNoInput = document.getElementById('posRoomNoField');
   var roomNoVal = (roomNoInput && roomNoInput.value.trim()) || '—';
@@ -22154,8 +22416,8 @@ function posRequestPost(mode){
   // work, and listing it every single time trained everyone to click past
   // the whole caution block. Only real problems belong here.
   var cautionLines = [];
-  if (!orderNoVal) cautionLines.push('No Order No(QT) entered — Confirm to proceed anyway.');
-  if (orderNoVal) {
+  if (orderIsNA) cautionLines.push('Order No(QT) marked N/A — this invoice will be saved without one.');
+  if (orderNoVal && !orderIsNA) {
     var qtDupe = posInvoices.some(function(r){
       return (!posEditingRecord || r.id !== posEditingRecord.id) && !r.deleted && (r.orderNo || '').trim().toLowerCase() === orderNoVal.toLowerCase();
     });
@@ -22275,12 +22537,12 @@ function posConfirmPost(){
 // untouched record — its loaded item/customer/payment values read as
 // "data" even though nothing had actually changed yet.
 function posRequestNewForm(){
-  if (!posFormDirty) { posResetForm(); return; }
+  if (!posFormDirty) { posResetForm(); posFocusOrderNo(); return; }
 
   showConfirmModal(
     'This invoice has data that hasn\'t been posted, printed, or sent anywhere yet. Clear it and start a new one?',
     { title: 'Discard unsaved invoice?', okText: 'Discard', cancelText: 'Keep editing', danger: true }
-  ).then(function(proceed){ if (proceed) posResetForm(); });
+  ).then(function(proceed){ if (proceed) { posResetForm(); posFocusOrderNo(); } });
 }
 
 // The "+ New" button every restaurant/POS page carries in its header —
@@ -22291,6 +22553,7 @@ function posGoToNewReceipt(){
   posResetForm();
   var posBtn = document.querySelector('.sidebar button[onclick*="page-pos-invoice"]');
   if (posBtn) posShowApp('page-pos-invoice', posBtn);
+  posFocusOrderNo();
 }
 
 function posResetForm(){
@@ -22365,7 +22628,13 @@ function posResetForm(){
   if (invoiceDateInput) { if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(posTodayISO(), true); else invoiceDateInput.value = posTodayISO(); }
   posApplyInvoiceDateLimits(); // back to a new receipt — future dates and locked days grayed out again
   var orderNoInput = document.getElementById('posOrderNo');
-  if (orderNoInput) orderNoInput.value = '';
+  var orderNoNABox = document.getElementById('posOrderNoNA');
+  if (orderNoNABox) orderNoNABox.checked = false;
+  if (orderNoInput) {
+    orderNoInput.classList.remove('field-error');
+    orderNoInput.disabled = false;
+    orderNoInput.value = posGetQtPrefix(); // blank receipt already carries the configured 44…
+  }
   var lineDescInput = document.getElementById('posLineDescription');
   if (lineDescInput) lineDescInput.value = '';
   try { localStorage.removeItem('pos_invoice_draft'); } catch(e) {}
@@ -22460,7 +22729,13 @@ function posLoadDraft(){
   var tableInput = document.getElementById('posTable');
   if (tableInput && draft.table) tableInput.value = draft.table;
   var orderInput = document.getElementById('posOrderNo');
-  if (orderInput && draft.orderNo) orderInput.value = draft.orderNo;
+  if (orderInput && draft.orderNo) {
+    orderInput.value = draft.orderNo;
+    var draftOrderNA = draft.orderNo.trim().toUpperCase() === 'N/A';
+    orderInput.disabled = draftOrderNA;
+    var draftNABox = document.getElementById('posOrderNoNA');
+    if (draftNABox) draftNABox.checked = draftOrderNA;
+  }
   var roomNoInput = document.getElementById('posRoomNoField');
   if (roomNoInput && draft.roomNo) { roomNoInput.value = draft.roomNo; posRoomNoChanged(roomNoInput); }
   var invoiceDateInput = document.getElementById('posInvoiceDate');
@@ -22637,11 +22912,13 @@ function posBootApp(){
   try { posRefreshMenuStats(); } catch(e) { console.error('[POS] posRefreshMenuStats failed', e); }
   try { posSetupRoomAutocomplete(); } catch(e) { console.error('[POS] posSetupRoomAutocomplete failed', e); }
   document.addEventListener('keydown', posEscCancelEdit);
+  document.addEventListener('keydown', posNewReceiptHotkey);
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
   if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
   var posInvoiceDateEl = document.getElementById('posInvoiceDate');
   if (posInvoiceDateEl) { posInvoiceDateEl.value = posTodayISO(); posInitDatePicker(posInvoiceDateEl); posAttachDateStepper('posInvoiceDate'); posApplyInvoiceDateLimits(); }
   posLoadDraft();
+  posApplyQtPrefixToField(); // no draft to restore -> the empty field still opens on the prefix
   posRecalcAll();
   var receiptsDateInitEl = document.getElementById('receiptsDateFilter');
   if (receiptsDateInitEl) { receiptsDateInitEl.value = posTodayISO(); posInitDatePicker(receiptsDateInitEl); posAttachDateStepper('receiptsDateFilter'); }
