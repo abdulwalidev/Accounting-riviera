@@ -20148,6 +20148,7 @@ function posSetupAutocomplete(input){
     }
     close();
     posRecalcAll();
+    posEnsureBlankLine(); // a fresh line is always waiting under the last item
   }
 
   function openMenu(){
@@ -20173,16 +20174,11 @@ function posSetupAutocomplete(input){
         pick(matches[activeIdx >= 0 ? activeIdx : 0]);
       }
       close();
-      // On to this line's quantity — the per-line description between them
-      // is optional and almost always skipped, so Enter jumps it (Tab still
-      // reaches it). From qty onward posRowFieldEnter walks the rest of the
-      // row and only then opens a new line.
-      if (input.value.trim()) {
-        var row = input.closest('tr');
-        var qtyInput = row ? row.querySelector('.qty-cell input') : null;
-        if (qtyInput) { qtyInput.focus(); if (qtyInput.select) qtyInput.select(); }
-        else if (!posFocusNextRowField(input)) posFocusNewLine();
-      }
+      // Straight on to the NEXT item, not this line's description or
+      // quantity — a picked item already comes with its price and qty 1, so
+      // the only thing left to type is the next one. Description and qty
+      // stay reachable with Tab or the mouse.
+      if (input.value.trim()) posFocusNextItemLine(input);
       return;
     }
     if (!menu.classList.contains('show')) return;
@@ -20725,6 +20721,10 @@ function posAddMenuSelection(){
   posFormDirty = true;
   posCloseMenuPanel();
   posRecalcAll();
+  // Same as picking an item by hand: a blank line is opened underneath and
+  // the caret is put on it, ready for the next one.
+  posEnsureBlankLine();
+  posFocusFirstEmptyItem();
   posShowToast(rows.length === 1 ? 'Added 1 item.' : 'Added ' + rows.length + ' items.');
 }
 
@@ -23136,6 +23136,29 @@ function posRowFieldEnter(e, input){
   if (e.key !== 'Enter') return;
   e.preventDefault();
   if (!posFocusNextRowField(input)) posFocusNewLine();
+}
+
+// Keeps one empty line sitting under the last filled-in item, so there's
+// always somewhere to type the next one — no reaching for "+ Add line"
+// between items. Does nothing if the last line is already blank.
+function posEnsureBlankLine(){
+  var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
+  if (!tbody) return;
+  var rows = tbody.querySelectorAll('tr');
+  var lastRow = rows[rows.length - 1];
+  var input = lastRow ? lastRow.querySelector('.pos-item-input') : null;
+  if (input && input.value.trim()) posAddLine();
+}
+
+// Moves from one item straight to the next item's name field, opening a new
+// line first if this was the last one.
+function posFocusNextItemLine(currentInput){
+  posEnsureBlankLine();
+  var row = currentInput.closest ? currentInput.closest('tr') : null;
+  var next = row ? row.nextElementSibling : null;
+  var input = next ? next.querySelector('.pos-item-input') : null;
+  if (input) input.focus();
+  else posFocusFirstEmptyItem();
 }
 
 // Puts the caret on the first item line still waiting to be filled in, or on
