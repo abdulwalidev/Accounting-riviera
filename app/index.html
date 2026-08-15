@@ -3800,8 +3800,20 @@
 #page-pos-invoice .grp-pill {border:1px solid var(--blue); color:var(--blue); border-radius:18px; padding:6px 16px; font-size:15px; background:#fff; cursor:pointer; user-select:none; white-space:nowrap; flex:0 0 auto;}
 #page-pos-invoice .grp-pill:hover {background:#eaf2ff;}
 #page-pos-invoice .grp-pill.active {background:var(--blue); color:#fff;}
+/* The group-pill menu popup reuses Manage Menu's Part #/Item/Price table,
+   but those table.parts rules are scoped to #page-manage-parts — so in here
+   it rendered as a bare browser table: no header bar, no cell padding, and
+   nothing that follows the theme, which is what made it look pasted-in
+   (and stay light) once dark mode was on. Same rules as Manage Menu's, so
+   it picks up light/dark from the same --tblhead-* variables the rest of
+   the module already uses. */
+#page-pos-invoice table.parts {width:100%; border-collapse:collapse; font-size:12.5px; border-radius:8px; overflow:hidden;}
+#page-pos-invoice table.parts th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:10.5px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong); text-transform:uppercase;}
+#page-pos-invoice table.parts th.num, #page-pos-invoice table.parts td.num {text-align:right;}
+#page-pos-invoice table.parts td {padding:7px 10px; border-bottom:1px solid var(--border); color:var(--text);}
 #page-pos-invoice .menu-panel-row {cursor:pointer;}
 #page-pos-invoice .menu-panel-row:hover {background:rgba(59,130,246,.08);}
+html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba(91,157,255,.14);}
 #page-pos-invoice .bottom-grid {display:grid; grid-template-columns:1.2fr 1fr; gap:16px; margin-bottom:16px;}
 #page-pos-invoice .tax-card, #page-pos-invoice .totals-card {padding:16px 20px;}
 #page-pos-invoice .section-title {font-size:11px; letter-spacing:.04em; color:var(--muted); font-weight:700; margin-bottom:12px;}
@@ -4275,6 +4287,10 @@ html[data-theme="dark"] #posDayLockModal > label{ color:#e8eaed !important; }
 html[data-theme="dark"] #posDayLockTypeInput{ background:#0A0A0A !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 html[data-theme="dark"] #posDeleteDetails,
 html[data-theme="dark"] #posPostDetails{ background:#1a1c20 !important; color:#c7ccd6 !important; }
+/* The caution band is a direct child of the modal, so the "> div" rule
+   above would repaint its warning red as ordinary body text — hence the
+   extra #id here to outweigh it. */
+html[data-theme="dark"] #posPostModal > div#posPostCautionBadge{ background:#3a1214 !important; border-color:#7f1d1d !important; color:#fca5a5 !important; }
 html[data-theme="dark"] #posDeleteConfirmInput,
 html[data-theme="dark"] #posPostEditConfirmInput{ background:#0A0A0A !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 html[data-theme="dark"] #posDeleteModal button[onclick="posCancelDelete()"],
@@ -5726,8 +5742,11 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 <div id="posPostModal" onkeydown="if(event.key==='Enter' && !document.getElementById('posPostConfirmBtn').disabled){ event.preventDefault(); posConfirmPost(); } if(event.key==='Escape'){ event.preventDefault(); posCancelPost(); }" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
   <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
     <div style="font-weight:700; font-size:14.5px; color:#1f2430;" id="posPostTitle">Post this invoice?</div>
-    <span id="posPostCautionBadge" style="display:none; font-weight:800; font-size:16px; color:#dc2626; white-space:nowrap;"></span>
   </div>
+  <!-- Was a nowrap span sharing the title's flex row, where it was squeezed
+       down to almost nothing. It's the one thing in this dialog that should
+       stop you, so it gets its own full-width band. -->
+  <div id="posPostCautionBadge" style="display:none; font-weight:800; font-size:18px; line-height:1.3; color:#b91c1c; background:#fee2e2; border:1px solid #fca5a5; border-radius:8px; padding:12px 14px; margin-bottom:12px; text-align:center;"></div>
   <div id="posPostDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:16px; background:#f7f8fa; border-radius:6px; padding:10px 12px;"></div>
   <div id="posPostEditConfirmWrap" style="display:none;">
     <div style="font-size:12.5px; color:#1f2430; margin-bottom:6px;">Type <b>edit</b> below to confirm updating this existing invoice:</div>
@@ -20298,6 +20317,12 @@ function posEnsurePaymentRowDates(){
     // Never left as a raw native date field — every other date in the app
     // is a flatpickr, and an un-enhanced one reads as "empty" next to them.
     if (!input._flatpickr) posInitDatePicker(input);
+    // The value can be right while the box still looks empty: flatpickr
+    // shows a separate alt input, and anything that blanks that (see the
+    // clear-form/remove-row guards) leaves the two out of step. Resync
+    // rather than trusting the display.
+    var alt = input._flatpickr && input._flatpickr.altInput;
+    if (input.value && alt && !alt.value) { input._flatpickr.setDate(input.value, false); return; }
     if (input.value) return;
     // `false` = don't fire change: this runs inside posRecalcAll, and the
     // change handler is posRecalcAll itself.
@@ -20438,6 +20463,10 @@ function posRemovePaymentRow(btn){
   var rows = container.querySelectorAll('.pay-row');
   if (rows.length <= 1) {
     row.querySelectorAll('input').forEach(function(inp){
+      // flatpickr's visible alt field lives in this cell too and has none
+      // of these classes — blanking it here wiped the date off screen right
+      // after setDate() filled it. See the same guard in the clear-form path.
+      if (inp.classList.contains('flatpickr-alt-input')) return;
       // flatpickr swaps the original .pay-date-input's own type to
       // "hidden" once altInput enhances it — checking .type here instead
       // of the class would miss it once enhanced, wiping the date via the
@@ -20590,6 +20619,40 @@ function posMakeRowClickable(tr, record){
 // posLockedDays itself is now declared up with the other POS state that has
 // to exist before init() can boot this module — see the comment there.
 
+// Local calendar date -> 'YYYY-MM-DD'. Not toISOString(), which converts to
+// UTC first and therefore reports yesterday for any evening date here.
+function posDateToISO(d){
+  if (!d) return '';
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
+}
+
+// A brand-new receipt can only be dated today: a future date isn't business
+// that has happened yet, and past days are closed by Day Lock — the same
+// rule the hotel side enforces on its own entry dates. Both are grayed out
+// in the calendar rather than rejected after the fact, so the restriction
+// is visible before anyone tries. A past day someone deliberately unlocked
+// stays selectable — that's what unlocking it is for.
+// Viewing or editing a saved invoice lifts the limits entirely: its own
+// date must display as-is, and flatpickr drops a preloaded value that falls
+// outside them.
+function posApplyInvoiceDateLimits(){
+  var el = document.getElementById('posInvoiceDate');
+  if (!el || !el._flatpickr) return;
+  var fp = el._flatpickr;
+  if (posViewingRecord) {
+    fp.set('maxDate', null);
+    fp.set('disable', []);
+    return;
+  }
+  fp.set('maxDate', posTodayISO());
+  fp.set('disable', [function(date){
+    var iso = posDateToISO(date);
+    return iso < posTodayISO() && posIsDateLocked(iso);
+  }]);
+}
+
 function posFindLockRow(iso){
   return posLockedDays.find(function(l){ return l.lock_date === iso; });
 }
@@ -20604,6 +20667,7 @@ function posIsLocked(record){
   return posIsDateLocked(record.isoDate);
 }
 function posRefreshAfterLockChange(){
+  posApplyInvoiceDateLimits(); // a day just locked/unlocked changes what a new receipt may be dated
   posRenderRecentInvoices();
   receiptsRefresh();
   printedOnlyRefresh();
@@ -21249,6 +21313,7 @@ function posOpenRecordInForm(record){
   if (roomNoInput) { roomNoInput.value = record.roomNo || ''; posRoomNoChanged(roomNoInput); }
   var invoiceDateInput = document.getElementById('posInvoiceDate');
   var openIso = record.isoDate || posTodayISO();
+  posApplyInvoiceDateLimits(); // lift the new-receipt limits first — a saved invoice's own date may sit outside them
   if (invoiceDateInput) {
     if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(openIso, true); else invoiceDateInput.value = openIso;
   }
@@ -21362,15 +21427,19 @@ function printedOnlyRefresh(){
   var dateInput = document.getElementById('printedOnlyDateFilter');
   var filterDMY = dateInput && dateInput.value ? receiptsDateToDMY(dateInput.value) : null;
   var shown = 0;
+  var guestShown = 0;
   var hasGuest = false;
   posInvoices.forEach(function(record){
     if (record.deleted || record.posted) return;
     if (filterDMY && record.date !== filterDMY) return;
     var row = posBuildInvoiceRow(record, false, true);
-    if (/guest/i.test(record.customer || '')) { guestBody.appendChild(row); hasGuest = true; }
+    if (/guest/i.test(record.customer || '')) { guestBody.appendChild(row); hasGuest = true; guestShown++; }
     else { body.appendChild(row); shown++; }
   });
-  if (countEl) countEl.textContent = shown + ' unposted';
+  // Guest receipts counted in too — they're unposted receipts sitting on
+  // this page like any other, just in their own table, and leaving them out
+  // made this number disagree with the sidebar count for no visible reason.
+  if (countEl) countEl.textContent = (shown + guestShown) + ' unposted';
   if (guestCard) guestCard.style.display = hasGuest ? '' : 'none';
   posUpdatePrintedOnlyNavCount();
 }
@@ -22081,8 +22150,10 @@ function posRequestPost(mode){
   var titleEl = document.getElementById('posPostTitle');
   if (titleEl) titleEl.textContent = POS_POST_MODE_LABELS[mode] || 'Post this invoice?';
 
+  // Posting without printing first isn't a caution — it's a normal way to
+  // work, and listing it every single time trained everyone to click past
+  // the whole caution block. Only real problems belong here.
   var cautionLines = [];
-  if (mode === 'post') cautionLines.push('You haven\'t printed this — are you sure you want to post it?');
   if (!orderNoVal) cautionLines.push('No Order No(QT) entered — Confirm to proceed anyway.');
   if (orderNoVal) {
     var qtDupe = posInvoices.some(function(r){
@@ -22111,16 +22182,30 @@ function posRequestPost(mode){
     if (flagged) cautionLines.push('"' + name + '" isn\'t a recognized menu item — flagged, but you can still post it.');
   });
 
+  // The cautions ARE the reason this dialog exists, so they lead it: a
+  // headline count plus the warnings themselves, spelled out at a readable
+  // size. They used to be a cramped red count in the title row with the
+  // actual sentences buried in small text inside the details box, above the
+  // item list — easy to skim straight past on the way to Confirm.
   var cautionBadge = document.getElementById('posPostCautionBadge');
   if (cautionBadge) {
     if (cautionLines.length) {
-      cautionBadge.textContent = '⚠️ ' + cautionLines.length + ' caution' + (cautionLines.length === 1 ? '' : 's') + ' found';
+      cautionBadge.innerHTML =
+        '<div style="font-size:19px; letter-spacing:.01em;">⚠️ ' + cautionLines.length + ' caution' + (cautionLines.length === 1 ? '' : 's') + '</div>' +
+        '<ul style="margin:10px 0 0; padding-left:22px; text-align:left; font-size:13.5px; font-weight:600; line-height:1.55;">' +
+        cautionLines.map(function(c){ return '<li style="margin-bottom:4px;">' + posEscapeHtml(c) + '</li>'; }).join('') +
+        '</ul>';
       cautionBadge.style.display = '';
     } else {
-      cautionBadge.textContent = '';
+      cautionBadge.innerHTML = '';
       cautionBadge.style.display = 'none';
     }
   }
+  // Confirm goes red whenever there's something to be cautious about, so
+  // the button itself carries the warning — you can't reach it without
+  // having seen that this isn't the ordinary case.
+  var confirmBtnColor = document.getElementById('posPostConfirmBtn');
+  if (confirmBtnColor) confirmBtnColor.style.background = cautionLines.length ? '#dc2626' : '#2563eb';
 
   var itemListHtml = itemLines.length ?
     '<table style="width:100%; border-collapse:collapse; font-size:12px; margin:2px 0 8px;">' +
@@ -22134,8 +22219,7 @@ function posRequestPost(mode){
   var detailsEl = document.getElementById('posPostDetails');
   if (detailsEl) {
     detailsEl.innerHTML =
-      cautionLines.map(function(c){ return '<b style="color:#dc2626;">' + posEscapeHtml(c) + '</b><br>'; }).join('') +
-      itemListHtml +
+      itemListHtml + // cautions moved up into their own band — see posPostCautionBadge above
       'Customer: <b>' + posEscapeHtml(customer) + '</b><br>' +
       'Room: ' + posEscapeHtml(roomNoVal) + '<br>' +
       'Total: ' + totals.grandTotal.toFixed(2) + ' &nbsp;·&nbsp; Paid: ' + totals.paid.toFixed(2);
@@ -22247,6 +22331,13 @@ function posResetForm(){
     prows.forEach(function(row, i){ if (i > 0) row.remove(); });
     var pfirst = payContainer.querySelector('.pay-row');
     if (pfirst) pfirst.querySelectorAll('input').forEach(function(inp){
+      // flatpickr's visible alt field is a SECOND input in this same cell,
+      // and it doesn't carry the .pay-date-input class — so it fell into
+      // the "clear it" branch below and was blanked immediately after
+      // setDate() had just filled it. That's why the DATE box could sit
+      // empty on a new receipt while the value underneath was today all
+      // along. It's a display for the real input, never cleared directly.
+      if (inp.classList.contains('flatpickr-alt-input')) return;
       // Same flatpickr type-swap gotcha as posRemovePaymentRow — check the
       // class, not .type, or an already-enhanced date field gets wiped
       // blank here instead of reset to today via setDate().
@@ -22272,6 +22363,7 @@ function posResetForm(){
   if (roomNoInput) { roomNoInput.value = ''; posRoomNoChanged(roomNoInput); }
   var invoiceDateInput = document.getElementById('posInvoiceDate');
   if (invoiceDateInput) { if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(posTodayISO(), true); else invoiceDateInput.value = posTodayISO(); }
+  posApplyInvoiceDateLimits(); // back to a new receipt — future dates and locked days grayed out again
   var orderNoInput = document.getElementById('posOrderNo');
   if (orderNoInput) orderNoInput.value = '';
   var lineDescInput = document.getElementById('posLineDescription');
@@ -22548,13 +22640,19 @@ function posBootApp(){
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
   if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
   var posInvoiceDateEl = document.getElementById('posInvoiceDate');
-  if (posInvoiceDateEl) { posInvoiceDateEl.value = posTodayISO(); posInitDatePicker(posInvoiceDateEl); posAttachDateStepper('posInvoiceDate'); }
+  if (posInvoiceDateEl) { posInvoiceDateEl.value = posTodayISO(); posInitDatePicker(posInvoiceDateEl); posAttachDateStepper('posInvoiceDate'); posApplyInvoiceDateLimits(); }
   posLoadDraft();
   posRecalcAll();
   var receiptsDateInitEl = document.getElementById('receiptsDateFilter');
   if (receiptsDateInitEl) { receiptsDateInitEl.value = posTodayISO(); posInitDatePicker(receiptsDateInitEl); posAttachDateStepper('receiptsDateFilter'); }
+  // Printed-Only deliberately opens with NO date filter, unlike every other
+  // list here. It's a to-do list, not a daily report: a receipt printed on
+  // the 5th and never posted is exactly what you need to see, and defaulting
+  // to today hid those — the page read "1 unposted" while five were actually
+  // sitting there. Now it matches the sidebar count. Picking a date still
+  // narrows it as before.
   var printedOnlyDateInitEl = document.getElementById('printedOnlyDateFilter');
-  if (printedOnlyDateInitEl) { printedOnlyDateInitEl.value = posTodayISO(); posInitDatePicker(printedOnlyDateInitEl); posAttachDateStepper('printedOnlyDateFilter'); }
+  if (printedOnlyDateInitEl) { printedOnlyDateInitEl.value = ''; posInitDatePicker(printedOnlyDateInitEl); posAttachDateStepper('printedOnlyDateFilter'); }
   var frontOfficeDateInitEl = document.getElementById('frontOfficeDateFilter');
   if (frontOfficeDateInitEl) { frontOfficeDateInitEl.value = posTodayISO(); posInitDatePicker(frontOfficeDateInitEl); posAttachDateStepper('frontOfficeDateFilter'); }
   ['deletedDateFilter', 'pendingPaymentsDateFilter'].forEach(function(id){
