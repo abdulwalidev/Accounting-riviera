@@ -6188,7 +6188,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="card filters-card">
     <div class="filters-label">FILTERS</div>
-    <div class="filters-grid" style="grid-template-columns:260px 220px 200px;">
+    <div class="filters-grid" style="grid-template-columns:260px max-content 200px;">
       <div><label>Search</label><input type="text" id="receiptsSearchInput" placeholder="Invoice #, Order #, Customer, Room…" oninput="receiptsRefresh()"></div>
       <div><label>Date</label><input type="date" id="receiptsDateFilter" onchange="receiptsRefresh()"></div>
       <div><label>Status</label>
@@ -6245,7 +6245,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="pos-page-head"><div class="h-title">Charges Summary</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
 
   <div class="card filters-card">
-    <div class="filters-grid" style="grid-template-columns:220px;">
+    <div class="filters-grid" style="grid-template-columns:max-content;">
       <div>
         <label>Date Range</label>
         <input type="text" id="csRange" placeholder="Select a date range">
@@ -6339,7 +6339,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="h-sub">How many of each menu item were sold in the selected period, and for how much — leave both dates blank to see everything.</div>
 
   <div class="card filters-card">
-    <div class="filters-grid" style="grid-template-columns:220px;">
+    <div class="filters-grid" style="grid-template-columns:max-content;">
       <div>
         <label>Date Range</label>
         <input type="text" id="qsRange" placeholder="Select a date range">
@@ -6404,7 +6404,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="card filters-card">
     <div class="filters-label">DATE</div>
-    <div class="filters-grid" style="grid-template-columns:220px;">
+    <div class="filters-grid" style="grid-template-columns:max-content;">
       <div><label>Date</label><input type="date" id="printedOnlyDateFilter" onchange="printedOnlyRefresh()"></div>
     </div>
   </div>
@@ -6453,7 +6453,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="card filters-card">
     <div class="filters-label">DATE</div>
-    <div class="filters-grid" style="grid-template-columns:220px;">
+    <div class="filters-grid" style="grid-template-columns:max-content;">
       <div><label>Date</label><input type="date" id="frontOfficeDateFilter" onchange="frontOfficeRefresh()"></div>
     </div>
   </div>
@@ -6496,7 +6496,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="card filters-card">
     <div class="filters-label">DATE</div>
-    <div class="filters-grid" style="grid-template-columns:220px;">
+    <div class="filters-grid" style="grid-template-columns:max-content;">
       <div><label>Date</label><input type="date" id="deletedDateFilter" onchange="deletedRefresh()"></div>
     </div>
   </div>
@@ -6526,7 +6526,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="card filters-card">
     <div class="filters-label">DATE</div>
-    <div class="filters-grid" style="grid-template-columns:220px;">
+    <div class="filters-grid" style="grid-template-columns:max-content;">
       <div><label>Date</label><input type="date" id="pendingPaymentsDateFilter" onchange="pendingPaymentsRefresh()"></div>
     </div>
   </div>
@@ -8527,7 +8527,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
     'dlDate','acDate','arDate','auditPageDate','rdDate','b19From',
     'cicoFrom','cicoTo','filterFrom','filterTo','hoFrom','hoTo','lgFrom','lgTo',
     'nprFrom','nprTo','parFrom','parTo','rvFrom','rvTo',
-    'csFromDate','csToDate','qsFromDate','qsToDate',
+    // Charges/Quantity Summary's from+to are hidden inputs driven by their
+    // range picker (initRangeDatePicker), not fields anyone types in — so
+    // their steppers were two stray sets of arrows stacked under the range
+    // box, stepping a date the page doesn't even show. Same reason the
+    // hotel's own range pairs (cicoFrom/To, filterFrom/To, ...) are in
+    // addDateStepper's disabledIds.
     'posInvoiceDate','receiptsDateFilter','printedOnlyDateFilter',
     'frontOfficeDateFilter','deletedDateFilter','pendingPaymentsDateFilter',
     'posDlDate','ccCheckoutDate','acnCheckinDate'
