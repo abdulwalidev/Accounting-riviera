@@ -4029,9 +4029,13 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row.picked {background:rgb
 #page-receipts .results-card {padding:20px;}
 #page-receipts .results-head {display:flex; justify-content:space-between; align-items:center; font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700; margin-bottom:14px;}
 #page-receipts .results-head .rh-count {font-size:12px; color:var(--blue); letter-spacing:normal; font-weight:600;}
-#page-receipts .status-badge {display:inline-block; border-radius:12px; padding:3px 10px; font-size:11px; font-weight:700; letter-spacing:.02em;}
-#page-receipts .status-badge.posted {background:#dcfce7; color:#15803d;}
-#page-receipts .status-badge.not-posted {background:#fdf1dc; color:var(--amber, #b45309);}
+/* Deleted is in here too: its rows now carry the same Posted / Not Posted
+   badge (a deleted print-only receipt is listed there rather than vanishing
+   — see deletedRefresh), and .status-badge is styled per page, so without
+   #page-deleted the badge rendered as bare unstyled text. */
+#page-receipts .status-badge, #page-deleted .status-badge {display:inline-block; border-radius:12px; padding:3px 10px; font-size:11px; font-weight:700; letter-spacing:.02em;}
+#page-receipts .status-badge.posted, #page-deleted .status-badge.posted {background:#dcfce7; color:#15803d;}
+#page-receipts .status-badge.not-posted, #page-deleted .status-badge.not-posted {background:#fdf1dc; color:var(--amber, #b45309);}
 #page-receipts table.rep {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:13px; border-radius:8px; overflow:hidden;}
 #page-receipts table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-receipts table.rep th.num {text-align:right;}
@@ -6492,7 +6496,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 <div class="wrap">
 
   <div class="pos-page-head"><div class="h-title">Deleted</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
-  <div class="h-sub">Invoices deleted after being posted (post/print &amp; post/sent to front office) — a deleted print-only draft never counted as a real invoice, so it never shows here.</div>
+  <div class="h-sub">Every deleted invoice, posted or not — a printed-but-unposted receipt is a saved record too, so deleting one leaves it here rather than vanishing. The STATUS column says which it was.</div>
 
   <div class="card filters-card">
     <div class="filters-label">DATE</div>
@@ -6508,7 +6512,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th></tr>
       </thead>
       <tbody id="deletedBody"></tbody>
     </table>
@@ -22078,9 +22082,15 @@ function posUpdatePrintedOnlyNavCount(){
   if (navBtn) navBtn.title = total ? total + ' receipt' + (total === 1 ? '' : 's') + ' printed but not posted' : '';
 }
 
-// Only invoices that were actually posted (post/printpost/frontoffice)
-// show up here once deleted — a deleted print-only draft was never a
-// real invoice, so it's just gone, not listed as "deleted".
+// Every deleted invoice shows up here, posted or not. This used to require
+// `posted` as well, on the reasoning that a print-only draft "was never a
+// real invoice, so it's just gone" — but a print-only receipt IS a saved
+// record with its own invoice number, printed on paper and handed to
+// somebody, and Print & Save now writes real items into it. Deleting one
+// dropped it off Printed Only (it's deleted) AND off this page (it isn't
+// posted), so it vanished from the app with no trace anywhere and no way
+// to see what was on it. The Posted / Not Posted badge in the last column
+// keeps the two kinds apart.
 function deletedRefresh(){
   var body = document.getElementById('deletedBody');
   var countEl = document.getElementById('deletedCount');
@@ -22090,9 +22100,9 @@ function deletedRefresh(){
   var filterDMY = dateInput && dateInput.value ? receiptsDateToDMY(dateInput.value) : null;
   var shown = 0;
   posInvoices.forEach(function(record){
-    if (!record.deleted || !record.posted) return;
+    if (!record.deleted) return;
     if (filterDMY && record.date !== filterDMY) return;
-    body.appendChild(posBuildInvoiceRow(record, false, true));
+    body.appendChild(posBuildInvoiceRow(record, true, true));
     shown++;
   });
   if (countEl) countEl.textContent = shown + ' deleted';
