@@ -3689,6 +3689,10 @@
   #restaurantNative .sidebar button:hover{color:#fff; background:rgba(255,255,255,.05);}
   #restaurantNative .sidebar button.active{color:#fff; border-left-color:#3b82f6; background:rgba(59,130,246,.08);}
   #restaurantNative .sidebar .sb-icon{font-size:15px; width:18px; text-align:center; flex-shrink:0;}
+  /* Unposted count on Printed-Only: a receipt sitting there is money not
+     yet posted, so the number is visible from every page, not only once
+     you open it. Hidden entirely at zero — see printedOnlyRefresh(). */
+  #restaurantNative .sidebar .sb-count{margin-left:auto; flex-shrink:0; background:#d97706; color:#fff; font-size:11px; font-weight:700; line-height:1; padding:3px 7px; border-radius:999px;}
   #restaurantNative .sidebar-spacer{flex:1;}
   #restaurantNative .app-wrap{flex:1; min-width:0; background:#f4f5f7;}
 
@@ -3760,7 +3764,14 @@
 #page-pos-invoice .search-wrap input {padding-right:34px;}
 #page-pos-invoice .search-wrap .icon {position:absolute; right:8px; color:var(--muted); font-size:13px; cursor:pointer;}
 #page-pos-invoice .search-wrap .icon:hover {color:#c53030;}
-#page-pos-invoice .ac-menu {position:absolute; top:100%; left:0; right:0; margin-top:6px; background:#fff; border:1px solid var(--border-strong); border-radius:8px; box-shadow:0 10px 28px rgba(0,0,0,.18); max-height:320px; overflow-y:auto; z-index:60; display:none; padding:6px;}
+/* Fixed, not absolute: as an absolutely-positioned child of .search-wrap the
+   list was clipped by the line-items table's own overflow:hidden, so it
+   disappeared behind the "+ Add line"/GROUPS row below instead of floating
+   over it. Nothing between here and the viewport uses transform/filter, so
+   fixed positioning escapes every one of those clips. top/left/width/
+   max-height are measured off the input each time it opens — see
+   posPlaceAcMenu(); the values here are only the pre-measurement defaults. */
+#page-pos-invoice .ac-menu {position:fixed; top:0; left:0; width:auto; background:#fff; border:1px solid var(--border-strong); border-radius:8px; box-shadow:0 10px 28px rgba(0,0,0,.18); max-height:320px; overflow-y:auto; z-index:900; display:none; padding:6px;}
 #page-pos-invoice .ac-menu.room-ac-menu {max-height:150px;}
 #page-pos-invoice .ac-menu.show {display:block;}
 #page-pos-invoice .ac-item {padding:10px 12px; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; gap:10px; border-radius:6px;}
@@ -3862,6 +3873,13 @@
    explicitly opt into via the Edit button, never just by opening it. */
 #page-pos-invoice.pos-view-only > .wrap > .card:not(.list-card) {opacity:.55; pointer-events:none;}
 #page-pos-invoice.pos-view-only .action-bar button:not(#posEditRecordBtn):not(#posPrintOnlyBtn):not(#posPrintBtn) {opacity:.4; pointer-events:none;}
+/* Viewing an unposted (print-only) receipt: Post stays live, since posting
+   it is the one thing that receipt is waiting for. Everything else in the
+   bar is still grayed until Edit is clicked.
+   !important because the gray-out rule above carries three :not(#id)
+   selectors — each counts as a full ID — so it outweighs any reasonable
+   selector written here. */
+#page-pos-invoice.pos-view-only.pos-postable-view .action-bar button#posPostBtn {opacity:1 !important; pointer-events:auto !important;}
 #page-pos-invoice .list-card {padding:16px 20px;}
 #page-pos-invoice .list-card .lc-title {font-size:15px; font-weight:600; margin-bottom:12px;}
 #page-pos-invoice table.simple {width:100%; border-collapse:collapse; font-size:12.5px; border-radius:8px; overflow:hidden;}
@@ -5752,7 +5770,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <button class="active" onclick="posShowApp('page-pos-invoice', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg><span class="sb-text">Point of Sale</span></button>
   <button onclick="posShowApp('page-charges-summary', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><span class="sb-text">Charges Summary</span></button>
   <button onclick="posShowApp('page-qty-summary', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><span class="sb-text">Quantity Summary</span></button>
-  <button onclick="posShowApp('page-printed-only', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg><span class="sb-text">Printed-Only</span></button>
+  <button onclick="posShowApp('page-printed-only', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg><span class="sb-text">Printed-Only</span><span class="sb-count" id="printedOnlyNavCount" style="display:none;"></span></button>
   <div class="sidebar-spacer"></div>
   <button onclick="posShowApp('page-deleted', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg><span class="sb-text">Deleted</span></button>
   <button onclick="posShowApp('page-pos-settings', this)"><svg class="sb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span class="sb-text">Settings</span></button>
@@ -5797,7 +5815,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>CUSTOMER 🔍</label>
         <div class="search-wrap" style="flex:1;"><input type="text" id="posCustomer" value="Walkin Customer" autocomplete="off" oninput="posRecalcAll()" style="width:100%;"><div class="ac-menu"></div></div>
       </div>
-      <div class="lbl-input" style="flex:0 0 170px;"><label>ORDER NO(QT)</label><div class="with-pick"><input type="text" id="posOrderNo"><button type="button" class="pick-btn" onclick="posAutoNextOrderNo()" title="Fill in previous Order No(QT) + 1">+1</button></div></div>
+      <div class="lbl-input" style="flex:0 0 170px;"><label>ORDER NO(QT)</label><input type="text" id="posOrderNo"></div>
       <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><div class="search-wrap" style="flex:1;"><input type="text" id="posRoomNoField" autocomplete="off" oninput="posRoomNoChanged(this)" style="width:100%;"><div class="ac-menu room-ac-menu"></div></div></div>
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>Discription(extra notes)</label><input type="text" id="posLineDescription"></div>
       <div class="lbl-input" style="flex:0 0 170px;"><label>Invoice Date</label><input type="date" id="posInvoiceDate"></div>
@@ -17419,6 +17437,11 @@ function updateHeaderDate(){
 
 function updateCloudIndicator(){
   updateHeaderDate();
+  // Restaurant sync failures live in their own posSyncProblem (same pos_*
+  // isolation as posPendingWriteCount below) so neither side can clear or
+  // overwrite the other's message — this one shared indicator reports
+  // whichever half is actually in trouble, hotel first.
+  const problem = syncProblem || (typeof posSyncProblem !== 'undefined' ? posSyncProblem : null);
   const el = document.getElementById('cloudStatus');
   if(el){
     // Restaurant/POS writes queue in their own posPending*/posPendingWriteCount
@@ -17431,8 +17454,8 @@ function updateCloudIndicator(){
     if(!sb){
       el.textContent = '⚠ Cloud database not configured';
       el.style.color = 'var(--danger)';
-    } else if(syncProblem){
-      el.textContent = '☁ ' + syncProblem + (pending ? ' (' + pending + ' unsaved)' : '');
+    } else if(problem){
+      el.textContent = '☁ ' + problem + (pending ? ' (' + pending + ' unsaved)' : '');
       el.style.color = 'var(--danger)';
     } else if(pending){
       el.textContent = '☁ Saving…';
@@ -17451,7 +17474,7 @@ function updateCloudIndicator(){
     }
   }
   const banner = document.getElementById('cloudBanner');
-  if(banner) banner.classList.toggle('show', !sb || !!syncProblem);
+  if(banner) banner.classList.toggle('show', !sb || !!problem);
   const bannerText = document.getElementById('cloudBannerText');
   if(bannerText){
     // Was always the same hardcoded sentence no matter what actually went
@@ -17460,7 +17483,7 @@ function updateCloudIndicator(){
     // place a real error gets silently swallowed into "check the internet".
     bannerText.textContent = !sb
       ? 'Entries cannot be saved or loaded until the connection is back — it retries automatically.'
-      : (syncProblem || 'Entries cannot be saved or loaded until the connection is back — it retries automatically.');
+      : (problem || 'Entries cannot be saved or loaded until the connection is back — it retries automatically.');
   }
 }
 
@@ -18768,6 +18791,39 @@ var posInvoices = []; // in-memory mirror, each with an .items[] array
 var posMutationStamp = 0;
 var posPullInFlight = null;
 var posAppBooted = false;
+// Declared here for the same boot-order reason as everything else in this
+// block: posBootApp() now hydrates the cached snapshot synchronously (see
+// posLoadSnapshotFromCache), and that writes posLockedDays. Left further
+// down where the Day Lock code lives, the `var posLockedDays = []` line
+// would run AFTER that hydration on a refresh with an existing session and
+// silently wipe the restored lock rows back to empty — which, with
+// posIsDateLocked's no-row-means-locked default, would show every past day
+// as locked until the first cloud fetch landed.
+var posLockedDays = [];
+var posInitialLoadDone = false; // first successful cloud pull done (cache hydration counts, same as the hotel's initialLoadDone)
+var posLastServerHash = '';     // last applied snapshot, to skip re-rendering when nothing actually changed
+var posSyncProblem = null;      // restaurant-side sync failure, surfaced through the shared header/banner
+// Both localStorage keys have to be up here for the same reason. Their
+// readers run inside posBootApp(), which init() can call synchronously —
+// and a `var KEY = '...'` further down the script hasn't been assigned yet
+// at that point, so the read became localStorage.getItem(undefined) and
+// quietly returned nothing. That silently defeated the pending-writes
+// restore on exactly the case it exists for: a refresh with an existing
+// session, where queued (never-pushed) invoices were dropped on the floor.
+var POS_PENDING_WRITES_KEY = 'pos_pending_writes_v1';
+var POS_CLOUD_CACHE_KEY = 'posCloudSnapshotV1';
+// And the retry queues themselves, for the same reason — this one was doing
+// real damage. posBootApp() calls posLoadPendingWritesFromStorage(), which
+// does posPendingInvoiceSaves.set(...); declared further down, that Map was
+// still undefined whenever init() booted the restaurant synchronously, so
+// the restore threw on its first row and was swallowed by its own
+// try/catch. Every write that had been queued for retry (an invoice saved
+// while offline, say) was therefore dropped by the very refresh the
+// localStorage mirror exists to survive. Verified before/after in a
+// headless boot of this page.
+var posPendingInvoiceSaves = new Map();   // id -> record (full new/edited invoice not yet confirmed)
+var posPendingInvoiceUpdates = new Map(); // id -> { record, fields } (merged field-only updates not yet confirmed)
+var posPendingLockActions = [];           // [{ mode, dateStr }]
 // Room numbers only — no guest names. This module never reads hotel guest
 // data (see migration/pos_module.sql header): reception matches a charge
 // to a guest by room number, not by a name carried over from here.
@@ -18953,9 +19009,8 @@ function posRowFromDb(row, items){
 // gives up — it's applied to local state immediately (so the UI, e.g. the
 // Deleted page, reflects it right away) and queued to auto-resend the
 // moment the connection comes back, instead of silently doing nothing.
-var posPendingInvoiceSaves = new Map();   // id -> record (full new/edited invoice not yet confirmed)
-var posPendingInvoiceUpdates = new Map(); // id -> { record, fields } (merged field-only updates not yet confirmed)
-var posPendingLockActions = [];           // [{ mode, dateStr }]
+// posPendingInvoiceSaves/posPendingInvoiceUpdates/posPendingLockActions are
+// declared with the other must-exist-before-init() POS state — see there.
 var posSyncRetryInFlight = false;
 var posPushRetryTimer = null; // mirrors the hotel side's own pushRetryTimer — near-instant retry on failure, not just the next opportunistic pull/5-min tick
 
@@ -18967,7 +19022,8 @@ var posPushRetryTimer = null; // mirrors the hotel side's own pushRetryTimer —
 // way. Now every mutation to these queues is mirrored to localStorage
 // immediately, and posBootApp() restores them before its first pull/flush
 // so a queued write survives a refresh.
-var POS_PENDING_WRITES_KEY = 'pos_pending_writes_v1';
+// POS_PENDING_WRITES_KEY is declared with the other must-exist-before-init()
+// POS state — see the comment there.
 function posSavePendingWritesToStorage(){
   try {
     localStorage.setItem(POS_PENDING_WRITES_KEY, JSON.stringify({
@@ -18986,6 +19042,63 @@ function posLoadPendingWritesFromStorage(){
     (data.updates || []).forEach(function(pair){ posPendingInvoiceUpdates.set(pair[0], pair[1]); });
     (data.locks || []).forEach(function(a){ posPendingLockActions.push(a); });
   } catch (e) { console.error('[POS] failed to restore pending writes', e); }
+}
+
+// ---------- POS stale-while-revalidate snapshot cache ----------
+// The same warm-start the hotel side already has (saveCloudSnapshotToCache /
+// cloudSnapshotV1), scoped to the restaurant's own tables and nothing else.
+// posPullFromCloud is a full-table download of every invoice and every line
+// item ever entered, and it only gets slower as the restaurant accumulates
+// history — until it landed, Point of Sale, Receipts, Front Office and the
+// summaries all sat empty on every refresh, and offline they stayed empty.
+// Caching the last snapshot lets posBootApp() paint from disk instantly
+// while the real pull reconciles in the background. Written after a
+// successful pull (like the hotel's), so it can trail live realtime patches
+// by up to one poll — the pull right after boot reconciles that in a
+// fraction of a second. POS_CLOUD_CACHE_KEY is declared with the other
+// must-exist-before-init() POS state; see the comment there.
+function posSaveSnapshotToCache(){
+  try{
+    localStorage.setItem(POS_CLOUD_CACHE_KEY, JSON.stringify({ invoices: posInvoices, lockedDays: posLockedDays }));
+  }catch(e){ /* best effort — quota exceeded or storage disabled just means no warm start next time */ }
+}
+function posLoadSnapshotFromCache(){
+  try{
+    var raw = localStorage.getItem(POS_CLOUD_CACHE_KEY);
+    if (!raw) return false;
+    var cached = JSON.parse(raw);
+    if (!cached || !Array.isArray(cached.invoices)) return false;
+    posInvoices = cached.invoices;
+    posLockedDays = Array.isArray(cached.lockedDays) ? cached.lockedDays : [];
+    return true;
+  }catch(e){ return false; }
+}
+
+// ---------- POS sync status ----------
+// The header indicator and warning banner are shared with the hotel side,
+// but the state behind them is not: a restaurant failure sets posSyncProblem
+// and a hotel failure sets syncProblem, so neither side can clear or
+// overwrite the other's message. updateCloudIndicator shows whichever is
+// set — same treatment posPendingWriteCount already gets there.
+// Before this, a restaurant-side pull or save that kept failing showed
+// nothing but a transient toast: the header still read "Live — synced
+// <old time>" while the restaurant data on screen was going stale.
+function posSetSyncProblem(msg){
+  if (posSyncProblem === msg) return;
+  posSyncProblem = msg;
+  if (typeof updateCloudIndicator === 'function') updateCloudIndicator();
+}
+// Same two wordings the hotel side uses, just named for the restaurant so
+// it's never ambiguous which half of the app is actually failing.
+function posSaveFailureMsg(){
+  return navigator.onLine === false
+    ? 'No internet — the restaurant save is queued and pushes the moment the connection is back.'
+    : 'Couldn\'t save restaurant data to the cloud database — retrying automatically…';
+}
+function posPullFailureMsg(){
+  return navigator.onLine === false
+    ? 'No internet — reconnecting…'
+    : 'Can\'t reach the cloud database for restaurant data — retrying…';
 }
 
 async function posPushNewInvoiceRaw(record){
@@ -19023,6 +19136,11 @@ async function posPushInvoiceUpdateRaw(id, fields){
 function posScheduleRetryFlush(){
   clearTimeout(posPushRetryTimer);
   posPushRetryTimer = setTimeout(posFlushPendingPosWrites, 1500);
+  // Every failed-write path goes through here, so this is the one place the
+  // shared header/banner needs to learn that restaurant writes aren't
+  // landing — the toast alone disappeared after a few seconds and left no
+  // standing sign that work was still stuck in the queue.
+  posSetSyncProblem(posSaveFailureMsg());
 }
 
 async function posPushNewInvoice(record){
@@ -19037,6 +19155,8 @@ async function posPushNewInvoice(record){
   }
   posPendingInvoiceSaves.delete(record.id);
   posSavePendingWritesToStorage();
+  if (posPendingWriteCount() === 0) posSetSyncProblem(null);
+  if (typeof updateCloudIndicator === 'function') updateCloudIndicator();
   return true;
 }
 
@@ -19047,8 +19167,13 @@ async function posQueueInvoiceUpdate(record, fields){
   posSavePendingWritesToStorage();
   if (!sb) return;
   var ok = await posPushInvoiceUpdateRaw(record.id, merged);
-  if (ok) { posPendingInvoiceUpdates.delete(record.id); posSavePendingWritesToStorage(); }
+  if (ok) {
+    posPendingInvoiceUpdates.delete(record.id);
+    posSavePendingWritesToStorage();
+    if (posPendingWriteCount() === 0) posSetSyncProblem(null);
+  }
   else posScheduleRetryFlush();
+  if (typeof updateCloudIndicator === 'function') updateCloudIndicator();
 }
 
 async function posFlushPendingPosWrites(){
@@ -19078,11 +19203,24 @@ async function posFlushPendingPosWrites(){
     // the next opportunistic pull or the 20s interval tick.
     if (posPendingInvoiceSaves.size > 0 || posPendingInvoiceUpdates.size > 0 || posPendingLockActions.length > 0) {
       posPushRetryTimer = setTimeout(posFlushPendingPosWrites, 1500);
+      posSetSyncProblem(posSaveFailureMsg());
+    } else {
+      // Queue drained — every restaurant write is on the server now, so the
+      // warning comes down (mirrors pushPendingNow clearing syncProblem).
+      posSetSyncProblem(null);
     }
+    if (typeof updateCloudIndicator === 'function') updateCloudIndicator(); // the "(N unsaved)" count moved
   }
 }
 setInterval(posFlushPendingPosWrites, 20000);
-window.addEventListener('online', posFlushPendingPosWrites);
+window.addEventListener('online', function(){
+  posFlushPendingPosWrites();
+  // Coming back online used to only push what was queued — whatever the
+  // restaurant missed while offline still waited for the 5-minute tick, and
+  // the failure banner stayed up until then. Re-pull instead: it refreshes
+  // the data and is what proves the connection is genuinely back.
+  if (posAppBooted) posRequestBackgroundPull();
+});
 
 // posPendingInvoiceSaves/posPendingInvoiceUpdates/posPendingLockActions only
 // ever live in memory — a refresh or closed tab before the 20s retry timer
@@ -19158,35 +19296,81 @@ async function posPullFromCloud(){
       var itemsRes = await sb.from('pos_invoice_items').select('*');
       console.log('[POS] pos_invoice_items result:', itemsRes);
       if (itemsRes.error) throw itemsRes.error;
-      if (posMutationStamp !== stampAtStart) { console.log('[POS] pull discarded — a write landed mid-flight, stale'); return; } // a write landed mid-flight — stale, next poll/realtime event covers it
+      // A write finished while this snapshot was on the wire — it's stale by
+      // definition. It used to just be dropped ("the next poll covers it"),
+      // which meant waiting up to the 5-minute tick for a device that had
+      // simply saved something at the wrong moment. Same as the hotel's own
+      // pullFreshFromCloud: throw it away AND immediately re-fetch.
+      if (posMutationStamp !== stampAtStart) {
+        console.log('[POS] pull discarded — a write landed mid-flight, stale; re-fetching');
+        posRequestBackgroundPull();
+        return;
+      }
 
-      var itemsByInvoice = {};
-      (itemsRes.data || []).forEach(function(it){
-        (itemsByInvoice[it.invoice_id] = itemsByInvoice[it.invoice_id] || []).push(it);
-      });
-      posInvoices = (invRes.data || []).map(function(row){
-        var items = (itemsByInvoice[row.id] || [])
-          .sort(function(a, b){ return (a.line_no || 0) - (b.line_no || 0); })
-          .map(posItemFromDb);
-        return posRowFromDb(row, items);
-      });
+      var firstLoad = !posInitialLoadDone;
+      posInitialLoadDone = true;
+      lastSyncAt = new Date();
+      // Reads working doesn't mean writes landed — while restaurant saves
+      // are still queued the warning stays up until the push itself
+      // succeeds (mirrors pullFreshFromCloud's own pending-writes check).
+      if (posPendingWriteCount() === 0) posSetSyncProblem(null);
+
+      // Nothing changed on the server since the last pull → don't rebuild
+      // and repaint all ten restaurant surfaces for nothing. The hotel side
+      // has had this (lastServerHash) all along; the restaurant re-rendered
+      // every list on every 5-minute tick regardless.
+      var hash = JSON.stringify([invRes.data, itemsRes.data]);
+      var changed = (hash !== posLastServerHash) || firstLoad;
+      posLastServerHash = hash;
+      if (changed) {
+        var itemsByInvoice = {};
+        (itemsRes.data || []).forEach(function(it){
+          (itemsByInvoice[it.invoice_id] = itemsByInvoice[it.invoice_id] || []).push(it);
+        });
+        posInvoices = (invRes.data || []).map(function(row){
+          var items = (itemsByInvoice[row.id] || [])
+            .sort(function(a, b){ return (a.line_no || 0) - (b.line_no || 0); })
+            .map(posItemFromDb);
+          return posRowFromDb(row, items);
+        });
+      }
       // Isolated from the try/catch above on purpose — the pos_locked_days
       // table not existing yet (migration not run) must not take down the
       // whole invoice pull. posIsDateLocked's no-row-means-locked default
       // keeps everything safely locked either way.
+      var locksBefore = JSON.stringify(posLockedDays);
       await posFetchLockedDays();
       await posAutoLockPastDays();
-      posRerenderAll();
+      // Lock rows are fetched separately from the invoice snapshot above, so
+      // they get their own comparison — a day locked/unlocked elsewhere must
+      // still repaint even when no invoice changed.
+      if (changed || JSON.stringify(posLockedDays) !== locksBefore) {
+        posRerenderAll();
+        posSaveSnapshotToCache();
+      }
+      if (typeof updateCloudIndicator === 'function') updateCloudIndicator();
       posFlushPendingPosWrites(); // a successful pull is a strong signal the connection is back — retry queued writes right away instead of waiting for the next interval tick
-      console.log('[POS] pull complete. posInvoices.length =', posInvoices.length);
+      console.log('[POS] pull complete. posInvoices.length =', posInvoices.length, '| changed =', changed);
     }catch(e){
       console.error('[POS] cloud pull failed', e);
-      posShowToast('Could not load restaurant data — check your connection and try again.', 'error');
+      // The toast only fires on the first failure of a streak now — the
+      // header/banner carries the state from here on, so being offline for
+      // an hour no longer means a toast every 5 minutes.
+      if (posSyncProblem === null) posShowToast('Could not load restaurant data — check your connection and try again.', 'error');
+      posSetSyncProblem(posPullFailureMsg());
     }finally{
       posPullInFlight = null;
     }
   })();
   return posPullInFlight;
+}
+
+// Collapses a burst of re-fetch requests into a single pull, and never
+// blocks its caller — the restaurant twin of requestBackgroundPull().
+var posPullDebounceTimer = null;
+function posRequestBackgroundPull(){
+  clearTimeout(posPullDebounceTimer);
+  posPullDebounceTimer = setTimeout(function(){ posPullFromCloud(); }, 500);
 }
 
 // Every POS surface that shows invoice data, refreshed in one call — used
@@ -19654,6 +19838,10 @@ function posSaveMenuEdit(){
 
 var POS_MENU_ITEMS = [['Plain Fries',350],['Buffalo Wings 5 Pieces',799],['Crispy Wings 5 Pieces',550],['Special Loaded Fries',950],['Pizza Fries',850],['Spanish Latte Cold',849],['Spanish Latte Hot',899],['Hazelnut Latte Cold',849],['Hazelnut Latte Hot',899],['Caramel Latte Cold',849],['Caramel Latte Hot',899],['Cortado Hot',799],['Cortado Cold',849],['Apple Cinnamon Cold',899],['Apple Cinnamon Hot',849],['Moca Latte Hot',849],['Moca Latte Cold',879],['Americano Cold',749],['Americano Hot',749],['Caramel Latte Cold',849],['Caramel Latte Hot',899],['Cortado Hot',799],['Cortado Cold',849],['Apple Cinnamon Cold',899],['Apple Cinnamon Hot',849],['Moca Latte Hot',849],['Moca Latte Cold',879],['Americano Cold',749],['Americano Hot',749],['Blueberry Fizz',749],['Strawberry Fizz',749],['Pineapple Fizz',699],['Lemon Ginger Fizz',699],['Chicken Tikka',799],['Chicken Botti One Plate',2450],['Chicken Malai Boti',2650],['Chicken Seekh Kabab (6pcs)',2400],['Beef Bihari Boti (1 plate)',3050],['Mutton Chops (1 kg)',4500],['Mineral Water Small',120],['Mineral Water Large',200],['Soft Drink Can',220],['Diet Can',250],['Mix Tea',250],['Separate Tea',250],['Green Tea',150],['Ice Tea (Peach, Lemon)',599],['Mint Margarita',499],['Pina Colada',699],['Fruit Smoothies',749],['Riviera Resort Special Shake',899],['Kit Kat Shake',799],['Fresh Seasonal Juice',699],['Milk Shake',599],['Egg Omelette',250],['Cheese Omelette',350],['Mushroom Omelette',350],['Fried Egg',249],['Boiled Egg',199],['Lahori Chanay',599],['Aalo Bujiya',599],['Aalo Qeema',159],['Paratha',159],['Naan',60],['Toasted Bread',150],['French Toast',299],['Butter',150],['Jam',200],['Honey',100],['Achaar',149],['Halwa (Plate)',200],['Halwa (Bowl)',500],['Kung Pao Chicken with Rice',1400],['Chicken Manchurian with Rice',999],['Chicken Shashlik with Rice',1350],['Chicken Chilly Dry with Rice',1500],['Beef Chilly Dry with Rice',1299],['Chicken Fried Rice',1100],['Egg Fried Rice',1000],['Garlic Rice',1000],['Plain Rice',800],['Chicken Black Pepper',1400],['Chicken Almond',1400],['Chicken Cashew Nuts',1400],['Mongolian Chicken',1400],['Chicken Vegetable',1300],['Chicken Chowmein',1400],['Vegetable Chowmein',1350],['Mongolian Chowmein',1500],['Vegetable Fried Rice',900],['Latte',699],['Cappuccino',799],['Espresso',0],['Single',499],['Double',699],['Hot Chocolate',749],['Beef Burger',999],['Beef Jalapeno Burger',1089],['Grill Chicken Burger',899],['Riviera Special Grilled Chicken Burger',999],['Grilled Chicken Cheese Sandwich',799],['Chicken Club Sandwich',900],['Riviera Special Sandwich',1049],['Trout Fish (1 Kg)',6000],['Zinger Burger',1000],['Chicken Karahi Half',1599],['Chicken Achari Karahi Half',1199],['Chicken Makhani Karahi Half',1249],['Chicken Handi Half',1399],['Chicken Handi Makhani Half',1449],['Riviera Resort Special Chicken Handi Half',1549],['Chicken Mughlai Handi Half',1499],['Mutton Makhani Karahi Half',2500],['Mutton Karahi Half',2500],['Chicken Ginger Half',1299],['Chicken Karahi Full',2450],['Chicken Achari Karahi Full',2249],['Chicken Makhani Karahi Full',2699],['Chicken Handi Full',2749],['Chicken Handi Makhani Full',2849],['Riviera Resort Special Chicken Handi Full',2799],['Chicken Mughlai Handi Full',3099],['Mutton Makhani Karahi Full',4800],['Mutton Karahi Full',4800],['Chicken Ginger Full',2499],['Chicken Kabab Karahi',1249],['Riviera Resort Special Daal Mash',699],['Mix Vegetable',649],['Chicken Biryani',799],['Kabuli Pulao',999],['Black Forest Cake 1 Pound',1499],['Black Forest Cake 2 Pound',2999],['Pineapple Cake 1 Pound',1399],['Pineapple Cake 2 Pound',2599],['Chocolate Cake 1 Pound',1599],['Chocolate Cake 2 Pound',2999],['Caramel Pudding (per piece)',400],['Walnut Brownie',499],['Chocolate Brownie',499],['Black Forest Cake',400],['Pineapple Cake',499],['Chocolate Cake',499],['Chocolate Fudge Cake',399],['Chocolate Fudge Cake (1 Pound)',1699],['Kit Kat Cake (per pc)',399],['Kit Kat Cake (1 Pound)',1699],['Red Velvet Cake (per pc)',399],['Red Velvet Cake (1 Pound)',1699],['Blueberry Cake (per pc)',399],['Blueberry Cake (per Pound)',1599],['Swiss Roll',350],['Waffles',350],['Donuts',350],['Banana Slice',120],['Cup Cake',250],['3 Milk Cake',400],['Biscuit (250 gm)',350],['Cakeras (150 gm)',350],['Apple Pie (per piece)',350],['Tart',250],['Lasagna Pasta',1349],['Riviera Special Pasta',1499],['Alfredo Pasta',1349],['Penne Arrabbiata Pasta',1100],['Spaghetti Bolognese Chicken',1100],['Riviera Resort Special Pizza Medium',1600],['Chicken BBQ Pizza Medium',1650],['Cheese Cheesy Pizza Medium',1500],['Chicken Fajita Pizza Medium',1600],['Riviera Resort Special Pizza Large',2300],['Chicken BBQ Pizza Large',2300],['Cheese Cheesy Pizza Large',2000],['Chicken Fajita Pizza Large',2250],['Riviera Resort Special Pizza Extra Large',2899],['Crown Crust Pizza Medium',1650],['Crown Crust Pizza Medium Large',2350],['Chicken Fajita Pizza Extra Large',2650],['Chicken Tikka Pizza Medium',1699],['Chicken Tikka Pizza Large',2350],['Italian Chicken Salad',650],['Fresh Green Salad',250],['Russian Salad',499],['Raita',250],['Shinwari Lamb Karahi Half',2500],['Shinwari Lamb Karahi Full',4500],['Shinwari Mutton Tikka Half',2500],['Shinwari Mutton Tikka Full',4500],['Namkeen Lamb Tikka Half',2500],['Namkeen Lamb Tikka Full',4500],['Shinwari Lamb Karahi',2999],['Hot & Sour Soup Single',500],['Chicken Corn Soup Single',499],['Riviera Special Soup Single',549],['Vegetable Soup Single',499],['Hot & Sour Soup Family',1799],['Chicken Corn Soup Family',1977],['Riviera Special Soup Family',1899],['Vegetable Soup Family',1599],['Mushroom Steak Chicken',1699],['Black Pepper Steak Chicken',1749],['Tarragon Steak Chicken',1699],['BBQ Steak Chicken',1689],['BBQ Steak Chicken',1679],['Stuffed Chicken',2599],['Plain Naan',60],['Roghni Naan',149],['Qandhari Naan',99],['Garlic Naan',149],['Plain Roti',50],['Kalwanji Naan',149],['Tandoori Paratha',149],['Per Head',750]];
 
+// No longer wired to anything — the "+1" button next to Order No(QT) was
+// removed from the form. Kept because the numbering rule it encodes (last
+// non-deleted invoice's Order No + 1) is the only place that's written
+// down; delete it outright if the field stays manual for good.
 // posInvoices is already sorted newest-first (posPullFromCloud orders by
 // created_at descending), so the first non-deleted record with a numeric
 // Order No(QT) found while scanning from the top is the most recent one.
@@ -19665,6 +19853,55 @@ function posAutoNextOrderNo(){
   if (isNaN(prev)) { posShowToast('No previous Order No(QT) found to calculate from.', 'error'); return; }
   orderInput.value = String(prev + 1);
 }
+
+// ---------- POS autocomplete dropdown placement ----------
+// The item/customer/room lists are position:fixed (see the .ac-menu CSS for
+// why), so their coordinates have to be measured from the input every time
+// they open or their contents change. Shared by all three so they can't
+// drift apart.
+function posPlaceAcMenu(menu, anchor){
+  if (!menu || !anchor) return;
+  var r = anchor.getBoundingClientRect();
+  // Same caps the stylesheet uses — the room list is deliberately short.
+  var cap = menu.classList.contains('room-ac-menu') ? 150 : 320;
+  var GAP = 6, EDGE = 8;
+  var below = window.innerHeight - r.bottom - GAP - EDGE;
+  var above = r.top - GAP - EDGE;
+  // Drop upward when there genuinely isn't room underneath (a line near the
+  // bottom of the screen) instead of squeezing the list into a few pixels.
+  var flipUp = below < Math.min(cap, 160) && above > below;
+  var space = Math.max(120, flipUp ? above : below);
+  menu.style.maxHeight = Math.min(cap, space) + 'px';
+  menu.style.width = r.width + 'px';
+  var left = Math.max(EDGE, Math.min(r.left, window.innerWidth - r.width - EDGE));
+  menu.style.left = left + 'px';
+  if (flipUp) {
+    menu.style.top = '';
+    menu.style.bottom = (window.innerHeight - r.top + GAP) + 'px';
+  } else {
+    menu.style.bottom = '';
+    menu.style.top = (r.bottom + GAP) + 'px';
+  }
+}
+
+// A fixed-position list can't follow its input while the page moves, and
+// leaving it hanging over unrelated rows is worse than dismissing it — so
+// any scroll (or resize) closes whatever is open. Scrolling INSIDE a list
+// is excluded, or a long menu could never be scrolled through.
+function posCloseAllAcMenus(){
+  document.querySelectorAll('#page-pos-invoice .ac-menu.show').forEach(function(m){
+    m.classList.remove('show');
+    m.innerHTML = '';
+  });
+}
+// Capture phase: scrolls inside nested containers don't bubble, and this
+// needs to catch every one of them.
+window.addEventListener('scroll', function(e){
+  var t = e.target;
+  if (t && t.classList && t.classList.contains('ac-menu')) return;
+  posCloseAllAcMenus();
+}, true);
+window.addEventListener('resize', posCloseAllAcMenus);
 
 function posSetupAutocomplete(input){
   var wrap = input.closest('.search-wrap');
@@ -19698,6 +19935,7 @@ function posSetupAutocomplete(input){
       });
     }
     menu.classList.add('show');
+    posPlaceAcMenu(menu, input); // re-measured on every render — the list's height changes as it filters
   }
 
   function close(){
@@ -19813,6 +20051,7 @@ function posSetupCustomerAutocomplete(){
       });
     }
     menu.classList.add('show');
+    posPlaceAcMenu(menu, input);
   }
 
   function openMenu(forceAll){
@@ -19903,6 +20142,7 @@ function posSetupRoomAutocomplete(){
       });
     }
     menu.classList.add('show');
+    posPlaceAcMenu(menu, input);
   }
 
   function openMenu(forceAll){
@@ -20040,7 +20280,33 @@ function posRowFields(row){
   };
 }
 
+// A payment row must always carry a date. An empty DATE cell posts as an
+// empty string, so that payment shows up dateless on the receipt and in the
+// day's payment breakdown. Rows could arrive blank from several directions
+// — the picker's own Clear button, a draft restored from a version that
+// saved a blank date, an older invoice whose payments were posted before
+// the date was filled in, or a row whose picker never got initialised (a
+// bare type="date" input shows an empty dd/mm/yyyy). Rather than chase each
+// path, every recalc guarantees the same thing: the invoice's own date if
+// it has one, otherwise today.
+function posEnsurePaymentRowDates(){
+  var invoiceDateEl = document.getElementById('posInvoiceDate');
+  var fallback = (invoiceDateEl && invoiceDateEl.value) || posTodayISO();
+  document.querySelectorAll('#page-pos-invoice .pay-rows .pay-row').forEach(function(row){
+    var input = row.querySelector('.pay-date-input');
+    if (!input) return;
+    // Never left as a raw native date field — every other date in the app
+    // is a flatpickr, and an un-enhanced one reads as "empty" next to them.
+    if (!input._flatpickr) posInitDatePicker(input);
+    if (input.value) return;
+    // `false` = don't fire change: this runs inside posRecalcAll, and the
+    // change handler is posRecalcAll itself.
+    if (input._flatpickr) input._flatpickr.setDate(fallback, false); else input.value = fallback;
+  });
+}
+
 function posRecalcAll(){
+  posEnsurePaymentRowDates();
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   var subtotal = 0, discTotal = 0;
   if (tbody) {
@@ -20128,7 +20394,10 @@ function posRecalcAll(){
   var postBtn = document.getElementById('posPostBtn');
   if (postBtn) {
     var custEl = document.getElementById('posCustomer');
-    postBtn.textContent = posEditingRecord ? 'Save' : (/guest/i.test((custEl && custEl.value) || '') ? 'Post Guest' : 'Post');
+    // Editing an existing invoice used to relabel this "Save". It's the same
+    // button doing the same thing either way, so it stays "Post" — one name
+    // for one action.
+    postBtn.textContent = (!posEditingRecord && /guest/i.test((custEl && custEl.value) || '')) ? 'Post Guest' : 'Post';
   }
 
   // Only autosave the "recover my unposted invoice after a refresh" draft
@@ -20318,7 +20587,8 @@ function posMakeRowClickable(tr, record){
 // so nothing is retroactively unlocked just because this table is new or
 // hasn't been backfilled/synced yet. Locked invoices can still be viewed
 // and opened, just never edited or deleted.
-var posLockedDays = [];
+// posLockedDays itself is now declared up with the other POS state that has
+// to exist before init() can boot this module — see the comment there.
 
 function posFindLockRow(iso){
   return posLockedDays.find(function(l){ return l.lock_date === iso; });
@@ -20469,6 +20739,10 @@ async function posLockDayAction(dateStr, fromRetry){
     return true;
   }catch(e){
     console.error('POS lock day failed', e);
+    // Queued lock/unlock actions used to sit until the 20s interval tick
+    // with nothing on screen saying so — same near-instant retry (and same
+    // standing warning) every other restaurant write already gets.
+    if (!fromRetry) posScheduleRetryFlush();
     if (!fromRetry) posShowToast(e && e.message && e.message.indexOf('pos_locked_days') !== -1
       ? 'The POS Day Lock table doesn\'t exist yet — run migration/pos_locked_days.sql in Supabase first. Locked locally for now, will sync once it does.'
       : 'Couldn\'t reach the cloud database — locked locally, will retry automatically.', 'error');
@@ -20502,6 +20776,7 @@ async function posUnlockDayAction(dateStr, fromRetry){
     return true;
   }catch(e){
     console.error('POS unlock day failed', e);
+    if (!fromRetry) posScheduleRetryFlush(); // same near-instant retry + standing warning as the lock path above
     if (!fromRetry) posShowToast('Couldn\'t reach the cloud database — unlocked locally, will retry automatically.', 'error');
     return false;
   }
@@ -20913,15 +21188,24 @@ function posOpenRecordInForm(record){
   // is actually posted, "Print-Only" no longer applies: reprinting it must
   // never re-save it as a fresh unposted draft. Swap to a plain Print
   // button for any already-posted record being viewed.
+  // ...and the same now goes for an unposted print-only receipt: it's
+  // already saved and already printed once, so offering "Print-Only" on it
+  // makes no sense — the useful action is a plain reprint. Print-Only
+  // survives only for a locked-day record, where saving a fresh unposted
+  // copy is the sanctioned way to carry its data into a new invoice.
   var printOnlyBtn = document.getElementById('posPrintOnlyBtn');
   var printBtn = document.getElementById('posPrintBtn');
-  if (record.posted) {
-    if (printOnlyBtn) printOnlyBtn.style.display = 'none';
-    if (printBtn) printBtn.style.display = '';
-  } else {
-    if (printOnlyBtn) printOnlyBtn.style.display = '';
-    if (printBtn) printBtn.style.display = 'none';
-  }
+  var plainPrint = record.posted || !isLockedRecord;
+  if (printOnlyBtn) printOnlyBtn.style.display = plainPrint ? 'none' : '';
+  if (printBtn) printBtn.style.display = plainPrint ? '' : 'none';
+
+  // An unposted receipt's whole purpose is to be posted later, so Post is
+  // live straight away instead of grayed out behind Edit — you shouldn't
+  // have to declare an edit just to post something you never changed.
+  // (Clicking it promotes the record to the edit target first, so it
+  // updates this receipt rather than writing a second copy — see
+  // posRequestPost.)
+  if (invoicePage) invoicePage.classList.toggle('pos-postable-view', !record.posted && !isLockedRecord);
   posUpdateAdjacentInvoiceButtons();
 
   var posBtn = document.querySelector('.sidebar button[onclick*="page-pos-invoice"]');
@@ -21088,6 +21372,22 @@ function printedOnlyRefresh(){
   });
   if (countEl) countEl.textContent = shown + ' unposted';
   if (guestCard) guestCard.style.display = hasGuest ? '' : 'none';
+  posUpdatePrintedOnlyNavCount();
+}
+
+// The sidebar count is deliberately NOT the `shown` number above: that one
+// is filtered to the picked date and excludes the guest table, so it can
+// read 0 while unposted receipts are sitting on other days. This counts
+// every unposted receipt there is — the whole point is to notice them from
+// any page.
+function posUpdatePrintedOnlyNavCount(){
+  var navCount = document.getElementById('printedOnlyNavCount');
+  if (!navCount) return;
+  var total = posInvoices.filter(function(r){ return !r.deleted && !r.posted; }).length;
+  navCount.textContent = total > 99 ? '99+' : String(total);
+  navCount.style.display = total > 0 ? '' : 'none';
+  var navBtn = document.querySelector('#appSidebar button[onclick*="page-printed-only"]');
+  if (navBtn) navBtn.title = total ? total + ' receipt' + (total === 1 ? '' : 's') + ' printed but not posted' : '';
 }
 
 // Only invoices that were actually posted (post/printpost/frontoffice)
@@ -21712,7 +22012,7 @@ function posSendToFrontOffice(){
 }
 
 var posPendingPostMode = null;
-var POS_POST_MODE_LABELS = { post: 'Post this invoice?', printpost: 'Print & post this invoice?', printonly: 'Save as print-only?', frontoffice: 'Send to Front Office?' };
+var POS_POST_MODE_LABELS = { post: 'Post this invoice?', printpost: 'Print & post this invoice?', printonly: 'Print this receipt? (not posted)', frontoffice: 'Send to Front Office?' };
 
 // Same validation posPostInvoice itself runs (items/customer/balance) —
 // checked here first so the confirm dialog never appears for something
@@ -21736,6 +22036,15 @@ function posRequestPost(mode){
   // guard belongs here too — not just in CSS — since silently posting
   // whatever's loaded in a not-yet-edited view is exactly the "create an
   // unintended duplicate" bug the locked-invoice fix above closed.
+  // Posting an unposted print-only receipt straight from its view is now
+  // allowed (its Post button is deliberately left live — see the
+  // .pos-postable-view CSS). It must UPDATE that receipt, never write a
+  // second copy of it, so promote it to the edit target first — exactly
+  // what clicking Edit does.
+  if (posViewingRecord && !posEditingRecord && !posViewingRecord.posted &&
+      !posIsLocked(posViewingRecord) && (mode === 'post' || mode === 'printpost')) {
+    posEnterEditMode();
+  }
   if (posViewingRecord && !posEditingRecord && mode !== 'printonly' && document.getElementById('page-pos-invoice').classList.contains('pos-view-only')) {
     posShowToast('Click "Edit" first to make this invoice editable before posting.', 'error');
     return;
@@ -21762,13 +22071,11 @@ function posRequestPost(mode){
   var roomNoInput = document.getElementById('posRoomNoField');
   var roomNoVal = (roomNoInput && roomNoInput.value.trim()) || '—';
 
-  // Print-only skips the confirm dialog entirely — it's not final like a
-  // real post (no accounting effect until it's actually posted later), so
-  // there's nothing here worth double-checking.
-  if (mode === 'printonly') {
-    posPostInvoice(mode);
-    return;
-  }
+  // Print-Only used to skip the confirm dialog entirely, on the grounds
+  // that it has no accounting effect until it's posted later. But it still
+  // writes a receipt row and prints a physical receipt for the customer —
+  // and a wrong one of those is out of your hands the moment it's printed.
+  // It now goes through the same confirmation as every other mode.
 
   posPendingPostMode = mode;
   var titleEl = document.getElementById('posPostTitle');
@@ -22204,6 +22511,16 @@ function posBootApp(){
   // on success, so this just needs to repopulate it first.
   try { posLoadPendingWritesFromStorage(); } catch (e) { console.error('[POS] posLoadPendingWritesFromStorage failed', e); }
 
+  // Paint last session's cached snapshot immediately (if there is one) so
+  // the restaurant is usable right away instead of blocking on the full
+  // invoice download — posPullFromCloud() at the bottom of this function
+  // still runs and silently reconciles once the real data lands. Same
+  // warm-start startApp() does for the hotel side. Rendering happens at the
+  // end of boot, once the date filters/pickers below are initialised.
+  var posHydratedFromCache = false;
+  try { posHydratedFromCache = posLoadSnapshotFromCache(); } catch (e) { console.error('[POS] posLoadSnapshotFromCache failed', e); }
+  if (posHydratedFromCache) posInitialLoadDone = true;
+
   posSyncSidebarOffset();
   // Web fonts/late layout shifts can change the header's real height
   // slightly after the very first measurement. Re-measuring on a couple of
@@ -22258,6 +22575,20 @@ function posBootApp(){
   if (qsToEl) qsToEl.value = posTodayISO();
   initRangeDatePicker('csRange', 'csFromDate', 'csToDate', renderChargesSummary);
   initRangeDatePicker('qsRange', 'qsFromDate', 'qsToDate', renderQuantitySummary);
+  // Cached invoices painted here, not earlier: every list above had to have
+  // its date filter set first, or the very first paint would filter on an
+  // empty date. Deferred by a tick on purpose — when init() boots the
+  // restaurant synchronously (a refresh with an existing session), the rest
+  // of this script hasn't executed yet, so the menu/beverage lookup tables
+  // the renderers use are still undefined and the paint throws (it did:
+  // posIsBeverageItem on undefined). A 0ms timeout runs it the moment the
+  // script finishes, still far ahead of the network pull. Wrapped like the
+  // rest of this function so a render throwing can't stop the pull below.
+  if (posHydratedFromCache) {
+    setTimeout(function(){
+      try { posRerenderAll(); } catch (e) { console.error('[POS] cached-snapshot render failed', e); }
+    }, 0);
+  }
   console.log('[POS] posBootApp() finished setup, calling posPullFromCloud() now. sb =', sb);
   posPullFromCloud();
 }
