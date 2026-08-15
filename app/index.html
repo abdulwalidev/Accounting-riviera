@@ -12240,16 +12240,11 @@ const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', pa
 
 function renderChangeLog(entry){
   const box = document.getElementById('detailChangeLog');
-  // This guest's whole history, pulled once per guest and repainted when it
-  // arrives — without it the tab only ever showed what this very session did.
-  const loading = fetchAuditForGuest(entry.id, repaintAuditViews);
   const logs = getLogsFor(entry.id);
   if(logs.length === 0){
     // entries saved before tracking existed have no log rows — fall back
     // to the stamps stored on the entry itself
-    box.innerHTML = loading
-      ? '<div class="empty-note">Loading change history…</div>'
-      : '<div class="empty-note">No change history recorded for this entry' + (entry.savedAt ? ' (saved before change tracking was added)' : '') + '.</div>';
+    box.innerHTML = '<div class="empty-note">No change history recorded for this entry' + (entry.savedAt ? ' (saved before change tracking was added)' : '') + '.</div>';
     return;
   }
   box.innerHTML = `
@@ -12296,93 +12291,11 @@ function guestNameForAudit(guestId){
   return e ? (e.guestName || '(no name)') : '(deleted entry)';
 }
 
-// ---- Audit reads: on demand, one slice at a time ----
-// guest_edits stays out of the routine poll and out of realtime on purpose —
-// it's append-only and grows forever, so pulling it wholesale would cost
-// every device egress all day for a table almost nothing reads. Instead the
-// audit-facing renders ask for exactly the slice they're about to show (one
-// Karachi day, or one guest), merge it into `editLogs` and repaint. Every
-// slice fetched is remembered, so re-rendering the same day never re-queries
-// and a slice is never in flight twice.
-const auditFetched = new Set();   // slice keys already pulled this session
-const auditFetching = new Set();  // slice keys in flight right now
-const AUDIT_ALL_DAYS_LIMIT = 2000; // "no date chosen" is capped, newest first
-
-function mergeEditLogs(rows){
-  if(!rows || !rows.length) return;
-  const have = new Set(editLogs.map(l=> l.id));
-  rows.forEach(r=>{
-    if(r && r.id && !have.has(r.id)){ have.add(r.id); editLogs.push(r); }
-  });
-}
-
-// `at` is stored as a UTC ISO string and Pakistan is a flat +05:00 with no
-// DST, so one Karachi day is exactly one 24h UTC window.
-function karachiDayWindowUTC(dateStr){
-  const start = new Date(dateStr + 'T00:00:00+05:00');
-  return [start.toISOString(), new Date(start.getTime() + 86400000).toISOString()];
-}
-
-// Returns true while the slice is still on its way (i.e. show a loading note
-// rather than "nothing recorded").
-function ensureAuditSlice(key, run, after){
-  if(auditFetched.has(key)) return false;
-  if(auditFetching.has(key)) return true;
-  if(!sb) return false;
-  auditFetching.add(key);
-  Promise.resolve(run()).then(res=>{
-    auditFetching.delete(key);
-    const error = res && res.error;
-    if(error){ console.error('Audit log fetch failed', error); return; }
-    auditFetched.add(key);       // only a clean read counts as fetched, so a
-    mergeEditLogs(res && res.data); // failed one retries on the next render
-    if(typeof after === 'function') after();
-  }).catch(err=>{
-    auditFetching.delete(key);
-    console.error('Audit log fetch failed', err);
-  });
-  return true;
-}
-
-function fetchAuditForDate(dateStr, after){
-  if(dateStr){
-    const win = karachiDayWindowUTC(dateStr);
-    return ensureAuditSlice('day:' + dateStr,
-      ()=> sb.from('guest_edits').select('*').gte('at', win[0]).lt('at', win[1]), after);
-  }
-  return ensureAuditSlice('all',
-    ()=> sb.from('guest_edits').select('*').order('at', { ascending: false }).limit(AUDIT_ALL_DAYS_LIMIT), after);
-}
-
-function fetchAuditForGuest(guestId, after){
-  if(!guestId) return false;
-  return ensureAuditSlice('guest:' + guestId,
-    ()=> sb.from('guest_edits').select('*').eq('guest_id', guestId), after);
-}
-
-// Repaint whichever audit surfaces are actually on screen once a slice
-// lands. Deliberately re-reads the date inputs instead of trusting the
-// values the fetch was started with — the user may have moved the date on
-// while it was in flight.
-function repaintAuditViews(){
-  if(currentView === 'audit' && document.getElementById('auditPageBody')) renderAuditPage();
-  const entryBox = document.getElementById('auditEntryCollapse');
-  if(entryBox && entryBox.style.display !== 'none'){
-    const d = document.getElementById('auditEntryDate');
-    renderAuditLog('auditEntryBody', d ? d.value : todayStr(), 200);
-  }
-  if(currentView === 'detail' && currentDetailId){
-    const e = loadAllEntries().find(x=> x.id === currentDetailId);
-    if(e && document.getElementById('detailChangeLog')) renderChangeLog(e);
-  }
-}
-
 // `dateStr` empty/omitted shows every day on record. `limit` (0 = no limit)
 // caps how many rows get rendered, purely to not choke the DOM/browser on a
-// long history — not an extra query. The rows themselves come from
-// `editLogs`, which this render fills on demand: the chosen day is pulled
-// from guest_edits the first time it's shown (see ensureAuditSlice) and the
-// page repaints itself when it lands.
+// long history — not an extra query. Reads from whatever's currently in
+// `editLogs`, which is never fetched from the server (see the note above
+// pullFreshFromCloud/realtime setup) — only this session's own actions.
 function renderAuditLog(bodyId, dateStr, limit){
   const box = document.getElementById(bodyId);
   if(!box) return;
@@ -12390,13 +12303,10 @@ function renderAuditLog(bodyId, dateStr, limit){
     box.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     return;
   }
-  const loading = fetchAuditForDate(dateStr, repaintAuditViews);
   let logs = getAllAuditLogs();
   if(dateStr) logs = logs.filter(l=> l.at && toKarachiDateStr(l.at) === dateStr);
   if(logs.length === 0){
-    box.innerHTML = loading
-      ? '<div class="empty-note">Loading change history…</div>'
-      : '<div class="empty-note">No changes recorded' + (dateStr ? ' on ' + formatDate(dateStr) : '') + '.</div>';
+    box.innerHTML = '<div class="empty-note">No changes recorded' + (dateStr ? ' on ' + formatDate(dateStr) : '') + '.</div>';
     return;
   }
   logs.sort((a,b)=> (b.at || '').localeCompare(a.at || ''));
@@ -13217,12 +13127,6 @@ function toggleAuditEntrySection(){
   const isOpen = box.style.display !== 'none';
   box.style.display = isOpen ? 'none' : 'block';
   chev.textContent = isOpen ? '▸ Show' : '▾ Hide';
-  // Opening it is what triggers that day's audit fetch — re-render so the
-  // section isn't stuck on whatever was there when the page last drew.
-  if(!isOpen){
-    const d = document.getElementById('auditEntryDate');
-    renderAuditLog('auditEntryBody', d ? d.value : todayStr(), 200);
-  }
 }
 
 // ---- Add Payment page ----
@@ -17026,8 +16930,8 @@ function renderAutoCheckout(){
   // editLogs is a same-session-only write log — a checkout done earlier
   // today from another device/session has no row in it, so those guests
   // showed no time. Pull that day's checked_out rows from guest_edits once
-  // per date (read-only, cached) and merge them in — its own narrow slice,
-  // kept separate from the audit pages' per-day fetch.
+  // per date (read-only, cached) and merge them in; this is the one page
+  // that fetches from the audit log, and only this thin slice of it.
   if(sb && acCheckoutLogCache.date !== asOfDate && !acCheckoutLogCache.fetching){
     acCheckoutLogCache.fetching = true;
     const winStart = addDaysToDateStr(asOfDate, -1) + 'T00:00:00Z';
@@ -17231,11 +17135,7 @@ function renderArrival(){
   // Pending's own log uses — an Undo'd arrival drops back out of this list
   // instead of sitting here forever looking confirmed.
   const all = loadAllEntries();
-  // Pull that day's audit rows once so a check-in confirmed on another
-  // device still shows its real time and the name of whoever did it, instead
-  // of falling through to the dateless backfill below.
-  fetchAuditForDate(asOfDate, ()=>{ if(currentView === 'arrival') renderArrival(); });
-  const dayCheckins = editLogs.concat(pendingEditLogs)
+  const dayCheckins = editLogs
     .filter(l=> l.action === 'checked_in' && l.at && toKarachiDateStr(l.at) === asOfDate)
     .filter(l=>{
       const entry = all.find(e=> e.id === l.guest_id);
@@ -17970,9 +17870,7 @@ async function pushPendingNow(){
       const { error: lErr } = await sb.from('guest_edits').upsert(pendingEditLogs.slice(), { onConflict: 'id' });
       if(lErr) throw lErr;
       mutationStamp++;
-      // merged (not concat'd) so a row that already came back from an audit
-      // fetch can't end up in editLogs twice under the same id
-      mergeEditLogs(pendingEditLogs.splice(0));
+      editLogs = editLogs.concat(pendingEditLogs.splice(0));
     }
     if(syncProblem) syncProblem = null;
     // No full pull here on purpose: the entry/room/payment objects saved
@@ -18539,16 +18437,14 @@ function requestBackgroundPull(){
   pullDebounceTimer = setTimeout(()=> pullFreshFromCloud(), 500);
 }
 
-// guest_edits (the audit log) is still not part of this routine poll, and
-// not part of realtime either — it's append-only and grows forever, so
-// pulling it on every poll would cost every open tab egress all day for a
-// table only a few pages read. It IS read now, just on demand and one slice
-// at a time: opening the Full Audit page, the entry page's ALL CHANGES
-// section, a guest's change-history tab or Arrival/Auto Checkout fetches
-// exactly the day (or the one guest) being shown and merges it into
-// `editLogs` — see ensureAuditSlice/fetchAuditForDate above renderAuditLog.
-// Each slice is fetched once per session and repaints when it lands, so the
-// audit pages now show what every device did, not just this one.
+// guest_edits (the audit log) is never fetched at all — not on the routine
+// poll, not on realtime events, not even on-demand when the audit-facing
+// pages are opened. It's write-only from the client's perspective: saves
+// still log to it (logGuestAction/pushPendingNow) for accountability, but
+// nothing ever reads it back, so `editLogs` only ever holds this session's
+// own actions. The Full Audit page, the per-guest audit tab, and Auto
+// Checkout's "already checked out today" list will only show what this
+// device itself did this session — that's the deliberate tradeoff.
 
 // Repaint whatever page is on screen from the fresh snapshot. The entry
 // form itself is never data-bound, so a pull can never wipe mid-typing
@@ -18661,8 +18557,8 @@ armIdleTimer();
 // see "Realtime incremental patching" above. If Realtime isn't enabled
 // this simply never fires — the periodic poll remains the guarantee, just
 // slower (up to 5 minutes instead of instant).
-// guest_edits (audit log) is deliberately NOT in this list — it's read on
-// demand per day/per guest instead, see the note above pullFreshFromCloud.
+// guest_edits (audit log) is deliberately NOT in this list — it's never
+// fetched at all, see the note above pullFreshFromCloud.
 if(sb && typeof sb.channel === 'function'){
   try{
     sb.channel('guest-system-live')
