@@ -473,10 +473,26 @@
   input[type="number"]::-webkit-outer-spin-button,
   input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
   input[type="number"]{ -moz-appearance:textfield; appearance:textfield; }
+  /* Rounded corners, done properly. With border-collapse:collapse the cell
+     borders are painted as straight segments that ignore the table's radius,
+     so every corner came out looking snipped off with a diagonal — the
+     border line just stopped dead instead of turning. border-radius only
+     applies to cells when the borders are separate, so that's what we use;
+     border-spacing:0 keeps the cells touching exactly as before. To stop
+     separate borders from doubling into 2px lines, each cell draws only its
+     right + bottom edge, and the first row/first column add back the top/
+     left edges — same single-line grid as collapse gave, but the corners
+     now actually curve. Print keeps collapse (see @media print), so printed
+     reports are untouched. */
   table{
     width:100%;
-    border-collapse:collapse;
-    border-radius:9px;
+    border-collapse:separate;
+    border-spacing:0;
+    /* Corner cells read this to curve their borders by exactly as much as
+       the table clips — tables with a different radius (the restaurant's
+       8px ones) set it alongside their own border-radius. */
+    --tbl-radius:9px;
+    border-radius:var(--tbl-radius);
     overflow:hidden;
     font-size:13px;
   }
@@ -509,6 +525,26 @@
     border:1px solid #00000018;
     vertical-align:middle;
   }
+  /* The single-line grid for separate borders (see the table rule above):
+     every cell owns its right + bottom edge, the first row adds the top
+     edge and the first column the left edge, and the four corner cells
+     carry the radius so the border turns the corner instead of being
+     sliced off. Kept here, after th/td, because both of those set the
+     border shorthand and would otherwise put all four widths back. */
+  th, td{ border-top-width:0; border-left-width:0; }
+  table > thead > tr:first-child > th,
+  table > thead > tr:first-child > td,
+  table > tbody:first-child > tr:first-child > th,
+  table > tbody:first-child > tr:first-child > td{ border-top-width:1px; }
+  tr > th:first-child, tr > td:first-child{ border-left-width:1px; }
+  table > thead > tr:first-child > *:first-child,
+  table > tbody:first-child > tr:first-child > *:first-child{ border-top-left-radius:var(--tbl-radius); }
+  table > thead > tr:first-child > *:last-child,
+  table > tbody:first-child > tr:first-child > *:last-child{ border-top-right-radius:var(--tbl-radius); }
+  table > tbody:last-child > tr:last-child > *:first-child,
+  table > tfoot:last-child > tr:last-child > *:first-child{ border-bottom-left-radius:var(--tbl-radius); }
+  table > tbody:last-child > tr:last-child > *:last-child,
+  table > tfoot:last-child > tr:last-child > *:last-child{ border-bottom-right-radius:var(--tbl-radius); }
   tbody tr:nth-child(even) td{ background:#F7F9FC; }
   .cashcheck-table tbody tr:nth-child(odd) td{ background:#fff; }
   .cashcheck-table tbody tr:nth-child(even) td{ background:#EFF6FF; }
@@ -3519,7 +3555,7 @@
   #view-nightsummary .ns-occ-sub{
     position:absolute; left:0; right:0; bottom:12px; text-align:center; font-size:11px; color:#2f6fed !important;
   }
-  #view-nightsummary .ns-table{ width:100%; border-collapse:collapse; font-size:12.5px; border-radius:9px; overflow:hidden; }
+  #view-nightsummary .ns-table{ width:100%; --tbl-radius:9px; border-collapse:separate; border-spacing:0; font-size:12.5px; border-radius:9px; overflow:hidden; }
   #view-nightsummary .ns-table thead th{
     text-align:left; color:#666 !important; font-weight:600; font-size:11px; padding:6px 8px;
     border:none !important; border-bottom:1px solid #ddd !important; background:transparent !important;
@@ -3761,12 +3797,19 @@
 #page-pos-invoice .static-note .due {color:var(--red); font-weight:700;}
 #page-pos-invoice .static-note .sub {color:var(--muted); font-size:11.5px;}
 #page-pos-invoice /* line items */
-  .line-table {width:100%; border-collapse:collapse; border-radius:8px; overflow:hidden;}
+  .line-table {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; border-radius:8px; overflow:hidden;}
 #page-pos-invoice .line-table thead th {background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; font-weight:700; letter-spacing:.03em; text-align:left; padding:10px 14px;}
 #page-pos-invoice .line-table thead th.num {text-align:right;}
 #page-pos-invoice .line-table tbody td {padding:8px 10px; border-bottom:1px solid var(--border);}
 #page-pos-invoice .line-table tbody td.num-col {width:34px; color:var(--muted); text-align:left; padding-left:14px;}
 #page-pos-invoice .line-table input {width:100%; border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; font-size:13px;}
+/* Same required-field red as Order No(QT), but for any input on the page —
+   a missing item name or customer gets pointed at directly instead of only
+   being named in a toast that's gone in a few seconds. Sits after the
+   .line-table input rule above so it wins the background/border on equal
+   specificity. */
+#page-pos-invoice input.field-error,
+#page-pos-invoice input.field-error:focus {outline:2px solid var(--red); outline-offset:0; border-color:var(--red); background:#fee2e2;}
 /* Item name text specifically shrinks so long menu item names actually
    fit inside the input instead of overflowing/getting cut off — the
    table header itself stays the normal 11px like every other header. */
@@ -3826,17 +3869,36 @@
    (and stay light) once dark mode was on. Same rules as Manage Menu's, so
    it picks up light/dark from the same --tblhead-* variables the rest of
    the module already uses. */
-#page-pos-invoice table.parts {width:100%; border-collapse:collapse; font-size:12.5px; border-radius:8px; overflow:hidden;}
+#page-pos-invoice table.parts {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:12.5px; border-radius:8px; overflow:hidden;}
 #page-pos-invoice table.parts th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:10.5px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong); text-transform:uppercase;}
 #page-pos-invoice table.parts th.num, #page-pos-invoice table.parts td.num {text-align:right;}
 #page-pos-invoice table.parts td {padding:7px 10px; border-bottom:1px solid var(--border); color:var(--text);}
 #page-pos-invoice .menu-panel-row {cursor:pointer;}
 #page-pos-invoice .menu-panel-row:hover {background:rgba(59,130,246,.08);}
 html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba(91,157,255,.14);}
+/* A ticked row is the whole row, not just the little box — the row IS the
+   click target, so it has to read as picked from across the counter. */
+#page-pos-invoice .menu-panel-row.picked {background:rgba(16,185,129,.12);}
+#page-pos-invoice .menu-panel-row.picked:hover {background:rgba(16,185,129,.18);}
+html[data-theme="dark"] #page-pos-invoice .menu-panel-row.picked {background:rgba(16,185,129,.20);}
+#page-pos-invoice .menu-panel-row td.mp-check {text-align:center; padding:7px 4px;}
+#page-pos-invoice .mp-box {width:16px; height:16px; accent-color:#10b981; cursor:pointer; vertical-align:middle; margin:0;}
+#page-pos-invoice .menu-panel-row td.mp-qty {padding:4px 10px;}
+#page-pos-invoice .qty-stepper {display:inline-flex; align-items:center; border:1px solid var(--border-strong); border-radius:7px; overflow:hidden; background:var(--panel);}
+#page-pos-invoice .qty-stepper .qs-btn {width:28px; height:28px; padding:0; border:0; background:transparent; color:var(--text); font-size:15px; font-weight:700; line-height:1; cursor:pointer;}
+#page-pos-invoice .qty-stepper .qs-btn:hover {background:rgba(59,130,246,.14);}
+#page-pos-invoice .qty-stepper .qs-val {width:44px; height:28px; padding:0; border:0; border-left:1px solid var(--border); border-right:1px solid var(--border); border-radius:0; text-align:center; background:transparent; color:var(--text); font-size:13px; font-weight:600;}
+#page-pos-invoice .qty-stepper .qs-val:focus {outline:none; background:rgba(59,130,246,.10);}
+#page-pos-invoice .menu-panel-foot {position:sticky; bottom:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 16px; border-top:1px solid var(--border-strong); background:var(--panel);}
+#page-pos-invoice .mp-count {font-size:12px; color:var(--muted);}
+#page-pos-invoice .mp-add-btn {background:#10b981; color:#fff; border:0; border-bottom:4px solid #059669; border-radius:8px; padding:8px 26px; font-size:13px; font-weight:700; letter-spacing:.04em; cursor:pointer;}
+#page-pos-invoice .mp-add-btn:hover {opacity:.88;}
+#page-pos-invoice .mp-add-btn:active {transform:translateY(2px); border-bottom:0;}
+#page-pos-invoice .mp-add-btn:disabled {background:var(--border-strong); border-bottom-color:var(--border); color:var(--muted); cursor:not-allowed; transform:none;}
 #page-pos-invoice .bottom-grid {display:grid; grid-template-columns:1.2fr 1fr; gap:16px; margin-bottom:16px;}
 #page-pos-invoice .tax-card, #page-pos-invoice .totals-card {padding:16px 20px;}
 #page-pos-invoice .section-title {font-size:11px; letter-spacing:.04em; color:var(--muted); font-weight:700; margin-bottom:12px;}
-#page-pos-invoice table.tax-tbl {width:100%; table-layout:fixed; border-collapse:collapse; font-size:13px; border-radius:8px; overflow:hidden;}
+#page-pos-invoice table.tax-tbl {width:100%; table-layout:fixed; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:13px; border-radius:8px; overflow:hidden;}
 #page-pos-invoice table.tax-tbl th {text-align:center; background:var(--tblhead-bg); color:var(--tblhead-text); font-weight:700; font-size:10.5px; letter-spacing:.03em; text-transform:uppercase; padding:6px 8px; border-bottom:1px solid var(--border-strong); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 #page-pos-invoice table.tax-tbl td {text-align:center; padding:8px; border-bottom:1px solid #f0f1f3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 #page-pos-invoice table.tax-tbl tr.total-row td {font-weight:700; border-bottom:none;}
@@ -3913,7 +3975,7 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-pos-invoice.pos-view-only.pos-postable-view .action-bar button#posPostBtn {opacity:1 !important; pointer-events:auto !important;}
 #page-pos-invoice .list-card {padding:16px 20px;}
 #page-pos-invoice .list-card .lc-title {font-size:15px; font-weight:600; margin-bottom:12px;}
-#page-pos-invoice table.simple {width:100%; border-collapse:collapse; font-size:12.5px; border-radius:8px; overflow:hidden;}
+#page-pos-invoice table.simple {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:12.5px; border-radius:8px; overflow:hidden;}
 #page-pos-invoice table.simple thead {background:var(--lightblue);}
 #page-pos-invoice table.simple th {text-align:left; padding:8px 10px; font-weight:700; color:var(--text);}
 #page-pos-invoice table.simple th.num, #page-pos-invoice table.simple td.num {text-align:right;}
@@ -3970,7 +4032,7 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-receipts .status-badge {display:inline-block; border-radius:12px; padding:3px 10px; font-size:11px; font-weight:700; letter-spacing:.02em;}
 #page-receipts .status-badge.posted {background:#dcfce7; color:#15803d;}
 #page-receipts .status-badge.not-posted {background:#fdf1dc; color:var(--amber, #b45309);}
-#page-receipts table.rep {width:100%; border-collapse:collapse; font-size:13px; border-radius:8px; overflow:hidden;}
+#page-receipts table.rep {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:13px; border-radius:8px; overflow:hidden;}
 #page-receipts table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-receipts table.rep th.num {text-align:right;}
 #page-receipts table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
@@ -4016,7 +4078,7 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-charges-summary .results-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
 #page-charges-summary .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
 #page-charges-summary .results-head .rh-count {font-size:12px; color:var(--blue);}
-#page-charges-summary table.rep {width:100%; border-collapse:collapse; font-size:13px; border-radius:8px; overflow:hidden;}
+#page-charges-summary table.rep {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:13px; border-radius:8px; overflow:hidden;}
 #page-charges-summary table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 6px; border-bottom:none;}
 #page-charges-summary table.rep th.num, #page-charges-summary table.rep td.num {text-align:right;}
 #page-charges-summary table.rep td {padding:9px 6px; border-bottom:none;}
@@ -4082,7 +4144,7 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-printed-only .results-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
 #page-printed-only .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
 #page-printed-only .results-head .rh-count {font-size:12px; color:var(--amber);}
-#page-printed-only table.rep {width:100%; border-collapse:collapse; font-size:13px; border-radius:8px; overflow:hidden;}
+#page-printed-only table.rep {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:13px; border-radius:8px; overflow:hidden;}
 #page-printed-only table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-printed-only table.rep th.num {text-align:right;}
 #page-printed-only table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
@@ -4111,7 +4173,7 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-front-office .results-head, #page-deleted .results-head, #page-qty-summary .results-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
 #page-front-office .results-head .rh-title, #page-deleted .results-head .rh-title, #page-qty-summary .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
 #page-front-office .results-head .rh-count, #page-deleted .results-head .rh-count, #page-qty-summary .results-head .rh-count {font-size:12px; color:var(--blue);}
-#page-front-office table.rep, #page-deleted table.rep, #page-qty-summary table.rep {width:100%; border-collapse:collapse; font-size:13px; border-radius:8px; overflow:hidden;}
+#page-front-office table.rep, #page-deleted table.rep, #page-qty-summary table.rep {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:13px; border-radius:8px; overflow:hidden;}
 #page-front-office table.rep th, #page-deleted table.rep th, #page-qty-summary table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-front-office table.rep th.num, #page-deleted table.rep th.num, #page-qty-summary table.rep th.num {text-align:right;}
 #page-front-office table.rep td, #page-deleted table.rep td, #page-qty-summary table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
@@ -4142,7 +4204,7 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-pending-payments .results-head, #page-previous-day .results-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
 #page-pending-payments .results-head .rh-title, #page-previous-day .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
 #page-pending-payments .results-head .rh-count, #page-previous-day .results-head .rh-count {font-size:12px; color:var(--blue);}
-#page-pending-payments table.rep, #page-previous-day table.rep {width:100%; border-collapse:collapse; font-size:13px; border-radius:8px; overflow:hidden;}
+#page-pending-payments table.rep, #page-previous-day table.rep {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:13px; border-radius:8px; overflow:hidden;}
 #page-pending-payments table.rep th, #page-previous-day table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-pending-payments table.rep th.num, #page-previous-day table.rep th.num {text-align:right;}
 #page-pending-payments table.rep td, #page-previous-day table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
@@ -4170,7 +4232,7 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-pos-daylock .results-card {padding:20px;}
 #page-pos-daylock .results-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
 #page-pos-daylock .results-head .rh-title {font-size:11px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
-#page-pos-daylock table.rep {width:100%; border-collapse:collapse; font-size:13px; border-radius:8px; overflow:hidden;}
+#page-pos-daylock table.rep {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:13px; border-radius:8px; overflow:hidden;}
 #page-pos-daylock table.rep th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:11px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong);}
 #page-pos-daylock table.rep td {padding:9px 10px; border-bottom:1px solid #f0f1f3;}
 #page-pos-daylock .empty-note {color:var(--muted); font-size:12.5px;}
@@ -4250,7 +4312,7 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-manage-parts .hint {color:var(--muted); font-size:12px; margin-left:auto;}
 #page-manage-parts .btn-primary {background:var(--blue); color:#fff; border:none; border-radius:6px; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px;}
 #page-manage-parts .table-wrap {overflow-x:auto;}
-#page-manage-parts table.parts {width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap; border-radius:8px; overflow:hidden;}
+#page-manage-parts table.parts {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:12.5px; white-space:nowrap; border-radius:8px; overflow:hidden;}
 #page-manage-parts table.parts th {text-align:left; background:var(--tblhead-bg); color:var(--tblhead-text); font-size:10.5px; letter-spacing:.03em; font-weight:700; padding:8px 10px; border-bottom:1px solid var(--border-strong); text-transform:uppercase;}
 #page-manage-parts table.parts th.num, #page-manage-parts table.parts td.num {text-align:right;}
 #page-manage-parts table.parts td {padding:7px 10px; border-bottom:1px solid #f0f1f3;}
@@ -4262,6 +4324,26 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row:hover {background:rgba
 #page-manage-parts .tag {display:inline-block; background:#eef2ff; color:var(--blue); border-radius:10px; padding:2px 8px; font-size:11px; margin:1px 2px 1px 0;}
 #page-manage-parts .new-note {color:var(--muted); font-size:12px; margin-bottom:12px;}
 #page-manage-parts .save-row {margin-top:14px;}
+
+/* ===== Restaurant-wide table + filter-row corrections ===== */
+/* The hotel's global th/td give every cell a full 1px box (blue #026591 on
+   headers). The restaurant's tables are horizontal-rules-only by design —
+   each page sets its own border-bottom and nothing else — so those inherited
+   side/top edges showed up as stray blue verticals between header cells and
+   a blue hairline along the top of every black header bar. */
+#restaurantNative table th,
+#restaurantNative table td{ border-top-width:0; border-left-width:0; border-right-width:0; }
+/* Filter rows: the hotel's global label{text-align:center} was leaking in,
+   centring "SEARCH"/"DATE"/"STATUS" over left-aligned fields, and the day
+   stepper (inserted at the top of its cell by addDateStepper) sat ABOVE the
+   Date label — which also made that column taller and pushed its field out
+   of line with its neighbours. Labels go back to the left, the stepper is
+   moved under the field by posAttachDateStepper, and every cell tops out on
+   the same line. */
+#restaurantNative .filters-grid{ align-items:start; }
+#restaurantNative .filters-grid > div{ display:flex; flex-direction:column; align-items:stretch; }
+#restaurantNative .filters-grid label{ text-align:left; }
+#restaurantNative .filters-grid .date-stepper{ justify-content:flex-start; margin-top:6px; }
 
 /* ===== Restaurant dark theme ===== */
 /* Every ported page already routes its colors through local CSS custom
@@ -5862,11 +5944,15 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <span id="posMenuPanelTitle" style="font-weight:700; font-size:14px;">Menu</span>
       <button type="button" class="pos-modal-close" onclick="posCloseMenuPanel()" title="Close" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
-    <div class="table-wrap" style="padding:0 4px 8px;">
+    <div class="table-wrap" style="padding:0 4px 0;">
       <table class="parts" id="posMenuPanelTable">
-        <thead><tr><th style="width:90px;">Part #</th><th>Item</th><th class="num" style="width:120px;">Price</th></tr></thead>
+        <thead><tr><th style="width:34px;"></th><th style="width:88px;">Part #</th><th>Item</th><th class="num" style="width:100px;">Price</th><th style="width:130px;">Qty</th></tr></thead>
         <tbody id="posMenuPanelBody"></tbody>
       </table>
+    </div>
+    <div class="menu-panel-foot">
+      <span class="mp-count" id="posMenuPanelCount">Tick the items you want</span>
+      <button type="button" class="mp-add-btn" id="posMenuPanelAddBtn" onclick="posAddMenuSelection()" disabled>ADD</button>
     </div>
   </div>
 
@@ -5876,9 +5962,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>CUSTOMER 🔍</label>
         <div class="search-wrap" style="flex:1;"><input type="text" id="posCustomer" value="Walkin Customer" autocomplete="off" oninput="posRecalcAll()" style="width:100%;"><div class="ac-menu"></div></div>
       </div>
-      <div class="lbl-input" style="flex:0 0 170px;"><div class="pos-label-row"><label>ORDER NO(QT) <span class="pos-req">*</span></label><label class="pos-na-check"><input type="checkbox" id="posOrderNoNA" onchange="posToggleOrderNoNA()"> N/A</label></div><input type="text" id="posOrderNo" inputmode="numeric" maxlength="5" autocomplete="off" oninput="posOrderNoInput(this)"></div>
+      <div class="lbl-input" style="flex:0 0 170px;"><div class="pos-label-row"><label>ORDER NO(QT) <span class="pos-req">*</span></label><label class="pos-na-check"><input type="checkbox" id="posOrderNoNA" onchange="posToggleOrderNoNA()"> N/A</label></div><input type="text" id="posOrderNo" inputmode="numeric" maxlength="5" autocomplete="off" oninput="posOrderNoInput(this)" onkeydown="posTopFieldEnter(event, this)"></div>
       <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><div class="search-wrap" style="flex:1;"><input type="text" id="posRoomNoField" autocomplete="off" oninput="posRoomNoChanged(this, true)" style="width:100%;"><div class="ac-menu room-ac-menu"></div></div></div>
-      <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>Discription(extra notes)</label><input type="text" id="posLineDescription"></div>
+      <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>Discription(extra notes)</label><input type="text" id="posLineDescription" onkeydown="posTopFieldEnter(event, this)"></div>
       <div class="lbl-input" style="flex:0 0 170px;"><label>Invoice Date</label><input type="date" id="posInvoiceDate"></div>
     </div>
 
@@ -6076,7 +6162,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card">
     <div class="lc-title">Recent Invoices</div>
     <table class="simple">
-      <thead><tr><th style="width:36px;">#</th><th style="width:120px;">STATUS</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th style="width:36px;">#</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th><th style="width:32px;"></th></tr></thead>
       <tbody id="recentInvoicesBody"></tbody>
     </table>
   </div>
@@ -6084,7 +6170,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card" id="guestInvoicesCard" style="display:none; margin-top:14px;">
     <div class="lc-title">Guests (Non-Paying)</div>
     <table class="simple">
-      <thead><tr><th style="width:36px;">#</th><th style="width:120px;">STATUS</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th style="width:36px;">#</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th><th style="width:32px;"></th></tr></thead>
       <tbody id="guestInvoicesBody"></tbody>
     </table>
   </div>
@@ -12675,7 +12761,7 @@ const RIVIERA_FOLIO_CSS = `
   .riviera-folio-content{ padding:6mm 15mm 14mm; font-size:11.5px; line-height:1.5; }
   .riviera-folio-guestinfo{ display:grid; grid-template-columns:1fr 1fr; gap:4px 18px; margin-bottom:14px; }
   .riviera-folio-section-title{ font-weight:bold; font-size:13px; margin:16px 0 8px; border-bottom:1px solid #ccc; padding-bottom:3px; }
-  .riviera-folio-table{ width:100%; border-collapse:collapse; font-size:11px; border-radius:9px; overflow:hidden; }
+  .riviera-folio-table{ width:100%; --tbl-radius:9px; border-collapse:separate; border-spacing:0; font-size:11px; border-radius:9px; overflow:hidden; }
   .riviera-folio-table th, .riviera-folio-table td{ border:1px solid #ccc; padding:5px 7px; text-align:left; }
   .riviera-folio-table th{ background:#f2f2f2; font-weight:bold; }
   .riviera-folio-table td.num, .riviera-folio-table th.num{ text-align:right; font-family:Arial,Helvetica,sans-serif; font-variant-numeric:lining-nums; }
@@ -19615,7 +19701,11 @@ function posShowApp(id, btn){
   if (id === 'page-qty-summary') renderQuantitySummary();
   if (id === 'page-pos-daylock') posRenderDayLockPage();
   if (id === 'page-pos-settings') posLoadQtPrefixInput();
-  if (id === 'page-pos-invoice') window.scrollTo(0, 0);
+  // Landing on Point of Sale always shows the configured prefix in Order
+  // No(QT) — setting it in Settings and walking back over here used to leave
+  // the field blank until the next New, because the seed only ran on reset
+  // and at boot. Never overwrites a number already in the field.
+  if (id === 'page-pos-invoice') { posApplyQtPrefixToField(); window.scrollTo(0, 0); }
   posPushHistoryForPage(id);
 }
 
@@ -20069,17 +20159,24 @@ function posSetupAutocomplete(input){
   input.addEventListener('keydown', function(e){
     if (e.key === 'Enter') {
       e.preventDefault();
-      // Only auto-pick a suggestion if the user explicitly navigated to it
-      // with arrow keys, or typed the exact name — a loose substring match
-      // must never silently overwrite what they typed.
+      // Enter takes the suggestion that's highlighted, or the top of the
+      // list when nothing has been arrowed to — typing "spanish" + Enter
+      // gives you Spanish Latte at its real price instead of a free-text
+      // item that then gets flagged as a violation.
       if (menu.classList.contains('show') && matches.length) {
-        var q = input.value.trim().toLowerCase();
-        var exactIdx = matches.findIndex(function(m){ return m[0].toLowerCase() === q; });
-        var pickIdx = activeIdx >= 0 ? activeIdx : exactIdx;
-        if (pickIdx >= 0 && matches[pickIdx]) pick(matches[pickIdx]);
+        pick(matches[activeIdx >= 0 ? activeIdx : 0]);
       }
       close();
-      if (input.value.trim()) posFocusNewLine();
+      // On to this line's quantity — the per-line description between them
+      // is optional and almost always skipped, so Enter jumps it (Tab still
+      // reaches it). From qty onward posRowFieldEnter walks the rest of the
+      // row and only then opens a new line.
+      if (input.value.trim()) {
+        var row = input.closest('tr');
+        var qtyInput = row ? row.querySelector('.qty-cell input') : null;
+        if (qtyInput) { qtyInput.focus(); if (qtyInput.select) qtyInput.select(); }
+        else if (!posFocusNextRowField(input)) posFocusNewLine();
+      }
       return;
     }
     if (!menu.classList.contains('show')) return;
@@ -20102,6 +20199,8 @@ function posSetupCustomerAutocomplete(){
   var wrap = input.closest('.search-wrap');
   var menu = wrap ? wrap.querySelector('.ac-menu') : null;
   if (!menu) return;
+  var matches = [];
+  var activeIdx = -1;
 
   function getNames(){
     var seen = {};
@@ -20121,7 +20220,13 @@ function posSetupCustomerAutocomplete(){
     menu.innerHTML = '';
   }
 
-  function render(matches){
+  function pick(name){
+    input.value = name;
+    close();
+    posRecalcAll();
+  }
+
+  function render(){
     menu.innerHTML = '';
     if (!matches.length) {
       var empty = document.createElement('div');
@@ -20129,17 +20234,15 @@ function posSetupCustomerAutocomplete(){
       empty.textContent = 'No matching customers — you can still type a new name.';
       menu.appendChild(empty);
     } else {
-      matches.forEach(function(name){
+      matches.forEach(function(name, i){
         var row = document.createElement('div');
-        row.className = 'ac-item';
+        row.className = 'ac-item' + (i === activeIdx ? ' active' : '');
         var label = document.createElement('span');
         label.textContent = name;
         row.appendChild(label);
         row.addEventListener('mousedown', function(e){
           e.preventDefault();
-          input.value = name;
-          close();
-          posRecalcAll();
+          pick(name);
         });
         menu.appendChild(row);
       });
@@ -20151,13 +20254,30 @@ function posSetupCustomerAutocomplete(){
   function openMenu(forceAll){
     var all = getNames();
     var q = input.value.trim().toLowerCase();
-    var matches = (forceAll || !q) ? all : all.filter(function(n){ return n.toLowerCase().indexOf(q) !== -1; });
-    render(matches);
+    matches = (forceAll || !q) ? all : all.filter(function(n){ return n.toLowerCase().indexOf(q) !== -1; });
+    activeIdx = -1;
+    render();
   }
 
   input.addEventListener('focus', function(){ openMenu(true); });
   input.addEventListener('click', function(){ openMenu(true); });
   input.addEventListener('input', function(){ openMenu(false); });
+
+  // Same keyboard contract as the room and item fields: arrows move through
+  // the list, Enter takes the highlighted name (or the top one) and moves on
+  // to Order No(QT).
+  input.addEventListener('keydown', function(e){
+    var open = menu.classList.contains('show');
+    if (e.key === 'ArrowDown' && open) { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, matches.length - 1); render(); return; }
+    if (e.key === 'ArrowUp' && open) { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); render(); return; }
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (open && matches.length) pick(matches[activeIdx >= 0 ? activeIdx : 0]);
+    close();
+    posTopFieldEnter({ key: 'Enter', preventDefault: function(){} }, input);
+  });
+
   input.addEventListener('blur', function(){ setTimeout(close, 120); });
 }
 
@@ -20196,19 +20316,53 @@ function posValidateItemInput(input){
 // typed in), and the .room-ac-menu height cap keeps it to ~4 rows visible
 // with the rest reachable by scrolling, since POS_ROOMS runs into the
 // dozens.
+// Nobody types the dash. "d102", "D 102" and "D-102" are the same room to
+// the person at the till, so matching ignores case and anything that isn't a
+// letter or a digit — and once what's typed can only be one room, the field
+// is rewritten to that room's real number (D-102) so what's stored stays
+// canonical.
+function posNormalizeRoomKey(s){
+  return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function posFindRoom(val){
+  var key = posNormalizeRoomKey(val);
+  if (!key) return null;
+  for (var i = 0; i < POS_ROOMS.length; i++) {
+    if (posNormalizeRoomKey(POS_ROOMS[i].no) === key) return POS_ROOMS[i];
+  }
+  return null;
+}
+
+function posMatchRooms(val){
+  var key = posNormalizeRoomKey(val);
+  if (!key) return POS_ROOMS.slice();
+  return POS_ROOMS.filter(function(r){ return posNormalizeRoomKey(r.no).indexOf(key) !== -1; });
+}
+
 function posSetupRoomAutocomplete(){
   var input = document.getElementById('posRoomNoField');
   if (!input) return;
   var wrap = input.closest('.search-wrap');
   var menu = wrap ? wrap.querySelector('.ac-menu') : null;
   if (!menu) return;
+  var matches = [];
+  var activeIdx = -1;
 
   function close(){
     menu.classList.remove('show');
     menu.innerHTML = '';
+    activeIdx = -1;
   }
 
-  function render(matches){
+  function pick(r){
+    if (!r) return;
+    input.value = r.no;
+    close();
+    posRoomNoChanged(input, true);
+  }
+
+  function render(){
     menu.innerHTML = '';
     if (!matches.length) {
       var empty = document.createElement('div');
@@ -20216,9 +20370,9 @@ function posSetupRoomAutocomplete(){
       empty.textContent = 'No matching rooms.';
       menu.appendChild(empty);
     } else {
-      matches.forEach(function(r){
+      matches.forEach(function(r, i){
         var row = document.createElement('div');
-        row.className = 'ac-item';
+        row.className = 'ac-item' + (i === activeIdx ? ' active' : '');
         var label = document.createElement('span');
         label.textContent = r.no;
         var floor = document.createElement('span');
@@ -20228,9 +20382,7 @@ function posSetupRoomAutocomplete(){
         row.appendChild(floor);
         row.addEventListener('mousedown', function(e){
           e.preventDefault();
-          input.value = r.no;
-          close();
-          posRoomNoChanged(input, true);
+          pick(r);
         });
         menu.appendChild(row);
       });
@@ -20240,15 +20392,39 @@ function posSetupRoomAutocomplete(){
   }
 
   function openMenu(forceAll){
-    var q = input.value.trim().toLowerCase();
-    var matches = (forceAll || !q) ? POS_ROOMS : POS_ROOMS.filter(function(r){ return r.no.toLowerCase().indexOf(q) !== -1; });
-    render(matches);
+    matches = (forceAll || !input.value.trim()) ? POS_ROOMS.slice() : posMatchRooms(input.value);
+    activeIdx = -1;
+    render();
   }
 
   input.addEventListener('focus', function(){ openMenu(true); });
   input.addEventListener('click', function(){ openMenu(true); });
   input.addEventListener('input', function(){ openMenu(false); });
-  input.addEventListener('blur', function(){ setTimeout(close, 120); });
+
+  // Enter takes the highlighted room, or the top of the list when nothing
+  // has been arrowed to — then carries straight on to the items, so a room
+  // order is room number, Enter, first item without a pause.
+  input.addEventListener('keydown', function(e){
+    var open = menu.classList.contains('show');
+    if (e.key === 'ArrowDown' && open) { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, matches.length - 1); render(); return; }
+    if (e.key === 'ArrowUp' && open) { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); render(); return; }
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (open && matches.length) pick(matches[activeIdx >= 0 ? activeIdx : 0]);
+    else pick(posFindRoom(input.value));
+    close();
+    posFocusFirstEmptyItem();
+  });
+
+  input.addEventListener('blur', function(){
+    setTimeout(function(){
+      close();
+      // Leaving the field with "d102" in it stores the room properly as D-102
+      var room = posFindRoom(input.value);
+      if (room && input.value !== room.no) { input.value = room.no; posRoomNoChanged(input, true); }
+    }, 120);
+  });
 }
 
 // ---------- Order No(QT): prefix, fixed length, N/A ----------
@@ -20283,10 +20459,13 @@ function posSaveQtPrefix(){
   catch(e) { posShowToast('Could not save the prefix on this device.', 'error'); return; }
   el.value = val;
   posShowToast(val ? 'QT prefix set to ' + val + ' — new receipts will start with it.' : 'QT prefix cleared.');
-  // Only re-seed a receipt that hasn't been started yet, so changing the
-  // setting can't rewrite a QT number already typed on an open invoice.
+  // Show it on the invoice form straight away. posApplyQtPrefixToField only
+  // ever fills an EMPTY field, so a QT number already typed on the open
+  // invoice is safe — the only extra guard needed is not seeding a saved
+  // record that's open for viewing/editing (an old receipt with no QT on it
+  // must stay without one).
   var orderInput = document.getElementById('posOrderNo');
-  if (orderInput && !posFormDirty && !posViewingRecord && !posEditingRecord) posApplyQtPrefixToField();
+  if (orderInput && !posViewingRecord && !posEditingRecord) posApplyQtPrefixToField();
 }
 
 // Seeds the empty field with the prefix. Never touches a field that already
@@ -20374,7 +20553,9 @@ function posSyncCustomerToRoom(roomVal){
 // must never rewrite the customer that was stored with it.
 function posRoomNoChanged(input, fromUser){
   var val = (input.value || '').trim();
-  var isValid = !val || POS_ROOMS.some(function(r){ return r.no.toLowerCase() === val.toLowerCase(); });
+  // Loose match (see posFindRoom): "d102" is a real room, so it must not go
+  // red while it's being typed just because the dash isn't in yet.
+  var isValid = !val || !!posFindRoom(val);
   input.style.borderColor = isValid ? '' : '#dc2626';
   input.style.background = isValid ? '' : '#fdecec';
   input.style.color = isValid ? '' : '#7a1d1d';
@@ -20396,14 +20577,53 @@ function posOpenMenuGroup(groupKey, title, pillEl){
     var priceText = cells[2] ? cells[2].textContent : '0.00';
     var row = document.createElement('tr');
     row.className = 'menu-panel-row';
-    row.innerHTML = '<td>' + partNo + '</td><td>' + name + '</td><td class="num">' + priceText + '</td>';
-    row.addEventListener('click', function(){
-      posSelectMenuItem(name, parseFloat(priceText.replace(/,/g, '')) || 0);
+    row.dataset.name = name;
+    row.dataset.price = String(parseFloat(priceText.replace(/,/g, '')) || 0);
+    row.innerHTML =
+      '<td class="mp-check"><input type="checkbox" class="mp-box" tabindex="-1" aria-label="Pick ' + posEscapeHtml(name) + '"></td>' +
+      '<td>' + partNo + '</td><td>' + name + '</td><td class="num">' + priceText + '</td>' +
+      '<td class="mp-qty"><div class="qty-stepper">' +
+        '<button type="button" class="qs-btn" data-step="-1" tabindex="-1" aria-label="Less">−</button>' +
+        '<input type="text" class="qs-val" inputmode="numeric" value="1" aria-label="Quantity">' +
+        '<button type="button" class="qs-btn" data-step="1" tabindex="-1" aria-label="More">+</button>' +
+      '</div></td>';
+    // The whole row is the tick target — a thumb on a counter shouldn't have
+    // to find a 16px box. The qty stepper is carved out of it so pressing
+    // +/− never also unticks the row you're setting a quantity on.
+    row.addEventListener('click', function(e){
+      if (e.target.closest('.qty-stepper')) return;
+      posSetMenuRowPicked(row, !row.classList.contains('picked'));
+    });
+    row.querySelector('.mp-box').addEventListener('click', function(e){
+      e.stopPropagation(); // the box handles itself; the row handler would undo it
+      posSetMenuRowPicked(row, this.checked);
+    });
+    row.querySelectorAll('.qs-btn').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        posStepMenuQty(row, parseInt(btn.dataset.step, 10) || 0);
+      });
+    });
+    var qsVal = row.querySelector('.qs-val');
+    qsVal.addEventListener('click', function(e){ e.stopPropagation(); });
+    qsVal.addEventListener('input', function(){
+      this.value = (this.value || '').replace(/\D/g, '').slice(0, 3);
+      // Typing a quantity is picking the item, same as pressing +
+      if (parseInt(this.value, 10) > 0) posSetMenuRowPicked(row, true);
+      posUpdateMenuPanelCount();
+    });
+    qsVal.addEventListener('blur', function(){
+      if (!(parseInt(this.value, 10) > 0)) this.value = '1';
+      posUpdateMenuPanelCount();
     });
     body.appendChild(row);
   });
+  posUpdateMenuPanelCount();
   if (titleEl) titleEl.textContent = title;
-  panel.style.display = '';
+  // 'block', not '' — posAnyModalOpen() reads the inline display, and an
+  // empty string there would leave the panel looking closed to every
+  // keyboard shortcut in the module.
+  panel.style.display = 'block';
   var backdrop = document.getElementById('posMenuBackdrop');
   if (backdrop) backdrop.style.display = '';
   document.querySelectorAll('#posGroupPills .grp-pill').forEach(function(p){ p.classList.remove('active'); });
@@ -20418,7 +20638,56 @@ function posCloseMenuPanel(){
   document.querySelectorAll('#posGroupPills .grp-pill').forEach(function(p){ p.classList.remove('active'); });
 }
 
-function posSelectMenuItem(name, price){
+// ── Menu panel picking ──────────────────────────────────────────────────
+// The panel is a basket now, not a one-shot picker: tick as many rows as the
+// table ordered, set a quantity on each, then ADD (or Enter) drops them all
+// onto the invoice in one go. Ordering four teas used to mean opening the
+// same popup four times.
+function posMenuRowQty(row){
+  var input = row ? row.querySelector('.qs-val') : null;
+  var n = input ? parseInt(input.value, 10) : 1;
+  return (n > 0) ? n : 1;
+}
+
+function posSetMenuRowPicked(row, on){
+  var box = row.querySelector('.mp-box');
+  if (box) box.checked = !!on;
+  row.classList.toggle('picked', !!on);
+  posUpdateMenuPanelCount();
+}
+
+function posMenuPickedRows(){
+  return Array.prototype.slice.call(document.querySelectorAll('#posMenuPanelBody tr.menu-panel-row.picked'));
+}
+
+// Nudging a quantity means you want the item — otherwise you'd have left the
+// row alone — so the stepper ticks the row for you.
+function posStepMenuQty(row, step){
+  var input = row.querySelector('.qs-val');
+  if (!input) return;
+  var n = posMenuRowQty(row) + step;
+  input.value = String(Math.min(999, Math.max(1, n)));
+  posSetMenuRowPicked(row, true);
+}
+
+function posUpdateMenuPanelCount(){
+  var label = document.getElementById('posMenuPanelCount');
+  var btn = document.getElementById('posMenuPanelAddBtn');
+  var rows = posMenuPickedRows();
+  var units = rows.reduce(function(sum, row){ return sum + posMenuRowQty(row); }, 0);
+  if (label) {
+    label.textContent = rows.length
+      ? rows.length + (rows.length === 1 ? ' item' : ' items') + ' · ' + units + ' qty'
+      : 'Tick the items you want';
+  }
+  if (btn) btn.disabled = rows.length === 0;
+}
+
+// Drops one menu item onto the line table, reusing the last line while it's
+// still blank so picking into a fresh invoice doesn't leave an empty row on
+// top. Doesn't close the panel or recalc — posAddMenuSelection does both once
+// for the whole batch.
+function posPlaceMenuItem(name, price, qty){
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (!tbody) return;
   var rows = tbody.querySelectorAll('tr');
@@ -20435,7 +20704,36 @@ function posSelectMenuItem(name, price){
   var priceInput = priceCell ? priceCell.querySelector('input') : null;
   if (priceInput) priceInput.value = price.toFixed(2);
   var qtyInput = lastRow ? lastRow.querySelector('.qty-cell input') : null;
-  if (qtyInput && (!qtyInput.value || parseFloat(qtyInput.value) === 0)) qtyInput.value = '1';
+  if (qtyInput) qtyInput.value = String(qty > 0 ? qty : 1);
+}
+
+function posAddMenuSelection(){
+  var rows = posMenuPickedRows();
+  if (!rows.length) { posShowToast('Tick at least one item first.', 'error'); return; }
+  rows.forEach(function(row){
+    posPlaceMenuItem(row.dataset.name || '', parseFloat(row.dataset.price) || 0, posMenuRowQty(row));
+  });
+  // Placing lines is a programmatic .value write, which fires no input event —
+  // so the dirty flag has to be set by hand or "New" would wipe the order
+  // without asking.
+  posFormDirty = true;
+  posCloseMenuPanel();
+  posRecalcAll();
+  posShowToast(rows.length === 1 ? 'Added 1 item.' : 'Added ' + rows.length + ' items.');
+}
+
+// Enter adds whatever's ticked, Escape closes — the panel owns the keyboard
+// while it's up.
+function posMenuPanelKeys(e){
+  var panel = document.getElementById('posMenuPanel');
+  if (!panel || !panel.style.display || panel.style.display === 'none') return;
+  if (e.key === 'Enter') { e.preventDefault(); posAddMenuSelection(); }
+  else if (e.key === 'Escape') { e.preventDefault(); posCloseMenuPanel(); }
+}
+
+function posSelectMenuItem(name, price){
+  posPlaceMenuItem(name, price, 1);
+  posFormDirty = true;
   posCloseMenuPanel();
   posRecalcAll();
 }
@@ -20784,10 +21082,12 @@ function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, 
   tr.title = 'Click to open ' + record.no + ' in Point of Sale';
   var itemsText = (record.items || []).map(function(it){ return it.name; }).filter(Boolean).join(', ');
   var payStatus = showPayStatus ? posPaymentStatus(record) : null;
+  // showPayStatus tables drop the INVOICE # column (every row here is one
+  // posted invoice — the number adds nothing) and carry the payment badge as
+  // the last data column instead, right before the delete button, where the
+  // eye lands after AMOUNT/PAID.
   tr.innerHTML = (rowNum != null ? '<td>' + rowNum + '</td>' : '') +
-    (payStatus
-      ? '<td><span class="status-badge ' + payStatus.cls + '" title="' + posEscapeHtml(payStatus.title) + '">' + payStatus.label + '</span></td>'
-      : '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>') +
+    (payStatus ? '' : '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>') +
     (showOrderNo ? '<td>' + posEscapeHtml(record.orderNo || '') + '</td>' : '') +
     '<td>' + posEscapeHtml(record.date) + '</td>' +
     '<td>' + posEscapeHtml(record.room) + '</td>' +
@@ -20795,6 +21095,7 @@ function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, 
     (showItems ? '<td class="fo-items-col" title="' + posEscapeHtml(itemsText) + '">' + posEscapeHtml(itemsText) + '</td>' : '') +
     '<td class="num">' + record.amount.toFixed(2) + '</td>' +
     '<td class="num">' + record.paid.toFixed(2) + '</td>' +
+    (payStatus ? '<td><span class="status-badge ' + payStatus.cls + '" title="' + posEscapeHtml(payStatus.title) + '">' + payStatus.label + '</span></td>' : '') +
     (showStatus ? '<td><span class="status-badge ' + (record.posted ? 'posted' : 'not-posted') + '">' + (record.posted ? 'Posted' : 'Not Posted') + '</span></td>' : '');
   if (!record.deleted) tr.appendChild(posMakeActionsCell(record));
   tr.addEventListener('click', function(e){
@@ -21362,8 +21663,13 @@ var posFormDirty = false;
 (function(){
   var invoicePage = document.getElementById('page-pos-invoice');
   if (!invoicePage) return;
-  invoicePage.addEventListener('input', function(){ posFormDirty = true; });
-  invoicePage.addEventListener('change', function(){ posFormDirty = true; });
+  // Ticking rows / setting quantities inside the menu popup isn't a change to
+  // the invoice — nothing lands on it until ADD is pressed (which sets the
+  // flag itself). Without this, browsing the menu and closing it would leave
+  // a blank form "dirty" and make New ask to discard nothing.
+  var fromMenuPanel = function(e){ return !!(e.target && e.target.closest && e.target.closest('#posMenuPanel')); };
+  invoicePage.addEventListener('input', function(e){ if (!fromMenuPanel(e)) posFormDirty = true; });
+  invoicePage.addEventListener('change', function(e){ if (!fromMenuPanel(e)) posFormDirty = true; });
 })();
 
 // Rebuilds the .pay-rows list from a plain [{date, amount, type}] array —
@@ -22400,11 +22706,20 @@ function posRequestPost(mode){
     var nameInput = row.querySelector('.pos-item-input');
     if (nameInput && nameInput.value.trim()) hasItem = true;
   });
-  if (!hasItem) { posShowToast('Add at least one item before posting.', 'error'); return; }
+  // A missing field gets pointed at, not just named: the cursor lands in it
+  // and it goes red (focusError), the same way the hotel flags its required
+  // fields. The toast still explains what's wrong, but the fix is now
+  // wherever the caret already is.
+  if (!hasItem) {
+    posShowToast('Add at least one item before posting.', 'error');
+    var firstItemInput = tbody.querySelector('.pos-item-input');
+    if (firstItemInput) focusError(firstItemInput);
+    return;
+  }
 
   var custInput = document.getElementById('posCustomer');
   var customer = custInput ? custInput.value.trim() : '';
-  if (!customer) { posShowToast('Enter a customer name before posting.', 'error'); if (custInput) custInput.focus(); return; }
+  if (!customer) { posShowToast('Enter a customer name before posting.', 'error'); if (custInput) focusError(custInput); return; }
 
   var totals = posRecalcAll();
   if (totals.balance < -0.004) { posShowToast('Payments (' + totals.paid.toFixed(2) + ') exceed the total (' + totals.grandTotal.toFixed(2) + ') — fix the payment amount before posting.', 'error'); return; }
@@ -22817,6 +23132,44 @@ function posRowFieldEnter(e, input){
   if (!posFocusNextRowField(input)) posFocusNewLine();
 }
 
+// Puts the caret on the first item line still waiting to be filled in, or on
+// a fresh line if every existing one is already named.
+function posFocusFirstEmptyItem(){
+  var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
+  if (!tbody) return;
+  var rows = tbody.querySelectorAll('tr');
+  for (var i = 0; i < rows.length; i++) {
+    var input = rows[i].querySelector('.pos-item-input');
+    if (input && !input.value.trim()) { input.focus(); return; }
+  }
+  posFocusNewLine();
+}
+
+// Enter carries on down the form instead of doing nothing: Customer hands
+// over to Order No(QT), and Order No / Room / Description all drop straight
+// into the item list. Together with N (new receipt, caret in Order No) and
+// Enter inside the line table (next field, then next line), a whole receipt
+// can be keyed without touching the mouse.
+function posTopFieldEnter(e, input){
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  // An open suggestion list belongs to the field being left — Enter here
+  // means "done with this field", so close it rather than leaving it
+  // hanging over the items below.
+  var wrap = input.closest && input.closest('.search-wrap');
+  var menu = wrap ? wrap.querySelector('.ac-menu') : null;
+  if (menu) menu.classList.remove('show');
+  if (input.id === 'posCustomer') {
+    var orderInput = document.getElementById('posOrderNo');
+    if (orderInput && !orderInput.disabled) {
+      orderInput.focus();
+      try { orderInput.setSelectionRange(orderInput.value.length, orderInput.value.length); } catch(err) {}
+      return;
+    }
+  }
+  posFocusFirstEmptyItem();
+}
+
 function posAddLine(){
   var tbody = document.querySelector('#page-pos-invoice .line-table tbody');
   if (!tbody) return;
@@ -22875,6 +23228,14 @@ function posAttachDateStepper(id){
   if (!el || typeof addDateStepper !== 'function') return;
   if (el._flatpickr && typeof filterDatePickers !== 'undefined') filterDatePickers[id] = el._flatpickr;
   addDateStepper(id);
+  // addDateStepper drops the arrows in as the FIRST child of the field's
+  // container, which in the hotel's own filter bars is where they belong. In
+  // the restaurant's filter grids the container is the whole labelled cell,
+  // so that put the arrows above the "Date" label — out of line with the
+  // Search/Status columns beside it. They belong under the date box.
+  var cell = el.parentElement;
+  var stepper = cell ? cell.querySelector(':scope > .date-stepper') : null;
+  if (stepper) cell.appendChild(stepper);
 }
 
 // posAppBooted now declared earlier, right before init() — see the comment there.
@@ -22943,6 +23304,7 @@ function posBootApp(){
   try { posSetupRoomAutocomplete(); } catch(e) { console.error('[POS] posSetupRoomAutocomplete failed', e); }
   document.addEventListener('keydown', posEscCancelEdit);
   document.addEventListener('keydown', posNewReceiptHotkey);
+  document.addEventListener('keydown', posMenuPanelKeys);
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
   if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
   var posInvoiceDateEl = document.getElementById('posInvoiceDate');
