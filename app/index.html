@@ -21785,10 +21785,21 @@ function posOpenRecordInForm(record){
   // makes no sense — the useful action is a plain reprint. Print-Only
   // survives only for a locked-day record, where saving a fresh unposted
   // copy is the sanctioned way to carry its data into a new invoice.
+  // ...except a plain reprint was wrong for an unposted print-only receipt
+  // in the other direction: anything added to it since (a second round of
+  // items on the same order) printed but never made it back into the saved
+  // record. It's "Print & Save" instead — same button, same printonly mode,
+  // but it writes the form back into THIS receipt first (posRequestPost
+  // promotes it to the edit target) so what's on the paper is what's stored.
   var printOnlyBtn = document.getElementById('posPrintOnlyBtn');
   var printBtn = document.getElementById('posPrintBtn');
-  var plainPrint = record.posted || !isLockedRecord;
-  if (printOnlyBtn) printOnlyBtn.style.display = plainPrint ? 'none' : '';
+  var printAndSave = !record.posted && !isLockedRecord;
+  var plainPrint = record.posted;
+  if (printOnlyBtn) {
+    printOnlyBtn.style.display = plainPrint ? 'none' : '';
+    printOnlyBtn.textContent = printAndSave ? 'Print & Save' : 'Print-Only';
+    printOnlyBtn.title = printAndSave ? 'Saves anything added here back into this receipt, then prints it. Still not posted.' : '';
+  }
   if (printBtn) printBtn.style.display = plainPrint ? '' : 'none';
 
   // An unposted receipt's whole purpose is to be posted later, so Post is
@@ -22697,8 +22708,12 @@ function posRequestPost(mode){
   // .pos-postable-view CSS). It must UPDATE that receipt, never write a
   // second copy of it, so promote it to the edit target first — exactly
   // what clicking Edit does.
+  // Print-Only on an already-saved unposted receipt is the same story — it's
+  // "Print & Save" there (see posOpenRecordInForm), so it has to land on the
+  // same receipt too. Without this it minted a brand-new print-only draft
+  // every reprint and the items added in between were saved only on the copy.
   if (posViewingRecord && !posEditingRecord && !posViewingRecord.posted &&
-      !posIsLocked(posViewingRecord) && (mode === 'post' || mode === 'printpost')) {
+      !posIsLocked(posViewingRecord) && (mode === 'post' || mode === 'printpost' || mode === 'printonly')) {
     posEnterEditMode();
   }
   if (posViewingRecord && !posEditingRecord && mode !== 'printonly' && document.getElementById('page-pos-invoice').classList.contains('pos-view-only')) {
@@ -22761,7 +22776,13 @@ function posRequestPost(mode){
 
   posPendingPostMode = mode;
   var titleEl = document.getElementById('posPostTitle');
-  if (titleEl) titleEl.textContent = POS_POST_MODE_LABELS[mode] || 'Post this invoice?';
+  var postTitle = POS_POST_MODE_LABELS[mode] || 'Post this invoice?';
+  // Print & Save on an existing print-only receipt — say which receipt it's
+  // being saved into, so it can't be mistaken for printing a second copy.
+  if (mode === 'printonly' && posEditingRecord && !posEditingRecord.posted) {
+    postTitle = 'Save these items into ' + posEditingRecord.no + ' and print it? (still not posted)';
+  }
+  if (titleEl) titleEl.textContent = postTitle;
 
   // Posting without printing first isn't a caution — it's a normal way to
   // work, and listing it every single time trained everyone to click past
@@ -22919,7 +22940,9 @@ function posResetForm(){
   var editRecordBtnTop = document.getElementById('posEditRecordBtnTop');
   if (editRecordBtnTop) editRecordBtnTop.style.display = 'none';
   var printOnlyBtn = document.getElementById('posPrintOnlyBtn');
-  if (printOnlyBtn) printOnlyBtn.style.display = '';
+  // back to plain "Print-Only" — the "Print & Save" wording belongs only to
+  // an already-saved receipt opened from Printed-Only (posOpenRecordInForm)
+  if (printOnlyBtn) { printOnlyBtn.style.display = ''; printOnlyBtn.textContent = 'Print-Only'; printOnlyBtn.title = ''; }
   var printBtn = document.getElementById('posPrintBtn');
   if (printBtn) printBtn.style.display = 'none';
   posUpdateAdjacentInvoiceButtons();
