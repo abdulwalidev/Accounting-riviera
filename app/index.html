@@ -6331,7 +6331,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         <div class="rh-count" id="csSummaryReceived" style="font-size:22px; font-weight:700; color:#fff;">0.00</div>
       </div>
       <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
-        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">RECEIVED − SERVICE CHARGE</div>
+        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">CASH − SERVICE CHARGE</div>
         <div class="rh-count" id="csSummaryReceivedAfterService" style="font-size:22px; font-weight:700; color:#fff;">0.00</div>
       </div>
     </div>
@@ -22725,8 +22725,11 @@ function renderChargesSummary(){
   if (sumTaxEl) sumTaxEl.textContent = (totTax - totServiceCharge).toFixed(2);
   var sumReceivedEl = document.getElementById('csSummaryReceived');
   if (sumReceivedEl) sumReceivedEl.textContent = totPaid.toFixed(2);
+  // Service Charge is always handed out of the cash drawer, no matter which
+  // way the invoice itself was paid — so what's left in the drawer is cash
+  // taken minus the whole period's Service Charge, not total received.
   var sumReceivedAfterServiceEl = document.getElementById('csSummaryReceivedAfterService');
-  if (sumReceivedAfterServiceEl) sumReceivedAfterServiceEl.textContent = (totPaid - totServiceCharge).toFixed(2);
+  if (sumReceivedAfterServiceEl) sumReceivedAfterServiceEl.textContent = (totCash - totServiceCharge).toFixed(2);
 
   var foodBevBody = document.getElementById('csFoodBevBody');
   if (foodBevBody) {
