@@ -17092,6 +17092,12 @@ function buildBreakfastReport(asOfDate){
 // reads struck-through rather than as a normal row — in both views, so
 // switching to Full never changes which rooms are on the page or which of
 // them the kitchen can skip.
+//
+// Without Breakfast renders blank rather than 0 (both views): the column
+// exists to point at the rooms holding someone who is NOT entitled, and a
+// column of mostly-zeros buries the two or three that matter. The totals
+// row still prints its real number even at 0 — there a blank would read as
+// "not calculated" instead of "nobody".
 let bfSimpleView = true;
 function setBreakfastToday(){
   setFilterDate('bfDate', todayStr());
@@ -17146,7 +17152,7 @@ function renderBreakfastReport(){
             <td>${r.guest}</td>
             <td>${r.breakfastAdults}</td>
             <td>${r.breakfastChildren}</td>
-            <td class="bf-without">${r.withoutBreakfast}</td>
+            <td class="bf-without">${r.withoutBreakfast || ''}</td>
             <td style="font-weight:700;">${r.breakfastTotal}</td>
           </tr>`).join('')}
         </tbody>
@@ -17185,7 +17191,7 @@ function renderBreakfastReport(){
           <td style="font-weight:700;">${r.pax}</td>
           <td>${r.breakfastAdults}</td>
           <td>${r.breakfastChildren}</td>
-          <td style="font-weight:700;">${r.withoutBreakfast}</td>
+          <td style="font-weight:700;">${r.withoutBreakfast || ''}</td>
           <td style="font-weight:700;">${r.breakfastTotal}</td>
         </tr>`).join('')}
       </tbody>
