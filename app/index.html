@@ -3975,6 +3975,17 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row.picked {background:rgb
 #page-pos-invoice.pos-view-only.pos-postable-view .action-bar button#posPostBtn {opacity:1 !important; pointer-events:auto !important;}
 #page-pos-invoice .list-card {padding:16px 20px;}
 #page-pos-invoice .list-card .lc-title {font-size:15px; font-weight:600; margin-bottom:12px;}
+#page-pos-invoice .list-card .lc-head {display:flex; align-items:center; justify-content:space-between; gap:12px;}
+#page-pos-invoice .list-card .lc-head .lc-title {margin-bottom:12px;}
+#page-pos-invoice .pos-sort-btn {border:1px solid var(--border-strong); background:transparent; color:var(--muted); border-radius:6px; padding:5px 10px; font-size:11px; font-weight:700; letter-spacing:.04em; cursor:pointer; margin-bottom:12px; white-space:nowrap;}
+#page-pos-invoice .pos-sort-btn:hover {color:var(--text); border-color:var(--blue);}
+/* One red rule between days, with the row # restarting under it — the point
+   is being able to count a single day's invoices at a glance. Deliberately
+   unscoped: every invoice table in the restaurant uses it. */
+tr.pos-day-sep td {padding:0; height:0; border-bottom:2px solid #dc2626;}
+/* An order with no number of its own is the exception on a page where every
+   other row has one, so it reads as the exception. */
+td.pos-order-na {color:#dc2626; font-weight:700;}
 #page-pos-invoice table.simple {width:100%; --tbl-radius:8px; border-collapse:separate; border-spacing:0; font-size:12.5px; border-radius:8px; overflow:hidden;}
 #page-pos-invoice table.simple thead {background:var(--lightblue);}
 #page-pos-invoice table.simple th {text-align:left; padding:8px 10px; font-weight:700; color:var(--text);}
@@ -6223,7 +6234,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <!-- Recent invoices -->
   <div class="card list-card">
-    <div class="lc-title">Recent Invoices</div>
+    <div class="lc-head">
+      <div class="lc-title">Recent Invoices</div>
+      <button type="button" id="posRecentSortBtn" class="pos-sort-btn" onclick="posToggleRecentSort()">SORT: INVOICE</button>
+    </div>
     <table class="simple">
       <thead><tr><th style="width:36px;">#</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th><th style="width:32px;"></th></tr></thead>
       <tbody id="recentInvoicesBody"></tbody>
@@ -6271,7 +6285,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsPaidBody"></tbody>
     </table>
@@ -6281,7 +6295,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="results-head">AT FRONT OFFICE</div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsFrontOfficeBody"></tbody>
     </table>
@@ -6291,7 +6305,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="results-head">GUESTS (NON-PAYING)</div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsGuestBody"></tbody>
     </table>
@@ -6489,7 +6503,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <table class="rep">
       <thead>
         <tr>
-          <th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
+          <th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
           <th class="num">AMOUNT</th><th class="num">PAID</th><th>ACTION</th>
         </tr>
       </thead>
@@ -6504,7 +6518,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <table class="rep">
       <thead>
         <tr>
-          <th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
+          <th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
           <th class="num">AMOUNT</th><th class="num">PAID</th><th>ACTION</th>
         </tr>
       </thead>
@@ -6537,7 +6551,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="frontOfficeBody"></tbody>
     </table>
@@ -6550,7 +6564,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:200px;">COLLECTED</th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:200px;">COLLECTED</th></tr>
       </thead>
       <tbody id="frontOfficeCollectedBody"></tbody>
     </table>
@@ -6581,7 +6595,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th></tr>
       </thead>
       <tbody id="deletedBody"></tbody>
     </table>
@@ -6611,7 +6625,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="pendingPaymentsBody"></tbody>
     </table>
@@ -20130,6 +20144,105 @@ async function posFetchSingleInvoice(id){
   }catch(e){ console.error('[POS] single-invoice fetch failed', e); }
 }
 
+// The day an invoice belongs to, as a sortable 'YYYY-MM-DD'. isoDate is
+// the real field; the dd-mm-yyyy display date is the fallback for older
+// rows that never got one.
+function posRecordDayKey(record){
+  if (record.isoDate) return record.isoDate;
+  var p = (record.date || '').split('-');
+  return p.length === 3 ? p[2] + '-' + p[1] + '-' + p[0] : '';
+}
+
+// Order No(QT) as a number to sort on. An order with no number of its own
+// — N/A, or blank on an older record — gets -1 so it sinks below every
+// real one INSIDE ITS OWN DAY, rather than drifting out of its day
+// entirely.
+function posOrderNoSortKey(record){
+  var digits = (record.orderNo || '').replace(/\D/g, '');
+  return digits ? Number(digits) : -1;
+}
+
+// Recent Invoices (and the Guests table beside it) read as a stack of days:
+// newest day first, and within a day the highest Order No(QT) first —
+// that's the order the desk actually took them in, which the raw insertion
+// order only roughly matched. Each day is separated by a red rule and its
+// own numbering restarts at 1, so "how many did we do today" is just the
+// last number in the top block.
+// Which of the two orderings the list is in. Kept in localStorage so the
+// choice survives a refresh — it's a preference about how someone reads
+// the page, not per-session state.
+var posRecentSortMode = (function(){
+  try { return localStorage.getItem('pos_recent_sort') === 'time' ? 'time' : 'invoice'; }
+  catch(e) { return 'invoice'; }
+})();
+function posToggleRecentSort(){
+  posRecentSortMode = posRecentSortMode === 'invoice' ? 'time' : 'invoice';
+  try { localStorage.setItem('pos_recent_sort', posRecentSortMode); } catch(e) {}
+  posUpdateRecentSortBtn();
+  posRenderRecentInvoices();
+}
+function posUpdateRecentSortBtn(){
+  var btn = document.getElementById('posRecentSortBtn');
+  if (!btn) return;
+  btn.textContent = posRecentSortMode === 'invoice' ? 'SORT: INVOICE' : 'SORT: TIME POSTED';
+  btn.title = posRecentSortMode === 'invoice'
+    ? 'Highest Order No(QT) first within each day — click for the order they were posted in'
+    : 'The order they were posted in — click to sort by Order No(QT) instead';
+}
+
+// Newest day first; inside a day, whichever ordering the SORT button is
+// on. withinDay overrides that for a table whose own ordering is the
+// point (Pending Payments is biggest-balance-first, and stays that way —
+// day grouping just gives it the same red rules and per-day counting).
+function posSortInvoicesForDisplay(records, withinDay){
+  var byTime = posRecentSortMode === 'time';
+  return records.slice().sort(function(a, b){
+    var dayA = posRecordDayKey(a), dayB = posRecordDayKey(b);
+    if (dayA !== dayB) return dayB.localeCompare(dayA);
+    if (withinDay) {
+      var own = withinDay(a, b);
+      if (own) return own;
+    } else if (!byTime) {
+      var orderA = posOrderNoSortKey(a), orderB = posOrderNoSortKey(b);
+      if (orderA !== orderB) return orderB - orderA;
+    }
+    // Invoice numbers are issued server-side in sequence, so numbering
+    // backwards IS "most recently posted first" — no separate timestamp
+    // needed, and no two rows can tie.
+    return (b.no || '').localeCompare(a.no || '');
+  });
+}
+
+// Appends rows day by day: a red rule between days and the row # starting
+// over under it, so a single day's invoices can be counted at a glance on
+// any table, not just Recent Invoices. buildRow(record, num) returns the
+// <tr>, and the rule's colspan is measured off a real row rather than
+// hardcoded — these tables have between 9 and 11 columns and each one
+// would have been its own thing to get wrong.
+function posAppendDayGroupedRows(body, records, buildRow, withinDay){
+  var lastDay = null, num = 0, lastRow = null;
+  posSortInvoicesForDisplay(records, withinDay).forEach(function(record){
+    var day = posRecordDayKey(record);
+    if (lastDay !== null && day !== lastDay) {
+      var sep = document.createElement('tr');
+      sep.className = 'pos-day-sep';
+      sep.innerHTML = '<td colspan="' + (lastRow ? lastRow.children.length : 10) + '"></td>';
+      body.appendChild(sep);
+      num = 0;
+    }
+    lastDay = day;
+    lastRow = buildRow(record, ++num);
+    body.appendChild(lastRow);
+  });
+  return num;
+}
+
+function posFillDayGroupedInvoiceRows(body, records){
+  posAppendDayGroupedRows(body, records, function(record, num){
+    return posBuildInvoiceRow(record, false, true, true, num, true);
+  });
+}
+
 function posRenderRecentInvoices(){
   var recentBody = document.getElementById('recentInvoicesBody');
   var guestBody = document.getElementById('guestInvoicesBody');
@@ -20137,17 +20250,15 @@ function posRenderRecentInvoices(){
   if (!recentBody) return;
   recentBody.innerHTML = '';
   if (guestBody) guestBody.innerHTML = '';
-  var hasGuest = false;
-  var recentNum = 0, guestNum = 0;
+  var recent = [], guests = [];
   posInvoices.forEach(function(record){
     if (record.deleted || !record.posted) return; // print-only drafts don't belong in Recent Invoices — only actually posted ones
-    var isGuest = /guest/i.test(record.customer || '');
-    var rowNum = isGuest ? ++guestNum : ++recentNum;
-    var row = posBuildInvoiceRow(record, false, true, true, rowNum, true);
-    if (isGuest && guestBody) { guestBody.appendChild(row); hasGuest = true; }
-    else recentBody.appendChild(row);
+    if (/guest/i.test(record.customer || '')) guests.push(record); else recent.push(record);
   });
-  if (guestCard) guestCard.style.display = hasGuest ? '' : 'none';
+  posUpdateRecentSortBtn();
+  posFillDayGroupedInvoiceRows(recentBody, recent);
+  if (guestBody) posFillDayGroupedInvoiceRows(guestBody, guests);
+  if (guestCard) guestCard.style.display = guests.length ? '' : 'none';
 }
 
 function posShowApp(id, btn){
@@ -21548,13 +21659,18 @@ function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, 
   tr.title = 'Click to open ' + record.no + ' in Point of Sale';
   var itemsText = (record.items || []).map(function(it){ return it.name; }).filter(Boolean).join(', ');
   var payStatus = showPayStatus ? posPaymentStatus(record) : null;
+  // An order with no number of its own reads as the exception it is —
+  // every other row on the page has one (see posOrderNoSortKey, which
+  // sinks these to the foot of their own day).
+  var orderNoText = record.orderNo || '';
+  var orderNaCls = orderNoText.trim().toUpperCase() === 'N/A' ? ' class="pos-order-na"' : '';
   // showPayStatus tables drop the INVOICE # column (every row here is one
   // posted invoice — the number adds nothing) and carry the payment badge as
   // the last data column instead, right before the delete button, where the
   // eye lands after AMOUNT/PAID.
   tr.innerHTML = (rowNum != null ? '<td>' + rowNum + '</td>' : '') +
     (payStatus ? '' : '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>') +
-    (showOrderNo ? '<td>' + posEscapeHtml(record.orderNo || '') + '</td>' : '') +
+    (showOrderNo ? '<td' + orderNaCls + '>' + posEscapeHtml(orderNoText) + '</td>' : '') +
     '<td>' + posEscapeHtml(record.date) + '</td>' +
     '<td>' + posEscapeHtml(record.room) + '</td>' +
     '<td>' + posEscapeHtml(record.customer) + '</td>' +
@@ -22113,6 +22229,7 @@ function receiptsRefresh(){
   var searchInput = document.getElementById('receiptsSearchInput');
   var searchQ = searchInput ? searchInput.value.trim().toLowerCase() : '';
   var shown = 0;
+  var paidRows = [], guestRows = [], foRows = [];
   posInvoices.forEach(function(record){
     if (record.deleted) return;
     if (statusFilter === 'posted' && !record.posted) return;
@@ -22128,12 +22245,15 @@ function receiptsRefresh(){
     } else if (filterDMY && record.date !== filterDMY) {
       return;
     }
-    var row = posBuildInvoiceRow(record, true, true, true);
     shown++;
-    if (/guest/i.test(record.customer || '')) guestBody.appendChild(row);
-    else if (record.sentToFrontOffice && foBody) foBody.appendChild(row);
-    else paidBody.appendChild(row);
+    if (/guest/i.test(record.customer || '')) guestRows.push(record);
+    else if (record.sentToFrontOffice && foBody) foRows.push(record);
+    else paidRows.push(record);
   });
+  var buildReceiptRow = function(record, num){ return posBuildInvoiceRow(record, true, true, true, num); };
+  posAppendDayGroupedRows(paidBody, paidRows, buildReceiptRow);
+  posAppendDayGroupedRows(guestBody, guestRows, buildReceiptRow);
+  if (foBody) posAppendDayGroupedRows(foBody, foRows, buildReceiptRow);
   var countEl = document.getElementById('receiptsCount');
   if (countEl) countEl.textContent = shown + (shown === 1 ? ' receipt' : ' receipts');
 }
@@ -22151,22 +22271,23 @@ function frontOfficeRefresh(){
   if (collectedBody) collectedBody.innerHTML = '';
   var dateInput = document.getElementById('frontOfficeDateFilter');
   var filterDMY = dateInput && dateInput.value ? receiptsDateToDMY(dateInput.value) : null;
-  var shown = 0, shownCollected = 0;
+  var pendingRows = [], collectedRows = [];
   posInvoices.forEach(function(record){
     if (record.deleted || !record.sentToFrontOffice) return;
     if (filterDMY && record.date !== filterDMY) return;
-    if (record.collected) {
-      if (!collectedBody) return;
-      var crow = posBuildInvoiceRow(record, false, true);
-      var stampTd = crow.lastElementChild;
-      if (stampTd) stampTd.textContent = (record.collectedBy || '') + ' · ' + (record.collectedAt ? posFormatDateTimeFromIso(record.collectedAt) : '');
-      collectedBody.appendChild(crow);
-      shownCollected++;
-    } else {
-      body.appendChild(posBuildInvoiceRow(record, false, true));
-      shown++;
-    }
+    if (record.collected) { if (collectedBody) collectedRows.push(record); }
+    else pendingRows.push(record);
   });
+  posAppendDayGroupedRows(body, pendingRows, function(record, num){
+    return posBuildInvoiceRow(record, false, true, false, num);
+  });
+  if (collectedBody) posAppendDayGroupedRows(collectedBody, collectedRows, function(record, num){
+    var crow = posBuildInvoiceRow(record, false, true, false, num);
+    var stampTd = crow.lastElementChild;
+    if (stampTd) stampTd.textContent = (record.collectedBy || '') + ' · ' + (record.collectedAt ? posFormatDateTimeFromIso(record.collectedAt) : '');
+    return crow;
+  });
+  var shown = pendingRows.length, shownCollected = collectedRows.length;
   if (countEl) countEl.textContent = shown + ' pending';
   if (collectedCountEl) collectedCountEl.textContent = shownCollected + ' collected';
 }
@@ -22545,16 +22666,16 @@ function printedOnlyRefresh(){
   guestBody.innerHTML = '';
   var dateInput = document.getElementById('printedOnlyDateFilter');
   var filterDMY = dateInput && dateInput.value ? receiptsDateToDMY(dateInput.value) : null;
-  var shown = 0;
-  var guestShown = 0;
-  var hasGuest = false;
+  var rows = [], guestRows = [];
   posInvoices.forEach(function(record){
     if (record.deleted || record.posted) return;
     if (filterDMY && record.date !== filterDMY) return;
-    var row = posBuildInvoiceRow(record, false, true);
-    if (/guest/i.test(record.customer || '')) { guestBody.appendChild(row); hasGuest = true; guestShown++; }
-    else { body.appendChild(row); shown++; }
+    if (/guest/i.test(record.customer || '')) guestRows.push(record); else rows.push(record);
   });
+  var buildPrintedRow = function(record, num){ return posBuildInvoiceRow(record, false, true, false, num); };
+  posAppendDayGroupedRows(body, rows, buildPrintedRow);
+  posAppendDayGroupedRows(guestBody, guestRows, buildPrintedRow);
+  var shown = rows.length, guestShown = guestRows.length, hasGuest = guestRows.length > 0;
   // Guest receipts counted in too — they're unposted receipts sitting on
   // this page like any other, just in their own table, and leaving them out
   // made this number disagree with the sidebar count for no visible reason.
@@ -22600,7 +22721,7 @@ function deletedRefresh(){
   // names as well as the invoice/order/customer/room fields.
   var searchInput = document.getElementById('deletedSearchInput');
   var searchQ = searchInput ? searchInput.value.trim().toLowerCase() : '';
-  var shown = 0;
+  var rows = [];
   posInvoices.forEach(function(record){
     if (!record.deleted) return;
     if (searchQ) {
@@ -22610,10 +22731,12 @@ function deletedRefresh(){
     } else if (filterDMY && record.date !== filterDMY) {
       return;
     }
-    body.appendChild(posBuildInvoiceRow(record, true, true, true));
-    shown++;
+    rows.push(record);
   });
-  if (countEl) countEl.textContent = shown + ' deleted';
+  posAppendDayGroupedRows(body, rows, function(record, num){
+    return posBuildInvoiceRow(record, true, true, true, num);
+  });
+  if (countEl) countEl.textContent = rows.length + ' deleted';
 }
 
 // Its own dedicated page for a quick daily look, plus feeds the same
@@ -22631,21 +22754,24 @@ function pendingPaymentsRefresh(){
     if (filterDMY && r.date !== filterDMY) return false;
     var bal = r.balance != null ? r.balance : (r.amount - r.paid);
     return bal > 0.004;
-  }).sort(function(a, b){
-    var balA = a.balance != null ? a.balance : (a.amount - a.paid);
-    var balB = b.balance != null ? b.balance : (b.amount - b.paid);
-    return balB - balA;
   });
-  rows.forEach(function(r){
+  // Day-grouped like every other invoice table, but biggest balance first
+  // WITHIN each day — chasing money is what this page is for, and that
+  // ordering is the page.
+  posAppendDayGroupedRows(body, rows, function(r, num){
     var bal = r.balance != null ? r.balance : (r.amount - r.paid);
-    var tr = posBuildInvoiceRow(r, false, true);
+    var tr = posBuildInvoiceRow(r, false, true, false, num);
     var balTd = document.createElement('td');
     balTd.className = 'num';
     balTd.style.fontWeight = '700';
     balTd.style.color = '#dc2626';
     balTd.textContent = bal.toFixed(2);
     tr.insertBefore(balTd, tr.lastElementChild);
-    body.appendChild(tr);
+    return tr;
+  }, function(a, b){
+    var balA = a.balance != null ? a.balance : (a.amount - a.paid);
+    var balB = b.balance != null ? b.balance : (b.amount - b.paid);
+    return balB - balA;
   });
   if (countEl) countEl.textContent = rows.length + ' pending';
 }
@@ -22748,17 +22874,17 @@ function renderChargesSummary(){
 
   if (guestBody) {
     guestBody.innerHTML = '';
-    guestRows.forEach(function(r, i){
+    posAppendDayGroupedRows(guestBody, guestRows, function(r, i){
       var itemsText = (r.items || []).map(function(it){ return it.name; }).filter(Boolean).join(', ');
       var gtr = document.createElement('tr');
-      gtr.innerHTML = '<td>' + (i + 1) + '</td>' +
+      gtr.innerHTML = '<td>' + i + '</td>' +
         '<td>' + posEscapeHtml(r.no) + '</td>' +
         '<td>' + posEscapeHtml(r.date) + '</td>' +
         '<td>' + posEscapeHtml(r.room) + '</td>' +
         '<td>' + posEscapeHtml(r.customer) + '</td>' +
         '<td class="fo-items-col" title="' + posEscapeHtml(itemsText) + '">' + posEscapeHtml(itemsText) + '</td>';
       posMakeRowClickable(gtr, r);
-      guestBody.appendChild(gtr);
+      return gtr;
     });
   }
   if (guestCountEl) guestCountEl.textContent = guestRows.length + ' guest invoices';
@@ -22767,7 +22893,10 @@ function renderChargesSummary(){
   var totSub = 0, totTax = 0, totAmt = 0, totPaid = 0, totBal = 0;
   var totCash = 0, totAccountTransfer = 0, totCard = 0;
   var totFood = 0, totBeverage = 0, totServiceCharge = 0;
-  rows.forEach(function(r, i){
+  // Day-grouped like every other invoice table — over a date range this is
+  // where the red rules earn their keep. The totals below are a sum over
+  // the same records, so the order rows come out in doesn't touch them.
+  posAppendDayGroupedRows(body, rows, function(r, i){
     var bal = r.balance != null ? r.balance : (r.amount - r.paid);
     totSub += r.subtotal || 0; totTax += r.taxTotal || 0; totAmt += r.amount || 0; totPaid += r.paid || 0; totBal += bal;
     totCash += r.paidCash || 0; totAccountTransfer += r.paidAccountTransfer || 0; totCard += r.paidCard || 0;
@@ -22787,7 +22916,7 @@ function renderChargesSummary(){
     var rowGstTax = (r.taxTotal || 0) - rowServiceCharge;
     var statusBadge = bal > 0.004 ? '<span class="status-badge pending">Pending</span>' : '<span class="status-badge paid">Paid</span>';
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td>' + (i + 1) + '</td>' +
+    tr.innerHTML = '<td>' + i + '</td>' +
       '<td>' + posEscapeHtml(r.date) + '</td>' +
       '<td>' + posEscapeHtml(r.room) + '</td>' +
       '<td>' + posEscapeHtml(r.customer) + '</td>' +
@@ -22800,7 +22929,7 @@ function renderChargesSummary(){
       '<td class="num"' + (bal > 0.004 ? ' style="color:#c53030; font-weight:700;"' : '') + '>' + bal.toFixed(2) + '</td>' +
       '<td>' + statusBadge + '</td>';
     posMakeRowClickable(tr, r);
-    body.appendChild(tr);
+    return tr;
   });
   if (rows.length) {
     var totalTr = document.createElement('tr');
