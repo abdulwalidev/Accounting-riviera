@@ -19245,7 +19245,15 @@ let idleTimer = null;
 let appPaused = false;
 
 function idlePauseMs(){
-  const role = currentUser ? currentUser.role : '';
+  // currentUser is a `let` declared further down the file, so it's in the
+  // temporal dead zone while this runs at load (armIdleTimer fires here
+  // before that line is reached) — reading it then THROWS rather than
+  // giving undefined, which is why this is a try/catch and not a plain
+  // truthiness check. Nobody is signed in at that point anyway, so the
+  // signed-out default is the right answer; showApp() re-arms on the real
+  // role once sign-in completes.
+  let role = '';
+  try{ role = currentUser ? currentUser.role : ''; }catch(e){ role = ''; }
   const ms = IDLE_PAUSE_MS_BY_ROLE[role];
   return ms === undefined ? IDLE_PAUSE_MS : ms;
 }
