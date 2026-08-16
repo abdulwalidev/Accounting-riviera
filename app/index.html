@@ -10132,12 +10132,19 @@ function isAdvanceReservation(entry){
   return !!(entry && entry.savedAt && entry.checkIn && toKarachiDateStr(entry.savedAt) < entry.checkIn);
 }
 
-// The date the Arrival page shipped. A booking saved before this has no
-// Actual Checkin for the boring reason that the field did not exist yet —
-// those guests really did stay, and treating them as unconfirmed would
-// erase weeks of genuine room-nights from every report. The gate below is
-// therefore forward-only: it can only ever judge bookings taken after the
-// desk actually had a Confirm button to press.
+// The date the Arrival page shipped. A stay that STARTED before this has no
+// Actual Checkin for the boring reason that the field did not exist on the
+// day the guest walked in — those guests really did stay, and treating them
+// as unconfirmed would erase weeks of genuine room-nights from every report.
+// The gate below is therefore forward-only: it can only judge a stay whose
+// arrival day fell after the desk actually had a Confirm button to press.
+//
+// Keyed on the CHECK-IN date, not on when the booking was taken. Those come
+// apart for a reservation made before this date for a stay after it — booked
+// 5 Aug to arrive 16 Aug, say. Judging by the booking date would grandfather
+// that guest forever, even though the Arrival page is sitting right there on
+// the day they're due. What matters is whether anyone COULD have confirmed
+// them, which is a fact about the day they arrived.
 const ARRIVAL_CONFIRM_START = '2026-08-07';
 
 // A booking whose check-in date has come and gone with nobody ever
@@ -10165,7 +10172,7 @@ function isLapsedUnconfirmedArrival(entry){
   if(!isAdvanceReservation(entry)) return false;
   if(getDetailValue(entry, 'Actual Checkin')) return false;
   if(entry.checkIn >= todayStr()) return false;
-  return toKarachiDateStr(entry.savedAt) >= ARRIVAL_CONFIRM_START;
+  return entry.checkIn >= ARRIVAL_CONFIRM_START;
 }
 
 // [FUTURE: No Show] ---- DISABLED, kept for re-enabling. Every site is
