@@ -4026,11 +4026,35 @@ td.pos-order-na {color:#dc2626; font-weight:700;}
    1280px cost the ITEMS column the room it needs to be worth reading. */
 #page-receipts .wrap {max-width:1560px; margin:0 auto;}
 /* SC / TAX: narrow, centered, and quiet enough that a column of ticks
-   reads as texture — you're scanning for the odd one out. */
-#page-receipts table.rep th.tax-flag {width:42px; text-align:center;}
-#page-receipts table.rep td.tax-flag {width:42px; text-align:center; font-weight:700; color:var(--muted);}
-#page-receipts table.rep td.tax-flag.yes {color:#15803d;}
-#page-receipts table.rep td.tax-flag.no {color:#dc2626;}
+   reads as texture — you're scanning for the odd one out.
+   Named page by page rather than as a bare `.tax-flag`: each of these
+   pages has its own `#page-x table.rep td` rules, and a plain class
+   selector loses to every one of them (the same specificity trap that
+   swallowed the day separator until it was given !important). */
+#page-receipts table.rep th.tax-flag,
+#page-printed-only table.rep th.tax-flag,
+#page-front-office table.rep th.tax-flag,
+#page-deleted table.rep th.tax-flag,
+#page-pending-payments table.rep th.tax-flag,
+#page-pos-invoice table.simple th.tax-flag {width:42px; text-align:center;}
+#page-receipts table.rep td.tax-flag,
+#page-printed-only table.rep td.tax-flag,
+#page-front-office table.rep td.tax-flag,
+#page-deleted table.rep td.tax-flag,
+#page-pending-payments table.rep td.tax-flag,
+#page-pos-invoice table.simple td.tax-flag {width:42px; text-align:center; font-weight:700; color:var(--muted);}
+#page-receipts table.rep td.tax-flag.yes,
+#page-printed-only table.rep td.tax-flag.yes,
+#page-front-office table.rep td.tax-flag.yes,
+#page-deleted table.rep td.tax-flag.yes,
+#page-pending-payments table.rep td.tax-flag.yes,
+#page-pos-invoice table.simple td.tax-flag.yes {color:#15803d;}
+#page-receipts table.rep td.tax-flag.no,
+#page-printed-only table.rep td.tax-flag.no,
+#page-front-office table.rep td.tax-flag.no,
+#page-deleted table.rep td.tax-flag.no,
+#page-pending-payments table.rep td.tax-flag.no,
+#page-pos-invoice table.simple td.tax-flag.no {color:#dc2626;}
 #page-receipts .h-title {font-size:24px; font-weight:600; margin:0 0 4px;}
 #page-receipts .h-sub {color:var(--muted); font-size:13px; margin-bottom:16px;}
 #page-receipts .card {background:var(--panel); border:1px solid var(--border); border-radius:8px;}
@@ -6259,7 +6283,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <button type="button" id="posRecentSortBtn" class="pos-sort-btn" onclick="posToggleRecentSort()">SORT: INVOICE</button>
     </div>
     <table class="simple">
-      <thead><tr><th style="width:36px;">#</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th style="width:36px;">#</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:120px;">STATUS</th><th style="width:32px;"></th></tr></thead>
       <tbody id="recentInvoicesBody"></tbody>
     </table>
   </div>
@@ -6267,7 +6291,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card list-card" id="guestInvoicesCard" style="display:none; margin-top:14px;">
     <div class="lc-title">Guests (Non-Paying)</div>
     <table class="simple">
-      <thead><tr><th style="width:36px;">#</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th style="width:36px;">#</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:120px;">STATUS</th><th style="width:32px;"></th></tr></thead>
       <tbody id="guestInvoicesBody"></tbody>
     </table>
   </div>
@@ -6524,7 +6548,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <thead>
         <tr>
           <th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
-          <th class="num">AMOUNT</th><th class="num">PAID</th><th>ACTION</th>
+          <th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th>ACTION</th>
         </tr>
       </thead>
       <tbody id="printedOnlyBody"></tbody>
@@ -6539,7 +6563,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <thead>
         <tr>
           <th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th>
-          <th class="num">AMOUNT</th><th class="num">PAID</th><th>ACTION</th>
+          <th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th>ACTION</th>
         </tr>
       </thead>
       <tbody id="printedOnlyGuestBody"></tbody>
@@ -6571,7 +6595,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="frontOfficeBody"></tbody>
     </table>
@@ -6584,7 +6608,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:200px;">COLLECTED</th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:200px;">COLLECTED</th></tr>
       </thead>
       <tbody id="frontOfficeCollectedBody"></tbody>
     </table>
@@ -6615,7 +6639,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:120px;">STATUS</th></tr>
       </thead>
       <tbody id="deletedBody"></tbody>
     </table>
@@ -6645,7 +6669,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="pendingPaymentsBody"></tbody>
     </table>
@@ -21713,7 +21737,25 @@ function posTaxFlagCell(record, code){
     ((row && row.name) || code) + ': ' + (on ? 'charged' : 'not charged') + '">' + (on ? '✓' : '✕') + '</td>';
 }
 
-function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, showPayStatus, showTaxFlags){
+// The DATE column: "16 Aug" reads faster down a column than "16-08-2026",
+// and on a list anyone is actually reading the year is the same on every
+// row. A record from another year keeps its year on it — there the year is
+// the whole point. The full date stays in the cell's tooltip either way.
+var POS_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function posShortDate(dmy){
+  var p = String(dmy || '').split('-');
+  if (p.length !== 3) return dmy || '';
+  var mon = POS_MONTHS[Number(p[1]) - 1];
+  var day = Number(p[0]);
+  // Anything that isn't really dd-mm-yyyy goes back out as it came in,
+  // rather than becoming "2026 Aug 16T00:00" on someone's screen — an ISO
+  // string splits into three parts on '-' just as happily.
+  if (!mon || !(day >= 1 && day <= 31) || !/^\d{4}$/.test(p[2])) return dmy;
+  var thisYear = String(posBusinessDay().getFullYear());
+  return day + ' ' + mon + (p[2] === thisYear ? '' : ' ' + p[2]);
+}
+
+function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, showPayStatus){
   var tr = document.createElement('tr');
   tr.dataset.invoiceId = record.id;
   tr.className = 'fo-row';
@@ -21725,9 +21767,11 @@ function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, 
   // sinks these to the foot of their own day).
   var orderNoText = record.orderNo || '';
   var orderNaCls = orderNoText.trim().toUpperCase() === 'N/A' ? ' class="pos-order-na"' : '';
-  var taxFlags = showTaxFlags
-    ? posTaxFlagCell(record, POS_TAX_CODE_SERVICE) + posTaxFlagCell(record, POS_TAX_CODE_GST)
-    : '';
+  // Every invoice list carries them now, not just All Receipts — whether
+  // Service Charge and GST were on an invoice is something you want to see
+  // wherever you're looking at invoices, and having them on some tables and
+  // not others made their absence look like an answer.
+  var taxFlags = posTaxFlagCell(record, POS_TAX_CODE_SERVICE) + posTaxFlagCell(record, POS_TAX_CODE_GST);
   // showPayStatus tables drop the INVOICE # column (every row here is one
   // posted invoice — the number adds nothing) and carry the payment badge as
   // the last data column instead, right before the delete button, where the
@@ -21735,7 +21779,7 @@ function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, 
   tr.innerHTML = (rowNum != null ? '<td>' + rowNum + '</td>' : '') +
     (payStatus ? '' : '<td><a href="#">' + posEscapeHtml(record.no) + '</a></td>') +
     (showOrderNo ? '<td' + orderNaCls + '>' + posEscapeHtml(orderNoText) + '</td>' : '') +
-    '<td>' + posEscapeHtml(record.date) + '</td>' +
+    '<td title="' + posEscapeHtml(record.date) + '">' + posEscapeHtml(posShortDate(record.date)) + '</td>' +
     '<td>' + posEscapeHtml(record.room) + '</td>' +
     '<td>' + posEscapeHtml(record.customer) + '</td>' +
     (showItems ? '<td class="fo-items-col" title="' + posEscapeHtml(itemsText) + '">' + posEscapeHtml(itemsText) + '</td>' : '') +
@@ -22422,7 +22466,7 @@ function receiptsRefresh(){
     else if (record.sentToFrontOffice && foBody) foRows.push(record);
     else paidRows.push(record);
   });
-  var buildReceiptRow = function(record, num){ return posBuildInvoiceRow(record, true, true, true, num, false, true); };
+  var buildReceiptRow = function(record, num){ return posBuildInvoiceRow(record, true, true, true, num, false); };
   posAppendDayGroupedRows(paidBody, paidRows, buildReceiptRow);
   posAppendDayGroupedRows(guestBody, guestRows, buildReceiptRow);
   if (foBody) posAppendDayGroupedRows(foBody, foRows, buildReceiptRow);
@@ -22938,7 +22982,9 @@ function pendingPaymentsRefresh(){
     balTd.style.fontWeight = '700';
     balTd.style.color = '#dc2626';
     balTd.textContent = bal.toFixed(2);
-    tr.insertBefore(balTd, tr.lastElementChild);
+    // Before the SC/TAX flags, not before the actions cell — the money
+    // columns belong next to each other, and this page IS the balance.
+    tr.insertBefore(balTd, tr.querySelector('td.tax-flag') || tr.lastElementChild);
     return tr;
   }, function(a, b){
     var balA = a.balance != null ? a.balance : (a.amount - a.paid);
@@ -23318,29 +23364,41 @@ var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sa
   '#posReceiptPrintArea .rc-fields td{padding:1px 0; vertical-align:top;} ' +
   '#posReceiptPrintArea .rc-fields td:first-child{color:#000; font-weight:600; white-space:nowrap; padding-right:6px;} ' +
   '#posReceiptPrintArea .rc-fields td:last-child{text-align:right; font-weight:600;} ' +
-  /* Same reason as the totals: the values that are numbers read cleaner
-     unbolded on thermal paper. Marked per row rather than blanket-applied
-     so the label column and the name/date fields keep their weight. */
-  '#posReceiptPrintArea table.rc-fields td.rc-plain{font-weight:400;} ' +
+  /* ---------------------------------------------------------------
+     Everything on the RIGHT of this receipt — the field values, the
+     amount column, the tax lines, the totals — is deliberately kept at
+     the receipt's own 600, not lightened.
+     They were tried at 400 (bold digits were running together) and it
+     backfired: this printer lays down noticeably less heat toward the
+     right edge of the paper, so the right-hand column is already the
+     faintest thing on the page. Thinning the strokes there made it fade
+     out. Weight is what buys darkness on thermal paper, so the right
+     side gets to keep it, and the totals settle for 600 instead of the
+     700 they used to be — one step down rather than three.
+     If the right edge still prints light, it is the hardware, not this:
+     raise the printer's density/darkness setting, and check the platen
+     roller and head for dust.
+     --------------------------------------------------------------- */
+  '#posReceiptPrintArea table.rc-fields td.rc-plain{font-weight:600;} ' +
   '#posReceiptPrintArea table.rc-items{width:100%; border-collapse:collapse; font-size:15px; margin-top:0;} ' +
   '#posReceiptPrintArea table.rc-items th{text-align:left; font-size:13px; letter-spacing:.03em; padding:0 0 1mm; font-weight:700;} ' +
   '#posReceiptPrintArea table.rc-items th.rc-num{text-align:right;} ' +
   '#posReceiptPrintArea table.rc-items th:first-child, #posReceiptPrintArea table.rc-items td:first-child{width:12mm; padding-right:3mm;} ' +
   '#posReceiptPrintArea table.rc-items td{padding:0.7mm 0; vertical-align:top;} ' +
-  '#posReceiptPrintArea table.rc-items td.rc-num:last-child{font-weight:400;} ' + /* the amount column only — Qty keeps its weight */
+  '#posReceiptPrintArea table.rc-items td.rc-num:last-child{font-weight:600;} ' + /* see the note above — the right column keeps its weight */
   '#posReceiptPrintArea .rc-num{text-align:right;} ' +
   '#posReceiptPrintArea table.rc-taxdetail{width:100%; border-collapse:collapse; font-size:14px; color:#000; font-weight:600;} ' +
   '#posReceiptPrintArea table.rc-taxdetail td{padding:0.5px 0;} ' +
-  '#posReceiptPrintArea table.rc-taxdetail td.rc-num{font-weight:400;} ' +
+  '#posReceiptPrintArea table.rc-taxdetail td.rc-num{font-weight:600;} ' +
   '#posReceiptPrintArea table.rc-taxdetail tr.rc-taxoff{color:#555; font-style:italic;} ' +
   '#posReceiptPrintArea table.rc-totals{width:100%; border-collapse:collapse; font-size:16px; margin-top:0;} ' +
   '#posReceiptPrintArea table.rc-totals td{padding:1px 0;} ' +
-  /* Bold at this size on 80mm thermal paper thickens the strokes until the
-     digits run together — the totals read cleaner unbolded. Sizes and
-     spacing are untouched, so the grand total still stands out by being
-     the biggest line on the receipt. */
-  '#posReceiptPrintArea table.rc-totals tr.rc-final td{font-weight:400;} ' +
-  '#posReceiptPrintArea table.rc-totals tr.rc-grand td{font-size:19px; font-weight:400; padding-top:1mm;} ' +
+  /* 700 ran the digits together; 400 faded on the right (see the note
+     above). 600 is the compromise, and the grand total still stands out
+     by being the biggest line rather than the heaviest. Sizes and spacing
+     untouched throughout. */
+  '#posReceiptPrintArea table.rc-totals tr.rc-final td{font-weight:600;} ' +
+  '#posReceiptPrintArea table.rc-totals tr.rc-grand td{font-size:19px; font-weight:600; padding-top:1mm;} ' +
   '#posReceiptPrintArea .rc-thanks{text-align:center; font-size:16px; font-weight:700; margin-top:1.5mm; letter-spacing:.03em;} ' +
   '#posReceiptPrintArea .rc-foot{text-align:center; font-size:12px; color:#000; font-weight:600; margin-top:0.5mm; margin-bottom:0;} ' +
   /* The app-wide @media print reset (see the plain "th, td{border:1px
