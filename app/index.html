@@ -7519,6 +7519,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <nav class="settings-nav" id="globalSettingsNav" style="display:none;">
     <div class="settings-nav-section">
       <div class="settings-nav-heading">Pages</div>
+      <!-- Top-nav tabs for everyone else; for the accountant (role
+           'admin') they live here instead — see ADMIN_SETTINGS_PAGES.
+           First in the list on purpose: these are pages they actually
+           work in, not admin tools like the rest of this section. -->
+      <a class="settings-nav-item" id="settingsAvailabilityBtn" onclick="showView('availability')" style="display:none;">Availability</a>
+      <a class="settings-nav-item" id="settingsLedgersBtn" onclick="showView('ledgers')" style="display:none;">Ledgers</a>
       <a class="settings-nav-item" onclick="showView('audit')">Full Audit</a>
       <a class="settings-nav-item" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">Day Lock</a>
       <a class="settings-nav-item" id="settingsPaymentRecordBtn" onclick="showView('paymentrecord')" style="display:none;">Report SS</a>
@@ -8100,7 +8106,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavRevSummary').classList.toggle('active', view === 'handover');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   document.getElementById('topNavArrival').classList.toggle('active', view === 'arrival');
-  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'npr' || view === 'cashcheck' || view === 'misc' || view === 'paymentrecord' || view === 'frontoffice' || view === 'users';
+  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'npr' || view === 'cashcheck' || view === 'misc' || view === 'paymentrecord' || view === 'frontoffice' || view === 'users' || isAdminSettingsPage(view);
   document.getElementById('topNavSettings').classList.toggle('active', isSettingsView);
   const globalSettingsNav = document.getElementById('globalSettingsNav');
   if(globalSettingsNav) globalSettingsNav.style.display = isSettingsView ? 'flex' : 'none';
@@ -19427,6 +19433,49 @@ function toggleHotelRestaurantMode(){
   showView(currentView === 'restaurant' ? 'dashboard' : 'restaurant');
 }
 
+// Exactly 'admin' — the accountant's account (accountant@riviera) — and
+// deliberately NOT isAdmin(), which is also true for superadmin. This is
+// only ever used to decide WHERE a page appears in the navigation, never
+// to grant or deny access to anything: the accountant works out of
+// Settings, so for that role Availability is a settings page instead of a
+// top-nav tab. Every other role keeps it in the top nav exactly as it was.
+function isPlainAdmin(){
+  return !!currentUser && currentUser.role === 'admin';
+}
+
+// The pages the accountant works out of Settings instead of the top nav.
+// Each one MOVES, it never disappears: the top-nav button and the
+// settings-sidebar item are the same page, and exactly one of the two is
+// visible for any given role — so nobody ever loses access to anything
+// here, it only ever changes which menu it's under. Adding another page
+// to this list is the whole change; applyAdminSettingsPageMoves() and
+// isAdminSettingsPage() below pick it up.
+//
+// Declared here, next to the role check that drives it, rather than
+// further down the file: showView() reads it during restoreLastView() on
+// sign-in, and anything declared after init() runs is undefined by then.
+const ADMIN_SETTINGS_PAGES = [
+  { view: 'availability', navId: 'topNavAvailability', settingsId: 'settingsAvailabilityBtn' },
+  { view: 'ledgers',      navId: 'topNavLedgers',      settingsId: 'settingsLedgersBtn' }
+];
+
+function applyAdminSettingsPageMoves(){
+  const moved = isPlainAdmin();
+  ADMIN_SETTINGS_PAGES.forEach(page=>{
+    const navBtn = document.getElementById(page.navId);
+    if(navBtn) navBtn.style.display = moved ? 'none' : '';
+    const settingsItem = document.getElementById(page.settingsId);
+    if(settingsItem) settingsItem.style.display = moved ? '' : 'none';
+  });
+}
+
+// True only for the role the page was actually moved for — for everyone
+// else these are still top-nav tabs and must not drag the settings
+// sidebar open behind them.
+function isAdminSettingsPage(view){
+  return isPlainAdmin() && ADMIN_SETTINGS_PAGES.some(page=> page.view === view);
+}
+
 // 'restaurant' — sees only the Restaurant tab and Front Office, nothing
 // else in the hotel app. See migration/pos_restaurant_role.sql.
 function isRestaurantRole(){
@@ -19452,6 +19501,7 @@ function renderSettings(){
   if(paymentRecordBtn) paymentRecordBtn.style.display = isAdmin() ? '' : 'none';
   const frontOfficeBtn = document.getElementById('settingsFrontOfficeBtn');
   if(frontOfficeBtn) frontOfficeBtn.style.display = isAdmin() ? '' : 'none';
+  applyAdminSettingsPageMoves();
   // Backup lives on the Settings landing page itself rather than behind
   // its own nav item — it's the thing you go looking for in a panic.
   const backupPanel = document.getElementById('settingsBackupPanel');
@@ -19481,6 +19531,7 @@ function applyRolePermissions(){
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const usersBtn = document.getElementById('settingsUsersBtn');
   if(usersBtn) usersBtn.style.display = isSuperAdmin() ? '' : 'none';
+  applyAdminSettingsPageMoves();
   const backupPanel = document.getElementById('settingsBackupPanel');
   if(backupPanel) backupPanel.style.display = isSuperAdmin() ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
