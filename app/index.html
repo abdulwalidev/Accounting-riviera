@@ -3981,7 +3981,7 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row.picked {background:rgb
 #page-pos-invoice table.simple th.num, #page-pos-invoice table.simple td.num {text-align:right;}
 #page-pos-invoice table.simple td {padding:8px 10px; border-bottom:1px solid #f0f1f3;}
 #page-pos-invoice table.simple td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
-#page-charges-summary table.rep td.fo-items-col, #page-receipts table.rep td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
+#page-charges-summary table.rep td.fo-items-col, #page-receipts table.rep td.fo-items-col, #page-deleted table.rep td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
 #page-pos-invoice table.simple td a {color:var(--blue); text-decoration:none;}
 #page-pos-invoice .neg {color:var(--muted);}
 /* Recent Invoices / Guests list every row of which is already posted, so a
@@ -6567,8 +6567,9 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="h-sub">Every deleted invoice, posted or not — a printed-but-unposted receipt is a saved record too, so deleting one leaves it here rather than vanishing. The STATUS column says which it was.</div>
 
   <div class="card filters-card">
-    <div class="filters-label">DATE</div>
-    <div class="filters-grid" style="grid-template-columns:220px;">
+    <div class="filters-label">FILTERS</div>
+    <div class="filters-grid" style="grid-template-columns:260px 220px;">
+      <div><label>Search</label><input type="text" id="deletedSearchInput" placeholder="Invoice #, Order #, Customer, Room, Item…" oninput="deletedRefresh()"></div>
       <div><label>Date</label><input type="date" id="deletedDateFilter" onchange="deletedRefresh()"></div>
     </div>
   </div>
@@ -6580,7 +6581,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th style="width:120px;">STATUS</th></tr>
       </thead>
       <tbody id="deletedBody"></tbody>
     </table>
@@ -21276,7 +21277,7 @@ function posEnsurePaymentRowDates(){
     if (!input) return;
     // Never left as a raw native date field — every other date in the app
     // is a flatpickr, and an un-enhanced one reads as "empty" next to them.
-    if (!input._flatpickr) posInitDatePicker(input);
+    if (!input._flatpickr) posInitDatePicker(input, true);
     // The value can be right while the box still looks empty: flatpickr
     // shows a separate alt input, and anything that blanks that (see the
     // clear-form/remove-row guards) leaves the two out of step. Resync
@@ -21410,7 +21411,7 @@ function posAddPayment(){
   if (dateCell) dateCell.innerHTML = '<input type="date" class="pay-date-input" onchange="posRecalcAll()">';
   container.appendChild(newRow);
   var newDateInput = newRow.querySelector('.pay-date-input');
-  if (newDateInput) { newDateInput.value = posTodayISO(); posInitDatePicker(newDateInput); }
+  if (newDateInput) { newDateInput.value = posTodayISO(); posInitDatePicker(newDateInput, true); }
   posRecalcAll();
 }
 
@@ -21629,10 +21630,57 @@ function posApplyInvoiceDateLimits(){
     return;
   }
   fp.set('maxDate', posTodayISO());
-  fp.set('disable', [function(date){
-    var iso = posDateToISO(date);
-    return iso < posTodayISO() && posIsDateLocked(iso);
-  }]);
+  fp.set('disable', [posDateIsClosed]);
+}
+
+// The one rule both of a new receipt's date fields follow — the Invoice
+// Date and every payment row's own date. A day is closed to a new receipt
+// if it's in the future (business that hasn't happened) or a past day Day
+// Lock has closed. A past day an admin deliberately unlocked stays open —
+// that is what unlocking is for.
+function posDateIsClosed(date){
+  var iso = posDateToISO(date);
+  return iso < posTodayISO() && posIsDateLocked(iso);
+}
+
+// The restaurant twin of the hotel's paymentDatePickerHooks(): closed days
+// are grayed out with a padlock in the calendar rather than refused after
+// the click, so the rule is visible before anyone tries, and a click on one
+// says why instead of doing nothing.
+// allowInvalidPreload matters here for exactly the reason it does there —
+// opening a saved invoice loads its own (past) dates back into these
+// fields, and without it flatpickr silently clears the field to '' and the
+// picker just looks dead.
+function posLockedDatePickerHooks(){
+  return {
+    maxDate: posTodayISO(),
+    disable: [posDateIsClosed],
+    allowInvalidPreload: true,
+    onDayCreate: function(dObj, dStr, fp, dayElem){
+      if (!dayElem.dateObj) return;
+      // Viewing/editing a saved invoice lifts the limits (see
+      // posApplyInvoiceDateLimits) — its own date must show as-is, so the
+      // calendar mustn't brand that day closed either.
+      if (posViewingRecord) return;
+      var iso = posDateToISO(dayElem.dateObj);
+      if (posDateIsClosed(dayElem.dateObj)) {
+        dayElem.classList.add('flatpickr-day-locked');
+        var tag = document.createElement('span');
+        tag.className = 'fp-day-locked-tag';
+        tag.innerHTML = LOCK_ICON_SVG;
+        dayElem.appendChild(tag);
+        dayElem.addEventListener('click', function(e){
+          e.preventDefault(); e.stopPropagation();
+          posShowToast(iso + ' is locked — an admin has to unlock it on the POS Day Lock page first.', 'error');
+        });
+      } else if (iso > posTodayISO()) {
+        dayElem.addEventListener('click', function(e){
+          e.preventDefault(); e.stopPropagation();
+          posShowToast('A receipt can\'t be dated in the future.', 'error');
+        });
+      }
+    }
+  };
 }
 
 function posFindLockRow(iso){
@@ -22171,7 +22219,7 @@ function posFillPaymentRows(entries, fallbackDate){
     var dateInput = row.querySelector('.pay-date-input');
     var amtInput = row.querySelector('.pay-amount-input');
     var typeSel = row.querySelector('.pay-type-select');
-    if (dateInput) { dateInput.value = (entry && entry.date) || fallbackDate || posTodayISO(); posInitDatePicker(dateInput); }
+    if (dateInput) { dateInput.value = (entry && entry.date) || fallbackDate || posTodayISO(); posInitDatePicker(dateInput, true); }
     if (amtInput) amtInput.value = (entry && entry.amount) ? entry.amount : '';
     if (typeSel) typeSel.value = (entry && entry.type) || 'cash';
   };
@@ -22546,11 +22594,23 @@ function deletedRefresh(){
   body.innerHTML = '';
   var dateInput = document.getElementById('deletedDateFilter');
   var filterDMY = dateInput && dateInput.value ? receiptsDateToDMY(dateInput.value) : null;
+  // Same search as All Receipts, for the same reason: hunting for something
+  // that was deleted is exactly when the date is the thing you can't
+  // remember, so a non-empty search looks across every date and matches item
+  // names as well as the invoice/order/customer/room fields.
+  var searchInput = document.getElementById('deletedSearchInput');
+  var searchQ = searchInput ? searchInput.value.trim().toLowerCase() : '';
   var shown = 0;
   posInvoices.forEach(function(record){
     if (!record.deleted) return;
-    if (filterDMY && record.date !== filterDMY) return;
-    body.appendChild(posBuildInvoiceRow(record, true, true));
+    if (searchQ) {
+      var itemNames = (record.items || []).map(function(it){ return it.name; }).filter(Boolean).join(' ');
+      var haystack = [record.no, record.orderNo, record.customer, record.room, record.roomNo, record.table, itemNames].filter(Boolean).join(' ').toLowerCase();
+      if (haystack.indexOf(searchQ) === -1) return;
+    } else if (filterDMY && record.date !== filterDMY) {
+      return;
+    }
+    body.appendChild(posBuildInvoiceRow(record, true, true, true));
     shown++;
   });
   if (countEl) countEl.textContent = shown + ' deleted';
@@ -23743,15 +23803,20 @@ function posAddLine(){
 // initPayDatePicker() above, just not keyed into either of their
 // registries since POS's fields aren't fixed ids present at page load
 // (lazy-booted) or are per-row and re-created (see posAddPayment()).
-function posInitDatePicker(el){
+// lockAware: opt-in, for the two fields that date a receipt (Invoice Date
+// and each payment row). Every other caller is a filter/report field —
+// those must keep reaching into the past and the future, and the Day Lock
+// page's own date field most of all.
+function posInitDatePicker(el, lockAware){
   if (typeof flatpickr === 'undefined' || !el || el._flatpickr) return null;
-  return flatpickr(el, {
+  return flatpickr(el, Object.assign({
     dateFormat: 'Y-m-d',
     altInput: true,
     altInputClass: 'flatpickr-alt-input',
     altFormat: 'D, d M Y',
     allowInput: false,
-    disableMobile: true,
+    disableMobile: true
+  }, lockAware ? posLockedDatePickerHooks() : {}, {
     onValueUpdate: function(selectedDates, dateStr, instance){ applyPickerDisplay(instance); },
     onOpen: function(selectedDates, dateStr, instance){ syncCalendarWidth(instance); },
     onReady: function(selectedDates, dateStr, instance){
@@ -23761,7 +23826,7 @@ function posInitDatePicker(el){
         function(){ instance.setDate(null, true); }
       );
     }
-  });
+  }));
 }
 
 // Reuses the hotel's own Prev/Next Day stepper (addDateStepper) instead of
@@ -23856,9 +23921,9 @@ function posBootApp(){
   document.addEventListener('keydown', posNewReceiptHotkey);
   document.addEventListener('keydown', posMenuPanelKeys);
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
-  if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput); }
+  if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput, true); }
   var posInvoiceDateEl = document.getElementById('posInvoiceDate');
-  if (posInvoiceDateEl) { posInvoiceDateEl.value = posTodayISO(); posInitDatePicker(posInvoiceDateEl); posAttachDateStepper('posInvoiceDate'); posApplyInvoiceDateLimits(); }
+  if (posInvoiceDateEl) { posInvoiceDateEl.value = posTodayISO(); posInitDatePicker(posInvoiceDateEl, true); posAttachDateStepper('posInvoiceDate'); posApplyInvoiceDateLimits(); }
   posLoadDraft();
   posApplyQtPrefixToField(); // no draft to restore -> the empty field still opens on the prefix
   posRecalcAll();
