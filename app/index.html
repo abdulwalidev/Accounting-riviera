@@ -23287,10 +23287,10 @@ function posBuildReceiptHtml(record){
     '<table class="rc-fields">' +
     '<tr><td>Guest Name</td><td>' + posEscapeHtml(record.customer) + '</td></tr>' +
     '<tr><td>Invoice #</td><td>' + posEscapeHtml(record.no) + '</td></tr>' +
-    '<tr><td>Order #</td><td>' + posEscapeHtml(record.orderNo) + '</td></tr>' +
+    '<tr><td>Order #</td><td class="rc-plain">' + posEscapeHtml(record.orderNo) + '</td></tr>' +
     '<tr><td>Printed</td><td>' + posEscapeHtml(record.printedAt) + '</td></tr>' +
     '<tr><td>Invoice Date</td><td>' + posEscapeHtml(record.date) + '</td></tr>' +
-    '<tr><td>Location</td><td>' + posEscapeHtml(receiptLocation) + '</td></tr>' +
+    '<tr><td>Location</td><td class="rc-plain">' + posEscapeHtml(receiptLocation) + '</td></tr>' +
     '</table>' +
     '<div class="rc-line"></div>' +
     '<table class="rc-items"><thead><tr><th class="rc-num">Qty</th><th>Item</th><th class="rc-num">Amount</th></tr></thead>' +
@@ -23318,14 +23318,20 @@ var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sa
   '#posReceiptPrintArea .rc-fields td{padding:1px 0; vertical-align:top;} ' +
   '#posReceiptPrintArea .rc-fields td:first-child{color:#000; font-weight:600; white-space:nowrap; padding-right:6px;} ' +
   '#posReceiptPrintArea .rc-fields td:last-child{text-align:right; font-weight:600;} ' +
+  /* Same reason as the totals: the values that are numbers read cleaner
+     unbolded on thermal paper. Marked per row rather than blanket-applied
+     so the label column and the name/date fields keep their weight. */
+  '#posReceiptPrintArea table.rc-fields td.rc-plain{font-weight:400;} ' +
   '#posReceiptPrintArea table.rc-items{width:100%; border-collapse:collapse; font-size:15px; margin-top:0;} ' +
   '#posReceiptPrintArea table.rc-items th{text-align:left; font-size:13px; letter-spacing:.03em; padding:0 0 1mm; font-weight:700;} ' +
   '#posReceiptPrintArea table.rc-items th.rc-num{text-align:right;} ' +
   '#posReceiptPrintArea table.rc-items th:first-child, #posReceiptPrintArea table.rc-items td:first-child{width:12mm; padding-right:3mm;} ' +
   '#posReceiptPrintArea table.rc-items td{padding:0.7mm 0; vertical-align:top;} ' +
+  '#posReceiptPrintArea table.rc-items td.rc-num:last-child{font-weight:400;} ' + /* the amount column only — Qty keeps its weight */
   '#posReceiptPrintArea .rc-num{text-align:right;} ' +
   '#posReceiptPrintArea table.rc-taxdetail{width:100%; border-collapse:collapse; font-size:14px; color:#000; font-weight:600;} ' +
   '#posReceiptPrintArea table.rc-taxdetail td{padding:0.5px 0;} ' +
+  '#posReceiptPrintArea table.rc-taxdetail td.rc-num{font-weight:400;} ' +
   '#posReceiptPrintArea table.rc-taxdetail tr.rc-taxoff{color:#555; font-style:italic;} ' +
   '#posReceiptPrintArea table.rc-totals{width:100%; border-collapse:collapse; font-size:16px; margin-top:0;} ' +
   '#posReceiptPrintArea table.rc-totals td{padding:1px 0;} ' +
