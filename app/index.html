@@ -16684,15 +16684,36 @@ function printInhouse(){
 // =========================================================
 function buildBreakfastReport(asOfDate){
   const today = asOfDate || todayStr();
+  // Breakfast served on the morning of D is eaten by whoever slept the
+  // night of D-1 — so this reads the PREVIOUS night's occupancy, not the
+  // coming night's. Every other page here is about who is in the building
+  // tonight; this one is about who was in it last night, which is a
+  // different set at both ends of the day:
+  //
+  //   - a guest checking out today ate breakfast this morning, so they stay
+  //     on the report. Reading today's occupancy dropped them the moment
+  //     the room was rebooked for tonight (Extended can't fire while a
+  //     booking exists for the date), and the kitchen was still feeding
+  //     someone the report had already forgotten.
+  //   - a guest ARRIVING tonight has not eaten anything yet. They were
+  //     being counted into this morning's total, so the number the kitchen
+  //     cooked to ran high by the day's arrivals.
+  //
+  // Both fall out of simply asking who was in a room last night, so there's
+  // no special-casing for either: no same-day-turnover branch, no
+  // previousGuestPending. A guest who's Extended (last booked night has
+  // passed, nobody confirmed they left) is still in the room and still
+  // eating, and stays included via the same Extended flag as before.
+  const night = addDaysToDateStr(today, -1);
   const roomsByEntity = {};
   let roomCount = 0;
-  computeRoomStatuses(today)
+  computeRoomStatuses(night)
     .filter(rs=> (rs.occupied || rs.extended) && rs.entry)
     .forEach(rs=>{
       roomCount++;
       const id = rs.entry.id;
       if(!roomsByEntity[id]) roomsByEntity[id] = { entry: rs.entry, roomNos: [] };
-      roomsByEntity[id].roomNos.push(rs.roomNo);
+      if(!roomsByEntity[id].roomNos.includes(rs.roomNo)) roomsByEntity[id].roomNos.push(rs.roomNo);
     });
   const rows = Object.values(roomsByEntity).map(({ entry, roomNos })=>{
     const relevantRooms = dedupeRoomsByNo((entry.rooms || []).filter(r=> roomNos.includes(r.roomNo)));
@@ -16755,15 +16776,21 @@ function renderBreakfastReport(){
 
   const bfDateEl = document.getElementById('bfDate');
   const asOfDate = (bfDateEl && bfDateEl.value) || todayStr();
-  document.getElementById('bfPrintHeaderSub').textContent = 'As of ' + formatDate(asOfDate) + '  ·  Generated ' + formatDate(todayStr());
+  // Spelled out on the page and on the printout, because "rooms in-house"
+  // used to mean tonight's bookings here and now means last night's — the
+  // set the kitchen is actually cooking for.
+  const bfNight = addDaysToDateStr(asOfDate, -1);
+  document.getElementById('bfPrintHeaderSub').textContent = 'Breakfast on ' + formatDate(asOfDate) +
+    '  ·  guests who stayed the night of ' + formatDate(bfNight) + '  ·  Generated ' + formatDate(todayStr());
   document.getElementById('bfTodayDate').textContent = formatDate(asOfDate);
 
   const data = buildBreakfastReport(asOfDate);
-  summary.textContent = data.roomCount + (data.roomCount === 1 ? ' room' : ' rooms') + ' in-house — ' +
-    data.totals.breakfastTotal + ' having breakfast, ' + data.totals.withoutBreakfast + ' without';
+  summary.textContent = data.roomCount + (data.roomCount === 1 ? ' room' : ' rooms') + ' stayed the night of ' +
+    formatDate(bfNight) + ' — ' + data.totals.breakfastTotal + ' having breakfast, ' +
+    data.totals.withoutBreakfast + ' without';
 
   if(data.rows.length === 0){
-    body.innerHTML = '<div class="empty-note">Nobody in-house right now.</div>';
+    body.innerHTML = '<div class="empty-note">Nobody stayed the night of ' + formatDate(bfNight) + ' — no breakfast to serve.</div>';
     return;
   }
 
