@@ -1503,6 +1503,74 @@
     color:var(--ink);
     margin-bottom:2px;
   }
+  /* Backup panel (Settings) — one row per download, description on the
+     left so it's obvious what each file actually is before clicking. */
+  .backup-row{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+    padding:14px 0;
+    border-top:1px solid var(--line, rgba(0,0,0,0.08));
+  }
+  .backup-row:first-of-type{ border-top:none; }
+  .backup-row-text{ flex:1; min-width:240px; }
+  .backup-row-title{
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    font-weight:700;
+    color:var(--ink);
+    margin-bottom:3px;
+  }
+  .backup-row-desc{ font-size:13px; line-height:1.5; color:var(--muted); }
+  .backup-tag{
+    display:inline-block;
+    margin-left:6px;
+    padding:1px 7px;
+    border-radius:4px;
+    background:rgba(2,132,199,0.12);
+    color:#0369a1;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.06em;
+    vertical-align:1px;
+  }
+  html[data-theme="dark"] .backup-tag{ background:rgba(125,211,252,0.14); color:#7dd3fc; }
+  .backup-status{
+    margin-top:10px;
+    font-size:13px;
+    line-height:1.6;
+    color:var(--muted);
+    white-space:pre-wrap;
+  }
+  .backup-status.bad{ color:var(--danger); }
+  .backup-status.good{ color:#15803d; }
+  html[data-theme="dark"] .backup-status.good{ color:#4ade80; }
+
+  /* Users page */
+  .users-error{ margin-top:10px; font-size:13px; color:var(--danger); }
+  .users-role-help{ margin-top:10px; font-size:13px; line-height:1.6; color:var(--muted); }
+  .users-role-pill{
+    display:inline-block;
+    padding:2px 9px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:0.03em;
+    background:rgba(2,132,199,0.1);
+    color:#0369a1;
+  }
+  .users-role-pill.superadmin{ background:rgba(185,28,28,0.1); color:var(--danger); }
+  .users-role-pill.admin{ background:rgba(212,160,23,0.16); color:#8a6508; }
+  .users-role-pill.viewer{ background:rgba(100,116,139,0.14); color:#475569; }
+  .users-role-pill.restaurant{ background:rgba(21,128,61,0.12); color:#15803d; }
+  html[data-theme="dark"] .users-role-pill{ background:rgba(125,211,252,0.14); color:#7dd3fc; }
+  html[data-theme="dark"] .users-role-pill.superadmin{ background:rgba(248,113,113,0.16); color:#f87171; }
+  html[data-theme="dark"] .users-role-pill.admin{ background:rgba(212,160,23,0.2); color:#fbbf24; }
+  html[data-theme="dark"] .users-role-pill.viewer{ background:rgba(148,163,184,0.18); color:#cbd5e1; }
+  html[data-theme="dark"] .users-role-pill.restaurant{ background:rgba(74,222,128,0.16); color:#4ade80; }
+  .users-you{ font-size:12px; font-weight:700; color:var(--muted); margin-left:6px; }
+
   .settings-nav-item{
     display:block;
     padding:8px 12px;
@@ -7460,6 +7528,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <a class="settings-nav-item" onclick="showView('npr')">NPR</a>
       <a class="settings-nav-item" onclick="showView('cashcheck')">Cash Check</a>
       <a class="settings-nav-item" onclick="showView('misc')">Miscellaneous</a>
+      <a class="settings-nav-item" id="settingsUsersBtn" onclick="showView('users')" style="display:none;">Users</a>
       <a class="settings-nav-item danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</a>
     </div>
     <div class="settings-nav-section" id="settingsDataSyncSection">
@@ -7483,6 +7552,103 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
     <h1>Settings</h1>
     <div class="sub">Admin tools and data/sync controls</div>
+
+    <!-- Backup — superadmin only, hidden outright for everyone else by
+         renderSettings(). Every button here only ever READS: it downloads a
+         copy to this device and never writes, updates or deletes a single
+         row. Nothing here can damage the live data. -->
+    <div class="panel accent-report" id="settingsBackupPanel" style="display:none;">
+      <h2>Backup</h2>
+      <div class="sub" style="margin-top:-4px;">Download a full copy of everything to this device. Read-only — these buttons never change, delete or touch the live data in any way. Keep the file somewhere off this computer.</div>
+
+      <div class="backup-row">
+        <div class="backup-row-text">
+          <div class="backup-row-title">1 &nbsp;All Tables <span class="backup-tag">JSON</span></div>
+          <div class="backup-row-desc">Every row of every table, exactly as the database holds it — including entries that were deleted in the app (they are only ever soft-deleted, never destroyed). This is the one to keep: it is the restore-from file.</div>
+        </div>
+        <button class="btn" id="backupTablesBtn" onclick="backupDownloadAllTables(this)">Download</button>
+      </div>
+
+      <div class="backup-row">
+        <div class="backup-row-text">
+          <div class="backup-row-title">2 &nbsp;All Images <span class="backup-tag">PDF</span></div>
+          <div class="backup-row-desc">Every payment screenshot ever attached, one per page with its caption, in a single PDF. This downloads the actual image files from cloud storage, so it is the slow one — and the only button here that costs anything.</div>
+        </div>
+        <button class="btn" id="backupImagesBtn" onclick="backupDownloadImagesPdf(this)">Download</button>
+      </div>
+
+      <div class="backup-row">
+        <div class="backup-row-text">
+          <div class="backup-row-title">3 &nbsp;All Data, Structured <span class="backup-tag">EXCEL</span></div>
+          <div class="backup-row-desc">The same data laid out for a human — one sheet per table, proper column headings, dates and money readable. For opening and reading. Use file 1, not this one, to put data back.</div>
+        </div>
+        <button class="btn" id="backupExcelBtn" onclick="backupDownloadStructuredExcel(this)">Download</button>
+      </div>
+
+      <div id="backupStatus" class="backup-status"></div>
+    </div>
+
+  </div>
+
+  <!-- Users — superadmin only, three times over: the nav item is hidden,
+       showView() refuses the view, and the database functions behind it
+       re-check the superadmin's own password on every single call (see
+       migration/roles/user_management.sql). -->
+  <div class="view" id="view-users">
+
+    <h1>Users</h1>
+    <div class="sub">Every account that can sign in to this app — create them, change their role, reset a password. Super admin only.</div>
+
+    <div class="panel accent-filters" id="usersLockPanel">
+      <h2>Confirm It's You</h2>
+      <div class="sub" style="margin-top:-4px;">Accounts can't be listed or changed without your own password. It is used for every action on this page and is kept in memory only until you sign out or refresh — never saved to this device.</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); margin-top:12px;">
+        <div>
+          <label>Your Password</label>
+          <input type="password" id="usersUnlockPassword" autocomplete="off" placeholder="Your own password">
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn" id="usersUnlockBtn" onclick="usersUnlock()">Unlock</button>
+      </div>
+      <div id="usersUnlockError" class="users-error"></div>
+    </div>
+
+    <div class="panel accent-guest" id="usersListPanel" style="display:none;">
+      <h2>Accounts</h2>
+      <div id="usersList"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+    <div class="panel accent-payments" id="usersFormPanel" style="display:none;">
+      <h2 id="usersFormTitle">Add a User</h2>
+      <div class="sub" style="margin-top:-4px;" id="usersFormHint">Usernames are stored in lower case and can't contain spaces.</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); margin-top:12px;">
+        <div>
+          <label>Username</label>
+          <input type="text" id="usersFormUsername" autocomplete="off" placeholder="name@riviera">
+        </div>
+        <div>
+          <label>Password <span class="locked-note" id="usersFormPasswordNote">at least 6 characters</span></label>
+          <input type="password" id="usersFormPassword" autocomplete="new-password" placeholder="">
+        </div>
+        <div>
+          <label>Role</label>
+          <select id="usersFormRole" onchange="usersRenderRoleHelp()">
+            <option value="staff">staff</option>
+            <option value="admin">admin</option>
+            <option value="superadmin">superadmin</option>
+            <option value="viewer">viewer</option>
+            <option value="restaurant">restaurant</option>
+          </select>
+        </div>
+      </div>
+      <div class="users-role-help" id="usersRoleHelp"></div>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn" id="usersSaveBtn" onclick="usersSave(this)">Create User</button>
+        <button class="btn secondary" id="usersCancelEditBtn" onclick="usersResetForm()" style="display:none;">Cancel</button>
+      </div>
+      <div id="usersFormError" class="users-error"></div>
+    </div>
 
   </div>
 
@@ -7833,7 +7999,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant','users'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -7903,6 +8069,11 @@ function showView(view, fromPopState){
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
+  if(view === 'users' && !isSuperAdmin()){
+    showNotice('Users is only available to the super admin account.');
+    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
+    return;
+  }
   currentView = view;
   try{
     localStorage.setItem('lastView', view);
@@ -7929,7 +8100,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavRevSummary').classList.toggle('active', view === 'handover');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   document.getElementById('topNavArrival').classList.toggle('active', view === 'arrival');
-  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'npr' || view === 'cashcheck' || view === 'misc' || view === 'paymentrecord' || view === 'frontoffice';
+  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'npr' || view === 'cashcheck' || view === 'misc' || view === 'paymentrecord' || view === 'frontoffice' || view === 'users';
   document.getElementById('topNavSettings').classList.toggle('active', isSettingsView);
   const globalSettingsNav = document.getElementById('globalSettingsNav');
   if(globalSettingsNav) globalSettingsNav.style.display = isSettingsView ? 'flex' : 'none';
@@ -7982,6 +8153,7 @@ function showView(view, fromPopState){
   if(view === 'dashboard') renderDashboard();
   if(view === 'cico') renderCico();
   if(view === 'settings') renderSettings();
+  if(view === 'users') renderUsersPage();
 
   // A popstate-triggered call must NOT push a new entry — that would fight
   // the browser's own history stack it's currently traversing. Every other
@@ -8118,6 +8290,7 @@ function restoreLastView(){
   if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout' || saved === 'arrival') && !isAdmin()) return;
   if(saved === 'frontoffice' && !isAdmin() && !isRestaurantRole()) return;
   if(saved === 'restaurant' && !isSuperAdmin() && !isRestaurantRole()) return;
+  if(saved === 'users' && !isSuperAdmin()) return;
   if(saved === 'detail'){
     let savedId = null;
     try{ savedId = localStorage.getItem('lastDetailId'); }catch(e){ /* ignore */ }
@@ -19279,6 +19452,10 @@ function renderSettings(){
   if(paymentRecordBtn) paymentRecordBtn.style.display = isAdmin() ? '' : 'none';
   const frontOfficeBtn = document.getElementById('settingsFrontOfficeBtn');
   if(frontOfficeBtn) frontOfficeBtn.style.display = isAdmin() ? '' : 'none';
+  // Backup lives on the Settings landing page itself rather than behind
+  // its own nav item — it's the thing you go looking for in a panic.
+  const backupPanel = document.getElementById('settingsBackupPanel');
+  if(backupPanel) backupPanel.style.display = isSuperAdmin() ? '' : 'none';
 }
 
 function applyRolePermissions(){
@@ -19302,6 +19479,10 @@ function applyRolePermissions(){
   if(hdrFrontOfficeBadge) hdrFrontOfficeBadge.style.display = (isAdmin() || isRestaurantRole()) ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
+  const usersBtn = document.getElementById('settingsUsersBtn');
+  if(usersBtn) usersBtn.style.display = isSuperAdmin() ? '' : 'none';
+  const backupPanel = document.getElementById('settingsBackupPanel');
+  if(backupPanel) backupPanel.style.display = isSuperAdmin() ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
   const settingsDataSyncSection = document.getElementById('settingsDataSyncSection');
   if(settingsDataSyncSection) settingsDataSyncSection.style.display = isRestaurantRole() ? 'none' : '';
@@ -19315,6 +19496,383 @@ function applyRolePermissions(){
   const avatar = document.getElementById('hdrAvatar');
   if(avatar) avatar.textContent = currentUser ? currentUser.username.charAt(0).toUpperCase() : '';
   document.documentElement.classList.toggle('role-viewer', isViewer());
+}
+
+// =========================================================
+// BACKUP — Settings > Backup, superadmin only (renderSettings /
+// applyRolePermissions hide the panel for everyone else).
+//
+// EVERYTHING IN THIS SECTION IS READ-ONLY. Not one function here calls
+// insert/update/delete/upsert or any rpc that writes. The worst a bug in
+// here can do is produce a bad file on the user's own disk; it cannot
+// touch a row in the database. That is the entire point of the feature —
+// it is the thing you reach for when something has already gone wrong,
+// so it must never be able to be the thing that goes wrong.
+//
+// The tables below are read from the BASE tables, not the *_active views,
+// on purpose: a backup has to include soft-deleted rows (deleted_at set),
+// because in this app "deleted" never means destroyed and a backup that
+// silently dropped them would be missing exactly the rows someone is most
+// likely to come looking for.
+//
+// public.users is deliberately NOT backed up: it is ungranted to the anon
+// key (only reachable through security-definer functions) and its only
+// real content is bcrypt password hashes, which have no business sitting
+// in a file in someone's Downloads folder. Accounts are re-created from
+// Settings > Users, not restored.
+// =========================================================
+const BACKUP_TABLES = [
+  {
+    table: 'guests', label: 'Guests', pk: 'id',
+    cols: [['id','ID'],['guest_name','Guest Name'],['father_name','Father Name'],['cnic','CNIC'],
+           ['check_in','Check In'],['check_out','Check Out'],['res_status','Reservation Status'],
+           ['extra_details','Extra Details'],['saved_by','Saved By'],['saved_at','Saved At'],
+           ['edited_by','Edited By'],['edited_at','Edited At'],['created_at','Created At'],
+           ['updated_at','Updated At'],['deleted_at','Deleted At'],['deleted_reason','Deleted Reason']]
+  },
+  {
+    table: 'booking_rooms', label: 'Rooms', pk: 'id',
+    cols: [['id','ID'],['guest_id','Guest ID'],['room_no','Room No'],['unit_type','Unit Type'],
+           ['rent_per_day','Rent Per Day'],['days_count','Nights'],['total','Total'],
+           ['moved_out_date','Moved Out Date'],['created_at','Created At'],['updated_at','Updated At'],
+           ['deleted_at','Deleted At'],['deleted_reason','Deleted Reason']]
+  },
+  {
+    table: 'guest_payments', label: 'Payments', pk: 'id',
+    cols: [['id','ID'],['guest_id','Guest ID'],['payment_date','Payment Date'],['pay_type','Type'],
+           ['mode','Mode'],['bank','Bank'],['cash','Cash'],['account','Account'],['total','Total'],
+           ['remarks','Remarks'],['created_by','Created By'],['created_at','Created At'],
+           ['updated_at','Updated At'],['deleted_at','Deleted At'],['deleted_reason','Deleted Reason']]
+  },
+  {
+    table: 'guest_edits', label: 'Audit Log', pk: 'id',
+    cols: [['id','ID'],['guest_id','Guest ID'],['username','Username'],['role','Role'],
+           ['action','Action'],['at','At']]
+  },
+  {
+    table: 'locked_days', label: 'Locked Days', pk: 'lock_date',
+    cols: [['lock_date','Date'],['locked_by','Locked By'],['locked_at','Locked At'],
+           ['unlocked_by','Unlocked By'],['unlocked_at','Unlocked At'],['audit_summary','Night Audit Summary']]
+  },
+  {
+    table: 'room_status', label: 'Room Status', pk: 'room_no',
+    cols: [['room_no','Room No'],['status','Status'],['updated_by','Updated By'],['updated_at','Updated At']]
+  },
+  {
+    // Metadata only — the image bytes themselves are the separate Images
+    // PDF button, since they live in Storage rather than in a table.
+    table: 'payment_attachments', label: 'Screenshots (Index)', pk: 'payment_id',
+    cols: [['payment_id','Payment ID'],['payment_date','Payment Date'],['guest_id','Guest ID'],
+           ['storage_path','File'],['caption','Caption'],['uploaded_by','Uploaded By'],['uploaded_at','Uploaded At']]
+  },
+  {
+    table: 'pos_invoices', label: 'Restaurant Invoices', pk: 'id',
+    cols: [['id','ID'],['invoice_no','Invoice #'],['invoice_date','Invoice Date'],['date_text','Date Text'],
+           ['dept','Dept'],['customer','Customer Type'],['customer_name','Customer Name'],
+           ['room_no','Room No'],['table_no','Table No'],['order_no','Order No'],['location_text','Location'],
+           ['subtotal','Subtotal'],['tax_total','Tax Total'],['grand_total','Grand Total'],
+           ['paid','Paid'],['balance','Balance'],['mode','Mode'],
+           ['paid_cash','Paid Cash'],['paid_account_transfer','Paid Transfer'],['paid_card','Paid Card'],
+           ['payments','Payment Rows'],['tax_rows','Tax Rows'],['posted','Posted'],
+           ['sent_to_front_office','Sent To Front Office'],['collected','Collected'],
+           ['collected_by','Collected By'],['collected_at','Collected At'],
+           ['created_by','Created By'],['created_at','Created At'],['deleted','Deleted']]
+  },
+  {
+    table: 'pos_invoice_items', label: 'Restaurant Items', pk: 'id',
+    cols: [['id','ID'],['invoice_id','Invoice ID'],['line_no','Line'],['name','Item'],['notes','Notes'],
+           ['qty','Qty'],['price','Price'],['pct','%'],['extended','Amount']]
+  },
+  {
+    table: 'pos_locked_days', label: 'Restaurant Locked Days', pk: 'lock_date',
+    cols: [['lock_date','Date'],['locked_by','Locked By'],['locked_at','Locked At'],
+           ['unlocked_by','Unlocked By'],['unlocked_at','Unlocked At']]
+  }
+];
+
+// PostgREST caps how many rows one request returns (1000 by default), and
+// a plain .select('*') just stops there without saying so — which for a
+// backup is the worst possible failure: a file that looks complete and
+// isn't. This walks the table in explicit, KEY-ORDERED pages instead.
+// The .order() is not cosmetic: range paging without a stable sort can
+// repeat and skip rows between requests.
+const BACKUP_PAGE_SIZE = 1000;
+async function backupFetchTable(spec){
+  let rows = [];
+  for(let from = 0; ; from += BACKUP_PAGE_SIZE){
+    const { data, error } = await sb.from(spec.table)
+      .select('*')
+      .order(spec.pk, { ascending: true })
+      .range(from, from + BACKUP_PAGE_SIZE - 1);
+    if(error) throw error;
+    const page = data || [];
+    rows = rows.concat(page);
+    if(page.length < BACKUP_PAGE_SIZE) break;
+    // A table that somehow keeps returning full pages forever would spin
+    // here — stop at a million rows rather than hang the browser.
+    if(rows.length >= 1000000) break;
+  }
+  return rows;
+}
+
+// Pulls every table, one after another (not in parallel — a backup is not
+// in a hurry, and ten simultaneous full-table downloads is how you get
+// timeouts). A table that isn't there / isn't readable is recorded as
+// skipped rather than aborting the whole backup: a missing optional table
+// must never cost you the nine that were fine.
+async function backupFetchEverything(onProgress){
+  const tables = {};
+  const skipped = [];
+  for(let i = 0; i < BACKUP_TABLES.length; i++){
+    const spec = BACKUP_TABLES[i];
+    if(onProgress) onProgress(i + 1, BACKUP_TABLES.length, spec.label);
+    try{
+      tables[spec.table] = await backupFetchTable(spec);
+    }catch(e){
+      console.error('Backup: could not read ' + spec.table, e);
+      skipped.push({ table: spec.table, reason: (e && e.message) || 'unreadable' });
+    }
+  }
+  return { tables, skipped };
+}
+
+function backupTimestamp(){
+  const d = new Date();
+  const p = n=> String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+}
+
+function backupDownloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoked late rather than immediately — some browsers cancel an
+  // in-flight download when the object URL is torn down too early.
+  setTimeout(()=> URL.revokeObjectURL(url), 60000);
+}
+
+function backupSetStatus(text, kind){
+  const el = document.getElementById('backupStatus');
+  if(!el) return;
+  el.className = 'backup-status' + (kind ? ' ' + kind : '');
+  el.textContent = text || '';
+}
+
+// One backup at a time — all three buttons share the status line, and two
+// full-table pulls racing each other helps nobody.
+let backupBusy = false;
+function backupSetBusy(busy, activeBtn, activeLabel){
+  backupBusy = busy;
+  ['backupTablesBtn','backupImagesBtn','backupExcelBtn'].forEach(id=>{
+    const b = document.getElementById(id);
+    if(!b) return;
+    b.disabled = busy;
+    if(b !== activeBtn) return;
+    if(busy){ b.dataset.idleLabel = b.dataset.idleLabel || b.textContent; b.textContent = activeLabel || 'Working…'; }
+    else if(b.dataset.idleLabel){ b.textContent = b.dataset.idleLabel; }
+  });
+}
+
+function backupGuard(){
+  if(!isSuperAdmin()){ showNotice('Backup is only available to the super admin account.'); return false; }
+  if(backupBusy){ showNotice('A backup is already running — let it finish.'); return false; }
+  if(!sb){ showNotice('Not connected to the cloud database — a backup needs the internet.'); return false; }
+  return true;
+}
+
+// ---------- 1. All tables (JSON) ----------
+// The restore-from file. Raw rows exactly as the database returned them —
+// no reformatting, no renamed columns, no dropped fields — so it can be
+// read straight back in by a person with SQL access. Anything clever done
+// to this file is a way to lose data.
+async function backupDownloadAllTables(btn){
+  if(!backupGuard()) return;
+  backupSetBusy(true, btn, 'Reading…');
+  backupSetStatus('Reading tables…');
+  try{
+    const { tables, skipped } = await backupFetchEverything((n, total, label)=>{
+      backupSetStatus('Reading ' + label + '  (' + n + ' of ' + total + ')…');
+    });
+    const counts = {};
+    let totalRows = 0;
+    Object.keys(tables).forEach(t=>{ counts[t] = tables[t].length; totalRows += tables[t].length; });
+    const payload = {
+      backup_format: 'riviera-full-tables',
+      backup_version: 1,
+      taken_at: new Date().toISOString(),
+      taken_by: currentUser ? currentUser.username : '',
+      source: SUPABASE_URL,
+      note: 'Raw rows, exactly as stored, including soft-deleted ones (deleted_at / deleted set). Account logins are not included by design.',
+      row_counts: counts,
+      total_rows: totalRows,
+      skipped_tables: skipped,
+      tables: tables
+    };
+    backupSetStatus('Writing the file…');
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    backupDownloadBlob(blob, 'riviera-backup-all-tables-' + backupTimestamp() + '.json');
+    const sizeMb = (blob.size / 1048576).toFixed(1);
+    backupSetStatus(
+      'Done — ' + totalRows.toLocaleString() + ' rows across ' + Object.keys(tables).length + ' tables (' + sizeMb + ' MB).' +
+      (skipped.length ? '\nCouldn\'t read: ' + skipped.map(s=> s.table).join(', ') + ' — everything else is in the file.' : ''),
+      skipped.length ? 'bad' : 'good'
+    );
+  }catch(e){
+    console.error('Backup (all tables) failed', e);
+    backupSetStatus('Backup failed — nothing was downloaded. ' + ((e && e.message) || 'Check the internet connection and try again.'), 'bad');
+  }finally{
+    backupSetBusy(false, btn);
+  }
+}
+
+// ---------- 2. All images (PDF) ----------
+// Reuses buildScreenshotsPdfDoc — the same one-page-per-screenshot builder
+// the per-day and per-range buttons use, just handed every attachment
+// there is. This is the only button here that pulls image bytes out of
+// Storage, which costs real money in egress (see the PAYMENT SCREENSHOTS
+// section comment), so it asks first and says exactly how many.
+async function backupDownloadImagesPdf(btn){
+  if(!backupGuard()) return;
+  if(typeof jspdf === 'undefined'){
+    showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
+    return;
+  }
+  if(!initialLoadDone){
+    showNotice('Still loading from the cloud — wait for the data to finish loading first.');
+    return;
+  }
+  const all = paymentAttachments.slice().sort((a, b)=>
+    String(a.payment_date || '').localeCompare(String(b.payment_date || '')));
+  if(all.length === 0){
+    backupSetStatus('There are no screenshots attached to any payment yet — nothing to put in a PDF.', 'bad');
+    return;
+  }
+  const proceed = await showConfirmModal(
+    'This downloads all ' + all.length + ' screenshot' + (all.length === 1 ? '' : 's') +
+    ' from cloud storage and stacks them into one PDF, one per page. It can take a few minutes and uses data allowance on the storage bill. Carry on?',
+    { title: 'Back Up All Images', okText: 'Download ' + all.length, cancelText: 'Cancel' }
+  );
+  if(!proceed) return;
+  backupSetBusy(true, btn, 'Fetching…');
+  backupSetStatus('Fetching ' + all.length + ' images…');
+  try{
+    const { doc, pagesAdded } = await buildScreenshotsPdfDoc(all, btn);
+    if(pagesAdded === 0){
+      backupSetStatus('Couldn\'t load any of the images — check the internet connection and try again.', 'bad');
+      return;
+    }
+    doc.save('riviera-backup-images-' + backupTimestamp() + '.pdf');
+    const missed = all.length - pagesAdded;
+    backupSetStatus(
+      'Done — ' + pagesAdded + ' image' + (pagesAdded === 1 ? '' : 's') + ' in the PDF.' +
+      (missed > 0 ? '\n' + missed + ' couldn\'t be fetched and are missing from it — run it again to try those.' : ''),
+      missed > 0 ? 'bad' : 'good'
+    );
+  }catch(e){
+    console.error('Backup (images) failed', e);
+    backupSetStatus('Image backup failed — nothing was downloaded. ' + ((e && e.message) || 'Check the internet connection and try again.'), 'bad');
+  }finally{
+    backupSetBusy(false, btn);
+  }
+}
+
+// ---------- 3. All data, structured (Excel) ----------
+// For reading, not for restoring — Excel flattens the jsonb columns to
+// text and will happily reinterpret an ID that looks like a number, which
+// is exactly why button 1 exists and why this one says so on the page.
+//
+// Columns are listed per table for order and readable headings, but any
+// column that turns up in the data and ISN'T in that list is appended at
+// the end under its raw name rather than dropped — a column added to the
+// database later must never quietly vanish out of the backup.
+function backupCellValue(v){
+  if(v === null || v === undefined) return '';
+  if(typeof v === 'object') return JSON.stringify(v); // jsonb: extra_details, payments, tax_rows, audit_summary
+  if(typeof v === 'boolean') return v ? 'Yes' : 'No';
+  return v;
+}
+
+function backupSheetFromRows(rows, cols){
+  const known = cols.map(c=> c[0]);
+  const extras = [];
+  rows.forEach(r=> Object.keys(r).forEach(k=>{
+    if(known.indexOf(k) === -1 && extras.indexOf(k) === -1) extras.push(k);
+  }));
+  const headers = cols.map(c=> c[1]).concat(extras);
+  const out = rows.map(r=>{
+    const o = {};
+    cols.forEach(c=> { o[c[1]] = backupCellValue(r[c[0]]); });
+    extras.forEach(k=> { o[k] = backupCellValue(r[k]); });
+    return o;
+  });
+  const ws = XLSX.utils.json_to_sheet(out, { header: headers });
+  ws['!cols'] = headers.map(h=> ({ wch: Math.min(Math.max(h.length + 2, 12), 40) }));
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+  return ws;
+}
+
+async function backupDownloadStructuredExcel(btn){
+  if(!backupGuard()) return;
+  if(typeof XLSX === 'undefined'){
+    showNotice('Excel export isn\'t available right now — the spreadsheet library failed to load.');
+    return;
+  }
+  backupSetBusy(true, btn, 'Reading…');
+  backupSetStatus('Reading tables…');
+  try{
+    const { tables, skipped } = await backupFetchEverything((n, total, label)=>{
+      backupSetStatus('Reading ' + label + '  (' + n + ' of ' + total + ')…');
+    });
+    backupSetStatus('Building the workbook…');
+    const wb = XLSX.utils.book_new();
+
+    // Contents sheet first, so opening the file tells you what's in it and
+    // when it was taken without hunting through ten tabs.
+    const summary = [
+      { 'Item': 'Backup taken', 'Value': new Date().toLocaleString() },
+      { 'Item': 'Taken by', 'Value': currentUser ? currentUser.username : '' },
+      { 'Item': '', 'Value': '' }
+    ];
+    let totalRows = 0;
+    BACKUP_TABLES.forEach(spec=>{
+      const rows = tables[spec.table];
+      if(!rows){ summary.push({ 'Item': spec.label, 'Value': 'COULD NOT BE READ' }); return; }
+      totalRows += rows.length;
+      summary.push({ 'Item': spec.label, 'Value': rows.length + ' rows' });
+    });
+    summary.push({ 'Item': '', 'Value': '' });
+    summary.push({ 'Item': 'Total rows', 'Value': totalRows });
+    summary.push({ 'Item': '', 'Value': '' });
+    summary.push({ 'Item': 'Note', 'Value': 'Includes deleted entries — anything with a Deleted At date was removed in the app but is kept here.' });
+    summary.push({ 'Item': 'Note', 'Value': 'This file is for reading. To put data back into the database, use the All Tables (JSON) backup instead.' });
+    const summaryWs = XLSX.utils.json_to_sheet(summary, { header: ['Item','Value'] });
+    summaryWs['!cols'] = [{ wch: 28 }, { wch: 70 }];
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Contents');
+
+    BACKUP_TABLES.forEach(spec=>{
+      const rows = tables[spec.table];
+      if(!rows) return;
+      // An empty table still gets its sheet, with headers — an absent tab
+      // reads as "this data is missing", a header-only one as "none yet".
+      XLSX.utils.book_append_sheet(wb, backupSheetFromRows(rows, spec.cols), spec.label.slice(0, 31));
+    });
+
+    XLSX.writeFile(wb, 'riviera-backup-structured-' + backupTimestamp() + '.xlsx');
+    backupSetStatus(
+      'Done — ' + totalRows.toLocaleString() + ' rows across ' + Object.keys(tables).length + ' sheets.' +
+      (skipped.length ? '\nCouldn\'t read: ' + skipped.map(s=> s.table).join(', ') + '.' : ''),
+      skipped.length ? 'bad' : 'good'
+    );
+  }catch(e){
+    console.error('Backup (structured Excel) failed', e);
+    backupSetStatus('Excel backup failed — nothing was downloaded. ' + ((e && e.message) || 'Check the internet connection and try again.'), 'bad');
+  }finally{
+    backupSetBusy(false, btn);
+  }
 }
 
 // Returns the account's role string on success, false on wrong
@@ -19352,6 +19910,311 @@ async function attemptLogin(){
     loginError.textContent = 'Couldn\'t reach the server — check your internet connection and try again.';
   } else {
     loginError.textContent = 'Wrong username or password.';
+  }
+}
+
+// =========================================================
+// USERS — Settings > Users, superadmin only.
+//
+// public.users is ungranted and RLS-blocked: the browser cannot read or
+// write it directly, by design (password hashes must never be selectable
+// with a key that is printed in this file). Everything here goes through
+// the three security-definer functions in
+// migration/roles/user_management.sql, each of which re-verifies the
+// caller's OWN username + password and refuses anyone who isn't a
+// superadmin.
+//
+// That is why this page asks for the password before it shows anything:
+// there is no server-side session to prove who you are — the password IS
+// the credential, sent with every call. It is held in this variable for
+// the session only, and never written to localStorage, sessionStorage or
+// anywhere else on disk.
+// =========================================================
+let usersAdminPassword = null;   // in memory only, cleared on refresh/sign-out
+let usersCache = [];
+let usersEditingUsername = null; // null = the form is in "create" mode
+
+const USERS_ROLE_HELP = {
+  superadmin: 'Everything an admin can do, plus the Restaurant module, Front Office and this page.',
+  admin: 'Full access to the hotel: create and edit entries, take payments, Day Lock, Delete Entity, all reports.',
+  staff: 'Everything except editing a saved entry — can create entries, take payments, search and report.',
+  viewer: 'Read-only everywhere. Can look at every page and report, but cannot create, edit or delete anything.',
+  restaurant: 'Only the Restaurant module and Front Office. Sees nothing else in the hotel app.'
+};
+
+function usersRenderRoleHelp(){
+  const sel = document.getElementById('usersFormRole');
+  const help = document.getElementById('usersRoleHelp');
+  if(!sel || !help) return;
+  help.textContent = USERS_ROLE_HELP[sel.value] || '';
+}
+
+// Every raise exception in user_management.sql arrives here as a message
+// string — turned into something a person can act on.
+function usersFriendlyError(e){
+  const msg = String((e && e.message) || e || '');
+  if(/NOT_AUTHORISED/.test(msg)) return 'That password isn\'t right (or this account isn\'t a super admin).';
+  if(/USERNAME_REQUIRED/.test(msg)) return 'Enter a username.';
+  if(/USERNAME_HAS_SPACES/.test(msg)) return 'A username can\'t contain spaces.';
+  if(/PASSWORD_TOO_SHORT/.test(msg)) return 'The password must be at least 6 characters.';
+  if(/BAD_ROLE/.test(msg)) return 'That isn\'t a role this app knows about.';
+  if(/CANNOT_DEMOTE_SELF/.test(msg)) return 'You can\'t take super admin away from your own account — sign in as another super admin to do that.';
+  if(/CANNOT_DELETE_SELF/.test(msg)) return 'You can\'t delete the account you\'re signed in with.';
+  if(/LAST_SUPERADMIN/.test(msg)) return 'This is the only super admin left. Make someone else a super admin first, or nobody will be able to open this page again.';
+  if(/NO_SUCH_USER/.test(msg)) return 'That account no longer exists — the list has been refreshed.';
+  if(/PGRST202/.test(msg) || /Could not find the function/i.test(msg) || /does not exist/i.test(msg)){
+    return 'The user-management functions aren\'t in the database yet — run migration/roles/user_management.sql in the Supabase SQL Editor first.';
+  }
+  return 'Couldn\'t reach the database — check the internet connection and try again.';
+}
+
+function usersSetError(id, text){
+  const el = document.getElementById(id);
+  if(el) el.textContent = text || '';
+}
+
+async function usersUnlock(){
+  const input = document.getElementById('usersUnlockPassword');
+  const btn = document.getElementById('usersUnlockBtn');
+  if(!input || !btn) return;
+  const pass = input.value;
+  usersSetError('usersUnlockError', '');
+  if(!pass){ usersSetError('usersUnlockError', 'Enter your password.'); return; }
+  if(!sb){ usersSetError('usersUnlockError', 'Not connected to the cloud database.'); return; }
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  try{
+    const { data, error } = await sb.rpc('admin_list_users', {
+      p_admin: currentUser ? currentUser.username : '',
+      p_pass: pass
+    });
+    if(error) throw error;
+    usersAdminPassword = pass;   // memory only — never stored
+    usersCache = data || [];
+    input.value = '';
+    renderUsersPage();
+  }catch(e){
+    console.error('Users unlock failed', e);
+    usersSetError('usersUnlockError', usersFriendlyError(e));
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Unlock';
+  }
+}
+
+async function usersRefreshList(){
+  if(!usersAdminPassword) return;
+  const { data, error } = await sb.rpc('admin_list_users', {
+    p_admin: currentUser ? currentUser.username : '',
+    p_pass: usersAdminPassword
+  });
+  if(error) throw error;
+  usersCache = data || [];
+}
+
+function renderUsersPage(){
+  if(!isSuperAdmin()) return;
+  const lockPanel = document.getElementById('usersLockPanel');
+  const listPanel = document.getElementById('usersListPanel');
+  const formPanel = document.getElementById('usersFormPanel');
+  if(!lockPanel || !listPanel || !formPanel) return;
+  const unlocked = !!usersAdminPassword;
+  lockPanel.style.display = unlocked ? 'none' : '';
+  listPanel.style.display = unlocked ? '' : 'none';
+  formPanel.style.display = unlocked ? '' : 'none';
+  if(!unlocked) return;
+  usersRenderList();
+  usersRenderRoleHelp();
+}
+
+// Built with real DOM nodes rather than an innerHTML template: usernames
+// are free text typed by a person, and this is the one page where they'd
+// be rendered back out — textContent means a username can never be markup.
+function usersRenderList(){
+  const wrap = document.getElementById('usersList');
+  if(!wrap) return;
+  wrap.textContent = '';
+  if(usersCache.length === 0){
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'No accounts found.';
+    wrap.appendChild(note);
+    return;
+  }
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  [['Username',''],['Role','width:150px;'],['Created','width:170px;'],['','width:170px;']].forEach(([label, style])=>{
+    const th = document.createElement('th');
+    th.textContent = label;
+    if(style) th.setAttribute('style', style);
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  usersCache.forEach(u=>{
+    const isSelf = !!currentUser && u.username === currentUser.username;
+    const tr = document.createElement('tr');
+
+    const nameTd = document.createElement('td');
+    nameTd.textContent = u.username;
+    if(isSelf){
+      const you = document.createElement('span');
+      you.className = 'users-you';
+      you.textContent = '(you)';
+      nameTd.appendChild(you);
+    }
+    tr.appendChild(nameTd);
+
+    const roleTd = document.createElement('td');
+    const pill = document.createElement('span');
+    pill.className = 'users-role-pill ' + u.role;
+    pill.textContent = u.role;
+    roleTd.appendChild(pill);
+    tr.appendChild(roleTd);
+
+    const madeTd = document.createElement('td');
+    madeTd.textContent = u.created_at ? new Date(u.created_at).toLocaleDateString() : '-';
+    tr.appendChild(madeTd);
+
+    const actTd = document.createElement('td');
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn secondary';
+    editBtn.setAttribute('style', 'min-height:28px; padding:3px 10px;');
+    editBtn.textContent = isSelf ? 'Change Password' : 'Edit';
+    editBtn.onclick = ()=> usersStartEdit(u.username);
+    actTd.appendChild(editBtn);
+    // No delete button on your own row at all — the database refuses it
+    // anyway (CANNOT_DELETE_SELF), so offering it would only ever be a
+    // click that turns into an error message.
+    if(!isSelf){
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn danger';
+      delBtn.setAttribute('style', 'min-height:28px; padding:3px 10px; margin-left:6px;');
+      delBtn.textContent = 'Delete';
+      delBtn.onclick = ()=> usersDelete(u.username);
+      actTd.appendChild(delBtn);
+    }
+    tr.appendChild(actTd);
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+}
+
+function usersStartEdit(username){
+  const user = usersCache.find(u=> u.username === username);
+  if(!user) return;
+  usersEditingUsername = username;
+  const isSelf = !!currentUser && username === currentUser.username;
+  document.getElementById('usersFormUsername').value = username;
+  document.getElementById('usersFormUsername').disabled = true; // a username is the primary key — renaming isn't editing, it's a new account
+  document.getElementById('usersFormPassword').value = '';
+  document.getElementById('usersFormRole').value = user.role;
+  // Changing your own role away from superadmin is refused by the database
+  // (you'd lock yourself out of this very page), so don't offer it here.
+  document.getElementById('usersFormRole').disabled = isSelf;
+  document.getElementById('usersFormTitle').textContent = isSelf ? 'Change Your Own Password' : 'Edit ' + username;
+  document.getElementById('usersFormHint').textContent = isSelf
+    ? 'Set a new password for the account you\'re signed in with. You stay signed in — the new password is what you\'ll use from now on, here and at the login screen.'
+    : 'Leave the password blank to change only the role. Type a new one to reset their password.';
+  document.getElementById('usersFormPasswordNote').textContent = 'blank = leave it unchanged';
+  document.getElementById('usersSaveBtn').textContent = 'Save Changes';
+  document.getElementById('usersCancelEditBtn').style.display = '';
+  usersSetError('usersFormError', '');
+  usersRenderRoleHelp();
+  document.getElementById('usersFormPassword').focus();
+}
+
+function usersResetForm(){
+  usersEditingUsername = null;
+  const nameEl = document.getElementById('usersFormUsername');
+  if(!nameEl) return;
+  nameEl.value = '';
+  nameEl.disabled = false;
+  document.getElementById('usersFormPassword').value = '';
+  document.getElementById('usersFormRole').value = 'staff';
+  document.getElementById('usersFormRole').disabled = false;
+  document.getElementById('usersFormTitle').textContent = 'Add a User';
+  document.getElementById('usersFormHint').textContent = 'Usernames are stored in lower case and can\'t contain spaces.';
+  document.getElementById('usersFormPasswordNote').textContent = 'at least 6 characters';
+  document.getElementById('usersSaveBtn').textContent = 'Create User';
+  document.getElementById('usersCancelEditBtn').style.display = 'none';
+  usersSetError('usersFormError', '');
+  usersRenderRoleHelp();
+}
+
+async function usersSave(btn){
+  if(!isSuperAdmin() || !usersAdminPassword) return;
+  const username = (document.getElementById('usersFormUsername').value || '').trim().toLowerCase();
+  const password = document.getElementById('usersFormPassword').value || '';
+  const role = document.getElementById('usersFormRole').value;
+  usersSetError('usersFormError', '');
+  if(!username){ usersSetError('usersFormError', 'Enter a username.'); return; }
+  if(/\s/.test(username)){ usersSetError('usersFormError', 'A username can\'t contain spaces.'); return; }
+  if(!usersEditingUsername && password.length < 6){ usersSetError('usersFormError', 'The password must be at least 6 characters.'); return; }
+  if(usersEditingUsername && password && password.length < 6){ usersSetError('usersFormError', 'The password must be at least 6 characters.'); return; }
+
+  const isSelf = !!currentUser && username === currentUser.username;
+  if(isSelf && password){
+    const ok = await showConfirmModal(
+      'This changes the password on your own account (' + username + '). You\'ll need the new one to sign in from now on, and to use this page again after a refresh.',
+      { title: 'Change Your Password', okText: 'Change It', cancelText: 'Cancel' }
+    );
+    if(!ok) return;
+  }
+
+  const label = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  try{
+    const { data, error } = await sb.rpc('admin_save_user', {
+      p_admin: currentUser ? currentUser.username : '',
+      p_pass: usersAdminPassword,
+      p_username: username,
+      p_password: password,
+      p_role: role
+    });
+    if(error) throw error;
+    // Changing your OWN password invalidates the credential every call on
+    // this page is made with — swap it for the new one immediately, or the
+    // very next action fails with NOT_AUTHORISED and looks like a bug.
+    if(isSelf && password) usersAdminPassword = password;
+    await usersRefreshList();
+    usersResetForm();
+    usersRenderList();
+    showNotice(data === 'created' ? 'Account created: ' + username : 'Saved: ' + username, 'success');
+  }catch(e){
+    console.error('Saving user failed', e);
+    usersSetError('usersFormError', usersFriendlyError(e));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = label; }
+  }
+}
+
+async function usersDelete(username){
+  if(!isSuperAdmin() || !usersAdminPassword) return;
+  const ok = await showConfirmModal(
+    'Delete the account "' + username + '"? They won\'t be able to sign in again. Everything they entered stays exactly as it is, and their name stays on it in the audit log.',
+    { title: 'Delete Account', okText: 'Delete', cancelText: 'Cancel', danger: true }
+  );
+  if(!ok) return;
+  try{
+    const { error } = await sb.rpc('admin_delete_user', {
+      p_admin: currentUser ? currentUser.username : '',
+      p_pass: usersAdminPassword,
+      p_username: username
+    });
+    if(error) throw error;
+    if(usersEditingUsername === username) usersResetForm();
+    await usersRefreshList();
+    usersRenderList();
+    showNotice('Account deleted: ' + username, 'success');
+  }catch(e){
+    console.error('Deleting user failed', e);
+    try{ await usersRefreshList(); usersRenderList(); }catch(e2){ /* list refresh is best effort */ }
+    showNotice(usersFriendlyError(e));
   }
 }
 
@@ -19402,6 +20265,13 @@ function showApp(){
 document.getElementById('loginBtn').addEventListener('click', attemptLogin);
 document.getElementById('loginPassword').addEventListener('keydown', ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); attemptLogin(); } });
 document.getElementById('loginUsername').addEventListener('keydown', ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); document.getElementById('loginPassword').focus(); } });
+// Settings > Users — Enter submits, same as everywhere else in the app.
+document.getElementById('usersUnlockPassword').addEventListener('keydown', ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); usersUnlock(); } });
+['usersFormUsername','usersFormPassword'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', ev=>{
+    if(ev.key === 'Enter'){ ev.preventDefault(); usersSave(document.getElementById('usersSaveBtn')); }
+  });
+});
 document.getElementById('logoutBtn').addEventListener('click', async ()=>{
   if(pendingPushIds.size > 0){
     const proceed = await showConfirmModal(
@@ -23454,7 +24324,46 @@ function posBuildReceiptHtml(record){
     '<div class="rc-foot">Riviera Resort · Restaurant</div>';
 }
 
-var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:600; line-height:1.35; width:80mm; box-sizing:border-box; margin:0; padding:0 4mm; color:#000; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;} ' +
+/* ---------------------------------------------------------------
+   RECEIPT FONT — chosen for one specific failure: a printed 9 reading
+   as an 8.
+   That is not a resolution problem, it is a COUNTER problem. A thermal
+   head burns dots that bleed slightly into the paper, so every enclosed
+   white space inside a character (the counter) shrinks by roughly a
+   dot in each direction as it prints. Arial's digits have small, tight
+   counters and a 9 whose bowl closes into a curved tail — fill that
+   bowl in and what is left is an 8. Same reason 0/6/8 blur together.
+   So the font here is picked on counter size and digit distinctness,
+   not on looks:
+     - Consolas leads. It ships with Windows (this prints from a
+       Windows till, and a font that isn't installed is a font that
+       isn't used), its counters are unusually large for its width, and
+       critically its 9 has a STRAIGHT vertical tail rather than a
+       curve that can close the bowl — a filled-in Consolas 9 still
+       cannot be mistaken for an 8. Its zero is slashed, which is the
+       other half of the same problem (0 vs 8 vs 6).
+     - It is monospaced, so every digit is the same width and the
+       amount column lines up down the page by construction, instead of
+       drifting the way Arial's narrow 1 made it.
+     - It is also narrow for a monospace — close to Arial's average
+       character width — so the 80mm layout and the line count land
+       where they already were.
+   Courier New is deliberately NOT in the fallback list despite being
+   the obvious "receipt font": its strokes are far too thin and it
+   prints faint, which is the exact problem that was fought at the
+   bottom of this block. Every fallback listed is sturdy and already on
+   the machine.
+   Deliberately NO webfont either: the Inter <link> at the top of this
+   file is a network request, and a receipt that prints in some
+   fallback because the internet blinked is worse than one that never
+   asked for a webfont at all.
+   If a 9 still fills in after this, the remaining lever is the
+   printer's own density/darkness setting — TOO high closes counters
+   just as surely as the wrong font does. That is the opposite
+   direction from the fade note below, so change one at a time.
+   Sizes, weights, spacing and the 80mm width are untouched.
+   --------------------------------------------------------------- */
+var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Consolas,"DejaVu Sans Mono","Liberation Mono","Lucida Console",Tahoma,monospace; font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; font-size:16px; font-weight:600; line-height:1.35; width:80mm; box-sizing:border-box; margin:0; padding:0 4mm; color:#000; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;} ' +
   '#posReceiptPrintArea *{ box-sizing:border-box; max-width:100%; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }' +
   '#posReceiptPrintArea .rc-brand{text-align:center; font-size:22px; font-weight:700; letter-spacing:.04em; margin-bottom:0.5mm;} ' +
   '#posReceiptPrintArea .rc-sub{text-align:center; font-size:15px; letter-spacing:.06em; color:#000; margin-bottom:1.5mm;} ' +
