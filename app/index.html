@@ -520,6 +520,16 @@
     border-color:#6D28D9;
     color:#fff;
   }
+  /* Without Breakfast is the one number on the Simple (kitchen-facing) view
+     that means "do NOT feed these people" — it reads red and bold on screen
+     AND on paper, unlike every other color here which print deliberately
+     flattens to black (see @media print). */
+  th.th-red{
+    background:#DC2626;
+    border-color:#B91C1C;
+    color:#fff;
+  }
+  td.bf-without{ color:#DC2626; font-weight:700; }
   td{
     padding:6px 8px;
     border:1px solid #00000018;
@@ -2776,6 +2786,17 @@
     .panel.accent-payments{
       background:#fff !important;
       border:2px solid #000 !important;
+    }
+    /* The one exception to the black-and-white rule above: Breakfast
+       Report's Without Breakfast column. It's the number that stops the
+       kitchen serving someone who isn't entitled, so it stays red and bold
+       on the printout the staff actually work off. Beats the blanket
+       *{color:#000 !important} on specificity (0,1,1 vs 0,0,0), not on
+       source order. */
+    th.th-red, td.bf-without{
+      color:#B91C1C !important;
+      font-weight:700 !important;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
   }
 
@@ -17116,6 +17137,7 @@ function renderBreakfastReport(){
           <th>Guest</th>
           <th class="th-green" style="width:140px;">Breakfast Adults</th>
           <th class="th-green" style="width:140px;">Breakfast Children</th>
+          <th class="th-red" style="width:140px;">Without Breakfast</th>
           <th class="th-green" style="width:120px;">Breakfast Total</th>
         </tr></thead>
         <tbody>${data.rows.map(r=> `
@@ -17124,6 +17146,7 @@ function renderBreakfastReport(){
             <td>${r.guest}</td>
             <td>${r.breakfastAdults}</td>
             <td>${r.breakfastChildren}</td>
+            <td class="bf-without">${r.withoutBreakfast}</td>
             <td style="font-weight:700;">${r.breakfastTotal}</td>
           </tr>`).join('')}
         </tbody>
@@ -17132,6 +17155,7 @@ function renderBreakfastReport(){
             <td colspan="2">Total</td>
             <td>${data.totals.breakfastAdults}</td>
             <td>${data.totals.breakfastChildren}</td>
+            <td class="bf-without">${data.totals.withoutBreakfast}</td>
             <td>${data.totals.breakfastTotal}</td>
           </tr>
         </tfoot>
