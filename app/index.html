@@ -3981,7 +3981,7 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row.picked {background:rgb
 #page-pos-invoice table.simple th.num, #page-pos-invoice table.simple td.num {text-align:right;}
 #page-pos-invoice table.simple td {padding:8px 10px; border-bottom:1px solid #f0f1f3;}
 #page-pos-invoice table.simple td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
-#page-charges-summary table.rep td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
+#page-charges-summary table.rep td.fo-items-col, #page-receipts table.rep td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
 #page-pos-invoice table.simple td a {color:var(--blue); text-decoration:none;}
 #page-pos-invoice .neg {color:var(--muted);}
 /* Recent Invoices / Guests list every row of which is already posted, so a
@@ -4091,6 +4091,20 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row.picked {background:rgb
 #page-charges-summary table.rep tr.subtotal.grand td {border-top:none; border-bottom:none;}
 #page-charges-summary .footnote {display:flex; justify-content:space-between; margin-top:14px; font-size:11.5px; color:var(--muted); align-items:flex-start; gap:20px;}
 #page-charges-summary table.foodbev-tbl th {text-align:center;}
+/* Summary tiles: three per row, so each number gets room to be read
+   instead of six of them fighting over one line. */
+#page-charges-summary .cs-summary-grid {display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; margin-top:12px;}
+#page-charges-summary .cs-tile {background:#14161a; border:1px solid #23262c; border-radius:10px; padding:16px 18px;}
+#page-charges-summary .cs-tile-label {font-size:12px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:8px;}
+#page-charges-summary .cs-tile-value {font-size:30px; font-weight:700; color:#fff; line-height:1.1;}
+#page-charges-summary .cs-tile-hint {margin-top:6px; font-size:11px; color:#6b7280;}
+#page-charges-summary .cs-tile-gold {background:#1c1710; border-color:#8a6d1f;}
+#page-charges-summary .cs-tile-gold .cs-tile-label {color:#d9b25a;}
+#page-charges-summary .cs-tile-gold .cs-tile-value {color:#f4c542;}
+#page-charges-summary .cs-tile-gold .cs-tile-hint {color:#9a7f3d;}
+@media (max-width: 900px) {
+  #page-charges-summary .cs-summary-grid {grid-template-columns:repeat(2, minmax(0, 1fr));}
+}
 #page-charges-summary .status-badge {display:inline-block; border-radius:12px; padding:3px 10px; font-size:11px; font-weight:700; letter-spacing:.02em;}
 #page-charges-summary .status-badge.paid {background:#dcfce7; color:#15803d;}
 #page-charges-summary .status-badge.pending {background:#fde2e2; color:#c53030;}
@@ -6238,7 +6252,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <div class="card filters-card">
     <div class="filters-label">FILTERS</div>
     <div class="filters-grid" style="grid-template-columns:260px max-content 200px;">
-      <div><label>Search</label><input type="text" id="receiptsSearchInput" placeholder="Invoice #, Order #, Customer, Room…" oninput="receiptsRefresh()"></div>
+      <div><label>Search</label><input type="text" id="receiptsSearchInput" placeholder="Invoice #, Order #, Customer, Room, Item…" oninput="receiptsRefresh()"></div>
       <div><label>Date</label><input type="date" id="receiptsDateFilter" onchange="receiptsRefresh()"></div>
       <div><label>Status</label>
         <select id="receiptsStatusFilter" onchange="receiptsRefresh()">
@@ -6257,7 +6271,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsPaidBody"></tbody>
     </table>
@@ -6267,7 +6281,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="results-head">AT FRONT OFFICE</div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsFrontOfficeBody"></tbody>
     </table>
@@ -6277,7 +6291,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="results-head">GUESTS (NON-PAYING)</div>
     <table class="rep">
       <thead>
-        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsGuestBody"></tbody>
     </table>
@@ -6309,30 +6323,39 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
        it was paid (cash or card), never split by payment method. -->
   <div class="card results-card">
     <div class="results-head"><span class="rh-title">SUMMARY</span></div>
-    <div style="display:flex; flex-wrap:nowrap; gap:12px; margin-top:10px; overflow-x:auto;">
-      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
-        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">CASH</div>
-        <div class="rh-count" id="csSummaryCash" style="font-size:22px; font-weight:700; color:#4ade80;">0.00</div>
+    <!-- Two rows of three rather than six squeezed side by side: the top row
+         is money taken and how it came in, the bottom row is what sits inside
+         that money and what's actually left in the drawer. -->
+    <div class="cs-summary-grid">
+      <div class="cs-tile">
+        <div class="cs-tile-label">TOTAL RECEIVED</div>
+        <div class="rh-count cs-tile-value" id="csSummaryReceived">0.00</div>
+        <div class="cs-tile-hint">cash + account + card</div>
       </div>
-      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
-        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">ACCOUNT + CARD</div>
-        <div class="rh-count" id="csSummaryAccountCard" style="font-size:22px; font-weight:700; color:#60a5fa;">0.00</div>
+      <div class="cs-tile">
+        <div class="cs-tile-label">CASH</div>
+        <div class="rh-count cs-tile-value" id="csSummaryCash" style="color:#4ade80;">0.00</div>
+        <div class="cs-tile-hint">paid in cash</div>
       </div>
-      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
-        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">SERVICE CHARGE</div>
-        <div class="rh-count" id="csSummaryServiceCharge" style="font-size:22px; font-weight:700; color:#fff;">0.00</div>
+      <div class="cs-tile">
+        <div class="cs-tile-label">ACCOUNT + CARD</div>
+        <div class="rh-count cs-tile-value" id="csSummaryAccountCard" style="color:#60a5fa;">0.00</div>
+        <div class="cs-tile-hint">transfer, room account &amp; card</div>
       </div>
-      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
-        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">GST TAX</div>
-        <div class="rh-count" id="csSummaryTax" style="font-size:22px; font-weight:700; color:#fff;">0.00</div>
+      <div class="cs-tile">
+        <div class="cs-tile-label">GST TAX</div>
+        <div class="rh-count cs-tile-value" id="csSummaryTax">0.00</div>
+        <div class="cs-tile-hint">included in the total above</div>
       </div>
-      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
-        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">TOTAL RECEIVED</div>
-        <div class="rh-count" id="csSummaryReceived" style="font-size:22px; font-weight:700; color:#fff;">0.00</div>
+      <div class="cs-tile">
+        <div class="cs-tile-label">SERVICE CHARGE</div>
+        <div class="rh-count cs-tile-value" id="csSummaryServiceCharge">0.00</div>
+        <div class="cs-tile-hint">every invoice, cash or card</div>
       </div>
-      <div style="flex:1; min-width:150px; background:#14161a; border-radius:8px; padding:12px 14px;">
-        <div style="font-size:11px; letter-spacing:.06em; color:#9ca3af; font-weight:700; margin-bottom:6px;">CASH − SERVICE CHARGE</div>
-        <div class="rh-count" id="csSummaryReceivedAfterService" style="font-size:22px; font-weight:700; color:#fff;">0.00</div>
+      <div class="cs-tile cs-tile-gold">
+        <div class="cs-tile-label">CASH − SERVICE CHARGE</div>
+        <div class="rh-count cs-tile-value" id="csSummaryReceivedAfterService">0.00</div>
+        <div class="cs-tile-hint">left in the drawer</div>
       </div>
     </div>
   </div>
@@ -20071,6 +20094,11 @@ function applyPosInvoiceItemRealtimeEvent(payload){
   record.items = record.items || [];
   var line = Number(it.line_no) || 0;
   var idx = record.items.findIndex(function(x){ return x.lineNo === line; });
+  // Belt and braces for lines that predate the stamping in
+  // posSaveInvoiceRecord (a cached snapshot written before it, say): an
+  // unnumbered line sitting at exactly that position IS that line, so patch
+  // it in place rather than appending a duplicate of it.
+  if (idx === -1 && record.items[line] && record.items[line].lineNo == null) idx = line;
   if (payload.eventType === 'DELETE'){
     if (idx !== -1) record.items.splice(idx, 1);
   } else {
@@ -21987,6 +22015,15 @@ async function posSaveInvoiceRecord(record, mode){
   if (mode === 'frontoffice') record.sentToFrontOffice = true;
   record.id = record.id || uid('inv_');
   record.createdBy = record.createdBy || (currentUser ? currentUser.username : '');
+  // Lines built from the form have no line number on them, but the realtime
+  // item patcher matches an incoming event to a local line BY lineNo — and
+  // undefined never matches line 0, 1, 2… so the echo of our own save was
+  // appended as a second copy of every item on the invoice. Reopening it
+  // then showed each line twice, and posting/printing again wrote that
+  // doubled list back to the database for real. Stamp the same index
+  // posItemPayload writes as line_no, so a save and its own echo are
+  // talking about the same lines.
+  (record.items || []).forEach(function(it, i){ it.lineNo = i; });
 
   var ok = await posPushNewInvoice(record);
   if (!ok) return false;
@@ -22033,12 +22070,17 @@ function receiptsRefresh(){
     if (statusFilter === 'posted' && !record.posted) return;
     if (statusFilter === 'notposted' && record.posted) return;
     if (searchQ) {
-      var haystack = [record.no, record.orderNo, record.customer, record.room, record.roomNo, record.table].filter(Boolean).join(' ').toLowerCase();
+      // Item names are part of the haystack too — "who ordered the fish
+      // last week" is a real question, and the ITEMS column now shows the
+      // answer right there in the row. Like every other field here it
+      // searches across all dates, not just the filtered one.
+      var itemNames = (record.items || []).map(function(it){ return it.name; }).filter(Boolean).join(' ');
+      var haystack = [record.no, record.orderNo, record.customer, record.room, record.roomNo, record.table, itemNames].filter(Boolean).join(' ').toLowerCase();
       if (haystack.indexOf(searchQ) === -1) return;
     } else if (filterDMY && record.date !== filterDMY) {
       return;
     }
-    var row = posBuildInvoiceRow(record, true, true);
+    var row = posBuildInvoiceRow(record, true, true, true);
     shown++;
     if (/guest/i.test(record.customer || '')) guestBody.appendChild(row);
     else if (record.sentToFrontOffice && foBody) foBody.appendChild(row);
