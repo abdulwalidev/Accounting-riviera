@@ -22998,14 +22998,30 @@ async function posPostInvoice(mode){
     items: items
   };
 
-  var saved = await posSaveInvoiceRecord(record, mode);
-  if (!saved) { abort(); return; }
-
-  posAddExtraMenuItems(items);
+  // The receipt used to print only after the WHOLE cloud save finished —
+  // three sequential round-trips (invoice upsert, items upsert, stale-line
+  // delete) plus a re-render of all eight lists on the page. On anything
+  // but a fast connection that's seconds of waiting before the print dialog
+  // even appears, for paper whose contents were already decided.
+  // The save is still started first, so its requests are on the wire before
+  // anything blocks, but printing no longer waits for it to come back: the
+  // record is fully formed by this point (posSaveInvoiceRecord stamps id /
+  // mode / posted synchronously, before its first await), so the paper is
+  // byte-identical — it just comes out immediately. window.print() blocks
+  // the page while the dialog is open, which is exactly why the save has to
+  // be kicked off BEFORE it rather than after.
+  // Still awaited below before the toast/reset, and a failed save still
+  // queues and retries in the background exactly as before.
+  var savePromise = posSaveInvoiceRecord(record, mode);
 
   if (mode === 'printpost' || mode === 'printonly') {
     posPrintRecord(record);
   }
+
+  var saved = await savePromise;
+  if (!saved) { abort(); return; }
+
+  posAddExtraMenuItems(items);
 
   var msg = editing ? 'Updated: ' :
     mode === 'printonly' ? 'Saved as print-only: ' :
