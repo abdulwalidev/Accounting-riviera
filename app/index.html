@@ -21887,6 +21887,17 @@ var posPendingDayLockAction = null;
 
 function posOpenDayLockConfirm(mode, dateStr){
   if (!dateStr) { posShowToast('Please pick a date first.', 'error'); return; }
+  // The one hard rule: a day that hasn't finished can't be locked. Nothing
+  // downstream honours such a lock anyway (posIsLocked exempts today and
+  // later), so before this the confirm ran, the row was written, and the
+  // day carried on exactly as unlocked as it was — which is precisely how
+  // today ended up with a lock row nobody could see the effect of.
+  if (dateStr >= posTodayISO()) {
+    posShowToast(dateStr === posTodayISO()
+      ? 'Today is still open — a business day can only be locked once it has ended. It locks itself after the 4am cutover.'
+      : 'That day hasn\'t happened yet — only a finished business day can be locked.', 'error');
+    return;
+  }
   posPendingDayLockAction = { mode: mode, dateStr: dateStr };
   var word = mode === 'lock' ? 'LOCK' : 'UNLOCK';
   document.getElementById('posDayLockModalTitle').textContent = mode === 'lock' ? 'Confirm Lock' : 'Confirm Unlock';
@@ -21936,6 +21947,9 @@ function posRemovePendingLockAction(action){
 async function posLockDayAction(dateStr, fromRetry){
   var action;
   if (!fromRetry) {
+    // Backstop for the rule the confirm dialog already enforces — no path
+    // gets to write a lock row for a day that hasn't finished.
+    if (dateStr >= posTodayISO()) { posShowToast('Only a finished business day can be locked — today is still open.', 'error'); return true; }
     if (posIsDateLocked(dateStr) && posFindLockRow(dateStr)) { posShowToast(dateStr + ' is already locked.', 'error'); return true; }
     var existing = posFindLockRow(dateStr);
     var row = existing || { lock_date: dateStr };
@@ -22022,18 +22036,42 @@ function posRenderDayLockPage(){
   var dateEl = document.getElementById('posDlDate');
   var actionBtn = document.getElementById('posDlActionBtn');
   if (!listEl || !dateEl || !actionBtn) return;
-  if (!dateEl.value) dateEl.value = posTodayISO();
+  // Opens on the day you'd actually be locking. Today can't be locked (see
+  // below), so defaulting to it just meant landing on a dead button.
+  if (!dateEl.value) dateEl.value = posPreviousBusinessDayIso();
 
   var pickedDate = dateEl.value;
   var lockRow = posFindLockRow(pickedDate);
   var locked = lockRow && !lockRow.unlocked_at;
-  if (locked) {
+  // A live day is not lockable, and never was in any way that mattered:
+  // posIsLocked exempts anything dated today or later outright, so a lock
+  // row on today changed nothing anywhere — the button "worked", said
+  // Unlock afterwards, and left every one of today's invoices editable.
+  // Rather than make today lockable (its own invoices are still being
+  // written), the button now says so.
+  if (pickedDate >= posTodayISO()) {
+    actionBtn.textContent = pickedDate === posTodayISO() ? 'Today is still open' : 'Not a finished day yet';
+    actionBtn.className = 'dl-action-btn secondary';
+    actionBtn.disabled = true;
+    actionBtn.style.opacity = '.55';
+    actionBtn.style.cursor = 'not-allowed';
+    actionBtn.title = 'A business day can only be locked once it has ended — today locks itself after the 4am cutover.';
+    actionBtn.onclick = null;
+  } else if (locked) {
     actionBtn.textContent = 'Unlock This Day';
     actionBtn.className = 'dl-action-btn secondary';
+    actionBtn.disabled = false;
+    actionBtn.style.opacity = '';
+    actionBtn.style.cursor = '';
+    actionBtn.title = '';
     actionBtn.onclick = function(){ posOpenDayLockConfirm('unlock', pickedDate); };
   } else {
     actionBtn.textContent = 'Lock This Day';
     actionBtn.className = 'dl-action-btn';
+    actionBtn.disabled = false;
+    actionBtn.style.opacity = '';
+    actionBtn.style.cursor = '';
+    actionBtn.title = '';
     actionBtn.onclick = function(){ posOpenDayLockConfirm('lock', pickedDate); };
   }
 
@@ -22091,12 +22129,15 @@ function posDayLockStates(){
   posInvoices.forEach(function(r){
     if (r.isoDate && r.isoDate < today) days[r.isoDate] = true;
   });
-  posLockedDays.forEach(function(l){ if (l.lock_date) days[l.lock_date] = true; });
+  // Finished days only. Today and anything later can't be locked at all
+  // (see posOpenDayLockConfirm), so listing them either way would be
+  // describing a state that doesn't apply — a leftover lock row on today
+  // is inert until the day ends, at which point it becomes an ordinary
+  // locked past day and shows up here on its own.
+  posLockedDays.forEach(function(l){ if (l.lock_date && l.lock_date < today) days[l.lock_date] = true; });
   return Object.keys(days).sort(function(a, b){ return b.localeCompare(a); }).map(function(iso){
     var row = posFindLockRow(iso);
-    // Today (and anything later) is only locked if someone actually locked
-    // it — the no-row-means-locked default is a rule about the past.
-    var locked = iso < today ? posIsDateLocked(iso) : !!(row && !row.unlocked_at);
+    var locked = posIsDateLocked(iso);
     return {
       date: iso,
       locked: locked,
