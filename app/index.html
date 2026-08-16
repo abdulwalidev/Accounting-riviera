@@ -19485,6 +19485,14 @@ var posAppBooted = false;
 // posIsDateLocked's no-row-means-locked default, would show every past day
 // as locked until the first cloud fetch landed.
 var posLockedDays = [];
+// Same boot-order trap once more: posBootApp() builds the invoice date field
+// and the first payment row, both lock-aware, so posInitDatePicker pushes
+// onto this registry while init() is still running — long before a
+// `var posLockAwarePickers = []` down beside posRefreshLockAwarePickers()
+// would have been assigned. It hoisted as undefined and the push threw,
+// taking posBootApp() (and with it Recent Invoices, which is filled after
+// it) down with it.
+var posLockAwarePickers = [];
 var posInitialLoadDone = false; // first successful cloud pull done (cache hydration counts, same as the hotel's initialLoadDone)
 var posLastServerHash = '';     // last applied snapshot, to skip re-rendering when nothing actually changed
 var posSyncProblem = null;      // restaurant-side sync failure, surfaced through the shared header/banner
@@ -24121,7 +24129,8 @@ function posAddLine(){
 // Rows are created and destroyed constantly (posFillPaymentRows, Add
 // payment, form reset), so dead instances are dropped on each pass rather
 // than tracked with listeners.
-var posLockAwarePickers = [];
+// posLockAwarePickers itself is declared up with posLockedDays — see the
+// note there; boot registers pickers before this point in the file runs.
 function posRefreshLockAwarePickers(){
   posLockAwarePickers = posLockAwarePickers.filter(function(fp){
     return fp && fp.calendarContainer && fp.input && document.body.contains(fp.input);
