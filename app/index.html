@@ -3666,10 +3666,11 @@
 
   /* Restaurant role: only the Restaurant tab exists in the topnav for
      this account — Front Office is the header badge now, not a nav
-     button — every other nav button (including the Settings gear) is
-     hidden, regardless of whatever per-button display rule
+     button, and Day Lock is a row in the restaurant's own Settings page —
+     every other nav button (including the Settings gear) is hidden,
+     regardless of whatever per-button display rule
      applyRolePermissions() would otherwise set. See isRestaurantRole(). */
-  .role-restaurant .topnav .navbtn:not(#topNavRestaurant):not(#topNavPosUnlock){
+  .role-restaurant .topnav .navbtn:not(#topNavRestaurant){
     display:none !important;
   }
   .role-restaurant .navbtn-separator{
@@ -4705,7 +4706,11 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
       <button class="navbtn" id="topNavPaymentProof" onclick="showView('paymentrecord')" style="display:none; margin-left:auto;">Report SS</button>
       <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
-      <button class="navbtn" id="topNavPosUnlock" onclick="posOpenDayLockPage()" style="display:none; margin-left:8px; padding:6px 8px;" title="POS Day Lock" aria-label="POS Day Lock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+      <!-- The restaurant's Day Lock used to hang here as a second gear in the
+           hotel's header — a restaurant page reached from the hotel chrome,
+           next to a Settings gear that opens something else entirely. It
+           lives in the restaurant's own Settings page now, beside the other
+           less-used pages. -->
     </div>
   </div>
   <div class="hdr-row3">
@@ -6723,6 +6728,10 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <div class="settings-row" onclick="posShowApp('page-previous-day', this)">
       <div><div class="label">Previous Day (Locked)</div><div class="sub">The most recently finished business day</div></div>
+      <span class="arrow">›</span>
+    </div>
+    <div class="settings-row" onclick="posShowApp('page-pos-daylock', this)">
+      <div><div class="label">Day Lock</div><div class="sub">Lock a business day so its invoices can't be edited or deleted — and see which days are still open</div></div>
       <span class="arrow">›</span>
     </div>
     <div class="settings-row" onclick="posShowApp('page-manage-parts', this)">
@@ -19251,8 +19260,6 @@ function applyRolePermissions(){
   if(hdrFrontOfficeBadge) hdrFrontOfficeBadge.style.display = (isAdmin() || isRestaurantRole()) ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
-  const posUnlockNav = document.getElementById('topNavPosUnlock');
-  if(posUnlockNav) posUnlockNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
   const settingsDataSyncSection = document.getElementById('settingsDataSyncSection');
   if(settingsDataSyncSection) settingsDataSyncSection.style.display = isRestaurantRole() ? 'none' : '';
@@ -20279,8 +20286,6 @@ function posShowApp(id, btn){
   document.querySelectorAll('.app-page').forEach(p=>p.classList.remove('visible'));
   document.getElementById(id).classList.add('visible');
   document.querySelectorAll('.sidebar button').forEach(b=>b.classList.remove('active'));
-  var posUnlockNavBtn = document.getElementById('topNavPosUnlock');
-  if (posUnlockNavBtn) posUnlockNavBtn.classList.remove('active');
   if (btn) btn.classList.add('active');
   if (id === 'page-receipts') receiptsRefresh();
   if (id === 'page-printed-only') printedOnlyRefresh();
@@ -22102,8 +22107,12 @@ function posDayLockStates(){
   });
 }
 
+// Day Lock is reached from the restaurant's Settings page now (the header
+// gear that used to open it is gone), so the page is shown the same way
+// every other Settings row shows its page — nothing to highlight up in the
+// hotel's header any more.
 function posOpenDayLockPage(){
-  posShowApp('page-pos-daylock', document.getElementById('topNavPosUnlock'));
+  posShowApp('page-pos-daylock', null);
 }
 
 function posMakeActionsCell(record){
