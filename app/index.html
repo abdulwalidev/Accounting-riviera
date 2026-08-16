@@ -4752,7 +4752,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <h2 class="login-card-heading">Sign in</h2>
       <label for="loginUsername" class="login-label">Username</label>
       <input type="text" id="loginUsername" class="login-input" autocomplete="off" placeholder="accountant@riviera">
-      <label for="loginPassword" class="login-label">Password</label>
+      <label for="loginPassword" class="login-label">Password <span style="opacity:0.65; font-size:12px;">— hold Ctrl to show</span></label>
       <input type="password" id="loginPassword" class="login-input" autocomplete="new-password">
       <div class="login-error" id="loginError"></div>
       <button class="login-signin-btn" id="loginBtn">Sign In</button>
@@ -20358,6 +20358,26 @@ function showApp(){
   resumeAppFromIdle();
   startApp();
 }
+
+// Hold Ctrl on the sign-in screen to read the password back — a typo in a
+// masked field on a shared front-desk keyboard is otherwise only findable
+// by clearing it and starting over. Held, not toggled, so the password is
+// never left sitting revealed on screen: releasing the key (or the window
+// losing focus at all — alt-tab, Ctrl+Tab, clicking away) re-masks it
+// immediately. Only ever touches the login field, and only while the login
+// overlay is actually up.
+(function(){
+  const pw = document.getElementById('loginPassword');
+  const overlay = document.getElementById('loginOverlay');
+  function setPwReveal(on){
+    if(!pw || !overlay) return;
+    const loginVisible = !overlay.classList.contains('hidden');
+    pw.type = (on && loginVisible) ? 'text' : 'password';
+  }
+  document.addEventListener('keydown', ev=>{ if(ev.key === 'Control') setPwReveal(true); });
+  document.addEventListener('keyup', ev=>{ if(ev.key === 'Control') setPwReveal(false); });
+  window.addEventListener('blur', ()=> setPwReveal(false));
+})();
 
 document.getElementById('loginBtn').addEventListener('click', attemptLogin);
 document.getElementById('loginPassword').addEventListener('keydown', ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); attemptLogin(); } });
