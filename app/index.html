@@ -17068,7 +17068,9 @@ function buildBreakfastReport(asOfDate){
 // Simple view: kitchen-facing cut of the same data — just who's getting
 // breakfast and how many, room by room. A room with nobody having
 // breakfast at all stays in the list (so it's clear it wasn't missed) but
-// reads struck-through rather than as a normal row.
+// reads struck-through rather than as a normal row — in both views, so
+// switching to Full never changes which rooms are on the page or which of
+// them the kitchen can skip.
 let bfSimpleView = true;
 function setBreakfastToday(){
   setFilterDate('bfDate', todayStr());
@@ -17151,7 +17153,7 @@ function renderBreakfastReport(){
         <th class="th-green" style="width:120px;">Breakfast Total</th>
       </tr></thead>
       <tbody>${data.rows.map(r=> `
-        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+        <tr style="cursor:pointer; ${r.breakfastTotal === 0 ? 'text-decoration:line-through; opacity:0.6;' : ''}" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${r.roomNo}</td>
           <td>${r.guest}</td>
           <td>${r.adultsDisplay}</td>
