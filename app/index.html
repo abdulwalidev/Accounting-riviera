@@ -4020,7 +4020,17 @@ td.pos-order-na {color:#dc2626; font-weight:700;}
   }
 #page-receipts * {box-sizing:border-box;}
 #page-receipts body {margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:13px;}
-#page-receipts .wrap {max-width:1280px; margin:0 auto;}
+/* Wider than the other pages: this one carries the most columns of any
+   list in the restaurant (invoice, order, date, room, customer, items,
+   money, the two tax flags, status, actions), and squeezing that into
+   1280px cost the ITEMS column the room it needs to be worth reading. */
+#page-receipts .wrap {max-width:1560px; margin:0 auto;}
+/* SC / TAX: narrow, centered, and quiet enough that a column of ticks
+   reads as texture — you're scanning for the odd one out. */
+#page-receipts table.rep th.tax-flag {width:42px; text-align:center;}
+#page-receipts table.rep td.tax-flag {width:42px; text-align:center; font-weight:700; color:var(--muted);}
+#page-receipts table.rep td.tax-flag.yes {color:#15803d;}
+#page-receipts table.rep td.tax-flag.no {color:#dc2626;}
 #page-receipts .h-title {font-size:24px; font-weight:600; margin:0 0 4px;}
 #page-receipts .h-sub {color:var(--muted); font-size:13px; margin-bottom:16px;}
 #page-receipts .card {background:var(--panel); border:1px solid var(--border); border-radius:8px;}
@@ -6295,7 +6305,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     </div>
     <table class="rep">
       <thead>
-        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsPaidBody"></tbody>
     </table>
@@ -6305,7 +6315,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="results-head">AT FRONT OFFICE</div>
     <table class="rep">
       <thead>
-        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsFrontOfficeBody"></tbody>
     </table>
@@ -6315,7 +6325,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="results-head">GUESTS (NON-PAYING)</div>
     <table class="rep">
       <thead>
-        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th>STATUS</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th>STATUS</th><th style="width:90px;"></th></tr>
       </thead>
       <tbody id="receiptsGuestBody"></tbody>
     </table>
@@ -20019,10 +20029,14 @@ async function posPullFromCloud(){
       // Lock rows are fetched separately from the invoice snapshot above, so
       // they get their own comparison — a day locked/unlocked elsewhere must
       // still repaint even when no invoice changed.
-      if (changed || JSON.stringify(posLockedDays) !== locksBefore) {
+      var locksChanged = JSON.stringify(posLockedDays) !== locksBefore;
+      if (changed || locksChanged) {
         posRerenderAll();
         posSaveSnapshotToCache();
       }
+      // Lists repaint from scratch; an open calendar does not — it keeps
+      // the lock state it was drawn with until something redraws it.
+      if (locksChanged) posRefreshAfterLockChange();
       if (typeof updateCloudIndicator === 'function') updateCloudIndicator();
       posFlushPendingPosWrites(); // a successful pull is a strong signal the connection is back — retry queued writes right away instead of waiting for the next interval tick
       console.log('[POS] pull complete. posInvoices.length =', posInvoices.length, '| changed =', changed);
@@ -21671,7 +21685,27 @@ function posPaymentStatus(record){
 // above. Recent Invoices/Guests only ever list posted invoices, so the
 // number was dead weight there — the row still opens the invoice on click
 // and names it in the row tooltip.
-function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, showPayStatus){
+// The two tax codes the invoice form offers (see the .tax-item labels) —
+// named here so the lists can ask "did this invoice charge Service Charge?"
+// without repeating a magic number that already appears in three places.
+var POS_TAX_CODE_SERVICE = '23221';
+var POS_TAX_CODE_GST = '23222';
+
+// A tick or a cross for one tax on one invoice. Both codes are always
+// written into tax_rows (at 0.00 when the box was unticked), so a positive
+// amount is the honest test for "this was charged".
+// Invoices from before tax_rows existed have nothing to answer with, and
+// guessing would be worse than saying so — those get a muted dash.
+function posTaxFlagCell(record, code){
+  var rows = record.taxRows || [];
+  if (!rows.length) return '<td class="tax-flag" title="This invoice predates the per-tax breakdown">–</td>';
+  var row = rows.find(function(t){ return t.code === code; });
+  var on = !!(row && row.amt > 0);
+  return '<td class="tax-flag ' + (on ? 'yes' : 'no') + '" title="' +
+    ((row && row.name) || code) + ': ' + (on ? 'charged' : 'not charged') + '">' + (on ? '✓' : '✕') + '</td>';
+}
+
+function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, showPayStatus, showTaxFlags){
   var tr = document.createElement('tr');
   tr.dataset.invoiceId = record.id;
   tr.className = 'fo-row';
@@ -21683,6 +21717,9 @@ function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, 
   // sinks these to the foot of their own day).
   var orderNoText = record.orderNo || '';
   var orderNaCls = orderNoText.trim().toUpperCase() === 'N/A' ? ' class="pos-order-na"' : '';
+  var taxFlags = showTaxFlags
+    ? posTaxFlagCell(record, POS_TAX_CODE_SERVICE) + posTaxFlagCell(record, POS_TAX_CODE_GST)
+    : '';
   // showPayStatus tables drop the INVOICE # column (every row here is one
   // posted invoice — the number adds nothing) and carry the payment badge as
   // the last data column instead, right before the delete button, where the
@@ -21696,6 +21733,7 @@ function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, 
     (showItems ? '<td class="fo-items-col" title="' + posEscapeHtml(itemsText) + '">' + posEscapeHtml(itemsText) + '</td>' : '') +
     '<td class="num">' + record.amount.toFixed(2) + '</td>' +
     '<td class="num">' + record.paid.toFixed(2) + '</td>' +
+    taxFlags +
     (payStatus ? '<td><span class="status-badge ' + payStatus.cls + '" title="' + posEscapeHtml(payStatus.title) + '">' + payStatus.label + '</span></td>' : '') +
     (showStatus ? '<td><span class="status-badge ' + (record.posted ? 'posted' : 'not-posted') + '">' + (record.posted ? 'Posted' : 'Not Posted') + '</span></td>' : '');
   if (!record.deleted) tr.appendChild(posMakeActionsCell(record));
@@ -21833,6 +21871,7 @@ function posIsLocked(record){
 }
 function posRefreshAfterLockChange(){
   posApplyInvoiceDateLimits(); // a day just locked/unlocked changes what a new receipt may be dated
+  posRefreshLockAwarePickers(); // ...and every payment row's own date picker, which is already drawn
   posRenderRecentInvoices();
   receiptsRefresh();
   printedOnlyRefresh();
@@ -22375,7 +22414,7 @@ function receiptsRefresh(){
     else if (record.sentToFrontOffice && foBody) foRows.push(record);
     else paidRows.push(record);
   });
-  var buildReceiptRow = function(record, num){ return posBuildInvoiceRow(record, true, true, true, num); };
+  var buildReceiptRow = function(record, num){ return posBuildInvoiceRow(record, true, true, true, num, false, true); };
   posAppendDayGroupedRows(paidBody, paidRows, buildReceiptRow);
   posAppendDayGroupedRows(guestBody, guestRows, buildReceiptRow);
   if (foBody) posAppendDayGroupedRows(foBody, foRows, buildReceiptRow);
@@ -24061,9 +24100,32 @@ function posAddLine(){
 // and each payment row). Every other caller is a filter/report field —
 // those must keep reaching into the past and the future, and the Day Lock
 // page's own date field most of all.
+// Every lock-aware picker currently on the page. A calendar decides which
+// days are disabled (and which get the padlock) as it BUILDS its day
+// elements, so one already sitting there goes on showing the lock state it
+// was drawn with — unlocking a day left every payment row's picker still
+// refusing it. posRefreshLockAwarePickers() redraws them; the invoice date
+// field is in here too, alongside its own limits call.
+// Rows are created and destroyed constantly (posFillPaymentRows, Add
+// payment, form reset), so dead instances are dropped on each pass rather
+// than tracked with listeners.
+var posLockAwarePickers = [];
+function posRefreshLockAwarePickers(){
+  posLockAwarePickers = posLockAwarePickers.filter(function(fp){
+    return fp && fp.calendarContainer && fp.input && document.body.contains(fp.input);
+  });
+  posLockAwarePickers.forEach(function(fp){
+    try {
+      fp.set('maxDate', posTodayISO());
+      fp.set('disable', [posDateIsClosed]); // re-set so flatpickr re-evaluates, not just repaints
+      fp.redraw();
+    } catch(e) { /* a picker torn down mid-pass is not worth failing the refresh over */ }
+  });
+}
+
 function posInitDatePicker(el, lockAware){
   if (typeof flatpickr === 'undefined' || !el || el._flatpickr) return null;
-  return flatpickr(el, Object.assign({
+  var fp = flatpickr(el, Object.assign({
     dateFormat: 'Y-m-d',
     altInput: true,
     altInputClass: 'flatpickr-alt-input',
@@ -24081,6 +24143,8 @@ function posInitDatePicker(el, lockAware){
       );
     }
   }));
+  if (lockAware && fp) posLockAwarePickers.push(fp);
+  return fp;
 }
 
 // Reuses the hotel's own Prev/Next Day stepper (addDateStepper) instead of
