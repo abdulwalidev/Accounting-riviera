@@ -23264,6 +23264,14 @@ function posBuildReceiptHtml(record){
     return '<tr' + (isOff ? ' class="rc-taxoff"' : '') + '><td>' + posEscapeHtml(t.name) + '</td><td class="rc-num">' + (isOff ? 'OFF' : posFormatMoney(t.amt)) + '</td></tr>';
   }).join('');
 
+  // "Location: Room" on its own doesn't say WHICH room the order went to,
+  // and that's the one thing the paper is carried to. The number is on the
+  // record either way (roomNo on new invoices, room on older ones), so
+  // print it with the word. Restaurant/Dining orders have no number and
+  // keep reading exactly as before.
+  var receiptRoomNo = String(record.roomNo || (record.room && record.room !== 'NA' ? record.room : '') || '').trim();
+  var receiptLocation = receiptRoomNo ? 'Room: ' + receiptRoomNo : (record.locationText || 'Dining');
+
   return '' +
     '<div class="rc-brand">RIVIERA RESORT</div>' +
     '<div class="rc-sub">RESTAURANT</div>' +
@@ -23274,7 +23282,7 @@ function posBuildReceiptHtml(record){
     '<tr><td>Order #</td><td>' + posEscapeHtml(record.orderNo) + '</td></tr>' +
     '<tr><td>Printed</td><td>' + posEscapeHtml(record.printedAt) + '</td></tr>' +
     '<tr><td>Invoice Date</td><td>' + posEscapeHtml(record.date) + '</td></tr>' +
-    '<tr><td>Location</td><td>' + posEscapeHtml(record.locationText || 'Dining') + '</td></tr>' +
+    '<tr><td>Location</td><td>' + posEscapeHtml(receiptLocation) + '</td></tr>' +
     '</table>' +
     '<div class="rc-line"></div>' +
     '<table class="rc-items"><thead><tr><th class="rc-num">Qty</th><th>Item</th><th class="rc-num">Amount</th></tr></thead>' +
@@ -23313,8 +23321,12 @@ var POS_RECEIPT_PRINT_CSS = '#posReceiptPrintArea{font-family:Arial,Helvetica,sa
   '#posReceiptPrintArea table.rc-taxdetail tr.rc-taxoff{color:#555; font-style:italic;} ' +
   '#posReceiptPrintArea table.rc-totals{width:100%; border-collapse:collapse; font-size:16px; margin-top:0;} ' +
   '#posReceiptPrintArea table.rc-totals td{padding:1px 0;} ' +
-  '#posReceiptPrintArea table.rc-totals tr.rc-final td{font-weight:700;} ' +
-  '#posReceiptPrintArea table.rc-totals tr.rc-grand td{font-size:19px; font-weight:700; padding-top:1mm;} ' +
+  /* Bold at this size on 80mm thermal paper thickens the strokes until the
+     digits run together — the totals read cleaner unbolded. Sizes and
+     spacing are untouched, so the grand total still stands out by being
+     the biggest line on the receipt. */
+  '#posReceiptPrintArea table.rc-totals tr.rc-final td{font-weight:400;} ' +
+  '#posReceiptPrintArea table.rc-totals tr.rc-grand td{font-size:19px; font-weight:400; padding-top:1mm;} ' +
   '#posReceiptPrintArea .rc-thanks{text-align:center; font-size:16px; font-weight:700; margin-top:1.5mm; letter-spacing:.03em;} ' +
   '#posReceiptPrintArea .rc-foot{text-align:center; font-size:12px; color:#000; font-weight:600; margin-top:0.5mm; margin-bottom:0;} ' +
   /* The app-wide @media print reset (see the plain "th, td{border:1px
