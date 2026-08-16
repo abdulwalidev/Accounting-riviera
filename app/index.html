@@ -3979,10 +3979,15 @@ html[data-theme="dark"] #page-pos-invoice .menu-panel-row.picked {background:rgb
 #page-pos-invoice .list-card .lc-head .lc-title {margin-bottom:12px;}
 #page-pos-invoice .pos-sort-btn {border:1px solid var(--border-strong); background:transparent; color:var(--muted); border-radius:6px; padding:5px 10px; font-size:11px; font-weight:700; letter-spacing:.04em; cursor:pointer; margin-bottom:12px; white-space:nowrap;}
 #page-pos-invoice .pos-sort-btn:hover {color:var(--text); border-color:var(--blue);}
-/* One red rule between days, with the row # restarting under it — the point
+/* One red bar between days, with the row # restarting under it — the point
    is being able to count a single day's invoices at a glance. Deliberately
-   unscoped: every invoice table in the restaurant uses it. */
-tr.pos-day-sep td {padding:0; height:0; border-bottom:2px solid #dc2626;}
+   unscoped: every invoice table in the restaurant uses it, and !important
+   because each of those tables has its own id-scoped `table.rep td` rule
+   (padding + its own border-bottom, "border-bottom:none" on some) which
+   outweighs a plain class selector and swallowed the rule whole. Painted
+   as a background bar rather than a border for the same reason — nothing
+   left for a page's own td border to override. */
+tr.pos-day-sep td {padding:0 !important; height:3px !important; background:#dc2626 !important; border:none !important;}
 /* An order with no number of its own is the exception on a page where every
    other row has one, so it reads as the exception. */
 td.pos-order-na {color:#dc2626; font-weight:700;}
