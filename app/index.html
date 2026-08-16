@@ -12089,7 +12089,7 @@ function renderRoomDetail(){
     const list = groups[section];
     const occ = list.filter(r=> r.occupied || r.extended).length;
     const rows = list.map(r=>{
-      const goesToGuest = (r.occupied || r.extended || r.arrivalPending) && !!r.entry;
+      const goesToGuest = (r.occupied || r.extended) && !!r.entry;
       const due = r.entry ? computeTotals(r.entry).due : 0;
       // Checkout day arrived (last booked night was yesterday) but the
       // balance isn't settled at exactly 0 — owes money, or has paid ahead
@@ -12106,8 +12106,13 @@ function renderRoomDetail(){
       const guestCell = goesToGuest
         ? (r.entry.guestName || '(no name)')
         : (showGuestInfo ? `<span class="muted-guest">${r.entry.guestName || '(no name)'}${r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : ''}</span>` : '-');
-      const statusLabel = r.arrivalPending ? 'Arrival' : isCheckoutPending ? 'Pending<br>Checkout' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
-      const statusCls = r.arrivalPending ? 'arrivaldue' : isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
+      // An unconfirmed arrival is deliberately absent here — no Arrival
+      // status, no guest name, the room simply reads by its housekeeping
+      // status. A booking nobody has confirmed shows on the Arrival page
+      // and nowhere else; the moment it's checked in it appears here as
+      // Occupied like any other stay.
+      const statusLabel = isCheckoutPending ? 'Pending<br>Checkout' : (r.occupied || r.extended ? 'Occupied' : STATUS_LABEL[r.housekeepingStatus]);
+      const statusCls = isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'pending' : STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
       const mainRow = `<tr style="cursor:pointer;" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
         <td><b>${r.roomNo}</b></td>
@@ -12133,23 +12138,14 @@ function renderRoomDetail(){
           <td>${pg.entry.guestName || '(no name)'}</td>
         </tr>`;
       })() : '';
-      // Double-booking conflict: a second, different guest also has a
-      // booked night on this same room today, unconfirmed — see
-      // nextGuestPending in computeRoomStatuses. Shown as its own Arrival
-      // row with an arrow tying it back to the room above it.
-      const nextRow = r.nextGuestPending ? (()=>{
-        const ng = r.nextGuestPending;
-        const ngDue = computeTotals(ng.entry).due;
-        return `<tr style="cursor:pointer;" onclick="openDetail('${ng.entry.id}')" title="Open this guest">
-          <td><b>${r.roomNo}</b> <span class="room-chain-arrow">→</span></td>
-          <td>${roomDetailTypeLabel(r.type) || '-'}</td>
-          <td>${ng.entry.checkIn ? formatDateShort(ng.entry.checkIn) : '-'}</td>
-          <td>${ngDue.toLocaleString()}</td>
-          <td><span class="status arrivaldue">Arrival</span></td>
-          <td>${ng.entry.guestName || '(no name)'}</td>
-        </tr>`;
-      })() : '';
-      return prevRow + mainRow + nextRow;
+      // nextGuestPending — the second, unconfirmed guest booked onto an
+      // already-occupied room — used to get its own Arrival row here. It's
+      // gone for the same reason as the Arrival status above: an
+      // unconfirmed booking belongs on the Arrival page and nowhere else.
+      // The conflict itself is still caught where it matters, at save time
+      // in the Guest Entry double-booking check, which reads room-nights
+      // with includeUnconfirmed and so still sees the clash.
+      return prevRow + mainRow;
     }).join('');
     return `
       <div class="day-group">
@@ -12168,7 +12164,7 @@ function renderRoomDetail(){
   const SR_STATUS_LABEL = { Ready: 'vacant', Dirty: 'dirty', OOO: 'ooo' };
   munchiBody.innerHTML = sections.map(section=>{
     const rows = groups[section].map(r=>{
-      const goesToGuest = (r.occupied || r.extended || r.arrivalPending) && !!r.entry;
+      const goesToGuest = (r.occupied || r.extended) && !!r.entry;
       const due = r.entry ? computeTotals(r.entry).due : 0;
       const isCheckoutPending = r.extended && due !== 0;
       // Vacant rooms still show their status/type cells as normal — the
@@ -12181,8 +12177,9 @@ function renderRoomDetail(){
       const guestText = goesToGuest
         ? (r.entry.guestName || '')
         : (showGuestInfo ? (r.entry.guestName || '(no name)') + (r.actualCheckout ? ' · left ' + formatDateShort(r.actualCheckout) : '') : '');
-      const statusText = r.arrivalPending ? 'arrival' : isCheckoutPending ? 'pending checkout' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
-      const statusCls = r.arrivalPending ? 'arrivaldue' : isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
+      // Unconfirmed arrivals omitted — see the SMART table's own status line.
+      const statusText = isCheckoutPending ? 'pending checkout' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_LABEL[r.housekeepingStatus]);
+      const statusCls = isCheckoutPending ? 'checkoutdue' : (r.occupied || r.extended ? 'occupied' : SR_STATUS_CLASS[r.housekeepingStatus]);
       const clickAction = goesToGuest ? `openDetail('${r.entry.id}')` : `openRoomStatusModal('${r.roomNo}')`;
       const guestCls = goesToGuest ? '' : ' sr-guest-muted';
       const mainRow = `<div class="smart-row clickable" onclick="${clickAction}" title="${goesToGuest ? 'Open this guest' : 'Set room status'}">
@@ -12203,18 +12200,9 @@ function renderRoomDetail(){
           <span class="sr-guest">${pg.entry.guestName || '(no name)'}</span>
         </div>`;
       })() : '';
-      // Double-booking conflict — see the SMART table's own nextRow for why.
-      const nextRow = r.nextGuestPending ? (()=>{
-        const ng = r.nextGuestPending;
-        return `<div class="smart-row clickable" onclick="openDetail('${ng.entry.id}')" title="Open this guest">
-          <span class="sr-room">${r.roomNo} <span class="room-chain-arrow">→</span></span>
-          <span class="sr-type">${roomDetailTypeLabel(r.type) || ''}</span>
-          <span class="sr-status arrivaldue">arrival</span>
-          <span class="sr-arrival">${ng.entry.checkIn ? formatDateShort(ng.entry.checkIn) : ''}</span>
-          <span class="sr-guest">${ng.entry.guestName || '(no name)'}</span>
-        </div>`;
-      })() : '';
-      return prevRow + mainRow + nextRow;
+      // Unconfirmed double-booking row dropped — see the SMART table's own
+      // return for why.
+      return prevRow + mainRow;
     }).join('');
     return `
       <div class="smart-panel">
