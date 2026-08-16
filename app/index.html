@@ -4669,6 +4669,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <button class="navbtn" id="topNavCico" onclick="showView('cico')">Check-in / Check-out</button>
       <button class="navbtn" id="topNavReservations" onclick="showView('reservations')">Reservations</button>
       <button class="navbtn" id="topNavBreakfast" onclick="showView('breakfast')">Breakfast Report</button>
+      <button class="navbtn" id="topNavAvailability" onclick="showView('availability')">Availability</button>
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
       <button class="navbtn" id="topNavRevSummary" onclick="showView('handover')">Revenue Summary</button>
       <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
@@ -5804,6 +5805,50 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <div class="panel accent-report">
       <div id="bfSummary" style="font-size:15px; font-weight:700; margin-bottom:10px;"></div>
       <div id="bfBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-availability">
+
+    <h1 class="no-print">Availability</h1>
+    <div class="sub no-print">Free rooms by type and by room, for a run of nights starting on the chosen date. A room counts as taken when a booked night lands on that date, whether or not the guest has been confirmed on Arrival — an unconfirmed booking still can't be sold to someone else. Bookings that picked a type but no room number yet are counted against that type, so the totals never show stock that's already spoken for.</div>
+
+    <div class="print-header">
+      <h1 id="avPrintTitle">Availability</h1>
+      <div class="print-header-sub" id="avPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel no-print accent-filters">
+      <div class="actions" style="gap:24px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+          <button class="btn secondary" onclick="setAvailabilityToday()">Today</button>
+          <button class="btn secondary" onclick="printAvailability()">🖶 Print</button>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <label class="lbl-sm" style="margin-bottom:4px;">Nights from</label>
+          <input type="date" id="avDate" onchange="renderAvailability()">
+          <div class="date-readout" id="avDateReadout" style="font-size:28px; font-weight:700; color:var(--accent); letter-spacing:0.02em;"></div>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <label class="lbl-sm" style="margin-bottom:4px;">Show nights</label>
+          <select id="avSpan" onchange="renderAvailability()">
+            <option value="7">7 nights</option>
+            <option value="14" selected>14 nights</option>
+            <option value="30">30 nights</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2>Free by Type</h2>
+      <div id="avTypeBody" style="overflow-x:auto; margin-top:10px;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+    <div class="panel accent-report">
+      <h2>Room by Room</h2>
+      <div id="avRoomBody" style="overflow-x:auto; margin-top:10px;"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -7685,7 +7730,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -7771,6 +7816,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavEntry').classList.toggle('active', view === 'entry');
   document.getElementById('topNavReservations').classList.toggle('active', view === 'reservations');
   document.getElementById('topNavBreakfast').classList.toggle('active', view === 'breakfast');
+  document.getElementById('topNavAvailability').classList.toggle('active', view === 'availability');
   document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
   document.getElementById('topNavReport').classList.toggle('active', view === 'report' || view === 'graphs');
@@ -7827,6 +7873,7 @@ function showView(view, fromPopState){
   if(view === 'roomdetail') renderRoomDetail();
   if(view === 'inhouse') renderInhouse();
   if(view === 'breakfast') renderBreakfastReport();
+  if(view === 'availability') renderAvailability();
   if(view === 'autocheckout') renderAutoCheckout();
   if(view === 'arrival') renderArrival();
   if(view === 'dashboard') renderDashboard();
@@ -8137,7 +8184,7 @@ function setStayDate(id, isoValue){
 // and Global Search. Kept as its own registry/setter rather than folding
 // into stayDatePickers/setStayDate so that already-proven code path stays
 // completely untouched.
-const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'ihDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate', 'acnCheckinDate', 'bfDate'];
+const FILTER_DATE_IDS = ['rdDate', 'nsDate', 'acDate', 'arDate', 'ihDate', 'dlDate', 'auditEntryDate', 'auditPageDate', 'dNewDate', 'b19From', 'gsearchDate', 'ccCheckoutDate', 'acnCheckinDate', 'bfDate', 'avDate'];
 const filterDatePickers = {};
 // Small closed-padlock glyph stamped on locked days in every payment date
 // picker — an SVG rather than an emoji so it renders identically (weight,
@@ -8473,6 +8520,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('ihHideZero').addEventListener('change', renderInhouse);
   document.getElementById('bfDate').addEventListener('input', renderBreakfastReport);
   setFilterDate('ihDate', todayStr());
+  document.getElementById('avDate').addEventListener('input', renderAvailability);
+  setFilterDate('avDate', todayStr());
   setFilterDate('b19From', '2026-07-19');
   updateDateReadout(document.getElementById('b19From'), document.getElementById('b19FromReadout'));
   document.getElementById('b19From').addEventListener('input', e=>{
@@ -8741,7 +8790,10 @@ const APARTMENT_NUMBERS = [
 ];
 const ALL_UNITS = [
   { value:'Miscellaneous', label:'Other (Miscellaneous)', group:'' },
-  { value:'N/A', group:'Not decided' },
+  // Value stays 'N/A' — it's the stored key every room-number check keys
+  // off — but the picker shows plain words, since staff never need to read
+  // the internal token.
+  { value:'N/A', label:'Room not decided yet', group:'Not decided' },
   ...ROOM_NUMBERS.map(n=>({ value:n, group:'Room' })),
   ...APARTMENT_NUMBERS.map(n=>({ value:n, group:'Apartment' }))
 ];
@@ -8759,10 +8811,14 @@ function isMiscRoomNo(roomNo){
 }
 
 // A room booked as "N/A" (undecided which physical unit) never reads to a
-// user as a bare, meaningless "N/A" — every display of a room number runs
-// through this so it shows the picked Type instead, e.g. "River View (N/A)".
+// user as "N/A" anywhere in the app — every display of a room number runs
+// through this, and shows the picked Type on its own instead: "River View".
+// The old "(N/A)" suffix is deliberately gone. It told staff nothing they
+// couldn't already see (a type where a room number belongs IS the signal
+// that no room is assigned yet) and it made every list of rooms read like
+// something was broken.
 function displayRoomNo(roomNo, unitType){
-  if((roomNo || '').trim().toUpperCase() === 'N/A') return (unitType || 'N/A') + ' (N/A)';
+  if((roomNo || '').trim().toUpperCase() === 'N/A') return unitType || 'Unassigned';
   return roomNo || '';
 }
 
@@ -8771,15 +8827,35 @@ function displayRoomNo(roomNo, unitType){
 // caller of this just wants "which room(s) is this guest in", so a room
 // number is only ever listed once here, however many rate-split rows it
 // actually has behind it.
+//
+// Undecided rooms can't dedupe that way: every one of them has the room
+// number "N/A", so keying on it collapsed a guest holding three undecided
+// rooms down to a single entry and quietly lost the other two. They're
+// grouped by their picked Type and counted instead — "2 River View,
+// 1 Mountain View" — which is both correct and what the desk actually
+// wants to read. Each N/A ROW is one room (the same rule
+// computeExpectedCheckoutDate already applies), so counting rows is right.
 function formatRoomChain(rooms){
   const seen = new Set();
-  return (rooms || []).filter(r=>{
-    if(!r || !r.roomNo) return false;
+  const naCounts = new Map();
+  const parts = [];
+  (rooms || []).forEach(r=>{
+    if(!r || !r.roomNo) return;
     const key = r.roomNo.trim().toUpperCase();
-    if(seen.has(key)) return false;
+    if(key === 'N/A'){
+      const t = r.unitType || 'Unassigned';
+      naCounts.set(t, (naCounts.get(t) || 0) + 1);
+      return;
+    }
+    if(seen.has(key)) return;
     seen.add(key);
-    return true;
-  }).map(r=> displayRoomNo(r.roomNo, r.unitType)).join(', ');
+    parts.push(displayRoomNo(r.roomNo, r.unitType));
+  });
+  // The count is shown even when it's 1 ("1 Mountain View"), so a room with
+  // no number yet never reads as a bare type name that could be mistaken
+  // for a room's label — the number is what makes it obviously a quantity.
+  naCounts.forEach((n, t)=> parts.push(`${n} ${t}`));
+  return parts.join(', ');
 }
 
 // Same Split Rate gotcha as formatRoomChain() above, for anything that
@@ -9606,7 +9682,7 @@ function handleKarachiMidnightRollover(){
   // it, so its calendar display can't fall out of sync with the value.
   // checkInDate deliberately excluded — it rolls over at the check-in
   // cutoff time instead of plain midnight, see scheduleCheckinCutoffRollover().
-  ['gsearchDate','dNewDate','rdDate','nsDate','ihDate','dlDate','auditEntryDate','auditPageDate','acDate','arDate'].forEach(id=>{
+  ['gsearchDate','dNewDate','rdDate','nsDate','ihDate','dlDate','auditEntryDate','auditPageDate','acDate','arDate','avDate'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el || el.value !== lastKnownToday) return;
     el.value = newToday;
@@ -10337,7 +10413,7 @@ async function reviewEntry(){
       showNotice(isMiscRoomNo(roomNo)
         ? 'Please select which facility this Miscellaneous row is for — BBQ, Bonfire, or Snooker.'
         : roomNo.trim().toUpperCase() === 'N/A'
-          ? 'Please select a Type for the N/A room in the Type column.'
+          ? 'Please select a Type for the room that has no number yet, in the Type column.'
           : 'Please select whether "' + roomNo + '" is a Room or an Apartment in the Type column.');
       focusError(typeSel);
       return;
@@ -11141,7 +11217,7 @@ function renderGlobalSearch(){
         <div>📄 <b>${p.label}</b></div>
       </div>`).join('');
     const guestRows = guestMatches.map(entry=>{
-      const roomNos = formatRoomChain(entry.rooms) || 'N/A';
+      const roomNos = formatRoomChain(entry.rooms) || '—';
       const sub = entry.cnic || getDetailValue(entry, 'Contact No') || '';
       return `<div class="hdr-search-row" onclick="openGlobalSearchResult('${entry.id}')">
           <div><b>${entry.guestName || '(no name)'}</b> — Room ${roomNos}</div>
@@ -11443,6 +11519,243 @@ const ROOM_SECTION_ORDER = ['2ND FLOOR','3RD FLOOR','4TH FLOOR','BLOCK A','BLOCK
 const ROOM_SECTION_LABELS = { '2ND FLOOR':'1st Floor', '3RD FLOOR':'2nd Floor', '4TH FLOOR':'3rd Floor' };
 function roomSectionLabel(section){
   return ROOM_SECTION_LABELS[section] || section;
+}
+
+// =========================================================
+// AVAILABILITY — "how many River View are free on 12 Sep", per type and
+// per physical room, across a run of nights. Every other page answers
+// "who is in room 207"; this one answers the question the front desk
+// actually gets on the phone, which is about a TYPE and a DATE.
+//
+// Nothing here stores state. The unit->type map is derived from
+// getRoomType() and the sold counts from buildLedgersRecords(), so this
+// can never drift from what Room Detail, Ledgers and Revenue already
+// show — the same single-source rule the rest of the file follows.
+// =========================================================
+// The app spells its room types four different ways: getRoomType()'s raw
+// strings, ROOM_DETAIL_TYPE_DISPLAY's shorter guest names, NA_TYPES for
+// undecided rooms, and the plain Room/Apartment on the entry form. This
+// page has to reconcile them, because an N/A booking's picked type
+// (NA_TYPES spelling) has to cancel out against a physical room's derived
+// type (getRoomType spelling) to give one honest number. The guest-facing
+// names win — they're what NA_TYPES already uses verbatim.
+const AVAIL_TYPES = ['Couple Suite', 'VIP Deluxe', 'River View', 'Mountain View', '1 Bed Apartment', '3 Bed Apartment'];
+
+// NA_TYPES also offers "2 Bed Apartment", but no physical unit in
+// ROOM_NUMBERS/APARTMENT_NUMBERS ever derives to it. It's not in
+// AVAIL_TYPES above (a type with zero rooms has no availability to show),
+// but an N/A booking CAN still be filed under it — so it's tracked
+// separately below and surfaced as an over-hold rather than silently
+// dropped, which would hide a booking nobody can house.
+function availTypeForRoom(roomNo){
+  const t = roomDetailTypeLabel(getRoomType(roomNo));
+  return AVAIL_TYPES.includes(t) ? t : '';
+}
+
+// Physical units per type — computed once, since ROOM_NUMBERS and
+// APARTMENT_NUMBERS are compile-time constants.
+let _availUnitsByType = null;
+function getAvailUnitsByType(){
+  if(_availUnitsByType) return _availUnitsByType;
+  const map = {};
+  AVAIL_TYPES.forEach(t=> map[t] = []);
+  [...ROOM_NUMBERS, ...APARTMENT_NUMBERS].forEach(roomNo=>{
+    const t = availTypeForRoom(roomNo);
+    if(t) map[t].push(roomNo);
+  });
+  _availUnitsByType = map;
+  return map;
+}
+
+// Availability for `days` nights starting at fromDate.
+//
+// "Taken" here means a booked night lands on that date — NOT the Arrival-
+// confirmed occupancy computeRoomStatuses uses for today. That difference
+// is deliberate: a guest who has booked tonight but hasn't walked in yet
+// still makes the room unsellable, so for "can I sell this room" the
+// booked night is the right signal and the confirmation step is noise.
+//
+// N/A rooms are the reason this isn't just a room grid. A booking filed
+// as "River View, room not decided yet" holds a River View unit just as
+// firmly as one filed against 207 — it simply hasn't been told WHICH one.
+// Counting only assigned rooms would report stock that is already spoken
+// for as free, and the desk would sell it twice.
+function buildAvailability(fromDate, days){
+  const start = fromDate || todayStr();
+  const span = Math.max(1, parseInt(days, 10) || 14);
+  const unitsByType = getAvailUnitsByType();
+
+  const dates = [];
+  for(let i = 0; i < span; i++) dates.push(addDaysToDateStr(start, i));
+  const inRange = new Set(dates);
+
+  // One pass over the room-nights index instead of calling
+  // computeRoomStatuses() per date — that rebuilds every ledger record on
+  // each call, which at a month's horizon is 30 full rebuilds.
+  const byRoom = {};      // roomNo -> date -> {guest, guestId}
+  const naByType = {};    // picked type -> date -> [{guest, guestId}]
+  buildLedgersRecords(true).forEach(n=>{
+    if(!inRange.has(n.date)) return;
+    if(isMiscRoomNo(n.roomNo)) return; // BBQ/Bonfire/Snooker aren't rooms
+    const key = (n.roomNo || '').trim().toUpperCase();
+    if(key === 'N/A'){
+      // The type the desk picked on the entry form; blank means they
+      // haven't decided even that, so it can't be held against any type.
+      const t = n.unitType || '';
+      if(!t) return;
+      ((naByType[t] = naByType[t] || {})[n.date] = (naByType[t][n.date] || [])).push({ guest: n.guest, guestId: n.guestId });
+      return;
+    }
+    // A room double-booked for the same night must still only consume one
+    // unit of stock, so this is keyed by date rather than appended.
+    (byRoom[key] = byRoom[key] || {})[n.date] = { guest: n.guest, guestId: n.guestId };
+  });
+
+  const perDate = dates.map(date=>{
+    const types = {};
+    AVAIL_TYPES.forEach(t=>{
+      const total = unitsByType[t].length;
+      const assigned = unitsByType[t].filter(r=> (byRoom[r] || {})[date]).length;
+      const held = ((naByType[t] || {})[date] || []).length;
+      types[t] = { total, assigned, held, taken: assigned + held, available: total - assigned - held };
+    });
+    return { date, types };
+  });
+
+  // Types an N/A booking was filed under that have no physical rooms at
+  // all ("2 Bed Apartment"). Never silently dropped — see comment above.
+  const orphanTypes = Object.keys(naByType).filter(t=> !AVAIL_TYPES.includes(t));
+
+  return { dates, perDate, byRoom, naByType, unitsByType, orphanTypes };
+}
+
+function setAvailabilityToday(){
+  setFilterDate('avDate', todayStr());
+  renderAvailability();
+}
+
+function printAvailability(){
+  window.print();
+}
+
+function getAvailabilityFromDate(){
+  const el = document.getElementById('avDate');
+  return (el && el.value) || todayStr();
+}
+
+function getAvailabilitySpan(){
+  const el = document.getElementById('avSpan');
+  return (el && parseInt(el.value, 10)) || 14;
+}
+
+// Guest names land inside title="..." here. Everywhere else in this file
+// they're interpolated into element TEXT, where a stray quote is harmless
+// — in an attribute it closes the attribute early and mangles the cell, so
+// this page escapes them. Deliberately local: it's not a general-purpose
+// sanitiser and shouldn't be used as one.
+function availAttr(s){
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+// Free cells are the ones staff scan for, so they get the colour; taken
+// cells carry the guest name and stay quiet. Weekends aren't highlighted —
+// this hotel's season doesn't run on a Mon-Fri rhythm.
+function availCell(free, label, title, onclick){
+  const bg = free ? 'rgba(74,222,128,0.16)' : 'transparent';
+  const click = onclick ? ` onclick="${onclick}" style="cursor:pointer;"` : '';
+  return `<td style="background:${bg}; text-align:center; white-space:nowrap; font-size:12px;" title="${availAttr(title)}"${click}>${label}</td>`;
+}
+
+function renderAvailability(){
+  const from = getAvailabilityFromDate();
+  const span = getAvailabilitySpan();
+  const av = buildAvailability(from, span);
+
+  const readout = document.getElementById('avDateReadout');
+  if(readout) readout.textContent = formatDate(from);
+  const sub = document.getElementById('avPrintHeaderSub');
+  if(sub) sub.textContent = formatDate(av.dates[0]) + ' – ' + formatDate(av.dates[av.dates.length - 1]);
+
+  const dateHead = av.dates.map(d=> `<th style="font-size:11px; white-space:nowrap;">${formatDateShort(d)}</th>`).join('');
+
+  // ---- Free by type ----
+  const typeRows = AVAIL_TYPES.map(t=>{
+    const cells = av.perDate.map(pd=>{
+      const c = pd.types[t];
+      // Held-as-N/A is shown alongside the free count rather than folded
+      // into it, so the desk can see WHY a type looks tight and which of
+      // those holds still needs a room number pinned to it.
+      const label = c.available <= 0
+        ? `<span style="color:var(--danger); font-weight:700;">${c.available}</span>`
+        : `<strong>${c.available}</strong>`;
+      const heldNote = c.held ? `<span style="color:var(--muted);"> (${c.held} held)</span>` : '';
+      return availCell(c.available > 0, label + heldNote, `${t} — ${c.assigned} in rooms, ${c.held} held without a room number, ${c.total} total`);
+    }).join('');
+    const total = av.unitsByType[t].length;
+    return `<tr><td style="white-space:nowrap;"><strong>${t}</strong> <span style="color:var(--muted);">(${total})</span></td>${cells}</tr>`;
+  }).join('');
+
+  // A booking filed under a type with no rooms can never be housed — it is
+  // always wrong, not merely tight, so it gets its own flagged row.
+  const orphanRows = av.orphanTypes.map(t=>{
+    const cells = av.dates.map(d=>{
+      const n = ((av.naByType[t] || {})[d] || []).length;
+      return `<td style="text-align:center; font-size:12px; color:${n ? 'var(--danger)' : 'var(--muted)'};">${n || ''}</td>`;
+    }).join('');
+    return `<tr><td style="white-space:nowrap; color:var(--danger);"><strong>${t}</strong> <span>(no rooms exist)</span></td>${cells}</tr>`;
+  }).join('');
+
+  document.getElementById('avTypeBody').innerHTML = `
+    <table>
+      <thead><tr><th style="text-align:left;">Type (rooms)</th>${dateHead}</tr></thead>
+      <tbody>${typeRows}${orphanRows}</tbody>
+    </table>`;
+
+  // ---- Room by room ----
+  const sections = {};
+  [...ROOM_NUMBERS, ...APARTMENT_NUMBERS].forEach(roomNo=>{
+    const s = getRoomSection(roomNo);
+    (sections[s] = sections[s] || []).push(roomNo);
+  });
+
+  let roomHtml = '';
+  ROOM_SECTION_ORDER.forEach(section=>{
+    const rooms = sections[section];
+    if(!rooms || !rooms.length) return;
+    roomHtml += `<tr><td colspan="${av.dates.length + 2}" style="background:var(--border); font-weight:700; font-size:12px;">${roomSectionLabel(section)}</td></tr>`;
+    rooms.forEach(roomNo=>{
+      const cells = av.dates.map(d=>{
+        const occ = (av.byRoom[roomNo] || {})[d];
+        if(!occ) return availCell(true, '', 'Free — ' + formatDate(d));
+        const short = (occ.guest || '').split(/\s+/)[0] || '—';
+        return availCell(false, short, `${occ.guest} — ${formatDate(d)}`, `openDetail('${occ.guestId}')`);
+      }).join('');
+      roomHtml += `<tr><td style="white-space:nowrap;"><strong>${roomNo}</strong></td><td style="white-space:nowrap; color:var(--muted); font-size:11px;">${availTypeForRoom(roomNo) || '-'}</td>${cells}</tr>`;
+    });
+  });
+
+  // N/A holds get their own block at the bottom: they're real bookings
+  // consuming real stock, but they have no room number to sort under, so
+  // they'd vanish entirely from a grid keyed on room numbers.
+  const naTypes = Object.keys(av.naByType).sort();
+  if(naTypes.length){
+    roomHtml += `<tr><td colspan="${av.dates.length + 2}" style="background:var(--border); font-weight:700; font-size:12px;">Held without a room number — type picked, room still to be chosen</td></tr>`;
+    naTypes.forEach(t=>{
+      const cells = av.dates.map(d=>{
+        const list = (av.naByType[t] || {})[d] || [];
+        if(!list.length) return `<td style="text-align:center;"></td>`;
+        const names = list.map(g=> g.guest).join(', ');
+        return `<td style="background:rgba(234,179,8,0.16); text-align:center; white-space:nowrap; font-size:12px; cursor:pointer;" title="${availAttr(names)}" onclick="openDetail('${list[0].guestId}')">${list.length}</td>`;
+      }).join('');
+      roomHtml += `<tr><td style="white-space:nowrap;"><strong>${t}</strong></td><td style="white-space:nowrap; color:var(--muted); font-size:11px;">no room yet</td>${cells}</tr>`;
+    });
+  }
+
+  document.getElementById('avRoomBody').innerHTML = `
+    <table>
+      <thead><tr><th style="text-align:left;">Room</th><th style="text-align:left;">Type</th>${dateHead}</tr></thead>
+      <tbody>${roomHtml}</tbody>
+    </table>`;
 }
 
 // "Occupied as of a date" is a heuristic: of the bookings for a room, the
@@ -15413,7 +15726,7 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
       if(!inRange(pay.date)) return;
       const extra = Math.round((pay.total - pay.towardRange) * 100) / 100;
       if(extra <= 0) return;
-      const roomNos = formatRoomChain(entry.rooms) || 'N/A';
+      const roomNos = formatRoomChain(entry.rooms) || '—';
       const source = pay.mode === 'Cash' ? 'Cash' : (pay.bank || pay.mode || '-');
       unlinkedPayments.push({ guestId, guest, roomNo: roomNos, amount: extra, source, date: pay.date });
     });
