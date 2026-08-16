@@ -19221,9 +19221,34 @@ scheduleMidnightAutoLock();
 // mousemove/scroll/keypress alone (a cat on the keyboard, momentum
 // scrolling, a stray key) do NOT dismiss it, they only ever prevent the
 // pause from triggering in the first place while still active. ----
+//
+// How long that takes is per ROLE, because the same 2 minutes that suit a
+// front-desk machine in a public lobby are just an obstruction elsewhere:
+//   - restaurant: the POS runs all shift on a counter with an order
+//     half-typed; a cover that needs dismissing between customers is pure
+//     friction, and the device isn't sitting where a guest can read it.
+//   - superadmin: the owner's own machine, same reasoning.
+//   - admin (the accountant): works in long reading/reconciling stretches
+//     with no input at all, so 2 minutes fires constantly mid-task — 3x.
+// Everyone else (staff, viewer) keeps the original 2 minutes.
+//
+// 0 means "never pause". Roles are looked up by name; anything not listed
+// falls back to IDLE_PAUSE_MS, so a new role is safe-by-default rather
+// than silently un-paused.
 const IDLE_PAUSE_MS = 2 * 60 * 1000;
+const IDLE_PAUSE_MS_BY_ROLE = {
+  restaurant: 0,
+  superadmin: 0,
+  admin: IDLE_PAUSE_MS * 3
+};
 let idleTimer = null;
 let appPaused = false;
+
+function idlePauseMs(){
+  const role = currentUser ? currentUser.role : '';
+  const ms = IDLE_PAUSE_MS_BY_ROLE[role];
+  return ms === undefined ? IDLE_PAUSE_MS : ms;
+}
 
 function pauseAppForIdle(){
   if(appPaused) return;
@@ -19231,9 +19256,15 @@ function pauseAppForIdle(){
   document.getElementById('idlePauseOverlay').classList.add('active');
 }
 
+// Re-armed on every activity event and on sign-in (showApp), so the role's
+// own timeout takes over the moment the role is actually known — the timer
+// first arms at page load, while currentUser is still null and the login
+// screen is up, on the shared 2-minute default.
 function armIdleTimer(){
   clearTimeout(idleTimer);
-  idleTimer = setTimeout(pauseAppForIdle, IDLE_PAUSE_MS);
+  const ms = idlePauseMs();
+  if(!ms) return; // this role never pauses
+  idleTimer = setTimeout(pauseAppForIdle, ms);
 }
 
 function resumeAppFromIdle(){
@@ -20320,6 +20351,11 @@ function showApp(){
   }catch(e){ console.error('Auto-navigate to Restaurant failed', e); }
   document.getElementById('loginOverlay').classList.add('hidden');
   document.getElementById('appRoot').style.display = '';
+  // The idle timer has been running on the signed-out default since page
+  // load; now that the role is known, re-arm it on that role's own timeout
+  // (or drop it entirely for the roles that never pause). Also clears the
+  // overlay if the pause fired while the login screen was sitting open.
+  resumeAppFromIdle();
   startApp();
 }
 
