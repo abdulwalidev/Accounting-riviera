@@ -6676,7 +6676,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 <div class="wrap">
 
   <div class="pos-page-head"><div class="h-title">POS Day Lock</div><button type="button" class="pos-new-btn" onclick="posGoToNewReceipt()">＋ New</button></div>
-  <div class="h-sub">Lock a business day so its invoices can no longer be edited or deleted — separate from the hotel's own Day Lock. The day right before today's 4am cutover locks itself automatically the first time anyone opens the app after it ends; lock/unlock any other day here.</div>
+  <div class="h-sub">Lock a business day so its invoices can no longer be edited or deleted — separate from the hotel's own Day Lock. <b>Every past day is locked unless somebody unlocked it</b>: the day right before today's 4am cutover locks itself the first time anyone opens the app afterwards, and a day nobody ever touched is locked too. The two lists below cover every day that has invoices on it, plus any day with a lock record of its own.</div>
 
   <div class="card filters-card">
     <div class="filters-label">LOCK / UNLOCK A DAY</div>
@@ -6688,7 +6688,16 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
 
   <div class="card results-card">
     <div class="results-head">
-      <span class="rh-title">CURRENTLY LOCKED DAYS</span>
+      <span class="rh-title">OPEN DAYS — EDITABLE RIGHT NOW</span>
+      <span class="rh-count" id="posDlOpenCount">0 open</span>
+    </div>
+    <div id="posDlOpenList"></div>
+  </div>
+
+  <div class="card results-card" style="margin-top:16px;">
+    <div class="results-head">
+      <span class="rh-title">LOCKED DAYS</span>
+      <span class="rh-count" id="posDlLockedCount">0 locked</span>
     </div>
     <div id="posDlList"></div>
   </div>
@@ -8623,10 +8632,10 @@ document.addEventListener('DOMContentLoaded', ()=>{
     'dlDate','acDate','arDate','auditPageDate','rdDate','b19From',
     'cicoFrom','cicoTo','filterFrom','filterTo','hoFrom','hoTo','lgFrom','lgTo',
     'nprFrom','nprTo','parFrom','parTo','rvFrom','rvTo',
-    'csFromDate','csToDate',
-    // qsFromDate/qsToDate deliberately left out: they're hidden inputs
-    // driven by Quantity Summary's range picker (initRangeDatePicker), not
-    // fields anyone types in, so their steppers were two stray sets of
+    // csFromDate/csToDate (Charges Summary) and qsFromDate/qsToDate
+    // (Quantity Summary) deliberately left out: both pairs are hidden
+    // inputs driven by their page's range picker (initRangeDatePicker),
+    // not fields anyone types in, so their steppers were two stray sets of
     // arrows stacked under the range box — stepping a date the page never
     // shows. Same reason the hotel's own range pairs (cicoFrom/To,
     // filterFrom/To, ...) sit in addDateStepper's disabledIds.
@@ -21968,7 +21977,13 @@ async function posUnlockDayAction(dateStr, fromRetry){
   var action;
   if (!fromRetry) {
     var row = posFindLockRow(dateStr);
-    if (row) { row.unlocked_by = currentUser ? currentUser.username : ''; row.unlocked_at = new Date().toISOString(); }
+    var stamp = { by: currentUser ? currentUser.username : '', at: new Date().toISOString() };
+    if (row) { row.unlocked_by = stamp.by; row.unlocked_at = stamp.at; }
+    // A day locked only by the no-row default has nothing to update — the
+    // server upsert below creates its row, but without this the page went
+    // on showing it as locked until that round-trip came back. Reachable
+    // now that those days are listed with an Unlock button of their own.
+    else posLockedDays.push({ lock_date: dateStr, locked_by: '', locked_at: null, unlocked_by: stamp.by, unlocked_at: stamp.at });
     action = { mode: 'unlock', dateStr: dateStr };
     posPendingLockActions.push(action);
     posSavePendingWritesToStorage();
@@ -22017,19 +22032,74 @@ function posRenderDayLockPage(){
     actionBtn.onclick = function(){ posOpenDayLockConfirm('lock', pickedDate); };
   }
 
-  var active = posLockedDays.filter(function(l){ return !l.unlocked_at; }).slice().sort(function(a, b){ return b.lock_date.localeCompare(a.lock_date); });
-  if (!active.length) { listEl.innerHTML = '<div class="empty-note">No days are locked right now.</div>'; return; }
+  var states = posDayLockStates();
+  var locked = states.filter(function(s){ return s.locked; });
+  var open = states.filter(function(s){ return !s.locked; });
+
+  var openListEl = document.getElementById('posDlOpenList');
+  var openCountEl = document.getElementById('posDlOpenCount');
+  var lockedCountEl = document.getElementById('posDlLockedCount');
+  if (openCountEl) openCountEl.textContent = open.length + (open.length === 1 ? ' open' : ' open');
+  if (lockedCountEl) lockedCountEl.textContent = locked.length + ' locked';
+
+  if (openListEl) {
+    openListEl.innerHTML = !open.length
+      ? '<div class="empty-note">Nothing is open — every past day with invoices on it is locked.</div>'
+      : '<table class="rep"><thead><tr><th style="width:130px;">Date</th><th>Unlocked By</th><th style="width:170px;">Unlocked At</th><th style="width:110px;"></th></tr></thead><tbody>' +
+        open.map(function(s){
+          return '<tr>' +
+            '<td>' + posEscapeHtml(s.date) + '</td>' +
+            '<td>' + posEscapeHtml(s.by || '-') + '</td>' +
+            '<td>' + (s.at ? new Date(s.at).toLocaleString() : '-') + '</td>' +
+            '<td><button type="button" class="dl-action-btn" style="padding:5px 12px; font-size:12px;" onclick="posOpenDayLockConfirm(\'lock\', \'' + s.date + '\')">Lock</button></td>' +
+            '</tr>';
+        }).join('') + '</tbody></table>';
+  }
+
+  if (!locked.length) { listEl.innerHTML = '<div class="empty-note">No days are locked right now.</div>'; return; }
   listEl.innerHTML =
     '<table class="rep"><thead><tr><th style="width:130px;">Date</th><th>Locked By</th><th style="width:170px;">Locked At</th><th style="width:110px;"></th></tr></thead><tbody>' +
-    active.map(function(l){
+    locked.map(function(s){
       return '<tr>' +
-        '<td>' + posEscapeHtml(l.lock_date) + '</td>' +
-        '<td>' + posEscapeHtml(l.locked_by || '-') + '</td>' +
-        '<td>' + (l.locked_at ? new Date(l.locked_at).toLocaleString() : '-') + '</td>' +
-        '<td><button type="button" class="dl-action-btn secondary" style="padding:5px 12px; font-size:12px;" onclick="posOpenDayLockConfirm(\'unlock\', \'' + l.lock_date + '\')">Unlock</button></td>' +
+        '<td>' + posEscapeHtml(s.date) + '</td>' +
+        '<td>' + (s.implicit ? '<span style="color:var(--muted);">Locked by default — never opened</span>' : posEscapeHtml(s.by || '-')) + '</td>' +
+        '<td>' + (s.at ? new Date(s.at).toLocaleString() : '—') + '</td>' +
+        '<td><button type="button" class="dl-action-btn secondary" style="padding:5px 12px; font-size:12px;" onclick="posOpenDayLockConfirm(\'unlock\', \'' + s.date + '\')">Unlock</button></td>' +
         '</tr>';
     }).join('') +
     '</tbody></table>';
+}
+
+// Every day this page has something to say about, newest first: each day
+// that has invoices on it, plus any day carrying a lock record of its own.
+//
+// The list used to be the lock TABLE, which is not the same thing — a past
+// day nobody ever touched has no row at all and is locked all the same
+// (see posIsDateLocked), so the page showed four locked days while dozens
+// were actually locked, and the genuinely open ones (someone unlocked
+// them, and nothing ever re-locks a day by itself) appeared nowhere at
+// all. Those are the rows that actually need looking at, so they get their
+// own list above the locked one.
+function posDayLockStates(){
+  var today = posTodayISO();
+  var days = {};
+  posInvoices.forEach(function(r){
+    if (r.isoDate && r.isoDate < today) days[r.isoDate] = true;
+  });
+  posLockedDays.forEach(function(l){ if (l.lock_date) days[l.lock_date] = true; });
+  return Object.keys(days).sort(function(a, b){ return b.localeCompare(a); }).map(function(iso){
+    var row = posFindLockRow(iso);
+    // Today (and anything later) is only locked if someone actually locked
+    // it — the no-row-means-locked default is a rule about the past.
+    var locked = iso < today ? posIsDateLocked(iso) : !!(row && !row.unlocked_at);
+    return {
+      date: iso,
+      locked: locked,
+      implicit: !row,
+      by: row ? (row.unlocked_at ? row.unlocked_by : row.locked_by) : '',
+      at: row ? (row.unlocked_at || row.locked_at) : ''
+    };
+  });
 }
 
 function posOpenDayLockPage(){
