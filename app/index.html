@@ -10132,6 +10132,42 @@ function isAdvanceReservation(entry){
   return !!(entry && entry.savedAt && entry.checkIn && toKarachiDateStr(entry.savedAt) < entry.checkIn);
 }
 
+// The date the Arrival page shipped. A booking saved before this has no
+// Actual Checkin for the boring reason that the field did not exist yet —
+// those guests really did stay, and treating them as unconfirmed would
+// erase weeks of genuine room-nights from every report. The gate below is
+// therefore forward-only: it can only ever judge bookings taken after the
+// desk actually had a Confirm button to press.
+const ARRIVAL_CONFIRM_START = '2026-08-07';
+
+// A booking whose check-in date has come and gone with nobody ever
+// confirming the guest turned up.
+//
+// Until now these lingered forever. Their room-nights still existed, so
+// once those nights ran out the stay had no Actual Checkout either and
+// computeRoomStatuses read it as Extended — which by design never expires.
+// One reservation nobody resolved therefore showed as in-house on Room
+// Detail, Inhouse, Dashboard and Breakfast every single day, indefinitely,
+// and each new one piled on top.
+//
+// There is no evidence such a guest was ever in the room, so their
+// room-nights are dropped entirely (see buildLedgersRecords) and they
+// survive in exactly one place: the Arrival page, which lists them so the
+// desk can still confirm them in — with their real arrival date, the
+// confirm modal takes one — or leave them. The moment Actual Checkin is
+// set, this returns false and every night comes straight back.
+//
+// Deliberately NOT applied while the check-in date is still today or later:
+// that booking is simply upcoming or due, it still holds its room, and it
+// is arrivalPending's job rather than this one's.
+function isLapsedUnconfirmedArrival(entry){
+  if(!entry || !entry.checkIn) return false;
+  if(!isAdvanceReservation(entry)) return false;
+  if(getDetailValue(entry, 'Actual Checkin')) return false;
+  if(entry.checkIn >= todayStr()) return false;
+  return toKarachiDateStr(entry.savedAt) >= ARRIVAL_CONFIRM_START;
+}
+
 // [FUTURE: No Show] ---- DISABLED, kept for re-enabling. Every site is
 // tagged '[FUTURE: No Show]'; the checklist lives in
 // future-implementations/no-show.md. Uncomment this block first.
@@ -15369,6 +15405,16 @@ function buildLedgersRecords(includeUnconfirmed /*, includeNoShows */){
     // plenty of existing bookings, and skipping it retroactively wiped real
     // room-nights out of both reports the first time this was tried).
     if(!includeUnconfirmed && entry.checkIn >= todayStr() && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
+    // ...and the other end of the same rule: a booking whose check-in date
+    // passed with nobody ever confirming the guest arrived produces no
+    // room-nights at all. Unlike the gate above this is NOT behind
+    // includeUnconfirmed — computeRoomStatuses must not see these either,
+    // because it was precisely computeRoomStatuses that kept them alive:
+    // their nights ran out, no Actual Checkout was ever set, and they read
+    // as Extended (which never expires) on every occupancy page every day
+    // from then on. Only bookings taken after the desk actually had a
+    // Confirm button can be judged this way — see isLapsedUnconfirmedArrival.
+    if(isLapsedUnconfirmedArrival(entry)) return;
     // The stay runs from when the guest ACTUALLY arrived (Arrival's
     // confirmed Actual Checkin, which the desk can set to a different day
     // than the booked Check-in — late arrivals happen), and only falls back
@@ -15640,6 +15686,11 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
     // plenty of existing bookings, and skipping it retroactively wiped real
     // room-nights out of both reports the first time this was tried).
     if(entry.checkIn >= todayStr() && isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
+    // Same rule at the other end — a check-in date that passed with nobody
+    // confirming the guest arrived earns no rent, collected or due row here
+    // either. This loop walks entries itself rather than going through
+    // buildLedgersRecords, so it needs its own copy of the gate.
+    if(isLapsedUnconfirmedArrival(entry)) return;
     const startDate = entry.checkIn || (entry.savedAt ? toKarachiDateStr(entry.savedAt) : '');
     if(!startDate) return;
     const guestId = entry.id;
@@ -17418,6 +17469,22 @@ function buildArrivalRows(asOfDate){
       });
     }
   }
+  // Bookings whose check-in date passed with nobody ever confirming the
+  // guest arrived. They no longer have room-nights at all (see
+  // isLapsedUnconfirmedArrival), so arrivalPending cannot surface them and
+  // they now appear on no other page in the app — this list is the only
+  // place they still exist, and the only way left to resolve them. Dropping
+  // them from the reports without this would strand them permanently:
+  // invisible everywhere, and no row to press Check-in on.
+  //
+  // Today-only. They aren't tied to any particular date, so pointing the As
+  // Of Date filter at a past day would otherwise repeat the whole list on
+  // every single day.
+  const lapsed = asOfDate === todayStr()
+    ? all
+        .filter(entry=> !dueSeen.has(entry.id) && isLapsedUnconfirmedArrival(entry))
+        .map(entry=> toRow(entry, 'lapsed'))
+    : [];
   // Checked in ON asOfDate specifically — lets the As Of Date filter show
   // what was confirmed that day, same as Checkout/Pending's log merge.
   const checkedIn = all
@@ -17432,7 +17499,7 @@ function buildArrivalRows(asOfDate){
     .filter(entry=> !dueSeen.has(entry.id) && getDetailValue(entry, 'No Show') === asOfDate)
     .map(entry=> toRow(entry, 'no_show'));
   */
-  return due.concat(checkedIn /*, noShows */)
+  return due.concat(lapsed, checkedIn /*, noShows */)
     .sort((a,b)=> a.roomNos.localeCompare(b.roomNos, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
@@ -17458,7 +17525,11 @@ function renderArrival(){
 
   const rows = buildArrivalRows(asOfDate);
   // [FUTURE: No Show] add back: no_show: ['checkoutdue', 'No Show']
-  const STATUS_BADGE = { due: ['arrivaldue', 'Arrival Due'], checked_in: ['paid', 'Checked In'] };
+  // 'lapsed' — check-in date passed, never confirmed. Flagged rather than
+  // shown as merely "due": it has already dropped out of every report, so
+  // this row is the last trace of it and needs to read as something to
+  // resolve, not something to wait for.
+  const STATUS_BADGE = { due: ['arrivaldue', 'Arrival Due'], lapsed: ['checkoutdue', 'Not Arrived'], checked_in: ['paid', 'Checked In'] };
   if(rows.length === 0){
     dueBody.innerHTML = '<div class="empty-note">Nobody\'s check-in was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
   } else {
