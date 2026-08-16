@@ -6077,13 +6077,21 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <!-- Top field block -->
   <div class="card">
     <div class="top-fields-live">
-      <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>CUSTOMER 🔍</label>
-        <div class="search-wrap" style="flex:1;"><input type="text" id="posCustomer" value="Walkin Customer" autocomplete="off" oninput="posRecalcAll()" style="width:100%;"><div class="ac-menu"></div></div>
+      <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>CUSTOMER TYPE 🔍</label>
+        <div class="search-wrap" style="flex:1;"><input type="text" id="posCustomer" value="Walkin Customer" autocomplete="off" oninput="posCustomerTypeInput()" style="width:100%;"><div class="ac-menu"></div></div>
+        <!-- The exact person, as opposed to the category above. Almost every
+             invoice is a walk-in or a room order where there's no name worth
+             recording, so this sits at N/A by default and works exactly like
+             ORDER NO(QT): required, with the N/A box as the sanctioned way
+             past it. Picking a guest customer type unticks it for you, since
+             that's the case the field exists for. -->
+        <div class="pos-label-row" style="margin-top:9px;"><label>NAME <span class="pos-req">*</span></label><label class="pos-na-check"><input type="checkbox" id="posCustomerNameNA" onchange="posToggleCustomerNameNA()" checked> N/A</label></div>
+        <input type="text" id="posCustomerName" value="N/A" autocomplete="off" onkeydown="posTopFieldEnter(event, this)" disabled>
       </div>
       <div class="lbl-input" style="flex:0 0 170px;"><div class="pos-label-row"><label>ORDER NO(QT) <span class="pos-req">*</span></label><label class="pos-na-check"><input type="checkbox" id="posOrderNoNA" onchange="posToggleOrderNoNA()"> N/A</label></div><input type="text" id="posOrderNo" inputmode="numeric" maxlength="5" autocomplete="off" oninput="posOrderNoInput(this)" onkeydown="posTopFieldEnter(event, this)"></div>
+      <div class="lbl-input" style="flex:0 0 170px;"><label>Invoice Date</label><input type="date" id="posInvoiceDate"></div>
       <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><div class="search-wrap" style="flex:1;"><input type="text" id="posRoomNoField" autocomplete="off" oninput="posRoomNoChanged(this, true)" style="width:100%;"><div class="ac-menu room-ac-menu"></div></div></div>
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>Discription(extra notes)</label><input type="text" id="posLineDescription" onkeydown="posTopFieldEnter(event, this)"></div>
-      <div class="lbl-input" style="flex:0 0 170px;"><label>Invoice Date</label><input type="date" id="posInvoiceDate"></div>
     </div>
 
     <!-- The rest of this generic invoicing template's fields (Room/Address/
@@ -19517,6 +19525,10 @@ var posLockedDays = [];
 // taking posBootApp() (and with it Recent Invoices, which is filled after
 // it) down with it.
 var posLockAwarePickers = [];
+// Whether pos_invoices has the customer_name column yet — see the note in
+// posInvoicePayload. Up here because posBootApp's synchronous cache
+// hydration reaches posRowFromDb, same trap as everything else in this block.
+var posHasCustomerNameColumn = false;
 var posInitialLoadDone = false; // first successful cloud pull done (cache hydration counts, same as the hotel's initialLoadDone)
 var posLastServerHash = '';     // last applied snapshot, to skip re-rendering when nothing actually changed
 var posSyncProblem = null;      // restaurant-side sync failure, surfaced through the shared header/banner
@@ -19619,7 +19631,7 @@ function posFormatDateTimeFromIso(iso){
 }
 
 function posInvoicePayload(record){
-  return {
+  var payload = {
     id: record.id,
     invoice_no: record.no,
     dept: record.dept,
@@ -19649,6 +19661,13 @@ function posInvoicePayload(record){
     created_by: record.createdBy || '',
     deleted: !!record.deleted
   };
+  // Only sent once a row pulled from the cloud has proved the column is
+  // there. PostgREST rejects the WHOLE upsert for one unknown column, so
+  // shipping this before migration/pos/pos_customer_name.sql has been run
+  // would stop the restaurant posting invoices at all. The first pull after
+  // the migration flips the flag on its own — nothing to coordinate.
+  if (posHasCustomerNameColumn) payload.customer_name = record.customerName || 'N/A';
+  return payload;
 }
 
 function posItemPayload(record){
@@ -19683,6 +19702,9 @@ function posItemFromDb(it){
 }
 
 function posRowFromDb(row, items){
+  // A row that carries the key at all is proof the column exists — see the
+  // note in posInvoicePayload.
+  if (Object.prototype.hasOwnProperty.call(row, 'customer_name')) posHasCustomerNameColumn = true;
   return {
     id: row.id,
     no: row.invoice_no,
@@ -19692,6 +19714,7 @@ function posRowFromDb(row, items){
     roomNo: row.room_no || '',
     room: row.room_no || 'NA',
     customer: row.customer,
+    customerName: row.customer_name || 'N/A',
     amount: Number(row.grand_total) || 0,
     paid: Number(row.paid) || 0,
     paidCash: Number(row.paid_cash) || 0,
@@ -21149,6 +21172,78 @@ function posToggleOrderNoNA(){
     input.focus();
     try { input.setSelectionRange(input.value.length, input.value.length); } catch(e) {}
   }
+}
+
+// NAME: the exact customer, as opposed to the CUSTOMER TYPE above it.
+// Same shape as the Order No(QT) box (and the hotel's CNIC N/A before it):
+// ticked fills in "N/A" and locks the field, unticked clears it and puts the
+// cursor there. Ticked is the default, because on a walk-in or a room order
+// there is no name to record.
+function posToggleCustomerNameNA(){
+  var input = document.getElementById('posCustomerName');
+  var box = document.getElementById('posCustomerNameNA');
+  if (!input || !box) return;
+  input.classList.remove('field-error');
+  if (box.checked) {
+    input.value = 'N/A';
+    input.disabled = true;
+  } else {
+    input.disabled = false;
+    if ((input.value || '').trim().toUpperCase() === 'N/A') input.value = '';
+    input.focus();
+  }
+}
+
+// The app already decides what a guest is by the customer text (see the
+// Guests (Non-Paying) tables, which key off the same test), so a guest type
+// being picked is exactly the moment a real name is wanted — the N/A box
+// unticks itself and the cursor lands in NAME. It stays a suggestion: the
+// box is still there to tick back on, and choosing a non-guest type never
+// discards a name that was already typed.
+function posCustomerIsGuest(customer){
+  return /guest/i.test(customer || '');
+}
+var posLastCustomerWasGuest = false;
+function posCustomerTypeInput(){
+  posRecalcAll();
+  var cust = document.getElementById('posCustomer');
+  var box = document.getElementById('posCustomerNameNA');
+  var isGuest = posCustomerIsGuest(cust && cust.value);
+  // Only on the crossing into guest, not on every keystroke while it stays
+  // one — otherwise ticking N/A back on (which is always allowed) would be
+  // undone by the very next character typed in the customer box.
+  var became = isGuest && !posLastCustomerWasGuest;
+  posLastCustomerWasGuest = isGuest;
+  if (!became || !box || !box.checked) return;
+  box.checked = false;
+  posToggleCustomerNameNA();
+}
+
+// What NAME currently holds, normalized — 'N/A' whenever the box is ticked,
+// so nothing downstream has to know about the checkbox.
+function posCustomerNameValue(){
+  var box = document.getElementById('posCustomerNameNA');
+  var input = document.getElementById('posCustomerName');
+  if (box && box.checked) return 'N/A';
+  return input ? input.value.trim() : '';
+}
+
+// Puts a saved/restored value back into the pair. Anything empty or 'N/A'
+// means the box is ticked.
+function posSetCustomerName(value){
+  var box = document.getElementById('posCustomerNameNA');
+  var input = document.getElementById('posCustomerName');
+  // Every caller sets the customer type first, so this is where the guest
+  // "crossing" baseline is re-armed for the invoice now in the form.
+  var cust = document.getElementById('posCustomer');
+  posLastCustomerWasGuest = posCustomerIsGuest(cust && cust.value);
+  if (!box || !input) return;
+  var name = (value || '').trim();
+  var isNA = !name || name.toUpperCase() === 'N/A';
+  box.checked = isNA;
+  input.classList.remove('field-error');
+  input.value = isNA ? 'N/A' : name;
+  input.disabled = isNA;
 }
 
 // New receipt → the cursor is already in Order No(QT), after the prefix, so
@@ -22702,6 +22797,7 @@ function posOpenRecordInForm(record){
 
   var custInput = document.getElementById('posCustomer');
   if (custInput) custInput.value = record.customer || 'Walkin Customer';
+  posSetCustomerName(record.customerName);
   var tableInput = document.getElementById('posTable');
   if (tableInput) tableInput.value = record.table || '';
   var orderInput = document.getElementById('posOrderNo');
@@ -23323,6 +23419,8 @@ function posBuildReceiptHtml(record){
   // record either way (roomNo on new invoices, room on older ones), so
   // print it with the word. Restaurant/Dining orders have no number and
   // keep reading exactly as before.
+  var receiptCustomerName = String(record.customerName || '').trim();
+  if (receiptCustomerName.toUpperCase() === 'N/A') receiptCustomerName = '';
   var receiptRoomNo = String(record.roomNo || (record.room && record.room !== 'NA' ? record.room : '') || '').trim();
   var receiptLocation = receiptRoomNo ? 'Room: ' + receiptRoomNo : (record.locationText || 'Dining');
 
@@ -23332,6 +23430,9 @@ function posBuildReceiptHtml(record){
     '<div class="rc-line dbl"></div>' +
     '<table class="rc-fields">' +
     '<tr><td>Guest Name</td><td>' + posEscapeHtml(record.customer) + '</td></tr>' +
+    // Only when there is an actual name — a "Name: N/A" line on every
+    // walk-in receipt is noise on paper that's already tight.
+    (receiptCustomerName ? '<tr><td>Name</td><td class="rc-plain">' + posEscapeHtml(receiptCustomerName) + '</td></tr>' : '') +
     '<tr><td>Invoice #</td><td>' + posEscapeHtml(record.no) + '</td></tr>' +
     '<tr><td>Order #</td><td class="rc-plain">' + posEscapeHtml(record.orderNo) + '</td></tr>' +
     '<tr><td>Printed</td><td>' + posEscapeHtml(record.printedAt) + '</td></tr>' +
@@ -23496,6 +23597,13 @@ async function posPostInvoice(mode){
   var custInput = document.getElementById('posCustomer');
   var customer = custInput ? custInput.value.trim() : '';
   if (!customer) { abort('Enter a customer name before posting.'); if (custInput) custInput.focus(); return; }
+  var custNameNABox = document.getElementById('posCustomerNameNA');
+  var custNameInput = document.getElementById('posCustomerName');
+  if (!(custNameNABox && custNameNABox.checked) && !(custNameInput && custNameInput.value.trim())) {
+    abort('Enter the customer\'s name — or tick N/A if there isn\'t one to record.');
+    if (custNameInput) custNameInput.focus();
+    return;
+  }
 
   var totals = posRecalcAll();
   if (totals.balance < -0.004) { abort('Payments (' + totals.paid.toFixed(2) + ') exceed the total (' + totals.grandTotal.toFixed(2) + ') — fix the payment amount before posting.'); return; }
@@ -23552,6 +23660,7 @@ async function posPostInvoice(mode){
     isoDate: recIsoDate,
     room: roomNoVal || 'NA',
     customer: customer,
+    customerName: posCustomerNameValue(),
     amount: totals.grandTotal,
     paid: totals.paid,
     paidCash: totals.paidCash,
@@ -23676,6 +23785,15 @@ function posRequestPost(mode){
   var custInput = document.getElementById('posCustomer');
   var customer = custInput ? custInput.value.trim() : '';
   if (!customer) { posShowToast('Enter a customer name before posting.', 'error'); if (custInput) focusError(custInput); return; }
+
+  // NAME is required the same way Order No(QT) is: type one, or tick N/A.
+  var custNameInput = document.getElementById('posCustomerName');
+  var custNameNABox = document.getElementById('posCustomerNameNA');
+  if (!(custNameNABox && custNameNABox.checked) && !(custNameInput && custNameInput.value.trim())) {
+    posShowToast('Enter the customer\'s name — or tick N/A if there isn\'t one to record.', 'error');
+    if (custNameInput) focusError(custNameInput);
+    return;
+  }
 
   var totals = posRecalcAll();
   if (totals.balance < -0.004) { posShowToast('Payments (' + totals.paid.toFixed(2) + ') exceed the total (' + totals.grandTotal.toFixed(2) + ') — fix the payment amount before posting.', 'error'); return; }
@@ -23929,6 +24047,7 @@ function posResetForm(){
   document.querySelectorAll('#page-pos-invoice .tax-item input[type=checkbox]').forEach(function(cb){ cb.checked = true; });
   var custInput = document.getElementById('posCustomer');
   if (custInput) custInput.value = 'Walkin Customer';
+  posSetCustomerName('');
   var tableInput = document.getElementById('posTable');
   if (tableInput) tableInput.value = '';
   var roomNoInput = document.getElementById('posRoomNoField');
@@ -23989,6 +24108,7 @@ function posSaveDraft(){
     var draft = {
       items: items,
       customer: custInput ? custInput.value : '',
+      customerName: posCustomerNameValue(),
       manualDisc: discInput ? discInput.value : '',
       table: tableInput ? tableInput.value : '',
       orderNo: orderInput ? orderInput.value : '',
@@ -24033,6 +24153,7 @@ function posLoadDraft(){
 
   var custInput = document.getElementById('posCustomer');
   if (custInput && draft.customer) custInput.value = draft.customer;
+  posSetCustomerName(draft.customerName || '');
   var discInput = document.querySelector('#page-pos-invoice .disc-card input');
   if (discInput && draft.manualDisc) discInput.value = draft.manualDisc;
   var tableInput = document.getElementById('posTable');
