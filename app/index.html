@@ -8196,8 +8196,8 @@ function showView(view, fromPopState){
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
-  if(view === 'restaurant' && !isAdmin() && !isRestaurantRole()){
-    showNotice('Restaurant is only available to admin accounts.');
+  if(view === 'restaurant' && !isSuperAdmin() && !isRestaurantRole()){
+    showNotice('Restaurant is only available to the super admin account.');
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
@@ -8424,7 +8424,7 @@ function restoreLastView(){
   if(!saved || saved === currentView || !ROUTABLE_VIEWS.includes(saved)) return;
   if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout' || saved === 'arrival') && !isAdmin()) return;
   if(saved === 'frontoffice' && !isAdmin() && !isRestaurantRole()) return;
-  if(saved === 'restaurant' && !isAdmin() && !isRestaurantRole()) return;
+  if(saved === 'restaurant' && !isSuperAdmin() && !isRestaurantRole()) return;
   if(saved === 'users' && !isSuperAdmin()) return;
   if(saved === 'detail'){
     let savedId = null;
@@ -19859,20 +19859,21 @@ function isAdmin(){
   return !!currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
 }
 
-// 'superadmin' — everything an admin can do, plus Settings > Users. See
-// migration/roles/user_management.sql: admin_assert_superadmin() re-checks
-// role === 'superadmin' server-side on every call, so that page can never
-// actually work for an 'admin' account no matter what the UI shows.
+// 'superadmin' — everything an admin can do, plus the Restaurant module and
+// Settings > Users. Settings > Users additionally can't be opened up to
+// plain admin from the client alone: migration/roles/user_management.sql's
+// admin_assert_superadmin() re-checks role === 'superadmin' server-side on
+// every call.
 function isSuperAdmin(){
   return !!currentUser && currentUser.role === 'superadmin';
 }
 
-// Quick Hotel/Restaurant switch next to the theme toggle — admin accounts
-// only, same two views topNavRestaurant/topNavDashboard already route to.
+// Quick Hotel/Restaurant switch next to the theme toggle — superadmin only,
+// same two views topNavRestaurant/topNavDashboard already route to.
 function updateHotelRestaurantSwitch(){
   const btn = document.getElementById('hotelRestaurantSwitch');
   if(!btn) return;
-  if(!isAdmin()){ btn.style.display = 'none'; return; }
+  if(!isSuperAdmin()){ btn.style.display = 'none'; return; }
   btn.style.display = '';
   btn.textContent = currentView === 'restaurant' ? 'Hotel' : 'Restaurant';
 }
@@ -20091,7 +20092,7 @@ function applyRolePermissions(){
   const pendingNav = document.getElementById('topNavPending');
   if(pendingNav) pendingNav.style.display = isAdmin() ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
-  if(restaurantNav) restaurantNav.style.display = (isAdmin() || isRestaurantRole()) ? '' : 'none';
+  if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const usersBtn = document.getElementById('settingsUsersBtn');
   if(usersBtn) usersBtn.style.display = isSuperAdmin() ? '' : 'none';
   applyAdminSettingsPageMoves();
