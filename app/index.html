@@ -7009,7 +7009,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
     <div class="settings-field">
       <div>
         <div class="label">Order No(QT) prefix</div>
-        <div class="sub">Every new receipt opens with this already typed in and locked — staff key only the rest of the 5 digits. Max 4 digits; empty for no prefix. Saved on this device.</div>
+        <div class="sub">Every new receipt opens with this already typed in and locked — staff key only the rest of the number (4 or 5 digits). Max 4 digits; empty for no prefix. Saved on this device.</div>
       </div>
       <div style="display:flex; gap:10px; align-items:center; flex-shrink:0;">
         <input type="text" id="posQtPrefixInput" inputmode="numeric" maxlength="4" placeholder="44" autocomplete="off">
@@ -22640,15 +22640,17 @@ function posSetupRoomAutocomplete(){
   });
 }
 
-// ---------- Order No(QT): prefix, fixed length, N/A ----------
-// Every QT number here is 5 digits and shares a leading run that only changes
-// when the restaurant's book rolls over (44xxx today) — so the prefix is
-// configured once in Settings, pre-typed into every new receipt and locked
-// against editing, and staff only key the digits that actually differ.
+// ---------- Order No(QT): prefix, length, N/A ----------
+// A QT number here is 4 or 5 digits (books of both lengths are in use) and
+// shares a leading run that only changes when the restaurant's book rolls
+// over (44xxx today) — so the prefix is configured once in Settings,
+// pre-typed into every new receipt and locked against editing, and staff
+// only key the digits that actually differ.
 // Device-local, like the rest of the POS's own settings (menu overrides,
 // extras): each terminal's book can be on a different prefix.
 var POS_QT_PREFIX_KEY = 'pos_qt_prefix_v1';
-var POS_QT_LENGTH = 5;
+var POS_QT_LENGTH = 5;     // longest a QT number may be
+var POS_QT_MIN_LENGTH = 4; // shortest a QT number may be
 
 function posGetQtPrefix(){
   try { return (localStorage.getItem(POS_QT_PREFIX_KEY) || '').replace(/\D/g, '').slice(0, POS_QT_LENGTH - 1); }
@@ -22665,7 +22667,7 @@ function posSaveQtPrefix(){
   if (!el) return;
   var val = (el.value || '').replace(/\D/g, '');
   if (val.length > POS_QT_LENGTH - 1) {
-    posShowToast('The prefix can be at most ' + (POS_QT_LENGTH - 1) + ' digits — a QT number is ' + POS_QT_LENGTH + ' digits and staff still need at least one to type.', 'error');
+    posShowToast('The prefix can be at most ' + (POS_QT_LENGTH - 1) + ' digits — a QT number is at most ' + POS_QT_LENGTH + ' digits and staff still need at least one to type.', 'error');
     return;
   }
   try { localStorage.setItem(POS_QT_PREFIX_KEY, val); }
@@ -22694,9 +22696,9 @@ function posApplyQtPrefixToField(){
 // Keeps the field digits-only, at most POS_QT_LENGTH long, and with the
 // configured prefix un-erasable: whatever the edit was, the value is rebuilt
 // as prefix + the digits that came after it. Backspacing into the prefix
-// therefore just stops, rather than letting a 4-digit or wrong-series number
-// through. Caret goes to the end because every edit here is a digit typed at
-// the end anyway.
+// therefore just stops, rather than letting a wrong-series number through.
+// Caret goes to the end because every edit here is a digit typed at the end
+// anyway.
 function posOrderNoInput(el){
   var prefix = posGetQtPrefix();
   var digits = (el.value || '').replace(/\D/g, '');
@@ -25402,8 +25404,8 @@ function posRequestPost(mode){
       if (orderInput) focusError(orderInput);
       return;
     }
-    if (!/^\d+$/.test(orderNoVal) || orderNoVal.length !== POS_QT_LENGTH) {
-      posShowToast('Order No(QT) must be exactly ' + POS_QT_LENGTH + ' digits — "' + orderNoVal + '" is ' + orderNoVal.length + '.', 'error');
+    if (!/^\d+$/.test(orderNoVal) || orderNoVal.length < POS_QT_MIN_LENGTH || orderNoVal.length > POS_QT_LENGTH) {
+      posShowToast('Order No(QT) must be ' + POS_QT_MIN_LENGTH + ' or ' + POS_QT_LENGTH + ' digits — "' + orderNoVal + '" is ' + orderNoVal.length + '.', 'error');
       if (orderInput) focusError(orderInput);
       return;
     }
