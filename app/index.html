@@ -550,9 +550,6 @@
     vertical-align:middle;
     color:var(--ink-strong);
   }
-  /* The restaurant keeps its existing look — this change is the hotel's
-     tables only, same module isolation as the rest of the pos_ code. */
-  #view-restaurant td{ color:var(--ink); }
   /* The single-line grid for separate borders (see the table rule above):
      every cell owns its right + bottom edge, the first row adds the top
      edge and the first column the left edge, and the four corner cells
@@ -4119,6 +4116,7 @@ td.pos-order-na {color:#dc2626; font-weight:700;}
 #page-pos-invoice table.simple td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
 #page-charges-summary table.rep td.fo-items-col, #page-receipts table.rep td.fo-items-col, #page-deleted table.rep td.fo-items-col {max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted);}
 #page-pos-invoice table.simple td a {color:var(--blue); text-decoration:none;}
+#page-pos-invoice table.simple tfoot td {padding:8px 10px; font-weight:700; background:var(--lightblue); border-bottom:none;}
 #page-pos-invoice .neg {color:var(--muted);}
 /* Recent Invoices / Guests list every row of which is already posted, so a
    Posted/Not-Posted badge would say nothing — these show where the money
@@ -6412,6 +6410,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
     <table class="simple">
       <thead><tr><th style="width:36px;">#</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th>ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:120px;">STATUS</th><th style="width:32px;"></th></tr></thead>
       <tbody id="recentInvoicesBody"></tbody>
+      <tfoot><tr class="pos-total-row"><td colspan="6" style="text-align:right;">TOTAL</td><td class="num" id="recentInvoicesTotalAmount">0.00</td><td class="num" id="recentInvoicesTotalPaid">0.00</td><td colspan="4"></td></tr></tfoot>
     </table>
   </div>
 
@@ -21535,6 +21534,10 @@ function posRenderRecentInvoices(){
   posFillDayGroupedInvoiceRows(recentBody, recent);
   if (guestBody) posFillDayGroupedInvoiceRows(guestBody, guests);
   if (guestCard) guestCard.style.display = guests.length ? '' : 'none';
+  var totalAmountEl = document.getElementById('recentInvoicesTotalAmount');
+  var totalPaidEl = document.getElementById('recentInvoicesTotalPaid');
+  if (totalAmountEl) totalAmountEl.textContent = recent.reduce(function(s, r){ return s + (r.amount || 0); }, 0).toFixed(2);
+  if (totalPaidEl) totalPaidEl.textContent = recent.reduce(function(s, r){ return s + (r.paid || 0); }, 0).toFixed(2);
 }
 
 function posShowApp(id, btn){
