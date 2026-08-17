@@ -705,14 +705,14 @@
     color:#fff;
     border:1px solid rgba(255,255,255,0.5);
     border-bottom:4px solid rgba(255,255,255,0.5);
-    padding:10.8px 19.2px;
-    border-radius:18px;
-    font-size:14.4px;
+    padding:12.96px 23.04px;
+    border-radius:21.6px;
+    font-size:17.28px;
     letter-spacing:0.04em;
     text-transform:uppercase;
     font-weight:800;
     cursor:pointer;
-    height:52.8px;
+    height:63.36px;
     display:inline-flex;
     align-items:center;
     justify-content:center;
@@ -3474,7 +3474,7 @@
     #roomBody td:nth-child(6)::before{ content:'Children'; }
     #roomBody td:nth-child(7)::before{ content:'Breakfast Adults'; }
     #roomBody td:nth-child(8)::before{ content:'Breakfast Children'; }
-    #roomBody td:nth-child(9)::before{ content:'No of Days'; }
+    #roomBody td:nth-child(9)::before{ content:'No of Nights'; }
     #roomBody td:nth-child(10)::before{ content:'Total'; }
     #roomBody td:nth-child(11)::before{ content:''; }
     /* Payment table headers */
@@ -5164,7 +5164,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
             <th style="width:90px;">Children</th>
             <th style="width:90px;">Breakfast Adults</th>
             <th style="width:90px;">Breakfast Children</th>
-            <th style="width:120px;">No of Days</th>
+            <th style="width:120px;">No of Nights</th>
             <th style="width:120px;">Total</th>
             <th style="width:40px;"></th>
           </tr>
@@ -5510,7 +5510,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
               <th style="width:90px;">Children</th>
               <th style="width:110px;">Breakfast Adults</th>
               <th style="width:110px;">Breakfast Children</th>
-              <th style="width:110px;">No of Days</th>
+              <th style="width:110px;">No of Nights</th>
               <th style="width:120px;">Total</th>
             </tr>
           </thead>
@@ -9953,7 +9953,7 @@ function requestDeleteRow(btn, kind){
         <div><div class="confirm-lbl">Children</div><div class="confirm-val">${tr.querySelector('.roomChildren').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">Breakfast Adults</div><div class="confirm-val">${tr.querySelector('.roomBfAdults').value.trim() || '-'}</div></div>
         <div><div class="confirm-lbl">Breakfast Children</div><div class="confirm-val">${tr.querySelector('.roomBfChildren').value.trim() || '-'}</div></div>
-        <div><div class="confirm-lbl">No of Days</div><div class="confirm-val">${isMiscRoomNo(tr.querySelector('.roomNo').value) ? '-' : (tr.dataset.rooms || 1)}</div></div>
+        <div><div class="confirm-lbl">No of Nights</div><div class="confirm-val">${isMiscRoomNo(tr.querySelector('.roomNo').value) ? '-' : (tr.dataset.rooms || 1)}</div></div>
         <div><div class="confirm-lbl">Total</div><div class="confirm-val">${tr.querySelector('.rowtotal').textContent || 0}</div></div>
       </div>`;
   } else {
@@ -17093,7 +17093,8 @@ function buildPendingReport(){
     const entry = rs.entry;
     if(seen.has(entry.id)) return;
     seen.add(entry.id);
-    const due = computeTotals(entry).due;
+    const totals = computeTotals(entry);
+    const due = totals.due;
     if(due <= 0) return;
     // Nights + rent sum PER ROOM NUMBER (a mid-stay rate split leaves
     // several rows for the same room), then across every distinct room
@@ -17116,6 +17117,7 @@ function buildPendingReport(){
       checkOut: getDetailValue(entry, 'Actual Checkout') || entry.checkOut || computeExpectedCheckoutDate(entry) || '',
       nights,
       rent,
+      bookingTotal: totals.bookingTotal,
       due
     });
   });
@@ -17138,7 +17140,7 @@ function renderPending(){
   }
   body.innerHTML = `
     <table>
-      <thead><tr><th style="width:50px;">Sr</th><th style="width:110px;">Room</th><th>Guest</th><th style="width:100px;">Checkin</th><th style="width:100px;">Checkout</th><th style="width:90px;">No of Nights</th><th style="width:110px;">Room Rent</th><th style="width:120px;">Due</th></tr></thead>
+      <thead><tr><th style="width:50px;">Sr</th><th style="width:110px;">Room</th><th>Guest</th><th style="width:100px;">Checkin</th><th style="width:100px;">Checkout</th><th style="width:90px;">No of Nights</th><th style="width:110px;">Room Rent</th><th style="width:120px;">Booking Total</th><th style="width:120px;">Due</th></tr></thead>
       <tbody>${data.rows.map((r, idx)=> `
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${idx + 1}</td>
@@ -17148,12 +17150,13 @@ function renderPending(){
           <td>${r.checkOut ? formatDate(r.checkOut) : '-'}</td>
           <td>${r.nights || '-'}</td>
           <td>${r.rent.toLocaleString()}</td>
+          <td>${r.bookingTotal.toLocaleString()}</td>
           <td style="font-weight:700; color:var(--danger);">${r.due.toLocaleString()}</td>
         </tr>`).join('')}
       </tbody>
       <tfoot>
         <tr class="day-foot-total">
-          <td colspan="7">Total</td>
+          <td colspan="8">Total</td>
           <td>${data.totalDue.toLocaleString()}</td>
         </tr>
       </tfoot>
