@@ -286,6 +286,15 @@
      via :placeholder-shown) so a leftover filter is never invisible/easy
      to forget about. Clicking it clears the field and re-fires whatever
      that input's own oninput/addEventListener handler already does. */
+  /* Admin-only: the shared date-range filter (Report/Payment Record/CICO/
+     Ledgers/Revenue/Handover/NPR/Charges/Quantity Summary) swaps its single
+     flatpickr range box for two plain native date inputs, stacked, with a
+     "to" divider between — a misread single-box range is a real risk on the
+     reports admin actually works from. See applyAdminDateRangeStacking(). */
+  .admin-date-range-stack{ display:flex; flex-direction:column; align-items:stretch; gap:3px; }
+  .admin-date-range-stack input[type="date"]{ width:100%; }
+  .admin-date-range-to{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; }
+
   .search-clear-wrap{ position:relative; }
   .search-clear-wrap input{ padding-right:32px; }
   .search-clear-btn{
@@ -8692,6 +8701,12 @@ function isoFromJsDate(d){
 }
 function initRangeDatePicker(rangeId, fromId, toId, onRangeChange){
   if(typeof flatpickr === 'undefined') return;
+  // Plain admin gets two stacked date inputs instead (applyAdminDateRangeStacking,
+  // called from applyRolePermissions) — skip building a flatpickr range picker
+  // for a box that's about to be hidden. Session-restored admins already have
+  // currentUser set by the time this runs; a fresh login doesn't, so the
+  // stacking function also handles tearing an already-built picker back down.
+  if(isPlainAdmin()) return;
   const rangeEl = document.getElementById(rangeId);
   if(!rangeEl || rangeDatePickers[rangeId]) return;
   const fromEl = document.getElementById(fromId);
@@ -10351,52 +10366,12 @@ function updateDateReadout(input, readoutEl){
   readoutEl.textContent = (input.type === 'date' && input.value) ? formatDate(input.value) : '';
 }
 
-// Small Prev/Next Day arrows under a standalone date filter — steps that
-// field's value by a day and fires 'input'/'change' so whatever that field
-// already does on a normal pick (re-render, readout update, etc.) fires
-// exactly the same way. Scoped to plain filter/report type="date" inputs;
-// the custom stay-date pickers (Check-in/Check-out/Actual Checkout) and the
-// per-room/per-payment row dates have their own interaction and are left
-// alone.
+// Prev/Next Day arrows under a date filter — removed app-wide (hotel and
+// restaurant both called into this one function, directly or via
+// posAttachDateStepper). Left as a no-op rather than deleting every call
+// site, since callers never look at its return value.
 function addDateStepper(inputId, placement){
-  const disabledIds = ['cicoFrom', 'cicoTo', 'filterFrom', 'filterTo', 'rvFrom', 'rvTo', 'lgFrom', 'lgTo', 'hoFrom', 'hoTo', 'parFrom', 'parTo', 'nprFrom', 'nprTo'];
-  if(disabledIds.includes(inputId)) return;
-  const input = document.getElementById(inputId);
-  if(!input || input.dataset.stepperAdded) return;
-  input.dataset.stepperAdded = '1';
-  const wrap = document.createElement('div');
-  wrap.className = 'date-stepper';
-  wrap.innerHTML =
-    '<button type="button" class="date-stepper-btn" title="Back 2 days">◀◀</button>' +
-    '<button type="button" class="date-stepper-btn" title="Previous day">◀</button>' +
-    '<button type="button" class="date-stepper-btn" title="Next day">▶</button>' +
-    '<button type="button" class="date-stepper-btn" title="Forward 2 days">▶▶</button>';
-  const [twoBackBtn, prevBtn, nextBtn, twoFwdBtn] = wrap.querySelectorAll('button');
-  const step = (delta)=>{
-    const newVal = addDaysToDateStr(input.value || todayStr(), delta);
-    input.value = newVal;
-    const fp = getPickerFor(inputId);
-    if(fp) fp.setDate(newVal, false);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  };
-  const stepMonths = (delta)=>{
-    const newVal = addMonthsToDateStr(input.value || todayStr(), delta);
-    input.value = newVal;
-    const fp = getPickerFor(inputId);
-    if(fp) fp.setDate(newVal, false);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  };
-  twoBackBtn.addEventListener('click', ()=> step(-2));
-  prevBtn.addEventListener('click', ()=> step(-1));
-  nextBtn.addEventListener('click', ()=> step(1));
-  twoFwdBtn.addEventListener('click', ()=> step(2));
-  if(placement === 'after'){
-    input.insertAdjacentElement('afterend', wrap);
-  } else {
-    input.parentElement.insertAdjacentElement('afterbegin', wrap);
-  }
+  return;
 }
 
 function collectExtraDetails(){
@@ -19672,6 +19647,51 @@ function isPlainAdmin(){
   return !!currentUser && currentUser.role === 'admin';
 }
 
+// Every page that filters by a date range, admin only: swap the single
+// flatpickr range box for the pair of native date inputs that were already
+// sitting behind it (hidden — see initRangeDatePicker), stacked with a "to"
+// divider between. A fresh login (unlike a session restore) already has
+// flatpickr built by the time the role is known, so this also tears that
+// instance down rather than assuming initRangeDatePicker skipped it.
+const ADMIN_DATE_RANGE_FIELDS = [
+  { range: 'filterRange', from: 'filterFrom', to: 'filterTo', render: renderReport },
+  { range: 'parRange',    from: 'parFrom',    to: 'parTo',    render: renderPaymentRecord },
+  { range: 'cicoRange',   from: 'cicoFrom',   to: 'cicoTo',   render: renderCico },
+  { range: 'lgRange',     from: 'lgFrom',     to: 'lgTo',     render: renderLedgers },
+  { range: 'rvRange',     from: 'rvFrom',     to: 'rvTo',     render: renderRevenue },
+  { range: 'hoRange',     from: 'hoFrom',     to: 'hoTo',     render: renderMoneyHandover },
+  { range: 'nprRange',    from: 'nprFrom',    to: 'nprTo',    render: renderNPR },
+  { range: 'csRange',     from: 'csFromDate', to: 'csToDate', render: renderChargesSummary },
+  { range: 'qsRange',     from: 'qsFromDate', to: 'qsToDate', render: renderQuantitySummary }
+];
+let adminDateRangeStackingApplied = false;
+function applyAdminDateRangeStacking(){
+  if(!isPlainAdmin() || adminDateRangeStackingApplied) return;
+  adminDateRangeStackingApplied = true;
+  ADMIN_DATE_RANGE_FIELDS.forEach(function(f){
+    const rangeEl = document.getElementById(f.range);
+    const fromEl = document.getElementById(f.from);
+    const toEl = document.getElementById(f.to);
+    if(!rangeEl || !fromEl || !toEl) return;
+    const fp = rangeDatePickers[f.range];
+    if(fp){ fp.destroy(); delete rangeDatePickers[f.range]; }
+    rangeEl.style.display = 'none';
+    const stack = document.createElement('div');
+    stack.className = 'admin-date-range-stack';
+    rangeEl.parentNode.insertBefore(stack, rangeEl);
+    const toLabel = document.createElement('div');
+    toLabel.className = 'admin-date-range-to';
+    toLabel.textContent = 'to';
+    fromEl.style.display = '';
+    toEl.style.display = '';
+    stack.appendChild(fromEl);
+    stack.appendChild(toLabel);
+    stack.appendChild(toEl);
+    fromEl.addEventListener('input', f.render);
+    toEl.addEventListener('input', f.render);
+  });
+}
+
 // The pages the accountant works out of Settings instead of the top nav.
 // Each one MOVES, it never disappears: the top-nav button and the
 // settings-sidebar item are the same page, and exactly one of the two is
@@ -19780,6 +19800,7 @@ function applyRolePermissions(){
   if(backupPanel) backupPanel.style.display = isSuperAdmin() ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
   applyPlainAdminSettingsTrim();
+  applyAdminDateRangeStacking();
   updateHotelRestaurantSwitch();
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
