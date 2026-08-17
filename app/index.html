@@ -16094,6 +16094,12 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
   // zero rent). Scoped to a single specific day only — Extended is a
   // snapshot read as-of one date, not something that makes sense summed
   // across an open date range.
+  // Due reads as a plain dash on these rows for the same reason: with no
+  // rent billed there is no rent outstanding to report here. The guest's own
+  // whole-stay balance is deliberately NOT substituted in — that is a
+  // guest-level number, not this night's revenue, and mixing it into a
+  // per-room-night rent report (and its Total Due) would be reporting money
+  // this range never billed. Checkout/Pending is where that balance belongs.
   const isSingleDay = !!fromDate && !!toDate && fromDate === toDate;
   const extendedKeys = new Set();
   if(isSingleDay){
@@ -16346,7 +16352,7 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
           <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
-          <td style="font-weight:700; color:${r.extended ? 'var(--amber)' : (r.due > 0 ? 'var(--danger)' : 'inherit')};">${r.extended ? 'NOT SET' : r.due.toLocaleString()}</td>
+          <td style="font-weight:700; color:${r.extended ? 'var(--amber)' : (r.due > 0 ? 'var(--danger)' : 'inherit')};"${r.extended ? ' title="No rent was billed for this extra night, so there is no rent due on it — see Checkout/Pending for what the guest still owes on the stay"' : ''}>${r.extended ? '-' : r.due.toLocaleString()}</td>
           ${ssCell(r)}
         </tr>`).join('')}
       </tbody>
@@ -17431,7 +17437,70 @@ function computeExpectedCheckoutDate(entry){
   return maxNights > 0 ? addDaysToDateStr(stayStart, maxNights) : '';
 }
 
+// A day AHEAD is a forecast, and Extended deliberately never forecasts:
+// computeRoomStatuses gates its `extended` flag on `refDate <= todayStr()`
+// so an unconfirmed departure can't block its room on every future date and
+// leave availability reading permanently full. That flag is what this whole
+// page is built on, so every future date read "Nobody's checkout was due" —
+// including tomorrow, which is exactly the list the front desk wants the
+// night before. Forecast it off the booked room-nights instead: a stay with
+// a night on the day BEFORE asOfDate and none on asOfDate itself is due out
+// that morning. Nothing here touches the `extended` flag, so availability is
+// unaffected.
+function buildFutureCheckoutRows(asOfDate){
+  const all = loadAllEntries();
+  const prevDay = addDaysToDateStr(asOfDate, -1);
+  // includeUnconfirmed: a reservation checking in tomorrow and out the day
+  // after is a genuine future checkout — nobody could have confirmed that
+  // arrival yet, and gating on it would hide most of the forecast.
+  const nights = buildLedgersRecords(true).filter(n=> n.roomNo && !isMiscRoomNo(n.roomNo));
+  const roomKeyOf = (rn)=> String(rn).trim().toUpperCase();
+  const stillBookedRoom = new Set();  // guest still has THIS room that night
+  const stillHereGuests = new Set();  // guest still has SOME room that night
+  nights.filter(n=> n.date === asOfDate).forEach(n=>{
+    stillBookedRoom.add(n.guestId + '|' + roomKeyOf(n.roomNo));
+    stillHereGuests.add(n.guestId);
+  });
+  const byGuest = new Map();
+  nights.filter(n=> n.date === prevDay).forEach(n=>{
+    const key = roomKeyOf(n.roomNo);
+    if(stillBookedRoom.has(n.guestId + '|' + key)) return; // stay runs on past that morning
+    const entry = all.find(e=> e.id === n.guestId);
+    if(!entry) return;
+    if(getDetailValue(entry, 'Actual Checkout')) return; // already checked out
+    // A room they moved OUT of mid-stay ended in a room move, not a checkout
+    // — the same resolvedByMove rule computeRoomStatuses applies.
+    const vacated = getRoomMoveVacatedRooms(entry)[key] || '';
+    if(vacated && vacated <= asOfDate) return;
+    const existing = byGuest.get(n.guestId);
+    if(existing){
+      if(!existing.roomNos.includes(n.roomNo)) existing.roomNos.push(n.roomNo);
+      return;
+    }
+    // Still booked into ANOTHER room that night: they aren't leaving, one of
+    // their rooms is just ending — an informational Extended row that can
+    // never be checked out, exactly how the live-day path treats it.
+    const isExtendedStatus = stillHereGuests.has(n.guestId);
+    const d = isExtendedStatus ? 0 : computeTotals(entry).due;
+    byGuest.set(n.guestId, {
+      roomNos: [n.roomNo], guestId: n.guestId, guest: entry.guestName || '(no name)',
+      checkIn: entry.checkIn || '', checkoutDate: asOfDate, due: d,
+      status: isExtendedStatus ? 'extended' : (d === 0 ? 'ready' : 'pending')
+    });
+  });
+  return Array.from(byGuest.values()).map(r=>{
+    const sortedRoomNos = r.roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    return {
+      roomNo: sortedRoomNos.join(', '), roomNos: sortedRoomNos, guestId: r.guestId, guest: r.guest,
+      checkIn: r.checkIn, checkoutDate: r.checkoutDate, due: r.due, status: r.status
+    };
+  }).sort((a,b)=> a.guest.localeCompare(b.guest, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
 function buildAutoCheckoutRows(asOfDate){
+  // Nobody can be checked out on a day that hasn't happened, so there is no
+  // "Checked Out" half to merge in for a future date — just the forecast.
+  if(asOfDate > todayStr()) return buildFutureCheckoutRows(asOfDate);
   const statuses = computeRoomStatuses(asOfDate);
   // A guest holding more than one room, where at least one of them is
   // still genuinely booked for that night (rebooked/extended), has NOT
@@ -17581,7 +17650,12 @@ function renderAutoCheckout(){
   if(remainingEl) remainingEl.textContent = rows.filter(r=> r.status !== 'checked_out').length;
   const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'] };
   if(rows.length === 0){
-    dueBody.innerHTML = '<div class="empty-note">Nobody\'s checkout was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
+    // A day ahead reads differently on purpose: "nobody was due" sounds like
+    // a verdict on something that already happened, when for a future date
+    // it only means nothing on the books ends that morning.
+    dueBody.innerHTML = '<div class="empty-note">' + (asOfDate > todayStr()
+      ? 'No checkouts are due on ' + formatDate(asOfDate) + ' from the bookings on file.'
+      : 'Nobody\'s checkout was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.') + '</div>';
   } else {
     dueBody.innerHTML = `
       <table>
@@ -17824,7 +17898,12 @@ function renderArrival(){
   // resolve, not something to wait for.
   const STATUS_BADGE = { due: ['arrivaldue', 'Arrival Due'], lapsed: ['checkoutdue', 'Not Arrived'], checked_in: ['paid', 'Checked In'] };
   if(rows.length === 0){
-    dueBody.innerHTML = '<div class="empty-note">Nobody\'s check-in was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
+    // Same reason as Checkout/Pending's own future wording: on a day ahead an
+    // empty list means nothing is booked in yet, not that anyone failed to
+    // turn up.
+    dueBody.innerHTML = '<div class="empty-note">' + (asOfDate > todayStr()
+      ? 'No arrivals are booked for ' + formatDate(asOfDate) + ' yet.'
+      : 'Nobody\'s check-in was due ' + (isToday ? 'today' : formatDate(asOfDate)) + '.') + '</div>';
   } else {
     dueBody.innerHTML = `
       <table>
