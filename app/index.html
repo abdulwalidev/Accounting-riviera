@@ -8796,6 +8796,13 @@ function setRangeDate(rangeId, fromId, toId, fromIso, toIso){
   const toEl = document.getElementById(toId);
   fromEl.value = fromIso || '';
   toEl.value = toIso || '';
+  // Admin's stacked From/To pickers (applyAdminDateRangeStacking) are two
+  // separate flatpickr instances, not the shared range box below — keep
+  // their altInput displays in sync too, whichever mode is actually live.
+  const fromFp = adminRangeFieldPickers[fromId];
+  const toFp = adminRangeFieldPickers[toId];
+  if(fromFp){ fromFp.setDate(fromIso || null, false); applyPickerDisplay(fromFp); }
+  if(toFp){ toFp.setDate(toIso || null, false); applyPickerDisplay(toFp); }
   const fp = rangeDatePickers[rangeId];
   if(!fp) return;
   if(fromIso && toIso) fp.setDate([fromIso, toIso], false);
@@ -19682,11 +19689,15 @@ function isPlainAdmin(){
 }
 
 // Every page that filters by a date range, admin only: swap the single
-// flatpickr range box for the pair of native date inputs that were already
-// sitting behind it (hidden — see initRangeDatePicker), stacked with a "to"
-// divider between. A fresh login (unlike a session restore) already has
-// flatpickr built by the time the role is known, so this also tears that
-// instance down rather than assuming initRangeDatePicker skipped it.
+// flatpickr RANGE box for two independent flatpickr SINGLE pickers — the
+// same "modern" popup-calendar style every other date field in the app
+// uses (see initFilterDatePickers), not the bare native date inputs that
+// were sitting hidden behind the range box. Stacked with a "to" divider
+// between. Setting From always pushes To to match (a fresh range starts as
+// a single day); setting To never touches From. A fresh login (unlike a
+// session restore) already has the range flatpickr built by the time the
+// role is known, so this also tears that instance down rather than
+// assuming initRangeDatePicker skipped it.
 const ADMIN_DATE_RANGE_FIELDS = [
   { range: 'filterRange', from: 'filterFrom', to: 'filterTo', render: renderReport },
   { range: 'parRange',    from: 'parFrom',    to: 'parTo',    render: renderPaymentRecord },
@@ -19698,9 +19709,37 @@ const ADMIN_DATE_RANGE_FIELDS = [
   { range: 'csRange',     from: 'csFromDate', to: 'csToDate', render: renderChargesSummary },
   { range: 'qsRange',     from: 'qsFromDate', to: 'qsToDate', render: renderQuantitySummary }
 ];
+// Individual pickers for admin's stacked From/To fields — separate registry
+// from rangeDatePickers (which holds the single-box range picker every
+// other role gets) so setRangeDate can drive whichever one actually exists.
+const adminRangeFieldPickers = {};
+function setAdminRangeFromDate(f, iso){
+  const fromEl = document.getElementById(f.from);
+  const toEl = document.getElementById(f.to);
+  const fromFp = adminRangeFieldPickers[f.from];
+  const toFp = adminRangeFieldPickers[f.to];
+  fromEl.value = iso || '';
+  if(fromFp){ fromFp.setDate(iso || null, false); applyPickerDisplay(fromFp); }
+  // Setting From always mirrors down to To — the one directional link asked
+  // for. Setting To (setAdminRangeToDate) never reaches back up to From.
+  toEl.value = iso || '';
+  if(toFp){ toFp.setDate(iso || null, false); applyPickerDisplay(toFp); }
+  fromEl.dispatchEvent(new Event('input', { bubbles: true }));
+  toEl.dispatchEvent(new Event('input', { bubbles: true }));
+  f.render();
+}
+function setAdminRangeToDate(f, iso){
+  const toEl = document.getElementById(f.to);
+  const toFp = adminRangeFieldPickers[f.to];
+  toEl.value = iso || '';
+  if(toFp){ toFp.setDate(iso || null, false); applyPickerDisplay(toFp); }
+  toEl.dispatchEvent(new Event('input', { bubbles: true }));
+  f.render();
+}
 let adminDateRangeStackingApplied = false;
 function applyAdminDateRangeStacking(){
   if(!isPlainAdmin() || adminDateRangeStackingApplied) return;
+  if(typeof flatpickr === 'undefined') return;
   adminDateRangeStackingApplied = true;
   ADMIN_DATE_RANGE_FIELDS.forEach(function(f){
     const rangeEl = document.getElementById(f.range);
@@ -19721,8 +19760,36 @@ function applyAdminDateRangeStacking(){
     stack.appendChild(fromEl);
     stack.appendChild(toLabel);
     stack.appendChild(toEl);
-    fromEl.addEventListener('input', f.render);
-    toEl.addEventListener('input', f.render);
+    adminRangeFieldPickers[f.from] = flatpickr(fromEl, {
+      dateFormat: 'Y-m-d', altInput: true, altInputClass: 'flatpickr-alt-input',
+      altFormat: 'd M Y', allowInput: false, disableMobile: true,
+      defaultDate: fromEl.value || undefined,
+      onChange: selectedDates=> setAdminRangeFromDate(f, selectedDates.length ? isoFromJsDate(selectedDates[0]) : ''),
+      onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
+      onOpen: (selectedDates, dateStr, instance)=> syncCalendarWidth(instance),
+      onReady: (selectedDates, dateStr, instance)=>{
+        applyPickerDisplay(instance);
+        addPickerFooter(instance,
+          ()=> setAdminRangeFromDate(f, todayStr()),
+          ()=> setAdminRangeFromDate(f, '')
+        );
+      }
+    });
+    adminRangeFieldPickers[f.to] = flatpickr(toEl, {
+      dateFormat: 'Y-m-d', altInput: true, altInputClass: 'flatpickr-alt-input',
+      altFormat: 'd M Y', allowInput: false, disableMobile: true,
+      defaultDate: toEl.value || undefined,
+      onChange: selectedDates=> setAdminRangeToDate(f, selectedDates.length ? isoFromJsDate(selectedDates[0]) : ''),
+      onValueUpdate: (selectedDates, dateStr, instance)=> applyPickerDisplay(instance),
+      onOpen: (selectedDates, dateStr, instance)=> syncCalendarWidth(instance),
+      onReady: (selectedDates, dateStr, instance)=>{
+        applyPickerDisplay(instance);
+        addPickerFooter(instance,
+          ()=> setAdminRangeToDate(f, todayStr()),
+          ()=> setAdminRangeToDate(f, '')
+        );
+      }
+    });
   });
 }
 
