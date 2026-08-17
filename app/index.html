@@ -1237,6 +1237,11 @@
     width:375px;
     flex:0 0 auto;
   }
+  /* Admin/superadmin only — a second, narrower box next to the main
+     "Search anything" one, filtered to room numbers alone. */
+  .hdr-search-wrap-room{
+    width:190px;
+  }
   .hdr-search{
     width:100%;
     background:#fff;
@@ -4865,6 +4870,11 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
         <button type="button" class="search-clear-btn hdr-search-clear" onclick="clearSearchField(this)" title="Clear search">✕</button>
         <span class="hdr-search-kbd">Ctrl + /</span>
         <div class="hdr-search-results" id="globalSearchResults"></div>
+      </div>
+      <div class="hdr-search-wrap hdr-search-wrap-room" id="globalSearchRoomWrap" style="display:none;">
+        <input type="text" id="globalSearchRoomInput" class="hdr-search" placeholder="Search room..." autocomplete="off" oninput="renderGlobalSearchRoom()" onkeydown="globalSearchRoomKeydown(event)" onfocus="renderGlobalSearchRoom()">
+        <button type="button" class="search-clear-btn hdr-search-clear" onclick="clearSearchField(this)" title="Clear search">✕</button>
+        <div class="hdr-search-results" id="globalSearchRoomResults"></div>
       </div>
     </div>
     <div class="hdr-right">
@@ -11636,9 +11646,69 @@ function globalSearchKeydown(ev){
   }
 }
 
+// Admin/superadmin-only second header box (globalSearchRoomWrap, gated in
+// applyRolePermissions) — same idea as the main search but matched against
+// room numbers alone, not name/CNIC/payment text too, so a room number that
+// happens to also be a name substring can't pull in the wrong guest.
+function globalSearchMatchesByRoom(query){
+  const q = stripDashes(query.trim().toLowerCase());
+  if(!q) return [];
+  const all = loadAllEntries();
+  const results = all.filter(entry=>{
+    const roomNos = stripDashes((formatRoomChain(entry.rooms) || '').toLowerCase());
+    return roomNos.includes(q);
+  });
+  results.sort((a,b)=> getLatestActivity(b).localeCompare(getLatestActivity(a)));
+  return results.slice(0, 8);
+}
+
+function renderGlobalSearchRoom(){
+  const input = document.getElementById('globalSearchRoomInput');
+  const box = document.getElementById('globalSearchRoomResults');
+  const q = input.value.trim();
+  if(!q){ box.classList.remove('show'); box.innerHTML = ''; return; }
+  const matches = globalSearchMatchesByRoom(q);
+  if(matches.length === 0){
+    box.innerHTML = '<div class="hdr-search-empty">No matching room.</div>';
+  } else {
+    box.innerHTML = matches.map(entry=>{
+      const roomNos = formatRoomChain(entry.rooms) || '—';
+      const sub = entry.cnic || getDetailValue(entry, 'Contact No') || '';
+      return `<div class="hdr-search-row" onclick="openGlobalSearchRoomResult('${entry.id}')">
+          <div><b>Room ${roomNos}</b> — ${entry.guestName || '(no name)'}</div>
+          <div class="hdr-search-sub">${sub}</div>
+        </div>`;
+    }).join('');
+  }
+  const wrapRect = document.getElementById('globalSearchRoomWrap').getBoundingClientRect();
+  box.style.top = (wrapRect.bottom + 6) + 'px';
+  box.style.left = wrapRect.left + 'px';
+  box.style.width = wrapRect.width + 'px';
+  box.classList.add('show');
+}
+
+function openGlobalSearchRoomResult(id){
+  document.getElementById('globalSearchRoomResults').classList.remove('show');
+  document.getElementById('globalSearchRoomInput').value = '';
+  openDetail(id);
+}
+
+function globalSearchRoomKeydown(ev){
+  if(ev.key === 'Escape'){
+    ev.target.blur();
+    document.getElementById('globalSearchRoomResults').classList.remove('show');
+  } else if(ev.key === 'Enter'){
+    const matches = globalSearchMatchesByRoom(ev.target.value);
+    if(matches.length) openGlobalSearchRoomResult(matches[0].id);
+  }
+}
+
 document.addEventListener('click', e=>{
-  const wrap = document.querySelector('.hdr-search-wrap');
-  if(wrap && !wrap.contains(e.target)) document.getElementById('globalSearchResults').classList.remove('show');
+  document.querySelectorAll('.hdr-search-wrap').forEach(wrap=>{
+    if(wrap.contains(e.target)) return;
+    const results = wrap.querySelector('.hdr-search-results');
+    if(results) results.classList.remove('show');
+  });
 });
 
 document.addEventListener('keydown', e=>{
@@ -19892,6 +19962,8 @@ function applyRolePermissions(){
   if(settingsFrontOfficeBtn) settingsFrontOfficeBtn.style.display = isAdmin() ? '' : 'none';
   const hdrFrontOfficeBadge = document.getElementById('hdrFrontOfficeBadge');
   if(hdrFrontOfficeBadge) hdrFrontOfficeBadge.style.display = (isAdmin() || isRestaurantRole()) ? '' : 'none';
+  const globalSearchRoomWrap = document.getElementById('globalSearchRoomWrap');
+  if(globalSearchRoomWrap) globalSearchRoomWrap.style.display = isAdmin() ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const usersBtn = document.getElementById('settingsUsersBtn');
