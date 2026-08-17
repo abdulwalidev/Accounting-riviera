@@ -3860,7 +3860,11 @@
   }
 #page-pos-invoice * {box-sizing:border-box;}
 #page-pos-invoice body {margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); font-size:13px;}
-#page-pos-invoice .wrap {max-width:1280px; margin:0 auto;}
+/* Wide enough for Recent Invoices/Guests, which carry the same column
+   set as Receipts (# / order / date / room / customer / items / amount /
+   paid / SC / TAX / status / actions) — 1280px was sized for the invoice
+   entry form above them and left that table's columns cramped. */
+#page-pos-invoice .wrap {max-width:1560px; margin:0 auto;}
 #page-pos-invoice .page-head {display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
 #page-pos-invoice .page-head h1 {font-size:24px; font-weight:600; margin:0;}
 /* Quick "start a blank invoice" entry point from every restaurant/POS
@@ -25037,6 +25041,17 @@ function posRequestPost(mode){
       if (orderInput) focusError(orderInput);
       return;
     }
+    // Same Order No(QT) on another invoice that isn't deleted is a hard
+    // block, no override — a deleted invoice's number is free to reuse,
+    // but two live invoices can never share one.
+    var qtDupe = posInvoices.some(function(r){
+      return (!posEditingRecord || r.id !== posEditingRecord.id) && !r.deleted && (r.orderNo || '').trim().toLowerCase() === orderNoVal.toLowerCase();
+    });
+    if (qtDupe) {
+      posShowToast('Order No(QT) "' + orderNoVal + '" is already used on another invoice — pick a different number.', 'error');
+      if (orderInput) focusError(orderInput);
+      return;
+    }
   }
 
   var roomNoInput = document.getElementById('posRoomNoField');
@@ -25063,12 +25078,6 @@ function posRequestPost(mode){
   // the whole caution block. Only real problems belong here.
   var cautionLines = [];
   if (orderIsNA) cautionLines.push('Order No(QT) marked N/A — this invoice will be saved without one.');
-  if (orderNoVal && !orderIsNA) {
-    var qtDupe = posInvoices.some(function(r){
-      return (!posEditingRecord || r.id !== posEditingRecord.id) && !r.deleted && (r.orderNo || '').trim().toLowerCase() === orderNoVal.toLowerCase();
-    });
-    if (qtDupe) cautionLines.push('Order No(QT) "' + orderNoVal + '" is already used on another invoice — allowed, but flagged.');
-  }
   // Itemized breakdown for the confirm popup — a non-menu item still counts
   // toward the Total below (posRecalcAll already includes it), but with
   // nothing here showing that, a fake/custom item's amount looked like it
