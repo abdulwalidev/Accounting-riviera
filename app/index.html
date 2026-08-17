@@ -5157,9 +5157,9 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
         <thead>
           <tr>
             <th style="width:36px;">#</th>
-            <th style="width:170px;">Room No / Apt No / Miscellaneous</th>
+            <th style="width:170px;">Room No / Apt no</th>
             <th style="width:130px;">Type</th>
-            <th style="width:166px;">Rent Per Day / Amount (Other)</th>
+            <th style="width:166px;">Rent per night</th>
             <th style="width:54px;">Adults</th>
             <th style="width:90px;">Children</th>
             <th style="width:90px;">Breakfast Adults</th>
@@ -5505,7 +5505,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
             <tr>
               <th>Room No / Apt No</th>
               <th style="width:120px;">Type</th>
-              <th style="width:166px;">Rent Per Day / Amount (Other)</th>
+              <th style="width:166px;">Rent per night</th>
               <th style="width:54px;">Adults</th>
               <th style="width:90px;">Children</th>
               <th style="width:110px;">Breakfast Adults</th>
@@ -8196,8 +8196,8 @@ function showView(view, fromPopState){
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
-  if(view === 'restaurant' && !isSuperAdmin() && !isRestaurantRole()){
-    showNotice('Restaurant is only available to the super admin account.');
+  if(view === 'restaurant' && !isAdmin() && !isRestaurantRole()){
+    showNotice('Restaurant is only available to admin accounts.');
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
@@ -8424,7 +8424,7 @@ function restoreLastView(){
   if(!saved || saved === currentView || !ROUTABLE_VIEWS.includes(saved)) return;
   if((saved === 'daylock' || saved === 'deleteentity' || saved === 'autocheckout' || saved === 'arrival') && !isAdmin()) return;
   if(saved === 'frontoffice' && !isAdmin() && !isRestaurantRole()) return;
-  if(saved === 'restaurant' && !isSuperAdmin() && !isRestaurantRole()) return;
+  if(saved === 'restaurant' && !isAdmin() && !isRestaurantRole()) return;
   if(saved === 'users' && !isSuperAdmin()) return;
   if(saved === 'detail'){
     let savedId = null;
@@ -19859,20 +19859,20 @@ function isAdmin(){
   return !!currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
 }
 
-// 'superadmin' — everything an admin can do, plus the Front Office view
-// (restaurant charges awaiting collection) surfaced in the top nav instead
-// of tucked in Settings. See migration/pos_module.sql — this role exists
-// only so one account can see the separate restaurant module's data.
+// 'superadmin' — everything an admin can do, plus Settings > Users. See
+// migration/roles/user_management.sql: admin_assert_superadmin() re-checks
+// role === 'superadmin' server-side on every call, so that page can never
+// actually work for an 'admin' account no matter what the UI shows.
 function isSuperAdmin(){
   return !!currentUser && currentUser.role === 'superadmin';
 }
 
-// Quick Hotel/Restaurant switch next to the theme toggle — superadmin only,
-// same two views topNavRestaurant/topNavDashboard already route to.
+// Quick Hotel/Restaurant switch next to the theme toggle — admin accounts
+// only, same two views topNavRestaurant/topNavDashboard already route to.
 function updateHotelRestaurantSwitch(){
   const btn = document.getElementById('hotelRestaurantSwitch');
   if(!btn) return;
-  if(!isSuperAdmin()){ btn.style.display = 'none'; return; }
+  if(!isAdmin()){ btn.style.display = 'none'; return; }
   btn.style.display = '';
   btn.textContent = currentView === 'restaurant' ? 'Hotel' : 'Restaurant';
 }
@@ -20057,22 +20057,7 @@ function renderSettings(){
   // Backup lives on the Settings landing page itself rather than behind
   // its own nav item — it's the thing you go looking for in a panic.
   const backupPanel = document.getElementById('settingsBackupPanel');
-  if(backupPanel) backupPanel.style.display = isSuperAdmin() ? '' : 'none';
-  applyPlainAdminSettingsTrim();
-}
-
-// Role 'admin' gets a deliberately tiny Settings: Day Lock and Delete
-// Entity, nothing else. Runs LAST, after every other rule above has had its
-// say, so it can only ever take items away — and it's a whitelist walk over
-// the sidebar rather than a list of things to hide, so an item added to that
-// nav later is hidden for this role by default instead of quietly appearing.
-// superadmin is untouched and still sees everything.
-const PLAIN_ADMIN_SETTINGS_ITEMS = ['settingsDayLockBtn', 'settingsDeleteEntityBtn'];
-function applyPlainAdminSettingsTrim(){
-  if(!isPlainAdmin()) return;
-  document.querySelectorAll('#globalSettingsNav .settings-nav-item').forEach(el=>{
-    if(!PLAIN_ADMIN_SETTINGS_ITEMS.includes(el.id)) el.style.display = 'none';
-  });
+  if(backupPanel) backupPanel.style.display = isAdmin() ? '' : 'none';
 }
 
 function applyRolePermissions(){
@@ -20104,16 +20089,15 @@ function applyRolePermissions(){
   const searchNav = document.getElementById('topNavSearch');
   if(searchNav) searchNav.style.display = isPlainAdmin() ? 'none' : '';
   const pendingNav = document.getElementById('topNavPending');
-  if(pendingNav) pendingNav.style.display = isPlainAdmin() ? '' : 'none';
+  if(pendingNav) pendingNav.style.display = isAdmin() ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
-  if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
+  if(restaurantNav) restaurantNav.style.display = (isAdmin() || isRestaurantRole()) ? '' : 'none';
   const usersBtn = document.getElementById('settingsUsersBtn');
   if(usersBtn) usersBtn.style.display = isSuperAdmin() ? '' : 'none';
   applyAdminSettingsPageMoves();
   const backupPanel = document.getElementById('settingsBackupPanel');
-  if(backupPanel) backupPanel.style.display = isSuperAdmin() ? '' : 'none';
+  if(backupPanel) backupPanel.style.display = isAdmin() ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
-  applyPlainAdminSettingsTrim();
   applyAdminDateRangeStacking();
   updateHotelRestaurantSwitch();
   const who = document.getElementById('whoami');
@@ -20307,7 +20291,7 @@ function backupSetBusy(busy, activeBtn, activeLabel){
 }
 
 function backupGuard(){
-  if(!isSuperAdmin()){ showNotice('Backup is only available to the super admin account.'); return false; }
+  if(!isAdmin()){ showNotice('Backup is only available to admin accounts.'); return false; }
   if(backupBusy){ showNotice('A backup is already running — let it finish.'); return false; }
   if(!sb){ showNotice('Not connected to the cloud database — a backup needs the internet.'); return false; }
   return true;
