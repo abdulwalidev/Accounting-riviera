@@ -6006,7 +6006,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
           </div>
           <div class="checkline">
             <input type="checkbox" id="ihHideZero">
-            <label for="ihHideZero" style="margin:0;">Hide 0Rs guests</label>
+            <label for="ihHideZero" style="margin:0;">Hide nonpaying</label>
             <span id="ihHiddenNote" style="text-transform:none; letter-spacing:0; color:var(--muted);"></span>
           </div>
         </div>
@@ -17060,7 +17060,10 @@ function buildInhouseReport(asOfDate, hideFreeStays){
       };
     })
     .sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
-  const freeStayCount = rows.filter(r=> !(r.rent > 0)).length;
+  const freeStayRows = rows.filter(r=> !(r.rent > 0));
+  const freeStayCount = freeStayRows.length;
+  const freeStayRoomCount = freeStayRows.filter(r=> detectUnitType(r.roomNo) !== 'Apartment').length;
+  const freeStayApartmentCount = freeStayRows.filter(r=> detectUnitType(r.roomNo) === 'Apartment').length;
   if(hideFreeStays) rows = rows.filter(r=> r.rent > 0);
   const roomCount = rows.length;
   const totalAdults = rows.reduce((s,r)=> s + r.adultsDisplay, 0);
@@ -17075,7 +17078,7 @@ function buildInhouseReport(asOfDate, hideFreeStays){
     const label = roomDetailTypeBucket(r.rs);
     if(Object.prototype.hasOwnProperty.call(typeBucketCounts, label)) typeBucketCounts[label]++;
   });
-  return { rows, roomCount, totalAdults, totalChildren, totalPax, roomTypeCount, apartmentTypeCount, typeBucketCounts, freeStayCount };
+  return { rows, roomCount, totalAdults, totalChildren, totalPax, roomTypeCount, apartmentTypeCount, typeBucketCounts, freeStayCount, freeStayRoomCount, freeStayApartmentCount };
 }
 
 // =========================================================
@@ -17197,8 +17200,9 @@ function renderInhouse(){
   const data = buildInhouseReport(asOfDate, inhouseHideZero());
   const hiddenNote = document.getElementById('ihHiddenNote');
   if(hiddenNote){
+    const freeStayBreakdown = data.freeStayRoomCount + ' room, ' + data.freeStayApartmentCount + ' apartment';
     hiddenNote.textContent = data.freeStayCount
-      ? (inhouseHideZero() ? '— ' + data.freeStayCount + ' hidden' : '— ' + data.freeStayCount + ' in-house right now')
+      ? (inhouseHideZero() ? '— ' + freeStayBreakdown + ' hidden' : '— ' + freeStayBreakdown + ' in-house right now')
       : '';
   }
   if(unitSplit) unitSplit.innerHTML = `
