@@ -9296,10 +9296,13 @@ function formatRoomChain(rooms){
     seen.add(key);
     parts.push(displayRoomNo(r.roomNo, r.unitType));
   });
-  // The count is shown even when it's 1 ("1 Mountain View"), so a room with
-  // no number yet never reads as a bare type name that could be mistaken
-  // for a room's label — the number is what makes it obviously a quantity.
-  naCounts.forEach((n, t)=> parts.push(`${n} ${t}`));
+  // The count is shown even when it's 1 ("1: Mountain View"), so a room
+  // with no number yet never reads as a bare type name that could be
+  // mistaken for a room's label — the number is what makes it obviously a
+  // quantity. The colon after it also keeps a count of 1 from reading as
+  // part of the type itself when the type starts with a digit, e.g.
+  // "1: 2 Bed Apartment" instead of the ambiguous "1 2 Bed Apartment".
+  naCounts.forEach((n, t)=> parts.push(`${n}: ${t}`));
   return parts.join(', ');
 }
 
