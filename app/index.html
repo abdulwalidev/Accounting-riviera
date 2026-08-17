@@ -7896,8 +7896,6 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <option value="Dirty">Dirty (needs cleaning)</option>
       <option value="OOO">OOO (out of order)</option>
     </select>
-    <label style="margin-top:12px;">Type CONFIRM to apply</label>
-    <input type="text" id="rsConfirmInput" placeholder="CONFIRM" autocomplete="off">
     <div class="modal-actions">
       <button class="btn secondary" onclick="closeRoomStatusModal()">Cancel</button>
       <button class="btn" onclick="confirmRoomStatusChange()">Set Status</button>
@@ -9495,9 +9493,6 @@ function openRoomStatusModal(roomNo){
   document.getElementById('rsModalRoomNo').textContent = roomNo;
   document.getElementById('rsModalSub').textContent = 'Update this room\'s housekeeping status.';
   document.getElementById('rsStatusSelect').value = (rs && rs.housekeepingStatus) || 'Ready';
-  const input = document.getElementById('rsConfirmInput');
-  input.value = '';
-  input.classList.remove('duplicate');
   document.getElementById('roomStatusModalBackdrop').classList.add('active');
 }
 
@@ -9522,14 +9517,12 @@ async function upsertRoomStatus(roomNo, status){
   return true;
 }
 
+// No typed CONFIRM here, unlike saving an entry / adding a payment /
+// checking a guest out: housekeeping status is routine, touched constantly
+// through the day, carries no money or guest record, and is one click to put
+// back if it's set wrong. Making staff type CONFIRM for Dirty/Ready was pure
+// friction on the single most-repeated action in the app.
 async function confirmRoomStatusChange(){
-  const input = document.getElementById('rsConfirmInput');
-  if(input.value.trim().toUpperCase() !== 'CONFIRM'){
-    input.classList.add('duplicate');
-    showNotice('Please type CONFIRM to apply this room status change.');
-    input.focus();
-    return;
-  }
   const status = document.getElementById('rsStatusSelect').value;
   const roomNo = pendingRoomStatusRoomNo;
   const ok = await upsertRoomStatus(roomNo, status);
