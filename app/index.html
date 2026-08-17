@@ -293,7 +293,7 @@
      reports admin actually works from. See applyAdminDateRangeStacking(). */
   .admin-date-range-stack{ display:flex; flex-direction:column; align-items:stretch; gap:3px; }
   .admin-date-range-stack input[type="date"]{ width:100%; }
-  .admin-date-range-to{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; }
+  .admin-date-range-to{ font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; text-align:center; }
 
   .search-clear-wrap{ position:relative; }
   .search-clear-wrap input{ padding-right:32px; }
@@ -4949,7 +4949,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
     <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
       <div>
         <h1>Dashboard</h1>
-        <div class="sub">Today at a glance</div>
+        <div class="sub" style="visibility:hidden;">Today at a glance</div>
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between; width:100%;">
         <button class="btn" onclick="openAvailModal()">Check Availability</button>
@@ -5047,7 +5047,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-cico">
 
     <h1>Check-in / Check-out</h1>
-    <div class="sub">Expected &amp; actual guest movement</div>
+    <div class="sub" style="visibility:hidden;">Expected &amp; actual guest movement</div>
 
     <div class="panel">
       <div class="search-row">
@@ -5099,7 +5099,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
     </div>
 
     <h1>Add Checkin/Reservation</h1>
-    <div class="sub">Customer detail &amp; room/apartment booking</div>
+    <div class="sub" style="visibility:hidden;">Customer detail &amp; room/apartment booking</div>
 
     <div class="panel accent-guest">
       <h2>Customer Detail</h2>
@@ -5257,6 +5257,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
     <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
       <div>
         <h1>Reservations</h1>
+        <div class="sub" style="visibility:hidden;">-</div>
       </div>
       <button class="btn" onclick="showView('entry')">+ Add Reservation</button>
     </div>
@@ -5284,7 +5285,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
     <div class="viewer-lock-note no-print">👁 View-only account — Add Payment is read-only. Nothing here can be saved.</div>
 
     <h1>Add Payment</h1>
-    <div class="sub">Take a payment against an existing entry</div>
+    <div class="sub" style="visibility:hidden;">Take a payment against an existing entry</div>
 
     <div class="panel accent-payments">
       <h2>Step 1 — Find The Guest</h2>
@@ -5388,6 +5389,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
     <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
       <div>
         <h1>Search Guests</h1>
+        <div class="sub" style="visibility:hidden;">-</div>
       </div>
       <div id="gsearchTotalDue" class="total-due-box"></div>
     </div>
@@ -5568,7 +5570,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-report">
 
     <h1 class="no-print">Payment Report</h1>
-    <div class="sub no-print">Payment detail, grouped by day</div>
+    <div class="sub no-print" style="visibility:hidden;">Payment detail, grouped by day</div>
 
     <div class="print-header">
       <h1>Payment Report</h1>
@@ -5616,7 +5618,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-paymentrecord">
 
     <h1 class="no-print">Account Payment Record</h1>
-    <div class="sub no-print">Bank/Card payments only — attach each one's screenshot, then download a whole day's screenshots as one PDF.</div>
+    <div class="sub no-print" style="visibility:hidden;">Bank/Card payments only — attach each one's screenshot, then download a whole day's screenshots as one PDF.</div>
 
     <div class="print-header">
       <h1>Account Payment Record</h1>
@@ -5698,6 +5700,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-ledgers">
 
     <h1 class="no-print">Ledgers</h1>
+    <div class="sub no-print" style="visibility:hidden;">-</div>
 
     <div class="print-header">
       <h1 id="lgPrintTitle">Ledgers</h1>
@@ -5744,7 +5747,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-before19">
 
     <h1 class="no-print" id="b19H1">Before 19 Jul 2026</h1>
-    <div class="sub no-print">Payments received before this date whose money still funded a room-night on or after it — already counted in Ledgers and Revenue Report from that date onward, but not in Payment Detail Total on the Report page, since that only counts money dated in range</div>
+    <div class="sub no-print" style="visibility:hidden;">Payments received before this date whose money still funded a room-night on or after it — already counted in Ledgers and Revenue Report from that date onward, but not in Payment Detail Total on the Report page, since that only counts money dated in range</div>
 
     <div class="print-header">
       <h1 id="b19PrintTitle">Before 19 Jul 2026</h1>
@@ -5770,7 +5773,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-handover">
 
     <h1 class="no-print">Revenue Summary</h1>
-    <div class="sub no-print">Totals only — the same numbers as the Revenue Report for this range, summed up: total cash, total per account, rent billed / collected / due</div>
+    <div class="sub no-print" style="visibility:hidden;">Totals only — the same numbers as the Revenue Report for this range, summed up: total cash, total per account, rent billed / collected / due</div>
 
     <div class="print-header">
       <h1 id="hoPrintTitle">Revenue Summary</h1>
@@ -5798,7 +5801,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-npr">
 
     <h1 class="no-print">NPR — Night Posting Reconciliation</h1>
-    <div class="sub no-print">Read-only: what this system already has, one row per room per night — for checking against an external nightly report. Never edits, backfills, or auto-adds anything to real data.</div>
+    <div class="sub no-print" style="visibility:hidden;">Read-only: what this system already has, one row per room per night — for checking against an external nightly report. Never edits, backfills, or auto-adds anything to real data.</div>
 
     <div class="panel no-print accent-filters">
       <h2>Date Range</h2>
@@ -5835,6 +5838,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-revenue">
 
     <h1 class="no-print">Revenue Report</h1>
+    <div class="sub no-print" style="visibility:hidden;">-</div>
 
     <div class="print-header">
       <h1 id="rvPrintTitle">Revenue Report</h1>
@@ -5989,6 +5993,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-inhouse">
 
     <h1 class="no-print">Inhouse Report</h1>
+    <div class="sub no-print" style="visibility:hidden;">-</div>
 
     <div class="print-header">
       <h1 id="ihPrintTitle">Inhouse Report</h1>
@@ -6034,6 +6039,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-pending">
 
     <h1 class="no-print">Pending</h1>
+    <div class="sub no-print" style="visibility:hidden;">-</div>
 
     <div class="print-header">
       <h1 id="pendingPrintTitle">Pending</h1>
@@ -6049,6 +6055,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-breakfast">
 
     <h1 class="no-print">Breakfast Report</h1>
+    <div class="sub no-print" style="visibility:hidden;">-</div>
 
     <div class="print-header">
       <h1 id="bfPrintTitle">Breakfast Report</h1>
@@ -6081,7 +6088,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-availability">
 
     <h1 class="no-print">Availability</h1>
-    <div class="sub no-print">Free rooms by type and by room, for a run of nights starting on the chosen date. A room counts as taken when a booked night lands on that date, whether or not the guest has been confirmed on Arrival — an unconfirmed booking still can't be sold to someone else. Bookings that picked a type but no room number yet are counted against that type, so the totals never show stock that's already spoken for.</div>
+    <div class="sub no-print" style="visibility:hidden;">Free rooms by type and by room, for a run of nights starting on the chosen date. A room counts as taken when a booked night lands on that date, whether or not the guest has been confirmed on Arrival — an unconfirmed booking still can't be sold to someone else. Bookings that picked a type but no room number yet are counted against that type, so the totals never show stock that's already spoken for.</div>
 
     <div class="print-header">
       <h1 id="avPrintTitle">Availability</h1>
@@ -6125,7 +6132,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-cashcheck">
 
     <h1>Cash Check</h1>
-    <div class="sub">Revenue Cash: Guest Charges Summary's own Cash column, grouped by the room-night's date. Report Cash: every Cash payment in the system, grouped by the date it was actually received. These use two different meanings of "date" on purpose — a night paid off later will land on different rows in each column.</div>
+    <div class="sub" style="visibility:hidden;">Revenue Cash: Guest Charges Summary's own Cash column, grouped by the room-night's date. Report Cash: every Cash payment in the system, grouped by the date it was actually received. These use two different meanings of "date" on purpose — a night paid off later will land on different rows in each column.</div>
 
     <div class="panel accent-report">
       <h2>Cash Received, Per Day</h2>
@@ -6137,7 +6144,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-misc">
 
     <h1>Miscellaneous</h1>
-    <div class="sub">Every Miscellaneous charge (Snooker, BBQ, Bonfire, Mattress) billed through guest entries — nothing else, no room-nights. Amounts are the billed charge on the entry, listed by the guest's check-in date.</div>
+    <div class="sub" style="visibility:hidden;">Every Miscellaneous charge (Snooker, BBQ, Bonfire, Mattress) billed through guest entries — nothing else, no room-nights. Amounts are the billed charge on the entry, listed by the guest's check-in date.</div>
 
     <div class="panel accent-report">
       <h2>Miscellaneous Charges</h2>
@@ -6149,7 +6156,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-frontoffice">
 
     <h1>Front Office</h1>
-    <div class="sub">Restaurant charges sent from the POS for in-house guests — collect-and-acknowledge only. This never touches any guest's balance or checkout total in this system; it is a separate list, see the POS's own "Front Office Pending" page for the restaurant side.</div>
+    <div class="sub" style="visibility:hidden;">Restaurant charges sent from the POS for in-house guests — collect-and-acknowledge only. This never touches any guest's balance or checkout total in this system; it is a separate list, see the POS's own "Front Office Pending" page for the restaurant side.</div>
 
     <div class="panel accent-filters">
       <h2>Pending <span id="foPendingCount"></span></h2>
@@ -7517,7 +7524,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-daylock">
 
     <h1>Day Lock</h1>
-    <div class="sub">Lock a date so no new payment can be dated on it — admin only. Payments already saved on that date are untouched.</div>
+    <div class="sub" style="visibility:hidden;">Lock a date so no new payment can be dated on it — admin only. Payments already saved on that date are untouched.</div>
 
     <div class="panel accent-filters">
       <h2>Lock / Unlock a Day</h2>
@@ -7543,6 +7550,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-autocheckout">
 
     <h1 class="no-print">Checkout/Pending</h1>
+    <div class="sub no-print" style="visibility:hidden;">-</div>
 
     <div class="print-header">
       <h1 id="acPrintTitle">Checkout Due</h1>
@@ -7590,7 +7598,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
     <!-- [FUTURE: No Show] restore this line when re-enabling — see future-implementations/no-show.md
     <div class="sub no-print">Advance reservations whose check-in date is on file for today — confirm they've actually shown up before their room reads as occupied, or mark them No Show if they never came. Walk-ins entered today don't appear here; entering them already is the confirmation.</div>
     -->
-    <div class="sub no-print">Advance reservations whose check-in date is on file for today — confirm they've actually shown up before their room reads as occupied. Walk-ins entered today don't appear here; entering them already is the confirmation.</div>
+    <div class="sub no-print" style="visibility:hidden;">Advance reservations whose check-in date is on file for today — confirm they've actually shown up before their room reads as occupied. Walk-ins entered today don't appear here; entering them already is the confirmation.</div>
 
     <div class="panel no-print accent-filters">
       <h2>As Of Date</h2>
@@ -7628,7 +7636,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-audit">
 
     <h1>Full Audit</h1>
-    <div class="sub">Every entry created, entry edited, and payment added, for the day picked below — recorded automatically, cannot be edited.</div>
+    <div class="sub" style="visibility:hidden;">Every entry created, entry edited, and payment added, for the day picked below — recorded automatically, cannot be edited.</div>
 
     <div class="panel accent-report">
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); margin-bottom:12px;">
@@ -7685,7 +7693,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-settings">
 
     <h1>Settings</h1>
-    <div class="sub">Admin tools and data/sync controls</div>
+    <div class="sub" style="visibility:hidden;">Admin tools and data/sync controls</div>
 
     <!-- Backup — superadmin only, hidden outright for everyone else by
          renderSettings(). Every button here only ever READS: it downloads a
@@ -7731,7 +7739,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-users">
 
     <h1>Users</h1>
-    <div class="sub">Every account that can sign in to this app — create them, change their role, reset a password. Super admin only.</div>
+    <div class="sub" style="visibility:hidden;">Every account that can sign in to this app — create them, change their role, reset a password. Super admin only.</div>
 
     <div class="panel accent-filters" id="usersLockPanel">
       <h2>Confirm It's You</h2>
@@ -7789,7 +7797,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-deleteentity">
 
     <h1 style="color:var(--danger);">⚠ Delete Entity</h1>
-    <div class="sub">Remove an accidentally created entry — admin only. This is a soft delete: the entry (with its rooms and payments) disappears from every screen immediately. Nothing is destroyed — an admin can still restore it directly in the Supabase SQL Editor — but there is no Undo button inside the app, so search carefully and confirm you have the right guest.</div>
+    <div class="sub" style="visibility:hidden;">Remove an accidentally created entry — admin only. This is a soft delete: the entry (with its rooms and payments) disappears from every screen immediately. Nothing is destroyed — an admin can still restore it directly in the Supabase SQL Editor — but there is no Undo button inside the app, so search carefully and confirm you have the right guest.</div>
 
     <div class="panel accent-guest">
       <div class="search-row">
@@ -7809,7 +7817,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="view" id="view-roomdetail">
 
     <h1>Room Detail</h1>
-    <div class="sub">Rooms by floor — who's in each one right now, at a glance</div>
+    <div class="sub" style="visibility:hidden;">Rooms by floor — who's in each one right now, at a glance</div>
 
     <div class="panel accent-guest">
       <div class="search-row">
