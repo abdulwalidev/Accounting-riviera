@@ -1375,16 +1375,16 @@
   }
 
   /* Room Detail button in dashboard - golden styling (not the nav button).
-     Sized 60% of the 130% size it briefly was — smaller than plain .btn. */
+     Sized 50% of plain .btn's current size. */
   button.btn.edit-gold[onclick="showView('roomdetail')"] {
     background:#d97706 !important;
     color:#fff !important;
     border:1px solid #fff !important;
     border-bottom:4px solid #fff !important;
-    padding:13.10px 23.29px !important;
-    border-radius:21.83px !important;
-    font-size:17.47px !important;
-    height:64.04px !important;
+    padding:8.40px 14.93px !important;
+    border-radius:14.00px !important;
+    font-size:11.20px !important;
+    height:41.06px !important;
   }
   button.btn.edit-gold[onclick="showView('roomdetail')"]:hover {
     opacity: 0.85;
@@ -1396,17 +1396,17 @@
   /* Check Availability button in dashboard - same border/press logic as
      the Room Detail button next to it (see above), pinned with !important
      so nothing else in the cascade (mobile size/border resets, etc) can
-     silently flatten it. Sized 60% of the 130% size it briefly was —
-     smaller than plain .btn, same as the Room Detail button next to it. */
+     silently flatten it. Sized 50% of plain .btn's current size, same as
+     the Room Detail button next to it. */
   button.btn[onclick="openAvailModal()"] {
     background:var(--btn-fill) !important;
     color:#fff !important;
     border:1px solid #fff !important;
     border-bottom:4px solid #fff !important;
-    padding:13.10px 23.29px !important;
-    border-radius:21.83px !important;
-    font-size:17.47px !important;
-    height:64.04px !important;
+    padding:8.40px 14.93px !important;
+    border-radius:14.00px !important;
+    font-size:11.20px !important;
+    height:41.06px !important;
   }
   button.btn[onclick="openAvailModal()"]:hover {
     opacity: 0.85;
@@ -3357,15 +3357,16 @@
       padding:14px 0;
     }
 
-    /* Reduce all buttons to 50% size on phone */
+    /* Reduce all buttons to 50% size on phone, scaled up ~1.87x to track
+       desktop .btn's cumulative growth this session (44px -> 82.11px). */
     .btn{
-      font-size:6px;
-      padding:4px 8px;
-      min-height:19px;
+      font-size:11.20px;
+      padding:7.46px 14.93px;
+      min-height:35.45px;
     }
     .btn.danger{
-      padding:2px 4px;
-      font-size:6px;
+      padding:3.73px 7.46px;
+      font-size:11.20px;
     }
 
     /* Dashboard: reduce card sizes on phone for consistency with desktop */
