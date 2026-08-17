@@ -27,6 +27,15 @@
   :root{
     /* Luxury hospitality palette: sky blue + gold, slate-cool surfaces */
     --ink:#0284C7;        /* sky blue — text, borders */
+    /* Table cell text only. The sky-blue --ink is right for headings, labels
+       and chrome, but a whole grid of figures in it reads as a wall of links
+       and makes the deliberately-coloured cells (gold Extended, red due,
+       green cash, blue account) stop standing out. Data cells are near-black
+       so colour in a table always MEANS something. Only plain cells are
+       affected: anything that sets its own colour — .cash-amt/.account-amt
+       (!important), td.bf-without, the status pills, and every inline
+       var(--danger)/var(--amber) cell — still wins over this. */
+    --tbl-ink:#111827;
     --ink-fill:#0EA5E9;   /* solid button/badge fills — same shade in both themes */
     --paper:#FFFFFF;      /* white page background */
     --muted:#5B6B84;      /* slate — labels, secondary text */
@@ -534,7 +543,11 @@
     padding:6px 8px;
     border:1px solid #00000018;
     vertical-align:middle;
+    color:var(--tbl-ink);
   }
+  /* The restaurant keeps its existing look — this change is the hotel's
+     tables only, same module isolation as the rest of the pos_ code. */
+  #view-restaurant td{ color:var(--ink); }
   /* The single-line grid for separate borders (see the table rule above):
      every cell owns its right + bottom edge, the first row adds the top
      edge and the first column the left edge, and the four corner cells
@@ -2804,6 +2817,9 @@
   html[data-theme="dark"]{
     color-scheme: dark;
     --ink:#7DD3FC;
+    /* Near-black would be unreadable here — the dark theme's equivalent of
+       "plain, uncoloured data" is near-white. */
+    --tbl-ink:#E8E8E8;
     --paper:#0A0A0A;
     --muted:#9C9C9C;
     --cash:#4ADE80;
@@ -2999,6 +3015,7 @@
   @media print{
     html[data-theme="dark"]{
       --ink:#0284C7;
+      --tbl-ink:#111827;
       --ink-fill:#0EA5E9;
       --paper:#FFFFFF;
       --muted:#5B6B84;
@@ -7558,21 +7575,12 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <a class="settings-nav-item" id="settingsUsersBtn" onclick="showView('users')" style="display:none;">Users</a>
       <a class="settings-nav-item danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</a>
     </div>
-    <div class="settings-nav-section" id="settingsDataSyncSection">
-      <div class="settings-nav-heading">Data &amp; Sync</div>
-      <div class="settings-nav-info">
-        <div class="settings-nav-row">
-          <div class="settings-nav-title">Guests / Rooms / Payments</div>
-          <span class="settings-table-status settings-status-on">Always On</span>
-        </div>
-      </div>
-      <div class="settings-nav-info">
-        <div class="settings-nav-row">
-          <div class="settings-nav-title">🚨 Audit Log</div>
-          <span class="settings-table-status settings-status-off">Off</span>
-        </div>
-      </div>
-    </div>
+    <!-- The old "Data & Sync" section lived here: two static rows reading
+         "Guests / Rooms / Payments — Always On" and "🚨 Audit Log — Off".
+         Neither was a control or a live reading — both were hardcoded
+         labels restating what the app always does, so they were removed
+         rather than left looking like switches nobody could throw. The
+         real sync state is the header's own cloud indicator. -->
   </nav>
 
   <div class="view" id="view-settings">
@@ -19371,11 +19379,89 @@ function resumeAppFromIdle(){
   }
 }
 
+// ---- Every page's date filter snaps back to today after 2 minutes of no
+// input ----
+// A shared front-desk machine gets left on whatever day the last person was
+// reading, and the next person takes those numbers for today's. This runs on
+// its own timer rather than off the idle pause above, so it applies to EVERY
+// role at the same 2 minutes — including restaurant and superadmin, which
+// never pause at all and are therefore the screens most likely to sit on a
+// stale date for hours.
+//
+// FILTER dates only. Deliberately NOT touched:
+//   - the entry form's stay dates, Add Payment's own date (dNewDate) and
+//     every Payment Detail row date. Those are half-typed RECORDS, not
+//     filters: snapping one to today would silently re-date somebody's
+//     payment or stay, which is a money error, not a cosmetic one.
+//   - the Checkout/Arrival confirm modals' date fields (ccCheckoutDate,
+//     acnCheckinDate) — same reason, and both are already set to today
+//     every time their modal opens.
+//   - Before 19's b19From and Revenue Summary's hoRange start: fixed
+//     historical cutoffs, not "which day am I looking at".
+//   - the restaurant's in-progress receipt date (posInvoiceDate).
+const DATE_RESET_IDLE_MS = 2 * 60 * 1000;
+// Hotel filters — set the value, then repaint once via rerenderActiveView.
+const DATE_RESET_HOTEL_IDS = ['rdDate','nsDate','ihDate','dlDate','acDate','arDate','avDate','bfDate','gsearchDate','auditEntryDate','auditPageDate'];
+// Restaurant filters render off their own field listeners rather than
+// rerenderActiveView, so these get an 'input' event — exactly what a real
+// pick on them does.
+const DATE_RESET_POS_IDS = ['posDlDate','receiptsDateFilter','printedOnlyDateFilter','frontOfficeDateFilter','deletedDateFilter','pendingPaymentsDateFilter'];
+const DATE_RESET_RANGES = [
+  { range:'filterRange', from:'filterFrom', to:'filterTo' },
+  { range:'parRange',    from:'parFrom',    to:'parTo' },
+  { range:'lgRange',     from:'lgFrom',     to:'lgTo' },
+  { range:'rvRange',     from:'rvFrom',     to:'rvTo' },
+  { range:'cicoRange',   from:'cicoFrom',   to:'cicoTo' },
+  { range:'nprRange',    from:'nprFrom',    to:'nprTo' }
+];
+let dateResetIdleTimer = null;
+function armDateResetIdleTimer(){
+  clearTimeout(dateResetIdleTimer);
+  dateResetIdleTimer = setTimeout(resetDateFiltersToToday, DATE_RESET_IDLE_MS);
+}
+function resetDateFiltersToToday(){
+  if(!appStarted) return; // nobody's signed in yet — nothing on screen to reset
+  const t = todayStr();
+  let changed = false;
+  // setFilterDate/setRangeDate, not a bare el.value — these fields are
+  // flatpickr-backed and writing the value directly leaves the calendar
+  // display showing the old day.
+  DATE_RESET_HOTEL_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el || el.value === t) return;
+    setFilterDate(id, t);
+    changed = true;
+  });
+  DATE_RESET_POS_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el || el.value === t) return;
+    setFilterDate(id, t);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    changed = true;
+  });
+  DATE_RESET_RANGES.forEach(({range, from, to})=>{
+    const fromEl = document.getElementById(from);
+    const toEl = document.getElementById(to);
+    if(!fromEl || !toEl) return;
+    if(fromEl.value === t && toEl.value === t) return;
+    setRangeDate(range, from, to, t, t);
+    changed = true;
+  });
+  if(changed) rerenderActiveView();
+  // Deliberately NOT re-armed here: the next real interaction arms it again,
+  // so a screen left alone all afternoon resets once, not every 2 minutes
+  // forever.
+}
+
 // Broad activity only resets the countdown — never dismisses an already-
 // paused overlay.
 ['mousemove','keydown','touchstart','wheel'].forEach(evt=>{
-  document.addEventListener(evt, ()=>{ if(!appPaused) armIdleTimer(); }, { passive: true });
+  document.addEventListener(evt, ()=>{
+    if(!appPaused) armIdleTimer();
+    armDateResetIdleTimer();
+  }, { passive: true });
 });
+armDateResetIdleTimer();
 
 // Chrome/Edge silently bump a focused <input type="number">'s value on any
 // scroll-wheel movement over it — a stray scroll while typing an amount
@@ -19633,6 +19719,21 @@ function renderSettings(){
   // its own nav item — it's the thing you go looking for in a panic.
   const backupPanel = document.getElementById('settingsBackupPanel');
   if(backupPanel) backupPanel.style.display = isSuperAdmin() ? '' : 'none';
+  applyPlainAdminSettingsTrim();
+}
+
+// Role 'admin' gets a deliberately tiny Settings: Day Lock and Delete
+// Entity, nothing else. Runs LAST, after every other rule above has had its
+// say, so it can only ever take items away — and it's a whitelist walk over
+// the sidebar rather than a list of things to hide, so an item added to that
+// nav later is hidden for this role by default instead of quietly appearing.
+// superadmin is untouched and still sees everything.
+const PLAIN_ADMIN_SETTINGS_ITEMS = ['settingsDayLockBtn', 'settingsDeleteEntityBtn'];
+function applyPlainAdminSettingsTrim(){
+  if(!isPlainAdmin()) return;
+  document.querySelectorAll('#globalSettingsNav .settings-nav-item').forEach(el=>{
+    if(!PLAIN_ADMIN_SETTINGS_ITEMS.includes(el.id)) el.style.display = 'none';
+  });
 }
 
 function applyRolePermissions(){
@@ -19662,8 +19763,7 @@ function applyRolePermissions(){
   const backupPanel = document.getElementById('settingsBackupPanel');
   if(backupPanel) backupPanel.style.display = isSuperAdmin() ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
-  const settingsDataSyncSection = document.getElementById('settingsDataSyncSection');
-  if(settingsDataSyncSection) settingsDataSyncSection.style.display = isRestaurantRole() ? 'none' : '';
+  applyPlainAdminSettingsTrim();
   updateHotelRestaurantSwitch();
   const who = document.getElementById('whoami');
   if(who) who.textContent = currentUser ? currentUser.username + ' · ' + currentUser.role : '';
