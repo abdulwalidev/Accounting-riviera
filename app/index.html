@@ -7669,7 +7669,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
       <a class="settings-nav-item" onclick="showView('before19')">Before 19</a>
       <a class="settings-nav-item" onclick="showView('handover')">Revenue Summary</a>
       <a class="settings-nav-item" onclick="showView('npr')">NPR</a>
-      <a class="settings-nav-item" onclick="showView('cashcheck')">Cash Check</a>
+      <a class="settings-nav-item" id="settingsCashCheckBtn" onclick="showView('cashcheck')">Cash Check</a>
       <a class="settings-nav-item" onclick="showView('misc')">Miscellaneous</a>
       <a class="settings-nav-item" id="settingsUsersBtn" onclick="showView('users')" style="display:none;">Users</a>
       <a class="settings-nav-item danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</a>
@@ -20057,7 +20057,22 @@ function renderSettings(){
   // Backup lives on the Settings landing page itself rather than behind
   // its own nav item — it's the thing you go looking for in a panic.
   const backupPanel = document.getElementById('settingsBackupPanel');
-  if(backupPanel) backupPanel.style.display = isAdmin() ? '' : 'none';
+  if(backupPanel) backupPanel.style.display = isSuperAdmin() ? '' : 'none';
+  applyPlainAdminSettingsTrim();
+}
+
+// Role 'admin' gets a deliberately tiny Settings: Day Lock, Cash Check, and
+// Delete Entity, nothing else. Runs LAST, after every other rule above has
+// had its say, so it can only ever take items away — and it's a whitelist
+// walk over the sidebar rather than a list of things to hide, so an item
+// added to that nav later is hidden for this role by default instead of
+// quietly appearing. superadmin is untouched and still sees everything.
+const PLAIN_ADMIN_SETTINGS_ITEMS = ['settingsDayLockBtn', 'settingsDeleteEntityBtn', 'settingsCashCheckBtn'];
+function applyPlainAdminSettingsTrim(){
+  if(!isPlainAdmin()) return;
+  document.querySelectorAll('#globalSettingsNav .settings-nav-item').forEach(el=>{
+    if(!PLAIN_ADMIN_SETTINGS_ITEMS.includes(el.id)) el.style.display = 'none';
+  });
 }
 
 function applyRolePermissions(){
@@ -20096,8 +20111,9 @@ function applyRolePermissions(){
   if(usersBtn) usersBtn.style.display = isSuperAdmin() ? '' : 'none';
   applyAdminSettingsPageMoves();
   const backupPanel = document.getElementById('settingsBackupPanel');
-  if(backupPanel) backupPanel.style.display = isAdmin() ? '' : 'none';
+  if(backupPanel) backupPanel.style.display = isSuperAdmin() ? '' : 'none';
   document.documentElement.classList.toggle('role-restaurant', isRestaurantRole());
+  applyPlainAdminSettingsTrim();
   applyAdminDateRangeStacking();
   updateHotelRestaurantSwitch();
   const who = document.getElementById('whoami');
@@ -20291,7 +20307,7 @@ function backupSetBusy(busy, activeBtn, activeLabel){
 }
 
 function backupGuard(){
-  if(!isAdmin()){ showNotice('Backup is only available to admin accounts.'); return false; }
+  if(!isSuperAdmin()){ showNotice('Backup is only available to the super admin account.'); return false; }
   if(backupBusy){ showNotice('A backup is already running — let it finish.'); return false; }
   if(!sb){ showNotice('Not connected to the cloud database — a backup needs the internet.'); return false; }
   return true;
