@@ -27,15 +27,16 @@
   :root{
     /* Luxury hospitality palette: sky blue + gold, slate-cool surfaces */
     --ink:#0284C7;        /* sky blue — text, borders */
-    /* Table cell text only. The sky-blue --ink is right for headings, labels
-       and chrome, but a whole grid of figures in it reads as a wall of links
-       and makes the deliberately-coloured cells (gold Extended, red due,
-       green cash, blue account) stop standing out. Data cells are near-black
-       so colour in a table always MEANS something. Only plain cells are
-       affected: anything that sets its own colour — .cash-amt/.account-amt
-       (!important), td.bf-without, the status pills, and every inline
-       var(--danger)/var(--amber) cell — still wins over this. */
-    --tbl-ink:#111827;
+    /* Plain READING text — body copy, page/panel headings, table cells, the
+       big figures on the Dashboard. The sky-blue --ink stays what it always
+       was for chrome: borders, nav, buttons, icons, hover states. Blue text
+       everywhere read as a wall of links and drowned out the colours that
+       actually mean something (gold Extended, red due, green cash, blue
+       account), so reading text is near-black and colour is reserved for
+       meaning. Anything setting its own colour still wins over this —
+       .cash-amt/.account-amt (!important), td.bf-without, the status pills,
+       every inline var(--danger)/var(--amber), and --muted labels. */
+    --ink-strong:#111827;
     --ink-fill:#0EA5E9;   /* solid button/badge fills — same shade in both themes */
     --paper:#FFFFFF;      /* white page background */
     --muted:#5B6B84;      /* slate — labels, secondary text */
@@ -58,7 +59,11 @@
   body{
     margin:0;
     background:var(--paper);
-    color:var(--ink);
+    /* Reading text, not chrome — see --ink-strong. This one line is what
+       turns page headings (h1) and every plain inheriting bit of text from
+       sky blue to near-black; --ink stays on borders, nav, buttons, icons
+       and hover states, which is where the blue actually belongs. */
+    color:var(--ink-strong);
     font-family:'Inter',sans-serif;
     overflow-x:hidden;
   }
@@ -98,7 +103,7 @@
     font-size:16px;
     text-transform:uppercase;
     letter-spacing:0.07em;
-    color:var(--ink);
+    color:var(--ink-strong);
     font-weight:700;
     margin:0 0 14px;
     padding-bottom:10px;
@@ -543,7 +548,7 @@
     padding:6px 8px;
     border:1px solid #00000018;
     vertical-align:middle;
-    color:var(--tbl-ink);
+    color:var(--ink-strong);
   }
   /* The restaurant keeps its existing look — this change is the hotel's
      tables only, same module isolation as the rest of the pos_ code. */
@@ -984,7 +989,7 @@
     font-family:'Inter',sans-serif;
     font-size:28px;
     font-weight:700;
-    color:var(--ink);
+    color:var(--ink-strong);
     line-height:1.1;
     margin:auto;
     text-align:center;
@@ -1016,7 +1021,7 @@
     font-family:'Inter',sans-serif;
     font-size:17px;
     font-weight:700;
-    color:var(--ink);
+    color:var(--ink-strong);
   }
   .dash-subtile-lbl{
     font-family:'Inter',sans-serif;
@@ -1065,7 +1070,7 @@
     color:var(--muted);
     margin-bottom:10px;
   }
-  .chart-peak b{ color:var(--ink); }
+  .chart-peak b{ color:var(--ink-strong); }
   .chart-col-track{
     display:flex;
     align-items:flex-end;
@@ -1402,7 +1407,7 @@
   .hdr-row3 .navbtn.active{ color:#1a73e8; font-weight:700; border-bottom-color:#1a73e8; }
   /* Golden nav buttons (Payment Report / Revenue Report) — gold in every
      state so they stand out from the blue-accented rest of the nav. */
-  .hdr-row2 .navbtn.gold-nav, .hdr-row3 .navbtn.gold-nav{ color:var(--gold-nav); font-weight:600; }
+  .hdr-row2 .navbtn.gold-nav, .hdr-row3 .navbtn.gold-nav{ color:var(--gold-nav); font-weight:700; }
   .hdr-row2 .navbtn.gold-nav:hover, .hdr-row3 .navbtn.gold-nav:hover{ color:var(--gold-nav); }
   .hdr-row2 .navbtn.gold-nav.active, .hdr-row3 .navbtn.gold-nav.active{ color:var(--gold-nav); font-weight:700; border-bottom-color:var(--gold-nav); }
   .view{
@@ -1687,7 +1692,7 @@
   .settings-row.clickable{ cursor:pointer; transition:background-color 150ms ease; }
   .settings-row.clickable:hover{ background:rgba(2,132,199,0.05); }
   html[data-theme="dark"] .settings-row.clickable:hover{ background:rgba(125,211,252,0.06); }
-  .settings-row-title{ font-family:'Inter',sans-serif; font-size:14px; font-weight:600; color:var(--ink); }
+  .settings-row-title{ font-family:'Inter',sans-serif; font-size:14px; font-weight:600; color:var(--ink-strong); }
   .settings-row.danger .settings-row-title{ color:var(--danger); }
   .settings-row-desc{ font-size:12.5px; color:var(--muted); margin-top:2px; max-width:520px; line-height:1.5; }
   .settings-row-chevron{ flex:none; color:var(--muted); font-size:18px; line-height:1; }
@@ -1825,7 +1830,11 @@
   .topnav .navbtn{
     font-family:'Inter',sans-serif;
     font-size:14px;
-    font-weight:500;
+    /* Bold in every state, not just the active one — the whole nav is
+       destinations, and 500 read washed-out next to the page content now
+       that body text is near-black. The active tab still separates itself
+       by its blue and its underline. */
+    font-weight:700;
     border:none;
     border-bottom:3px solid transparent;
     background:transparent;
@@ -1892,7 +1901,7 @@
     font-size:13px;
     color:var(--muted);
   }
-  .room-summary b{ color:var(--ink); }
+  .room-summary b{ color:var(--ink-strong); }
   .rd-switch{
     display:inline-flex;
     border:1px solid var(--ink);
@@ -2818,8 +2827,8 @@
     color-scheme: dark;
     --ink:#7DD3FC;
     /* Near-black would be unreadable here — the dark theme's equivalent of
-       "plain, uncoloured data" is near-white. */
-    --tbl-ink:#E8E8E8;
+       "plain, uncoloured reading text" is near-white. */
+    --ink-strong:#E8E8E8;
     --paper:#0A0A0A;
     --muted:#9C9C9C;
     --cash:#4ADE80;
@@ -3015,7 +3024,7 @@
   @media print{
     html[data-theme="dark"]{
       --ink:#0284C7;
-      --tbl-ink:#111827;
+      --ink-strong:#111827;
       --ink-fill:#0EA5E9;
       --paper:#FFFFFF;
       --muted:#5B6B84;
@@ -4984,7 +4993,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         </div>
         <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
           <label>&nbsp;</label>
-          <div id="cicoRangeReadout" style="font-size:28px; font-weight:700; color:var(--ink); letter-spacing:0.02em; min-height:34px; display:flex; align-items:center; justify-content:center; text-align:center; width:100%;"></div>
+          <div id="cicoRangeReadout" style="font-size:28px; font-weight:700; color:var(--ink-strong); letter-spacing:0.02em; min-height:34px; display:flex; align-items:center; justify-content:center; text-align:center; width:100%;"></div>
         </div>
       </div>
     </div>
@@ -5340,7 +5349,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <label for="gsearchShowZero" style="margin:0;">Show 0Rs guests</label>
         </div>
       </div>
-      <div id="gsearchDateReadoutBig" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em; margin-bottom:8px;"></div>
+      <div id="gsearchDateReadoutBig" style="font-size:20px; font-weight:700; color:var(--ink-strong); letter-spacing:0.02em; margin-bottom:8px;"></div>
       <div class="glist" id="gsearchList"></div>
     </div>
 
@@ -5519,7 +5528,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <button class="btn secondary" onclick="setFiltersToday()">Today</button>
           <button class="btn secondary" id="reportExtraBtn" onclick="toggleReportExtra()">Extra</button>
         </div>
-        <div id="filterRangeReadout" style="flex:1; display:flex; align-items:center; justify-content:center; text-align:center; font-size:28px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+        <div id="filterRangeReadout" style="flex:1; display:flex; align-items:center; justify-content:center; text-align:center; font-size:28px; font-weight:700; color:var(--ink-strong); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
           <input type="text" id="filterCashSearch" placeholder="type total amount" style="width:180px;" autocomplete="off">
           <!-- <button class="btn secondary" onclick="showView('graphs')">📊 Detailed Graphs</button> -->
@@ -5566,7 +5575,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <button class="btn secondary" onclick="clearParFilters()">Clear Filters</button>
           <button class="btn secondary" onclick="setParFiltersToday()">Today</button>
         </div>
-        <div id="parRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+        <div id="parRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink-strong); letter-spacing:0.02em;"></div>
       </div>
     </div>
 
@@ -5648,7 +5657,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
             <label for="lgSimplify" style="margin:0;">Simplify</label>
           </div>
         </div>
-        <div id="lgRangeReadout" style="flex:1; display:flex; align-items:center; justify-content:center; text-align:center; font-size:28px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+        <div id="lgRangeReadout" style="flex:1; display:flex; align-items:center; justify-content:center; text-align:center; font-size:28px; font-weight:700; color:var(--ink-strong); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn" onclick="exportLedgersExcel()">⬇ Export</button>
           <button class="btn secondary" onclick="printLedgers()">🖶 Print</button>
@@ -5784,7 +5793,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <button class="btn secondary" onclick="setRevenueToday()">Today</button>
           <button class="btn secondary" onclick="clearRevenueFilters()">Clear Filter (All Days)</button>
         </div>
-        <div id="rvRangeReadout" style="flex:1; display:flex; align-items:center; justify-content:center; text-align:center; font-size:28px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+        <div id="rvRangeReadout" style="flex:1; display:flex; align-items:center; justify-content:center; text-align:center; font-size:28px; font-weight:700; color:var(--ink-strong); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn secondary" onclick="openRevenueSummary()">Σ Summary</button>
           <button class="btn" onclick="exportRevenueExcel()">⬇ Export</button>
@@ -5873,7 +5882,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn secondary" onclick="setNightSummaryToday()">Today</button>
         </div>
-        <div id="nsDateReadoutBig" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+        <div id="nsDateReadoutBig" style="font-size:20px; font-weight:700; color:var(--ink-strong); letter-spacing:0.02em;"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="btn secondary" onclick="printNightSummary()">🖶 Print</button>
         </div>
@@ -5973,7 +5982,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
           <label class="lbl-sm" style="margin-bottom:4px;">Breakfast as of</label>
           <input type="date" id="bfDate">
         </div>
-        <div id="bfTodayDate" style="font-size:20px; font-weight:700; color:var(--ink); letter-spacing:0.02em;"></div>
+        <div id="bfTodayDate" style="font-size:20px; font-weight:700; color:var(--ink-strong); letter-spacing:0.02em;"></div>
       </div>
     </div>
 
@@ -12365,7 +12374,7 @@ function renderRoomDetail(){
   const box = (label, val, first, last)=> `
     <div style="padding:8px 20px; border:1px solid var(--line); ${first ? '' : 'border-left:none;'} border-radius:${first ? '6px 0 0 6px' : last ? '0 6px 6px 0' : '0'};">
       <div style="font-family:'Inter',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted);">${label}</div>
-      <div style="font-size:18px; font-weight:700; color:var(--ink);">${val}</div>
+      <div style="font-size:18px; font-weight:700; color:var(--ink-strong);">${val}</div>
     </div>`;
   unitBoxesEl.innerHTML = `
     <div style="display:flex; flex-wrap:wrap; gap:16px;">
@@ -13885,7 +13894,7 @@ function renderApGuestStrip(){
   document.getElementById('apGuestStrip').innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
       <div>
-        <div style="font-family:'Inter',sans-serif; font-weight:700; font-size:17px; color:var(--ink);">${entry.guestName || '(no name)'}</div>
+        <div style="font-family:'Inter',sans-serif; font-weight:700; font-size:17px; color:var(--ink-strong);">${entry.guestName || '(no name)'}</div>
         <div style="color:var(--muted); font-family:'Inter',sans-serif; font-size:12px; margin-top:2px;">${entry.fatherName && entry.fatherName !== 'N/A' ? 's/o ' + entry.fatherName + ' &middot; ' : ''}${roomNos ? 'Room ' + roomNos : ''}</div>
       </div>
       <div class="gnums">
