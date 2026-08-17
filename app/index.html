@@ -22005,15 +22005,17 @@ function posSetupAutocomplete(input){
 
   function openMenu(){
     var q = input.value.trim().toLowerCase();
+    // Only ever opens once something's been typed — a bare focus/click (e.g.
+    // the fresh blank line left after adding items from a Group panel) must
+    // not pop the full item list back open on its own.
+    if (!q) { close(); return; }
     var all = posAllMenuItems();
-    matches = q ? all.filter(function(m){ return m[0].toLowerCase().indexOf(q) !== -1; }) : all.slice();
+    matches = all.filter(function(m){ return m[0].toLowerCase().indexOf(q) !== -1; });
     activeIdx = -1;
     render();
   }
 
   input.addEventListener('input', openMenu);
-  input.addEventListener('focus', openMenu);
-  input.addEventListener('click', openMenu);
 
   input.addEventListener('keydown', function(e){
     if (e.key === 'Enter') {
