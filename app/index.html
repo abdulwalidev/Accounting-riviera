@@ -15396,13 +15396,13 @@ function renderMoneyHandover(){
   html += `
     <table style="margin-top:16px;">
       <thead><tr>
-        <th>Total Rent (billed)</th><th>Collected (these nights)</th><th>Due</th>${data.totalMisc > 0 ? '<th>Misc Charges</th>' : ''}
+        <th>Total Rent (billed)</th><th>Collected (these nights)</th><th>Due</th>
       </tr></thead>
       <tbody>
         <tr>
           <td>Rs. ${Math.round(data.totalRent).toLocaleString()}</td>
           <td>Rs. ${Math.round(data.totalCollected).toLocaleString()}</td>
-          <td>Rs. ${Math.round(data.totalDue).toLocaleString()}</td>${data.totalMisc > 0 ? '<td>Rs. ' + Math.round(data.totalMisc).toLocaleString() + '</td>' : ''}
+          <td>Rs. ${Math.round(data.totalDue).toLocaleString()}</td>
         </tr>
       </tbody>
     </table>
