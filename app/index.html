@@ -37,7 +37,8 @@
        .cash-amt/.account-amt (!important), td.bf-without, the status pills,
        every inline var(--danger)/var(--amber), and --muted labels. */
     --ink-strong:#111827;
-    --ink-fill:#0EA5E9;   /* solid button/badge fills — same shade in both themes */
+    --ink-fill:#0EA5E9;   /* solid non-button fills (table headers, day-group bars) — same shade in both themes */
+    --btn-fill:#111827;   /* solid BUTTON fills specifically — black in light theme, blue in dark (see dark override below) */
     --paper:#FFFFFF;      /* white page background */
     --muted:#5B6B84;      /* slate — labels, secondary text */
     --cash:#166534;       /* green — cash amounts */
@@ -701,7 +702,7 @@
   }
   .btn{
     font-family:'Inter',sans-serif;
-    background:var(--ink-fill);
+    background:var(--btn-fill);
     color:#fff;
     border:1px solid rgba(255,255,255,0.5);
     border-bottom:4px solid rgba(255,255,255,0.5);
@@ -734,7 +735,7 @@
     opacity:0.85;
   }
   .btn.secondary{
-    background:var(--ink-fill);
+    background:var(--btn-fill);
     color:#fff;
     border:1px solid rgba(255,255,255,0.5);
     border-bottom:4px solid rgba(255,255,255,0.5);
@@ -1392,7 +1393,7 @@
      so nothing else in the cascade (mobile size/border resets, etc) can
      silently flatten it. */
   button.btn[onclick="openAvailModal()"] {
-    background:var(--ink-fill) !important;
+    background:var(--btn-fill) !important;
     color:#fff !important;
     border:1px solid #fff !important;
     border-bottom:4px solid #fff !important;
@@ -1936,13 +1937,13 @@
     color:var(--ink);
     font-family:'Inter',sans-serif;
     font-weight:700;
-    font-size:11px;
+    font-size:13.2px;
     letter-spacing:0.06em;
-    padding:7px 18px;
+    padding:8.4px 21.6px;
     cursor:pointer;
   }
   .rd-switch-btn.active{
-    background:var(--ink-fill);
+    background:var(--btn-fill);
     color:#fff;
   }
   .smart-grid{
@@ -2850,6 +2851,7 @@
     /* Near-black would be unreadable here — the dark theme's equivalent of
        "plain, uncoloured reading text" is near-white. */
     --ink-strong:#E8E8E8;
+    --btn-fill:#0EA5E9;   /* buttons stay blue in dark theme, unlike light */
     --paper:#0A0A0A;
     --muted:#9C9C9C;
     --cash:#4ADE80;
@@ -3006,12 +3008,12 @@
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    width:44px;
-    height:44px;
-    border-radius:15px;
+    width:52.8px;
+    height:52.8px;
+    border-radius:18px;
     border:1px solid rgba(255,255,255,0.5);
     border-bottom:4px solid rgba(255,255,255,0.5);
-    background:var(--ink-fill);
+    background:var(--btn-fill);
     color:#fff;
     cursor:pointer;
     margin-right:8px;
@@ -3076,9 +3078,9 @@
 
     /* Revert all Duolingo button styling for mobile view */
     .btn.danger, .btn.success, .btn.edit-gold, .btn.danger-solid {
-      background: var(--ink-fill);
+      background: var(--btn-fill);
       color: var(--paper);
-      border: 1px solid var(--ink-fill);
+      border: 1px solid var(--btn-fill);
       border-bottom: none;
       border-radius: 4px;
       opacity: 1;
