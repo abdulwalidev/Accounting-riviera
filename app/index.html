@@ -1431,7 +1431,7 @@
     align-items:center;
     padding:8px 10px;
     background:var(--ink-fill);
-    color:var(--paper);
+    color:var(--ink-strong);
     font-family:'Inter',sans-serif;
     font-size:13px;
     font-weight:700;
@@ -3131,7 +3131,8 @@
       border: 1px solid var(--green);
       border-radius: 6px;
       opacity: 1;
-      padding: 7px 14px;
+      padding: 10.5px 21px;
+      font-size: 19.5px;
       border-bottom: none;
     }
 
@@ -3979,7 +3980,7 @@
    times an order and it should read as the primary action, not an outline.
    The bottom edge keeps the same 4px lift, in a darker green so the
    pressed-in effect still shows against the fill. */
-#page-pos-invoice .btn-addline {background:#10b981; color:#fff; border:none; border-bottom:4px solid #059669; border-radius:15px; padding:7px 14px; font-size:13px; cursor:pointer; font-weight:800; transition:all 0.2s ease;}
+#page-pos-invoice .btn-addline {background:#10b981; color:#fff; border:none; border-bottom:4px solid #059669; border-radius:15px; padding:10.5px 21px; font-size:19.5px; cursor:pointer; font-weight:800; transition:all 0.2s ease;}
 #page-pos-invoice .btn-addline {opacity:0.9;}
 #page-pos-invoice .btn-addline:active {transform:translateY(2px); border-bottom:0;}
 #page-pos-invoice .btn-addline:hover {opacity:0.85;}
@@ -4608,6 +4609,39 @@ html[data-theme="dark"] #posDeleteModal button[onclick="posCancelDelete()"],
 html[data-theme="dark"] #posPostModal button[onclick="posCancelPost()"],
 html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm()"]{ background:#1a1c20 !important; color:#e8eaed !important; border-color:#3a3f47 !important; }
 
+/* Text explicitly colored var(--blue) recolored per what it's actually
+   sitting on, instead of just riding the --blue:#5b9dff reassignment above.
+   A button/pill/badge with its own hardcoded white background needs black
+   text here; everything else sits on the page's dark --panel and needs
+   white. */
+html[data-theme="dark"] #page-pos-invoice .pick-btn,
+html[data-theme="dark"] #page-pos-invoice .grp-pill,
+html[data-theme="dark"] #page-pos-invoice .ab-blue-outline{ color:#000 !important; }
+
+html[data-theme="dark"] #page-pos-invoice .tax-item .name,
+html[data-theme="dark"] #page-pos-invoice table.simple td a,
+html[data-theme="dark"] #page-receipts .date-input,
+html[data-theme="dark"] #page-receipts .results-head .rh-count,
+html[data-theme="dark"] #page-receipts table.rep td a,
+html[data-theme="dark"] #page-charges-summary .date-input,
+html[data-theme="dark"] #page-charges-summary .results-head .rh-count,
+html[data-theme="dark"] #page-charges-summary table.rep td a,
+html[data-theme="dark"] #page-qty-summary .date-input,
+html[data-theme="dark"] #page-qty-summary .results-head .rh-count,
+html[data-theme="dark"] #page-qty-summary table.rep td a,
+html[data-theme="dark"] #page-printed-only table.rep td a,
+html[data-theme="dark"] #page-front-office .date-input,
+html[data-theme="dark"] #page-front-office .results-head .rh-count,
+html[data-theme="dark"] #page-front-office table.rep td a,
+html[data-theme="dark"] #page-deleted .date-input,
+html[data-theme="dark"] #page-deleted .results-head .rh-count,
+html[data-theme="dark"] #page-deleted table.rep td a,
+html[data-theme="dark"] #page-pending-payments .results-head .rh-count,
+html[data-theme="dark"] #page-pending-payments table.rep td a,
+html[data-theme="dark"] #page-previous-day .results-head .rh-count,
+html[data-theme="dark"] #page-previous-day table.rep td a,
+html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
+
   /* Desktop: Scale action buttons to 80% size, excluding navigation buttons */
   @media (min-width: 601px) {
     .btn:not(.navbtn) {
@@ -4662,8 +4696,8 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       font-size: 11px;
     }
     #page-pos-invoice .btn-addline {
-      padding: 5px 11px;
-      font-size: 11px;
+      padding: 7.5px 16.5px;
+      font-size: 16.5px;
     }
     table.rep { font-size: 11px; }
     table.parts { font-size: 11px; }
@@ -6323,23 +6357,23 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <button type="button" class="btn-addline" onclick="posAddLine()">+ Add line</button>
       <span class="grp-label">GROUPS:</span>
       <div class="grp-pills" id="posGroupPills">
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Appetizers','Appetizers (5)',this)">Appetizers (5)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:BAR','BAR (28)',this)">BAR (28)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:BBQ','BBQ (6)',this)">BBQ (6)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Beverages','Beverages (15)',this)">Beverages (15)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Breakfast','Breakfast (18)',this)">Breakfast (18)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Chinese Cuisine','Chinese Cuisine (18)',this)">Chinese Cuisine (18)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Coffee','Coffee (6)',this)">Coffee (6)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Continental Italian','Continental Italian (9)',this)">Continental Italian (9)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Desi Cuisine','Desi Cuisine (25)',this)">Desi Cuisine (25)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Dessert','Dessert (30)',this)">Dessert (30)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Pasta','Pasta (6)',this)">Pasta (6)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Pizza','Pizza (14)',this)">Pizza (14)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Salads','Salads (4)',this)">Salads (4)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Shinwari','Shinwari (7)',this)">Shinwari (7)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Soups','Soups (8)',this)">Soups (8)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Steaks','Steaks (6)',this)">Steaks (6)</span>
-        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Tandoor','Tandoor (8)',this)">Tandoor (8)</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Appetizers','Appetizers (5)',this)">Appetizers</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:BAR','BAR (28)',this)">BAR</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:BBQ','BBQ (6)',this)">BBQ</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Beverages','Beverages (15)',this)">Beverages</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Breakfast','Breakfast (18)',this)">Breakfast</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Chinese Cuisine','Chinese Cuisine (18)',this)">Chinese Cuisine</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Coffee','Coffee (6)',this)">Coffee</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Continental Italian','Continental Italian (9)',this)">Continental Italian</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Desi Cuisine','Desi Cuisine (25)',this)">Desi Cuisine</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Dessert','Dessert (30)',this)">Dessert</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Pasta','Pasta (6)',this)">Pasta</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Pizza','Pizza (14)',this)">Pizza</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Salads','Salads (4)',this)">Salads</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Shinwari','Shinwari (7)',this)">Shinwari</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Soups','Soups (8)',this)">Soups</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Steaks','Steaks (6)',this)">Steaks</span>
+        <span class="grp-pill" onclick="posOpenMenuGroup('Restaurant:Tandoor','Tandoor (8)',this)">Tandoor</span>
       </div>
     </div>
   </div>
@@ -21928,23 +21962,16 @@ function posPlaceAcMenu(menu, anchor){
   // Same caps the stylesheet uses — the room list is deliberately short.
   var cap = menu.classList.contains('room-ac-menu') ? 150 : 320;
   var GAP = 6, EDGE = 8;
-  var below = window.innerHeight - r.bottom - GAP - EDGE;
-  var above = r.top - GAP - EDGE;
-  // Drop upward when there genuinely isn't room underneath (a line near the
-  // bottom of the screen) instead of squeezing the list into a few pixels.
-  var flipUp = below < Math.min(cap, 160) && above > below;
-  var space = Math.max(120, flipUp ? above : below);
-  menu.style.maxHeight = Math.min(cap, space) + 'px';
+  // Always drops below the field, full height, never flips above it — a
+  // line near the bottom of the screen used to send the list jumping
+  // upward, which read as landing in the wrong place entirely. Running off
+  // the bottom of the viewport is preferable to that.
+  menu.style.maxHeight = cap + 'px';
   menu.style.width = r.width + 'px';
   var left = Math.max(EDGE, Math.min(r.left, window.innerWidth - r.width - EDGE));
   menu.style.left = left + 'px';
-  if (flipUp) {
-    menu.style.top = '';
-    menu.style.bottom = (window.innerHeight - r.top + GAP) + 'px';
-  } else {
-    menu.style.bottom = '';
-    menu.style.top = (r.bottom + GAP) + 'px';
-  }
+  menu.style.bottom = '';
+  menu.style.top = (r.bottom + GAP) + 'px';
 }
 
 // A fixed-position list can't follow its input while the page moves, and
