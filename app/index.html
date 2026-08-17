@@ -17095,11 +17095,27 @@ function buildPendingReport(){
     seen.add(entry.id);
     const due = computeTotals(entry).due;
     if(due <= 0) return;
+    // Nights + rent sum PER ROOM NUMBER (a mid-stay rate split leaves
+    // several rows for the same room), then across every distinct room
+    // this guest holds — same per-room approach as buildInhouseReport.
+    const roomNightTotals = {};
+    const roomLatestRent = {};
+    (entry.rooms || []).forEach(r=>{
+      if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
+      const key = r.roomNo;
+      roomNightTotals[key] = (roomNightTotals[key] || 0) + (parseInt(r.count) || 1);
+      roomLatestRent[key] = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
+    });
+    const nights = Object.values(roomNightTotals).reduce((m,n)=> Math.max(m,n), 0);
+    const rent = Object.values(roomLatestRent).reduce((s,v)=> s + v, 0);
     rows.push({
       guestId: entry.id,
       guest: entry.guestName || '(no name)',
       rooms: formatRoomChain(entry.rooms),
       checkIn: getDetailValue(entry, 'Actual Checkin') || entry.checkIn || '',
+      checkOut: getDetailValue(entry, 'Actual Checkout') || entry.checkOut || computeExpectedCheckoutDate(entry) || '',
+      nights,
+      rent,
       due
     });
   });
@@ -17122,19 +17138,22 @@ function renderPending(){
   }
   body.innerHTML = `
     <table>
-      <thead><tr><th style="width:50px;">Sr</th><th style="width:120px;">Room</th><th>Guest</th><th style="width:110px;">Checkin</th><th style="width:120px;">Due</th></tr></thead>
+      <thead><tr><th style="width:50px;">Sr</th><th style="width:110px;">Room</th><th>Guest</th><th style="width:100px;">Checkin</th><th style="width:100px;">Checkout</th><th style="width:90px;">No of Nights</th><th style="width:110px;">Room Rent</th><th style="width:120px;">Due</th></tr></thead>
       <tbody>${data.rows.map((r, idx)=> `
         <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
           <td>${idx + 1}</td>
           <td>${r.rooms}</td>
           <td>${r.guest}</td>
           <td>${r.checkIn ? formatDate(r.checkIn) : '-'}</td>
+          <td>${r.checkOut ? formatDate(r.checkOut) : '-'}</td>
+          <td>${r.nights || '-'}</td>
+          <td>${r.rent.toLocaleString()}</td>
           <td style="font-weight:700; color:var(--danger);">${r.due.toLocaleString()}</td>
         </tr>`).join('')}
       </tbody>
       <tfoot>
         <tr class="day-foot-total">
-          <td colspan="4">Total</td>
+          <td colspan="7">Total</td>
           <td>${data.totalDue.toLocaleString()}</td>
         </tr>
       </tfoot>
