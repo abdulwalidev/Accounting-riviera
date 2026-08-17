@@ -5241,8 +5241,8 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
     <h2 class="standalone-heading">Today's Entries</h2>
     <div id="todayEntriesBody"><div class="empty-note">No entries saved today yet.</div></div>
 
-    <div class="section-divider"></div>
-    <div class="panel" style="padding:0;">
+    <div class="section-divider" id="auditEntryDivider"></div>
+    <div class="panel" id="auditEntryPanel" style="padding:0;">
       <div class="collapse-head" onclick="toggleAuditEntrySection()">
         <span>ALL CHANGES (Full Audit)</span>
         <span class="collapse-head-right">
@@ -20129,6 +20129,13 @@ function applyRolePermissions(){
   if(searchNav) searchNav.style.display = isPlainAdmin() ? 'none' : '';
   const pendingNav = document.getElementById('topNavPending');
   if(pendingNav) pendingNav.style.display = isAdmin() ? '' : 'none';
+  // The "ALL CHANGES (Full Audit)" collapse embedded at the bottom of Add
+  // Checkin/Reservation — hidden for plain admin only, same as Full Audit
+  // itself is dropped off their trimmed Settings sidebar.
+  const auditEntryPanel = document.getElementById('auditEntryPanel');
+  if(auditEntryPanel) auditEntryPanel.style.display = isPlainAdmin() ? 'none' : '';
+  const auditEntryDivider = document.getElementById('auditEntryDivider');
+  if(auditEntryDivider) auditEntryDivider.style.display = isPlainAdmin() ? 'none' : '';
   const restaurantNav = document.getElementById('topNavRestaurant');
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const usersBtn = document.getElementById('settingsUsersBtn');
