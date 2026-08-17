@@ -11613,10 +11613,9 @@ function globalSearchMatches(query){
   const qNoDash = stripDashes(q);
   const all = loadAllEntries();
   const results = all.filter(entry=>{
-    const roomNos = formatRoomChain(entry.rooms);
     const paymentText = (entry.payments || []).map(p=> [p.mode, p.bank, p.remarks].filter(Boolean).join(' ')).join(' ');
     const haystack = [
-      entry.guestName, entry.fatherName, entry.cnic, roomNos,
+      entry.guestName, entry.fatherName, entry.cnic,
       (entry.extraDetails || []).map(d=> d.value).join(' '),
       paymentText
     ].join(' ').toLowerCase();
