@@ -6194,20 +6194,24 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
   <!-- Top field block -->
   <div class="card">
     <div class="top-fields-live">
-      <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>CUSTOMER TYPE 🔍</label>
+      <div class="lbl-input" style="flex:0 0 170px;"><label>CUSTOMER TYPE 🔍</label>
         <div class="search-wrap" style="flex:1;"><input type="text" id="posCustomer" value="Walkin Customer" autocomplete="off" oninput="posCustomerTypeInput()" style="width:100%;"><div class="ac-menu"></div></div>
-        <!-- The exact person, as opposed to the category above. Almost every
-             invoice is a walk-in or a room order where there's no name worth
-             recording, so this sits at N/A by default and works exactly like
-             ORDER NO(QT): required, with the N/A box as the sanctioned way
-             past it. Picking a guest customer type unticks it for you, since
-             that's the case the field exists for. -->
-        <div class="pos-label-row" style="margin-top:9px;"><label>NAME <span class="pos-req">*</span></label><label class="pos-na-check"><input type="checkbox" id="posCustomerNameNA" onchange="posToggleCustomerNameNA()" checked> N/A</label></div>
-        <input type="text" id="posCustomerName" value="N/A" autocomplete="off" onkeydown="posTopFieldEnter(event, this)" disabled>
       </div>
       <div class="lbl-input" style="flex:0 0 170px;"><div class="pos-label-row"><label>ORDER NO(QT) <span class="pos-req">*</span></label><label class="pos-na-check"><input type="checkbox" id="posOrderNoNA" onchange="posToggleOrderNoNA()"> N/A</label></div><input type="text" id="posOrderNo" inputmode="numeric" maxlength="5" autocomplete="off" oninput="posOrderNoInput(this)" onkeydown="posTopFieldEnter(event, this)"></div>
-      <div class="lbl-input" style="flex:0 0 170px;"><label>Invoice Date</label><input type="date" id="posInvoiceDate"></div>
       <div class="lbl-input" style="flex:0 0 220px;"><label>Room no</label><div class="search-wrap" style="flex:1;"><input type="text" id="posRoomNoField" autocomplete="off" oninput="posRoomNoChanged(this, true)" style="width:100%;"><div class="ac-menu room-ac-menu"></div></div></div>
+    </div>
+    <div class="top-fields-live">
+      <div class="lbl-input" style="flex:0 0 170px;">
+        <!-- The exact person, as opposed to the customer type category. Almost
+             every invoice is a walk-in or a room order where there's no name
+             worth recording, so this sits at N/A by default and works exactly
+             like ORDER NO(QT): required, with the N/A box as the sanctioned way
+             past it. Picking a guest customer type unticks it for you, since
+             that's the case the field exists for. -->
+        <div class="pos-label-row"><label>NAME <span class="pos-req">*</span></label><label class="pos-na-check"><input type="checkbox" id="posCustomerNameNA" onchange="posToggleCustomerNameNA()" checked> N/A</label></div>
+        <input type="text" id="posCustomerName" value="N/A" autocomplete="off" onkeydown="posTopFieldEnter(event, this)" disabled>
+      </div>
+      <div class="lbl-input" style="flex:0 0 170px;"><label>Invoice Date</label><input type="date" id="posInvoiceDate"></div>
       <div class="lbl-input" style="flex:1.4; min-width:220px;"><label>Discription(extra notes)</label><input type="text" id="posLineDescription" onkeydown="posTopFieldEnter(event, this)"></div>
     </div>
 
