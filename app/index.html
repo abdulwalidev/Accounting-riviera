@@ -4922,6 +4922,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
       <button class="navbtn active" id="topNavEntry" onclick="showView('entry')">Add Checkin/Reservation</button>
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search<span style="color:#dc2626;">(due)</span></button>
+      <button class="navbtn" id="topNavPending" onclick="showView('pending')" style="display:none;">Pending</button>
       <button class="navbtn gold-nav" id="topNavReport" onclick="showView('report')">Payment Report</button>
       <div class="navbtn-separator"></div>
       <button class="navbtn gold-nav" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
@@ -6012,6 +6013,21 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
 
     <div class="panel accent-report">
       <div id="ihBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-pending">
+
+    <h1 class="no-print">Pending</h1>
+
+    <div class="print-header">
+      <h1 id="pendingPrintTitle">Pending</h1>
+      <div class="print-header-sub" id="pendingPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="pendingBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -8101,7 +8117,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant','users'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant','users','pending'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -8195,6 +8211,8 @@ function showView(view, fromPopState){
   document.getElementById('topNavAvailability').classList.toggle('active', view === 'availability');
   document.getElementById('topNavAddPay').classList.toggle('active', view === 'addpay');
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
+  const topNavPending = document.getElementById('topNavPending');
+  if(topNavPending) topNavPending.classList.toggle('active', view === 'pending');
   document.getElementById('topNavReport').classList.toggle('active', view === 'report' || view === 'graphs');
   document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
@@ -8234,6 +8252,7 @@ function showView(view, fromPopState){
   if(view === 'search') renderSearch();
   if(view === 'entry') renderTodayEntries();
   if(view === 'addpay') renderApList();
+  if(view === 'pending') renderPending();
   if(view === 'ledgers') renderLedgers();
   if(view === 'before19') renderBefore19();
   if(view === 'handover') renderMoneyHandover();
@@ -17035,6 +17054,69 @@ function buildInhouseReport(asOfDate, hideFreeStays){
   return { rows, roomCount, totalAdults, totalChildren, totalPax, roomTypeCount, apartmentTypeCount, typeBucketCounts, freeStayCount };
 }
 
+// =========================================================
+// PENDING — plain admin's replacement for the Add Payment / Search(due)
+// nav buttons: everyone currently in-house who still owes money, in one
+// list. One row per GUEST (not per room, unlike Inhouse Report), since a
+// guest holding several rooms only owes one balance across all of them.
+// =========================================================
+function buildPendingReport(){
+  const today = todayStr();
+  const occupiedRs = computeRoomStatuses(today).filter(rs=> (rs.occupied || rs.extended) && rs.entry);
+  const seen = new Set();
+  const rows = [];
+  occupiedRs.forEach(rs=>{
+    const entry = rs.entry;
+    if(seen.has(entry.id)) return;
+    seen.add(entry.id);
+    const due = computeTotals(entry).due;
+    if(due <= 0) return;
+    rows.push({
+      guestId: entry.id,
+      guest: entry.guestName || '(no name)',
+      rooms: formatRoomChain(entry.rooms),
+      checkIn: getDetailValue(entry, 'Actual Checkin') || entry.checkIn || '',
+      due
+    });
+  });
+  rows.sort((a,b)=> b.due - a.due);
+  return { rows, totalDue: rows.reduce((s,r)=> s + r.due, 0) };
+}
+
+function renderPending(){
+  const body = document.getElementById('pendingBody');
+  if(!body) return;
+  if(!initialLoadDone){
+    body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  document.getElementById('pendingPrintHeaderSub').textContent = 'As of ' + formatDate(todayStr());
+  const data = buildPendingReport();
+  if(data.rows.length === 0){
+    body.innerHTML = '<div class="empty-note">Nobody in-house is pending right now.</div>';
+    return;
+  }
+  body.innerHTML = `
+    <table>
+      <thead><tr><th style="width:50px;">Sr</th><th style="width:120px;">Room</th><th>Guest</th><th style="width:110px;">Checkin</th><th style="width:120px;">Due</th></tr></thead>
+      <tbody>${data.rows.map((r, idx)=> `
+        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
+          <td>${idx + 1}</td>
+          <td>${r.rooms}</td>
+          <td>${r.guest}</td>
+          <td>${r.checkIn ? formatDate(r.checkIn) : '-'}</td>
+          <td style="font-weight:700; color:var(--danger);">${r.due.toLocaleString()}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="4">Total</td>
+          <td>${data.totalDue.toLocaleString()}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
 function setInhouseToday(){
   setFilterDate('ihDate', todayStr());
   renderInhouse();
@@ -19964,6 +20046,15 @@ function applyRolePermissions(){
   if(hdrFrontOfficeBadge) hdrFrontOfficeBadge.style.display = (isAdmin() || isRestaurantRole()) ? '' : 'none';
   const globalSearchRoomWrap = document.getElementById('globalSearchRoomWrap');
   if(globalSearchRoomWrap) globalSearchRoomWrap.style.display = isAdmin() ? '' : 'none';
+  // Plain admin (the accountant's account) gets a "Pending" nav item in
+  // place of Add Payment / Search(due) — see buildPendingReport() for why:
+  // those two pages are folded into one in-house-and-owing view for them.
+  const addPayNav = document.getElementById('topNavAddPay');
+  if(addPayNav) addPayNav.style.display = isPlainAdmin() ? 'none' : '';
+  const searchNav = document.getElementById('topNavSearch');
+  if(searchNav) searchNav.style.display = isPlainAdmin() ? 'none' : '';
+  const pendingNav = document.getElementById('topNavPending');
+  if(pendingNav) pendingNav.style.display = isPlainAdmin() ? '' : 'none';
   const restaurantNav = document.getElementById('topNavRestaurant');
   if(restaurantNav) restaurantNav.style.display = (isSuperAdmin() || isRestaurantRole()) ? '' : 'none';
   const usersBtn = document.getElementById('settingsUsersBtn');
