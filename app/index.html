@@ -4855,7 +4855,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <button class="navbtn" id="topNavLedgers" onclick="showView('ledgers')">Ledgers</button>
       <button class="navbtn" id="topNavRevSummary" onclick="showView('handover')">Revenue Summary</button>
       <button class="navbtn" id="topNavNightSummary" onclick="showView('nightsummary')">Night Summary</button>
-      <button class="navbtn" id="topNavPaymentProof" onclick="showView('paymentrecord')" style="display:none; margin-left:auto;">Report SS</button>
+      <button class="navbtn" id="topNavPaymentProof" onclick="showView('paymentrecord')" style="display:none; margin-left:auto;">Report Screenshot</button>
       <button class="navbtn" id="topNavSettings" onclick="showView('settings')" style="font-size:22px; line-height:1; padding:6px 4px;" title="Settings" aria-label="Settings">⚙</button>
       <!-- The restaurant's Day Lock used to hang here as a second gear in the
            hotel's header — a restaurant page reached from the hotel chrome,
@@ -7577,7 +7577,7 @@ html[data-theme="dark"] #posDayLockModal button[onclick="posCloseDayLockConfirm(
       <a class="settings-nav-item" id="settingsLedgersBtn" onclick="showView('ledgers')" style="display:none;">Ledgers</a>
       <a class="settings-nav-item" onclick="showView('audit')">Full Audit</a>
       <a class="settings-nav-item" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">Day Lock</a>
-      <a class="settings-nav-item" id="settingsPaymentRecordBtn" onclick="showView('paymentrecord')" style="display:none;">Report SS</a>
+      <a class="settings-nav-item" id="settingsPaymentRecordBtn" onclick="showView('paymentrecord')" style="display:none;">Report Screenshot</a>
       <a class="settings-nav-item" id="settingsFrontOfficeBtn" onclick="showView('frontoffice')" style="display:none;">Front Office</a>
       <a class="settings-nav-item" onclick="showView('before19')">Before 19</a>
       <a class="settings-nav-item" onclick="showView('handover')">Revenue Summary</a>
@@ -8100,7 +8100,7 @@ function showView(view, fromPopState){
     return;
   }
   if(view === 'paymentrecord' && !isAdmin()){
-    showNotice('Report SS is only available to admin accounts.');
+    showNotice('Report Screenshot is only available to admin accounts.');
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
@@ -10355,7 +10355,7 @@ function updateDateReadout(input, readoutEl){
 // per-room/per-payment row dates have their own interaction and are left
 // alone.
 function addDateStepper(inputId, placement){
-  const disabledIds = ['cicoFrom', 'cicoTo', 'filterFrom', 'filterTo', 'rvFrom', 'rvTo', 'lgFrom', 'lgTo', 'hoFrom', 'hoTo'];
+  const disabledIds = ['cicoFrom', 'cicoTo', 'filterFrom', 'filterTo', 'rvFrom', 'rvTo', 'lgFrom', 'lgTo', 'hoFrom', 'hoTo', 'parFrom', 'parTo', 'nprFrom', 'nprTo'];
   if(disabledIds.includes(inputId)) return;
   const input = document.getElementById(inputId);
   if(!input || input.dataset.stepperAdded) return;
