@@ -6015,18 +6015,11 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
 
     <div class="panel no-print accent-filters">
       <div class="actions" style="gap:24px;">
-        <div style="width:100%; display:flex; flex-direction:column; gap:10px;">
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn" onclick="exportInhouseExcel()">⬇ Export</button>
-            <button class="btn secondary" onclick="printInhouse()">🖶 Print</button>
-            <button class="btn secondary" onclick="showView('breakfast')">🥐 Breakfast Report</button>
-            <button class="btn secondary" onclick="setInhouseToday()">Today</button>
-          </div>
-          <div class="checkline">
-            <input type="checkbox" id="ihHideZero">
-            <label for="ihHideZero" style="margin:0;">Hide nonpaying</label>
-            <span id="ihHiddenNote" style="text-transform:none; letter-spacing:0; color:var(--muted);"></span>
-          </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" onclick="exportInhouseExcel()">⬇ Export</button>
+          <button class="btn secondary" onclick="printInhouse()">🖶 Print</button>
+          <button class="btn secondary" onclick="showView('breakfast')">🥐 Breakfast Report</button>
+          <button class="btn secondary" onclick="setInhouseToday()">Today</button>
         </div>
         <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
           <label class="lbl-sm" style="margin-bottom:4px;">In-house as of</label>
@@ -6039,6 +6032,11 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
             <label class="lbl-sm" style="margin-bottom:4px; text-align:right;">In-house Guests</label>
             <div id="ihGuestSplit" class="dash-subtiles" style="max-width:300px; margin-top:0; justify-content:flex-end;"></div>
           </div>
+        </div>
+        <div class="checkline" style="width:100%; padding-bottom:0;">
+          <input type="checkbox" id="ihHideZero">
+          <label for="ihHideZero" style="margin:0;">Hide nonpaying</label>
+          <span id="ihHiddenNote" style="text-transform:none; letter-spacing:0; color:var(--muted);"></span>
         </div>
       </div>
     </div>
