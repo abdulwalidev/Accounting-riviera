@@ -4172,6 +4172,13 @@ td.pos-order-na {color:#dc2626; font-weight:700;}
    still has to act on. Front Office holding the cash is not the same
    thing as the restaurant having booked the payment, and the old green
    "Collected" pill said it was. See posPaymentStatus. */
+/* "Select Payment" is far longer than every label this column was sized
+   for (Paid / Partial / Pending / At FO), and .status-badge is nowrap — in
+   Recent Invoices' 72px STATUS column that forced the cell wider and threw
+   the whole table's widths out. Only in the compact table.simple lists does
+   it wrap, onto two lines, so the column keeps the width it was given. The
+   roomier .rep tables leave it on one line. */
+#page-pos-invoice table.simple .status-badge {white-space:normal; padding:3px 7px; line-height:1.3; display:inline-block; text-align:center;}
 #page-pos-invoice .status-badge.select-payment,
 #page-front-office .status-badge.select-payment,
 #page-pending-payments .status-badge.select-payment {background:#7c3aed; color:#fff; box-shadow:0 1px 3px rgba(124,58,237,.35);}
@@ -6601,7 +6608,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
       <button type="button" id="posRecentSortBtn" class="pos-sort-btn" onclick="posToggleRecentSort()">SORT: INVOICE</button>
     </div>
     <table class="simple">
-      <thead><tr><th style="width:36px;">#</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th style="width:168px;">ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:72px;">STATUS</th><th style="width:32px;"></th></tr></thead>
+      <thead><tr><th style="width:36px;">#</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th style="width:168px;">ITEMS</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:84px;">STATUS</th><th style="width:32px;"></th></tr></thead>
       <tbody id="recentInvoicesBody"></tbody>
       <tfoot><tr class="pos-total-row"><td colspan="6" style="text-align:right;">TOTAL</td><td class="num" id="recentInvoicesTotalAmount">0.00</td><td class="num" id="recentInvoicesTotalPaid">0.00</td><td colspan="4"></td></tr></tfoot>
     </table>
@@ -23764,9 +23771,22 @@ function posBuildInvoiceRow(record, showStatus, showOrderNo, showItems, rowNum, 
     taxFlags +
     (payStatus ? '<td><span class="status-badge ' + payStatus.cls + '" title="' + posEscapeHtml(payStatus.title) + '">' + payStatus.label + '</span></td>' : '') +
     (showStatus ? '<td><span class="status-badge ' + (record.posted ? 'posted' : 'not-posted') + '">' + (record.posted ? 'Posted' : 'Not Posted') + '</span></td>' : '');
-  if (!record.deleted) tr.appendChild(posMakeActionsCell(record));
+  // The pay-status badge is built as part of the innerHTML above, so the
+  // Select Payment click is attached here rather than in
+  // posSelectPaymentStatusCell — same behaviour either way: on a row that
+  // still needs its payment recorded, the badge IS the button, which is what
+  // lets the actions cell stay compact (see posMakeActionsCell).
+  if (payStatus && posNeedsPaymentSelection(record) && !posIsLocked(record)) {
+    var badgeEl = tr.querySelector('.status-badge.select-payment');
+    if (badgeEl) {
+      badgeEl.style.cursor = 'pointer';
+      badgeEl.addEventListener('click', function(e){ e.stopPropagation(); posOpenSelectPaymentModal(record); });
+    }
+  }
+  if (!record.deleted) tr.appendChild(posMakeActionsCell(record, !!showPayStatus));
   tr.addEventListener('click', function(e){
     if (e.target.closest('button')) return;
+    if (e.target.closest('.status-badge.select-payment')) return; // handled above
     e.preventDefault();
     posOpenRecordInForm(record);
   });
@@ -24291,14 +24311,21 @@ function posOpenDayLockPage(){
   posShowApp('page-pos-daylock', null);
 }
 
-function posMakeActionsCell(record){
+// compact: this row already carries a clickable pay-status badge of its own
+// (Recent Invoices / Guests), so the collected controls are left off. Two
+// reasons, and both matter: the same action must not appear twice on one
+// row, and that table budgets 32px for this cell — a "Select Payment"
+// button, a collected-by tag and an Undo button in 32px is what broke its
+// column widths. The badge is the affordance there; clicking the row still
+// opens the invoice, where the banner offers the full button.
+function posMakeActionsCell(record, compact){
   var td = document.createElement('td');
   td.className = 'del-col';
   var wrap = document.createElement('div');
   wrap.style.cssText = 'display:flex; gap:6px; justify-content:flex-end; align-items:center;';
 
   var locked = posIsLocked(record);
-  if (record.collected) {
+  if (record.collected && !compact) {
     var needsPay = posNeedsPaymentSelection(record);
     // The primary action on a collected-but-unbooked invoice, first in the
     // row so it is the thing the eye lands on. Before this, a collected
@@ -24575,7 +24602,10 @@ function frontOfficeRefresh(){
     // That is why a collected invoice had no controls at all here, on the
     // one page where restaurant staff are most likely to be looking for them.
     var stampTd = document.createElement('td');
-    stampTd.style.cssText = 'font-size:11.5px; color:#6b7280; white-space:nowrap;';
+    // Wraps rather than nowrap: a long username plus a timestamp cannot fit
+    // this column on one line, and forcing it would push every other column
+    // out of shape — the same way "Select Payment" did in Recent Invoices.
+    stampTd.style.cssText = 'font-size:11.5px; color:#6b7280; line-height:1.35;';
     stampTd.textContent = (record.collectedBy || '') + (record.collectedAt ? ' · ' + posFormatDateTimeFromIso(record.collectedAt) : '');
     posInsertCellBeforeActions(crow, stampTd);
     return crow;
