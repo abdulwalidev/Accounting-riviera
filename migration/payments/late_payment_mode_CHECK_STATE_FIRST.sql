@@ -1,4 +1,4 @@
--- READ-ONLY. Changes nothing. Run this before btc_payment_mode.sql to see
+-- READ-ONLY. Changes nothing. Run this before late_payment_mode.sql to see
 -- what state the database is actually in.
 --
 -- Deliberately ONE statement: the Supabase SQL editor only shows the result
@@ -9,17 +9,17 @@
 --
 -- How to read the result:
 --
---   btc_already_allowed = true
+--   late_payment_allowed = true
 --       The migration has already been applied. Nothing left to do.
 --
---   btc_already_allowed = false, and mode_constraints names
+--   late_payment_allowed = false, and mode_constraints names
 --   guest_payments_mode_check
---       Normal starting state. Run btc_payment_mode.sql.
+--       Normal starting state. Run late_payment_mode.sql.
 --
 --   mode_constraints = 'NONE — no check constraint on this table'
 --       An earlier run dropped the constraint without replacing it. No data
 --       was lost and nothing is broken, but mode is currently unvalidated.
---       Run btc_payment_mode.sql; it puts the constraint back.
+--       Run late_payment_mode.sql; it puts the constraint back.
 --
 --   mode_constraints names something OTHER than guest_payments_mode_check
 --       Tell me before running the migration. Its DROP targets that one name,
@@ -36,13 +36,13 @@ select
   ) as mode_constraints,
 
   coalesce(
-    (select bool_or(pg_get_constraintdef(oid) like '%BTC%')
+    (select bool_or(pg_get_constraintdef(oid) like '%Late Payment%')
        from pg_constraint
       where conrelid = 'public.guest_payments'::regclass
         and contype = 'c'),
     false
-  ) as btc_already_allowed,
+  ) as late_payment_allowed,
 
   (select count(*) from public.guest_payments)                          as payment_rows,
   (select count(*) from public.guest_payments
-    where mode not in ('Cash', 'Bank Transfer', 'Card', 'BTC'))         as rows_that_would_block_migration;
+    where mode not in ('Cash', 'Bank Transfer', 'Card', 'Late Payment'))         as rows_that_would_block_migration;

@@ -43,7 +43,7 @@
     --muted:#5B6B84;      /* slate — labels, secondary text */
     --cash:#166534;       /* green — cash amounts */
     --account:#1D4ED8;    /* blue — bank/account amounts */
-    --btc:#B45309;        /* burnt orange — BTC amounts (billed to a company, NOT collected) */
+    --late:#B45309;        /* burnt orange — late-payment amounts (owed, NOT collected) */
     --line:rgba(0,0,0,0.55); /* solid-reading black border — panels/cards need to visibly separate from the white page */
     --amber:#E7C55A;      /* gold accent — table headers, highlights */
     --gold-deep:#A16207;  /* darker gold for text/borders on light bg */
@@ -127,10 +127,10 @@
   /* ---- Payment mode colour-coding ---- */
   .cash-amt{ color:var(--cash) !important; font-weight:700; }
   .account-amt{ color:var(--account) !important; font-weight:700; }
-  /* BTC money is money that has NOT arrived — deliberately not green (cash)
+  /* A late payment is money that has NOT arrived — deliberately not green (cash)
      and not blue (account), so an outstanding invoice can never be misread
      as collected revenue at a glance. */
-  .btc-amt{ color:var(--btc) !important; font-weight:700; }
+  .late-amt{ color:var(--late) !important; font-weight:700; }
   /* ---- Revenue Report: Payments By Date boxes, left to right, wrapping ---- */
   .date-box-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
   .date-box{
@@ -158,21 +158,21 @@
   .section-divider{ border-top:2px solid #000; margin:24px 0; }
   tr.mode-cash td{ background:#E9F6EF; }
   tr.mode-bank td{ background:#EAF1FC; }
-  tr.mode-btc td{ background:#FDF1E3; }
+  tr.mode-late td{ background:#FDF1E3; }
   tbody tr.mode-cash:nth-child(even) td{ background:#DDF0E5; }
   tbody tr.mode-bank:nth-child(even) td{ background:#DEE9FA; }
-  tbody tr.mode-btc:nth-child(even) td{ background:#FAE7D2; }
+  tbody tr.mode-late:nth-child(even) td{ background:#FAE7D2; }
   /* Day Lock already blocks saving an edit/delete on these rows (see
      isDateLocked() checks) — grayed out here so it reads that way before
      the user even tries. Wins over the cash/bank tint above on purpose. */
   tr.pay-row-locked td,
   tr.pay-row-locked.mode-cash td,
   tr.pay-row-locked.mode-bank td,
-  tr.pay-row-locked.mode-btc td{ background:#E5E5E5 !important; color:var(--muted); opacity:0.7; }
+  tr.pay-row-locked.mode-late td{ background:#E5E5E5 !important; color:var(--muted); opacity:0.7; }
   html[data-theme="dark"] tr.pay-row-locked td,
   html[data-theme="dark"] tr.pay-row-locked.mode-cash td,
   html[data-theme="dark"] tr.pay-row-locked.mode-bank td,
-  html[data-theme="dark"] tr.pay-row-locked.mode-btc td{ background:rgba(255,255,255,0.06) !important; color:var(--muted); opacity:0.7; }
+  html[data-theme="dark"] tr.pay-row-locked.mode-late td{ background:rgba(255,255,255,0.06) !important; color:var(--muted); opacity:0.7; }
   .pay-lock-tag{
     display:none;
     text-align:center;
@@ -218,11 +218,11 @@
   }
   .mode-badge.cash{ background:#CBEEDA; color:var(--cash); }
   .mode-badge.bank{ background:#D7E3FB; color:var(--account); }
-  .mode-badge.btc{ background:#FBE3C8; color:var(--btc); }
+  .mode-badge.late{ background:#FBE3C8; color:var(--late); }
   input:disabled, select:disabled{ opacity:0.55; }
   .payCash:not(:disabled), #dNewCash:not(:disabled){ border-color:var(--cash); box-shadow:inset 0 0 0 1px var(--cash); }
   .payAccount:not(:disabled), #dNewAccount:not(:disabled){ border-color:var(--account); box-shadow:inset 0 0 0 1px var(--account); }
-  tr.mode-btc .payAccount:not(:disabled), #dNewAccount.btc-mode:not(:disabled){ border-color:var(--btc); box-shadow:inset 0 0 0 1px var(--btc); }
+  tr.mode-late .payAccount:not(:disabled), #dNewAccount.late-mode:not(:disabled){ border-color:var(--late); box-shadow:inset 0 0 0 1px var(--late); }
   label{
     display:block;
     font-family:'Inter',sans-serif;
@@ -1193,11 +1193,11 @@
     background:var(--danger-bg);
     color:var(--danger);
   }
-  /* Billed to a company and still outstanding — its own colour so it can
+  /* Owed and still outstanding — its own colour so it can
      never be skimmed as either Paid (green) or plain Pending (red). */
-  .status.btc{
+  .status.late{
     background:#FBE3C8;
-    color:var(--btc);
+    color:var(--late);
   }
   .status.arrivaldue{
     background:#F7EBC5;
@@ -2831,9 +2831,9 @@
        below) and the Cash/Account column headers already say which is
        which, so nothing is actually lost by dropping the tint. */
     tbody tr:nth-child(even) td,
-    tr.mode-cash td, tr.mode-bank td, tr.mode-btc td,
+    tr.mode-cash td, tr.mode-bank td, tr.mode-late td,
     tbody tr.mode-cash:nth-child(even) td, tbody tr.mode-bank:nth-child(even) td,
-    tbody tr.mode-btc:nth-child(even) td{
+    tbody tr.mode-late:nth-child(even) td{
       background:#fff !important;
     }
     tr.day-foot-total td{
@@ -2884,7 +2884,7 @@
     --muted:#9C9C9C;
     --cash:#4ADE80;
     --account:#60A5FA;
-    --btc:#FB923C;
+    --late:#FB923C;
     --line:rgba(255,255,255,0.14);
     --amber:#F0D078;
     --gold-deep:#FBBF24;
@@ -2972,18 +2972,18 @@
   html[data-theme="dark"] th{ background:var(--ink-fill); color:#000; }
   html[data-theme="dark"] .status.paid{ background:rgba(74,222,128,0.18); }
   html[data-theme="dark"] .status.partial{ background:rgba(240,208,120,0.18); }
-  html[data-theme="dark"] .status.btc{ background:rgba(251,146,60,0.18); }
+  html[data-theme="dark"] .status.late{ background:rgba(251,146,60,0.18); }
   html[data-theme="dark"] .status.ooo{ background:rgba(255,255,255,0.12); color:#D1D5DB; }
   html[data-theme="dark"] .guest-badge{ background:#B8860B; color:#fff; }
   html[data-theme="dark"] tr.mode-cash td{ background:rgba(74,222,128,0.08); }
   html[data-theme="dark"] tr.mode-bank td{ background:rgba(96,165,250,0.08); }
   html[data-theme="dark"] tbody tr.mode-cash:nth-child(even) td{ background:rgba(74,222,128,0.14); }
   html[data-theme="dark"] tbody tr.mode-bank:nth-child(even) td{ background:rgba(96,165,250,0.14); }
-  html[data-theme="dark"] tr.mode-btc td{ background:rgba(251,146,60,0.08); }
-  html[data-theme="dark"] tbody tr.mode-btc:nth-child(even) td{ background:rgba(251,146,60,0.14); }
+  html[data-theme="dark"] tr.mode-late td{ background:rgba(251,146,60,0.08); }
+  html[data-theme="dark"] tbody tr.mode-late:nth-child(even) td{ background:rgba(251,146,60,0.14); }
   html[data-theme="dark"] .mode-badge.cash{ background:rgba(74,222,128,0.22); }
   html[data-theme="dark"] .mode-badge.bank{ background:rgba(96,165,250,0.22); }
-  html[data-theme="dark"] .mode-badge.btc{ background:rgba(251,146,60,0.22); }
+  html[data-theme="dark"] .mode-badge.late{ background:rgba(251,146,60,0.22); }
   html[data-theme="dark"] .rpt-day-group,
   html[data-theme="dark"] .total-due-box,
   html[data-theme="dark"] .rpt-grandtotal-box{ box-shadow:0 4px 14px rgba(0,0,0,0.5); }
@@ -3086,7 +3086,7 @@
       --muted:#5B6B84;
       --cash:#166534;
       --account:#1D4ED8;
-      --btc:#B45309;
+      --late:#B45309;
       --line:rgba(0,0,0,0.55);
       --amber:#E7C55A;
       --gold-deep:#A16207;
@@ -3522,7 +3522,7 @@
     #payBody td:nth-child(5)::before{ content:'Bank'; }
     #payBody td:nth-child(6)::before{ content:'Remarks'; }
     #payBody td:nth-child(7)::before{ content:'Cash Amount'; }
-    #payBody td:nth-child(8)::before{ content:'Account / BTC'; }
+    #payBody td:nth-child(8)::before{ content:'Account / Late'; }
     #payBody td:nth-child(9)::before{ content:'Row Total'; }
     #payBody td:nth-child(10)::before{ content:''; }
     #view-entry tbody td:nth-child(n+9){
@@ -5013,12 +5013,12 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search<span style="color:#dc2626;">(due)</span></button>
       <button class="navbtn" id="topNavPending" onclick="showView('pending')" style="display:none;">Pending</button>
-      <button class="navbtn" id="topNavBtc" onclick="showView('btc')">BTC<span id="topNavBtcCount" style="color:var(--btc);"></span></button>
+      <button class="navbtn" id="topNavLatePay" onclick="showView('latepay')">BTC<span id="topNavLatePayCount" style="color:var(--late);"></span></button>
       <button class="navbtn gold-nav" id="topNavReport" onclick="showView('report')">Payment Report</button>
       <div class="navbtn-separator"></div>
       <button class="navbtn gold-nav" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
       <button class="navbtn" id="topNavArrival" onclick="showView('arrival')" style="display:none; margin-left:auto;">Arrival</button>
-      <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none;">Checkout/Pending</button>
+      <button class="navbtn" id="topNavAutoCheckout" onclick="showView('autocheckout')" style="display:none;">Checkout/Pending<span id="topNavAutoCheckoutCount" style="color:var(--danger);"></span></button>
     </div>
   </div>
 </div>
@@ -5270,7 +5270,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
             <th style="width:110px;">Bank</th>
             <th>Remarks</th>
             <th style="width:110px;">Cash Amount</th>
-            <th style="width:110px;">Account / BTC</th>
+            <th style="width:110px;">Account / Late</th>
             <th style="width:110px;">Row Total</th>
             <th style="width:40px;"></th>
           </tr>
@@ -5294,9 +5294,9 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
           <div class="lbl">Balance Due</div>
           <div class="val" id="sumDue">0</div>
         </div>
-        <div class="box" id="sumBtcBox" style="display:none;">
-          <div class="lbl">BTC (Pending)</div>
-          <div class="val btc-amt" id="sumBtcPending">0</div>
+        <div class="box" id="sumLateBox" style="display:none;">
+          <div class="lbl">Late Payment</div>
+          <div class="val late-amt" id="sumLatePending">0</div>
         </div>
         <div class="box">
           <div class="lbl">Status</div>
@@ -5416,7 +5416,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
               <option value="Cash">Cash</option>
               <option value="Bank Transfer">Bank Transfer</option>
               <option value="Card">Card</option>
-              <option value="BTC">BTC (Bill To Company)</option>
+              <option value="Late Payment">Late Payment</option>
             </select>
           </div>
           <div>
@@ -5619,7 +5619,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
             <th>Remarks</th>
             <th style="width:130px;">Taken By</th>
             <th style="width:100px;">Cash</th>
-            <th style="width:100px;">Account / BTC</th>
+            <th style="width:100px;">Account / Late</th>
             <th style="width:100px;">Total</th>
           </tr>
         </thead>
@@ -5639,9 +5639,9 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
           <div class="lbl">Balance Due</div>
           <div class="val" id="dSumDue">0</div>
         </div>
-        <div class="box" id="dSumBtcBox" style="display:none;">
-          <div class="lbl">BTC (Pending)</div>
-          <div class="val btc-amt" id="dSumBtcPending">0</div>
+        <div class="box" id="dSumLateBox" style="display:none;">
+          <div class="lbl">Late Payment</div>
+          <div class="val late-amt" id="dSumLatePending">0</div>
         </div>
         <div class="box">
           <div class="lbl">Status</div>
@@ -6140,19 +6140,19 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
 
   </div>
 
-  <div class="view" id="view-btc">
+  <div class="view" id="view-latepay">
 
     <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
       <div>
-        <h1 class="no-print">BTC — Bill To Company</h1>
-        <div class="sub no-print" style="margin-top:-6px;">Every stay billed to a company instead of collected at the desk. These guests check out normally; the money is still owed. A row leaves this page the moment you open the guest, edit the payment, and switch its Mode from BTC to whatever the company actually paid with.</div>
+        <h1 class="no-print">BTC — Late Payments</h1>
+        <div class="sub no-print" style="margin-top:-6px;">Every stay whose payment is still to come. These guests check out normally; the money is still owed. A row leaves this page the moment you open the guest, edit the payment, and switch its Mode from Late Payment to whatever they actually paid with.</div>
       </div>
-      <div id="btcTotalBox" class="total-due-box"></div>
+      <div id="latePayTotalBox" class="total-due-box"></div>
     </div>
 
     <div class="print-header">
-      <h1>BTC — Outstanding</h1>
-      <div class="print-header-sub" id="btcPrintHeaderSub"></div>
+      <h1>BTC — Late Payments Outstanding</h1>
+      <div class="print-header-sub" id="latePayPrintHeaderSub"></div>
     </div>
 
     <div class="panel accent-report">
@@ -6160,19 +6160,19 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
         <div class="grow">
           <label>Search (guest, company, room, remarks)</label>
           <div class="search-clear-wrap">
-            <input type="text" id="btcSearchInput" placeholder="Type to search..." autocomplete="off">
+            <input type="text" id="latePaySearchInput" placeholder="Type to search..." autocomplete="off">
             <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">&#10005;</button>
           </div>
         </div>
         <div class="checkline">
-          <input type="checkbox" id="btcCheckedOutOnly">
-          <label for="btcCheckedOutOnly" style="margin:0;">Only guests who've checked out</label>
+          <input type="checkbox" id="latePayCheckedOutOnly">
+          <label for="latePayCheckedOutOnly" style="margin:0;">Only guests who've checked out</label>
         </div>
         <div style="align-self:flex-end;">
           <button class="btn secondary" onclick="window.print()">&#128438; Print</button>
         </div>
       </div>
-      <div id="btcBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+      <div id="latePayBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -8316,7 +8316,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant','users','pending','btc'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant','users','pending','latepay'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -8412,8 +8412,8 @@ function showView(view, fromPopState){
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
   const topNavPending = document.getElementById('topNavPending');
   if(topNavPending) topNavPending.classList.toggle('active', view === 'pending');
-  const topNavBtc = document.getElementById('topNavBtc');
-  if(topNavBtc) topNavBtc.classList.toggle('active', view === 'btc');
+  const topNavLatePay = document.getElementById('topNavLatePay');
+  if(topNavLatePay) topNavLatePay.classList.toggle('active', view === 'latepay');
   document.getElementById('topNavReport').classList.toggle('active', view === 'report' || view === 'graphs');
   document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
@@ -8454,7 +8454,7 @@ function showView(view, fromPopState){
   if(view === 'entry') renderTodayEntries();
   if(view === 'addpay') renderApList();
   if(view === 'pending') renderPending();
-  if(view === 'btc') renderBtc();
+  if(view === 'latepay') renderLatePay();
   if(view === 'ledgers') renderLedgers();
   if(view === 'before19') renderBefore19();
   if(view === 'handover') renderMoneyHandover();
@@ -9106,8 +9106,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   ['dNewCash','dNewAccount'].forEach(id=>{
     document.getElementById(id).addEventListener('input', updateAddPayPreview);
   });
-  document.getElementById('btcSearchInput').addEventListener('input', renderBtc);
-  document.getElementById('btcCheckedOutOnly').addEventListener('change', renderBtc);
+  document.getElementById('latePaySearchInput').addEventListener('input', renderLatePay);
+  document.getElementById('latePayCheckedOutOnly').addEventListener('change', renderLatePay);
   document.getElementById('apSearchInput').addEventListener('input', renderApList);
   document.getElementById('apDueOnly').addEventListener('change', renderApList);
   document.getElementById('rdSearchInput').addEventListener('input', renderRoomDetail);
@@ -9886,8 +9886,8 @@ function openCheckoutConfirmModal(){
     <div><div class="confirm-lbl">Booking Total</div><div class="confirm-val">${t.bookingTotal.toLocaleString()}</div></div>
     <div><div class="confirm-lbl">Paid</div><div class="confirm-val">${t.paid.toLocaleString()}</div></div>
     <div><div class="confirm-lbl">Due</div><div class="confirm-val" style="${t.due > 0 ? 'color:var(--danger); font-weight:700;' : ''}">${t.due.toLocaleString()}</div></div>
-    ${t.btcPending > 0 ? '<div><div class="confirm-lbl">Billed To Company (BTC)</div><div class="confirm-val btc-amt">' + t.btcPending.toLocaleString() + '</div></div>' : ''}
-  ` + (t.btcPending > 0 ? '<div class="sub" style="margin:10px 0 0;">This guest still owes Rs. ' + t.due.toLocaleString() + ', covered by an outstanding BTC invoice. Checking them out is expected here — the balance stays owed and stays listed on the BTC page until the company pays.</div>' : '');
+    ${t.latePending > 0 ? '<div><div class="confirm-lbl">Late Payment (Pending)</div><div class="confirm-val late-amt">' + t.latePending.toLocaleString() + '</div></div>' : ''}
+  ` + (t.latePending > 0 ? '<div class="sub" style="margin:10px 0 0;">This guest still owes Rs. ' + t.due.toLocaleString() + ', recorded as a late payment. Checking them out is expected here — the balance stays owed and stays listed on the Late Payments page until they pay.</div>' : '');
   const input = document.getElementById('ccConfirmInput');
   input.value = '';
   input.classList.remove('duplicate');
@@ -9942,7 +9942,7 @@ async function confirmRoomCheckout(){
   if(!target) return;
   // Last line of defense — never write a checkout for a guest whose
   // balance isn't settled at exactly 0, no matter what UI path got here.
-  // Balance owed against an outstanding BTC invoice counts as settled for
+  // Balance owed against an outstanding Late Payment invoice counts as settled for
   // this one purpose only (netDue) — the Due itself stays owed everywhere else.
   if(computeTotals(target).netDue !== 0){
     showNotice('This guest\'s balance isn\'t settled at exactly 0 — checkout blocked.');
@@ -10446,7 +10446,7 @@ function addPayRow(){
         <option value="Cash">Cash</option>
         <option value="Bank Transfer">Bank Transfer</option>
         <option value="Card">Card</option>
-        <option value="BTC">BTC (Bill To Company)</option>
+        <option value="Late Payment">Late Payment</option>
       </select>
     </td>
     <td>
@@ -10480,18 +10480,18 @@ function applyPayModeEnablement(tr){
   const cash = tr.querySelector('.payCash');
   const acct = tr.querySelector('.payAccount');
   const bank = tr.querySelector('.payBank');
-  // One live amount field per mode. BTC shares the Account box (the column
-  // header reads "Account / BTC") — what separates them is the mode itself,
+  // One live amount field per mode. Late Payment shares the Account box (the column
+  // header reads "Account / Late Payment") — what separates them is the mode itself,
   // which is also what decides where the figure gets stored: an Account
-  // payment saves into `account`, a BTC saves into `total` alone with
+  // payment saves into `account`, a late payment saves into `total` alone with
   // `account` left at 0, so it never reaches a collected-money report.
-  // BTC has no bank either: nothing was deposited anywhere, it is an
+  // Late Payment has no bank either: nothing was deposited anywhere, it is an
   // invoice waiting on a company, so Bank stays shut exactly like Cash's.
   const isCash = mode === 'Cash';
-  const isBtc = mode === BTC_MODE;
+  const isLate = mode === LATE_MODE;
   cash.disabled = !isCash;
   acct.disabled = isCash;
-  bank.disabled = isCash || isBtc;
+  bank.disabled = isCash || isLate;
 }
 
 function updatePayRowLockStyle(tr){
@@ -10533,30 +10533,30 @@ function toggleMode(sel){
   const mode = sel.value;
   // The row's own tint class records what it was before this change — no
   // extra state needed, and unlike field-enablement it still distinguishes
-  // BTC from Card/Transfer now that those share the Account box.
-  const wasBtc = tr.classList.contains('mode-btc');
-  const isBtc = mode === BTC_MODE;
+  // Late Payment from Card/Transfer now that those share the Account box.
+  const wasLate = tr.classList.contains('mode-late');
+  const isLate = mode === LATE_MODE;
   const amount = (parseFloat(cash.value) || 0) + (parseFloat(acct.value) || 0);
 
   cash.value = ''; acct.value = '';
-  if(mode === 'Cash' || isBtc) bank.value = '';
+  if(mode === 'Cash' || isLate) bank.value = '';
   applyPayModeEnablement(tr);
 
-  // Settling a BTC is a mode change and nothing more: when the company
-  // finally pays, switch this row from BTC to whatever actually came in and
+  // Settling a late payment is a mode change and nothing more: when the company
+  // finally pays, switch this row from Late Payment to whatever actually came in and
   // the amount is already sitting in the right box — no retyping real money,
-  // no second payment row, and the row leaves the BTC page by itself.
-  // Carried ONLY when BTC is on one side of the switch; a plain
+  // no second payment row, and the row leaves the Late Payment page by itself.
+  // Carried ONLY when Late Payment is on one side of the switch; a plain
   // Cash<->Card/Transfer change still clears the amount exactly as it always
   // has, so nothing about the three existing modes behaves differently.
-  if((wasBtc || isBtc) && amount > 0){
+  if((wasLate || isLate) && amount > 0){
     (mode === 'Cash' ? cash : acct).value = amount;
   }
 
-  tr.classList.remove('mode-cash', 'mode-bank', 'mode-btc');
-  total.classList.remove('cash-amt', 'account-amt', 'btc-amt');
+  tr.classList.remove('mode-cash', 'mode-bank', 'mode-late');
+  total.classList.remove('cash-amt', 'account-amt', 'late-amt');
   if(mode === 'Cash'){ tr.classList.add('mode-cash'); total.classList.add('cash-amt'); }
-  else if(isBtc){ tr.classList.add('mode-btc'); total.classList.add('btc-amt'); }
+  else if(isLate){ tr.classList.add('mode-late'); total.classList.add('late-amt'); }
   else { tr.classList.add('mode-bank'); total.classList.add('account-amt'); }
   calcPayRow(cash);
 }
@@ -10587,24 +10587,24 @@ function renumberPay(){
 
 function calcSummary(){
   const bookingTotal = parseFloat(document.getElementById('grandTotal').textContent.replace(/,/g,'')) || 0;
-  // BTC rows are summed apart from Paid: the money has not arrived, so
+  // Late Payment rows are summed apart from Paid: the money has not arrived, so
   // Balance Due must keep reading the full amount still owed.
-  let paid = 0, btcPending = 0;
+  let paid = 0, latePending = 0;
   document.querySelectorAll('#payBody tr').forEach(tr=>{
     const totalEl = tr.querySelector('.payTotal');
     const modeEl = tr.querySelector('.payMode');
     if(!totalEl || !modeEl) return;
     const amt = parseFloat(totalEl.textContent.replace(/,/g,'')) || 0;
-    if(modeEl.value === BTC_MODE) btcPending += amt;
+    if(modeEl.value === LATE_MODE) latePending += amt;
     else paid += amt;
   });
   const due = bookingTotal - paid;
-  // Fifth summary box, shown only once a BTC row actually exists — an entry
-  // with no BTC looks exactly like it always did.
-  const btcBox = document.getElementById('sumBtcBox');
-  if(btcBox){
-    btcBox.style.display = btcPending > 0 ? '' : 'none';
-    document.getElementById('sumBtcPending').textContent = btcPending.toLocaleString();
+  // Fifth summary box, shown only once a late payment row actually exists — an entry
+  // with no Late Payment looks exactly like it always did.
+  const lateBox = document.getElementById('sumLateBox');
+  if(lateBox){
+    lateBox.style.display = latePending > 0 ? '' : 'none';
+    document.getElementById('sumLatePending').textContent = latePending.toLocaleString();
   }
 
   document.getElementById('sumBookingTotal').textContent = bookingTotal.toLocaleString();
@@ -10612,10 +10612,10 @@ function calcSummary(){
   document.getElementById('sumDue').textContent = Math.max(due,0).toLocaleString();
 
   const statusEl = document.getElementById('sumStatus');
-  statusEl.classList.remove('paid','pending','partial','btc');
-  if(btcPending > 0){
-    statusEl.textContent = 'BTC';
-    statusEl.classList.add('btc');
+  statusEl.classList.remove('paid','pending','partial','late');
+  if(latePending > 0){
+    statusEl.textContent = 'Late';
+    statusEl.classList.add('late');
   } else if(bookingTotal > 0 && due <= 0){
     statusEl.textContent = 'Paid';
     statusEl.classList.add('paid');
@@ -11177,10 +11177,10 @@ async function reviewEntry(){
     const dateInput = tr.querySelector('.payDate');
     const cashInput = tr.querySelector('.payCash');
     const acctInput = tr.querySelector('.payAccount');
-    const isBtc = mode === BTC_MODE;
+    const isLate = mode === LATE_MODE;
     const cash = parseFloat(cashInput.value) || 0;
-    // For a BTC row this holds the invoiced amount, typed into the shared
-    // Account / BTC box; it is deliberately NOT saved to the account field.
+    // For a late payment row this holds the invoiced amount, typed into the shared
+    // Account / Late Payment box; it is deliberately NOT saved to the account field.
     const account = parseFloat(acctInput.value) || 0;
     if(cash === 0 && account === 0) continue; // untouched filler payment row — ignore silently
     if(cash < 0 || account < 0){
@@ -11219,9 +11219,9 @@ async function reviewEntry(){
       focusError(dateInput);
       return;
     }
-    // A BTC row's amount lives in `total` alone, with cash and account both
-    // pinned at 0 — even though it was typed into the Account / BTC box.
-    // That is the whole storage trick, and it is what keeps BTC out of the
+    // A late payment row's amount lives in `total` alone, with cash and account both
+    // pinned at 0 — even though it was typed into the Account / Late Payment box.
+    // That is the whole storage trick, and it is what keeps Late Payment out of the
     // money reports for free: every collected-money figure in this app is
     // built from cash/account, or from a payment list that paidPayments()
     // has already filtered, so an unpaid invoice can never add itself to a
@@ -11233,8 +11233,8 @@ async function reviewEntry(){
       date: dateInput.value,
       type: tr.querySelector('.payType').value,
       mode, bank,
-      cash: isBtc ? 0 : cash,
-      account: isBtc ? 0 : account,
+      cash: isLate ? 0 : cash,
+      account: isLate ? 0 : account,
       remarks: tr.querySelector('.payRemarks').value.trim(),
       total: parseFloat(tr.querySelector('.payTotal').textContent.replace(/,/g,'')) || 0
     };
@@ -11243,9 +11243,9 @@ async function reviewEntry(){
   }
 
   const bookingTotalNum = parseFloat(document.getElementById('grandTotal').textContent.replace(/,/g,'')) || 0;
-  // BTC rows DO count here, unlike everywhere else. This cap is not asking
+  // Late Payment rows DO count here, unlike everywhere else. This cap is not asking
   // "how much has been paid" but "how much of this booking has been accounted
-  // for" — and an amount billed to a company is accounted for. Excluding it
+  // for" — and an amount still to be paid is accounted for. Excluding it
   // would let the same night be both invoiced to a company and paid in cash,
   // i.e. charged twice.
   const paidTotalNum = cleanPayments.reduce((sum, p) => sum + p.total, 0);
@@ -11303,17 +11303,17 @@ function openConfirmModal(data){
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
-    // A BTC row reaches here with cash and account already zeroed, so its
+    // A late payment row reaches here with cash and account already zeroed, so its
     // figure has to be read off total or the review would show a blank row
     // for the one payment most worth double-checking before saving.
-    const btc = isBtcPayment(p);
+    const late = isLatePayment(p);
     const isCash = p.mode === 'Cash';
     return `
-    <tr class="${btc ? 'mode-btc' : (isCash ? 'mode-cash' : 'mode-bank')}">
-      <td>${formatDate(p.date)}</td><td>${p.type}</td><td><span class="mode-badge ${btc ? 'btc' : (isCash ? 'cash' : 'bank')}">${p.mode}</span></td><td>${p.bank || '-'}</td>
+    <tr class="${late ? 'mode-late' : (isCash ? 'mode-cash' : 'mode-bank')}">
+      <td>${formatDate(p.date)}</td><td>${p.type}</td><td><span class="mode-badge ${late ? 'late' : (isCash ? 'cash' : 'bank')}">${p.mode}</span></td><td>${p.bank || '-'}</td>
       <td>${p.remarks || '-'}</td>
-      <td class="cash-amt">${p.cash ? p.cash.toLocaleString() : '-'}</td><td class="account-amt">${btc ? p.total.toLocaleString() : (p.account ? p.account.toLocaleString() : '-')}</td>
-      <td class="rowtotal ${btc ? 'btc-amt' : (isCash ? 'cash-amt' : 'account-amt')}">${p.total.toLocaleString()}</td>
+      <td class="cash-amt">${p.cash ? p.cash.toLocaleString() : '-'}</td><td class="account-amt">${late ? p.total.toLocaleString() : (p.account ? p.account.toLocaleString() : '-')}</td>
+      <td class="rowtotal ${late ? 'late-amt' : (isCash ? 'cash-amt' : 'account-amt')}">${p.total.toLocaleString()}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="8" class="empty-note">No payments entered yet.</td></tr>';
 
@@ -11610,32 +11610,32 @@ function loadAllEntries(){
 }
 
 // =========================================================
-// BTC — Bill To Company. A payment MODE (the 4th, alongside Cash / Bank
+// Late Payment — Late Payment. A payment MODE (the 4th, alongside Cash / Bank
 // Transfer / Card) for money the guest never handed over at the desk: a
 // company settles it later, often a month later. Two rules define it, and
 // everything else in this file follows from them:
 //
-//   1. BTC is NOT money. It never counts as Paid, never lands in any
+//   1. Late Payment is NOT money. It never counts as Paid, never lands in any
 //      collected-money report (Payment Report, Revenue, Ledgers, Night
 //      Summary, Graphs, Account Payment Record), and the guest's Due stays
 //      owed in full until the company actually pays.
-//   2. BTC unpins the guest. The one thing an unpaid balance normally does
+//   2. Late Payment unpins the guest. The one thing an unpaid balance normally does
 //      is block checkout (computeTotals().due !== 0, enforced twice in the
-//      checkout flow) — BTC lifts exactly that block via netDue, so the
+//      checkout flow) — Late Payment lifts exactly that block via netDue, so the
 //      guest can leave on time while the invoice is still outstanding.
 //
 // Settling one is deliberately not a separate action: when the company
-// pays, you edit that payment row and switch its Mode from BTC to whatever
+// pays, you edit that payment row and switch its Mode from Late Payment to whatever
 // actually came in (Cash / Bank Transfer / Card). At that instant it stops
-// being a BTC row and becomes a real payment everywhere at once — it drops
-// off the BTC page, counts as Paid, and appears in the money reports under
+// being a late payment row and becomes a real payment everywhere at once — it drops
+// off the Late Payment page, counts as Paid, and appears in the money reports under
 // the date it was collected. The amount carries across the mode switch on
 // its own (see toggleMode), so nothing has to be re-typed.
-const BTC_MODE = 'BTC';
-function isBtcPayment(p){ return !!p && p.mode === BTC_MODE; }
+const LATE_MODE = 'Late Payment';
+function isLatePayment(p){ return !!p && p.mode === LATE_MODE; }
 // Every collected-money report flattens payments through one of these two,
-// so BTC can never silently leak into a revenue figure.
-function paidPayments(list){ return (list || []).filter(p=> !isBtcPayment(p)); }
+// so Late Payment can never silently leak into a revenue figure.
+function paidPayments(list){ return (list || []).filter(p=> !isLatePayment(p)); }
 function sumPaymentTotals(list){
   return (list || []).reduce((s,p)=> s + (parseFloat(p.total) || 0), 0);
 }
@@ -11645,31 +11645,31 @@ function computeTotals(entry){
     const t = parseFloat(String(r.total).replace(/,/g,'')) || 0;
     return s + t;
   }, 0);
-  // BTC rows are excluded from paid on purpose — the money has not arrived,
+  // Late Payment rows are excluded from paid on purpose — the money has not arrived,
   // so Due must keep reading the full amount owed (the guest stays on
   // Search(due) and Add Payment until the company settles).
   const payments = entry.payments || [];
   const paid = sumPaymentTotals(paidPayments(payments));
-  const btcPending = sumPaymentTotals(payments.filter(isBtcPayment));
+  const latePending = sumPaymentTotals(payments.filter(isLatePayment));
   const due = bookingTotal - paid;
   let status = 'Pending';
   if(bookingTotal > 0 && due <= 0) status = 'Paid';
   else if(paid > 0) status = 'Partial';
-  // An outstanding BTC outranks Pending/Partial as the guest's headline
+  // An outstanding Late Payment outranks Pending/Partial as the guest's headline
   // state: "Pending" reads as nobody has chased this yet, when in fact a
   // company has been invoiced and the desk has nothing further to collect.
   // Nothing anywhere branches on this string — every use renders it as a
   // pill via .toLowerCase() — so this is display only.
-  if(btcPending > 0) status = 'BTC';
+  if(latePending > 0) status = 'Late';
   const isNonpayingGuest = bookingTotal === 0;
   if(isNonpayingGuest) status = 'Guest';
-  // netDue is the checkout gate's number, and the ONLY place BTC counts for
-  // anything: what would still be owed if every outstanding BTC invoice were
+  // netDue is the checkout gate's number, and the ONLY place Late Payment counts for
+  // anything: what would still be owed if every outstanding Late Payment invoice were
   // paid. Clamped exactly like due, so an overpaid guest reads 0 here the
-  // same way they always did. With no BTC rows this is identical to due, so
+  // same way they always did. With no Late Payment rows this is identical to due, so
   // every existing guest's checkout behaves precisely as before.
-  const netDue = Math.max(bookingTotal - paid - btcPending, 0);
-  return { bookingTotal, paid, due: Math.max(due,0), netDue, btcPending, status, isNonpayingGuest };
+  const netDue = Math.max(bookingTotal - paid - latePending, 0);
+  return { bookingTotal, paid, due: Math.max(due,0), netDue, latePending, status, isNonpayingGuest };
 }
 
 // The most recent thing that happened to this entry — created, edited, or
@@ -11827,10 +11827,10 @@ function startEditEntry(entry){
       // block the latter
       tr.dataset.origDate = p.date || '';
       tr.dataset.origCash = String(p.cash || 0);
-      // A BTC row's box is filled from `total` (account is 0 on disk), so the
+      // A late payment row's box is filled from `total` (account is 0 on disk), so the
       // snapshot has to record what the box will actually show — otherwise
-      // every untouched BTC row would look edited to the Day Lock check.
-      tr.dataset.origAccount = String(isBtcPayment(p) ? (parseFloat(p.total) || 0) : (p.account || 0));
+      // every untouched Late Payment row would look edited to the Day Lock check.
+      tr.dataset.origAccount = String(isLatePayment(p) ? (parseFloat(p.total) || 0) : (p.account || 0));
       tr.dataset.origMode = p.mode || 'Cash';
       tr.dataset.origBank = p.bank || '';
     }
@@ -11853,10 +11853,10 @@ function startEditEntry(entry){
     toggleMode(modeSel);
     if(modeSel.value === 'Cash'){
       tr.querySelector('.payCash').value = p.cash || '';
-    } else if(isBtcPayment(p)){
-      // A BTC row carries its amount in `total` (cash and account are both 0
+    } else if(isLatePayment(p)){
+      // A late payment row carries its amount in `total` (cash and account are both 0
       // by construction — see the save flow), so that is what goes back
-      // into the shared Account / BTC box when the entry is reopened.
+      // into the shared Account / Late Payment box when the entry is reopened.
       tr.querySelector('.payAccount').value = parseFloat(p.total) || '';
     } else {
       tr.querySelector('.payBank').value = p.bank || '';
@@ -13318,20 +13318,20 @@ function renderDetail(){
   const payBody = document.getElementById('detailPayBody');
   const payments = (entry.payments || []).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''));
   payBody.innerHTML = payments.map(p=>{
-    const btc = isBtcPayment(p);
+    const late = isLatePayment(p);
     const isCash = p.mode === 'Cash';
-    const modeClass = btc ? 'mode-btc' : (isCash ? 'mode-cash' : 'mode-bank');
-    const amtClass = btc ? 'btc-amt' : (isCash ? 'cash-amt' : 'account-amt');
+    const modeClass = late ? 'mode-late' : (isCash ? 'mode-cash' : 'mode-bank');
+    const amtClass = late ? 'late-amt' : (isCash ? 'cash-amt' : 'account-amt');
     return `
     <tr class="${modeClass}">
       <td>${p.id && newPaymentIds.has(p.id) ? '<span class="new-flag">NEW!</span>' : ''}${formatDate(p.date)}</td>
       <td>${p.type}</td>
-      <td><span class="mode-badge ${btc ? 'btc' : (isCash ? 'cash' : 'bank')}">${p.mode}</span></td>
+      <td><span class="mode-badge ${late ? 'late' : (isCash ? 'cash' : 'bank')}">${p.mode}</span></td>
       <td>${p.bank || '-'}</td>
       <td>${p.remarks || '-'}</td>
       <td>${p.createdBy || '-'}</td>
       <td class="cash-amt">${p.cash ? Number(p.cash).toLocaleString() : '-'}</td>
-      <td class="account-amt">${btc ? Number(p.total).toLocaleString() : (p.account ? Number(p.account).toLocaleString() : '-')}</td>
+      <td class="account-amt">${late ? Number(p.total).toLocaleString() : (p.account ? Number(p.account).toLocaleString() : '-')}</td>
       <td class="rowtotal ${amtClass}">${Number(p.total).toLocaleString()}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="9" class="empty-note">No payments yet.</td></tr>';
@@ -13342,11 +13342,11 @@ function renderDetail(){
   document.getElementById('dSumBooking').textContent = t.bookingTotal.toLocaleString();
   document.getElementById('dSumPaid').textContent = t.paid.toLocaleString();
   document.getElementById('dSumDue').textContent = t.due.toLocaleString();
-  // Shown only when there is one, so a guest with no BTC looks unchanged.
-  const dBtcBox = document.getElementById('dSumBtcBox');
-  if(dBtcBox){
-    dBtcBox.style.display = t.btcPending > 0 ? '' : 'none';
-    document.getElementById('dSumBtcPending').textContent = t.btcPending.toLocaleString();
+  // Shown only when there is one, so a guest with no Late Payment looks unchanged.
+  const dLateBox = document.getElementById('dSumLateBox');
+  if(dLateBox){
+    dLateBox.style.display = t.latePending > 0 ? '' : 'none';
+    document.getElementById('dSumLatePending').textContent = t.latePending.toLocaleString();
   }
   const statusEl = document.getElementById('dSumStatus');
   statusEl.className = 'status ' + t.status.toLowerCase();
@@ -13918,18 +13918,18 @@ function buildGuestFolioHtml(entry){
   // payment list in the app orders them, so this reads the same way.
   let running = 0;
   const payRows = (entry.payments || []).map(p=>{
-    // A BTC is still printed on the folio — the guest should see what was
+    // A late payment is still printed on the folio — the guest should see what was
     // billed to their company — but it does not advance the running balance,
     // because nothing has been received against it.
     const amount = parseFloat(p.total) || 0;
-    const btc = isBtcPayment(p);
-    if(!btc) running += amount;
+    const late = isLatePayment(p);
+    if(!late) running += amount;
     const balance = t.bookingTotal - running;
     return `
     <tr>
       <td>${p.date ? formatDate(p.date) : '-'}</td>
       <td>${p.type || '-'}</td>
-      <td>${btc ? 'BTC (billed to company)' : (p.mode || '-')}</td>
+      <td>${late ? 'Late Payment (unpaid)' : (p.mode || '-')}</td>
       <td>${p.bank || '-'}</td>
       <td class="num">${amount.toLocaleString()}</td>
       <td class="num">${balance.toLocaleString()}</td>
@@ -14086,17 +14086,17 @@ function buildCompleteGuestFolioHtml(entry){
 
   let running = 0;
   const payRows = allPayments.map(p=>{
-    // Same rule as the single-stay folio: a BTC is listed but never advances
+    // Same rule as the single-stay folio: a late payment is listed but never advances
     // the running balance, because no money has come in against it.
     const amount = parseFloat(p.total) || 0;
-    const btc = isBtcPayment(p);
-    if(!btc) running += amount;
+    const late = isLatePayment(p);
+    if(!late) running += amount;
     const balance = bookingTotal - running;
     return `
     <tr>
       <td>${p.date ? formatDate(p.date) : '-'}</td>
       <td>${p.type || '-'}</td>
-      <td>${btc ? 'BTC (billed to company)' : (p.mode || '-')}</td>
+      <td>${late ? 'Late Payment (unpaid)' : (p.mode || '-')}</td>
       <td>${p.bank || '-'}</td>
       <td class="num">${amount.toLocaleString()}</td>
       <td class="num">${balance.toLocaleString()}</td>
@@ -14384,26 +14384,26 @@ function toggleDetailMode(){
   const acct = document.getElementById('dNewAccount');
   const bank = document.getElementById('dNewBank');
   const isCash = mode === 'Cash';
-  const isBtc = mode === BTC_MODE;
-  const wasBtc = acct.classList.contains('btc-mode');
+  const isLate = mode === LATE_MODE;
+  const wasLate = acct.classList.contains('late-mode');
   // Same rule as the entry form's toggleMode: one live amount field per
-  // mode, BTC shares the Account box, and BTC has no bank because nothing
+  // mode, Late Payment shares the Account box, and Late Payment has no bank because nothing
   // was deposited anywhere.
   if(!isCash) cash.value = '';
-  if(isCash || isBtc) bank.value = '';
+  if(isCash || isLate) bank.value = '';
   // Cash is the only switch that moves the figure to a different box — carry
-  // it rather than dropping it, so settling a BTC never means retyping money.
-  if(wasBtc && isCash){
+  // it rather than dropping it, so settling a late payment never means retyping money.
+  if(wasLate && isCash){
     const carried = parseFloat(acct.value) || 0;
     if(carried > 0) cash.value = carried;
   }
   if(isCash) acct.value = '';
   cash.disabled = !isCash;
   acct.disabled = isCash;
-  bank.disabled = isCash || isBtc;
-  acct.classList.toggle('btc-mode', isBtc);
+  bank.disabled = isCash || isLate;
+  acct.classList.toggle('late-mode', isLate);
   const acctLabel = document.getElementById('dNewAccountLabel');
-  if(acctLabel) acctLabel.textContent = isBtc ? 'BTC Amount' : 'Account Amount';
+  if(acctLabel) acctLabel.textContent = isLate ? 'Late Payment Amount' : 'Account Amount';
   updateAddPayPreview();
 }
 
@@ -14421,7 +14421,7 @@ function addDetailPayment(){
   const remarks = document.getElementById('dNewRemarks').value.trim();
   const cashInput = document.getElementById('dNewCash');
   const acctInput = document.getElementById('dNewAccount');
-  const isBtc = mode === BTC_MODE;
+  const isLate = mode === LATE_MODE;
   const cash = parseFloat(cashInput.value) || 0;
   const account = parseFloat(acctInput.value) || 0;
   const total = cash + account;
@@ -14430,36 +14430,36 @@ function addDetailPayment(){
     focusError(cash < 0 ? cashInput : acctInput);
     return;
   }
-  if(total <= 0){ showNotice(isBtc ? 'Enter the amount being billed to the company.' : 'Enter a cash or account amount.'); return; }
+  if(total <= 0){ showNotice(isLate ? 'Enter the amount still to be paid.' : 'Enter a cash or account amount.'); return; }
   if((mode === 'Bank Transfer' || mode === 'Card') && !bank){ showNotice('Please select a bank.'); return; }
 
   const entry = getCurrentEntry();
   if(!entry) return;
 
   const t = computeTotals(entry);
-  // A BTC is invoiced against what is still UNBILLED (netDue), not against
-  // the whole balance — otherwise a second BTC could re-bill money the
+  // A late payment is invoiced against what is still UNBILLED (netDue), not against
+  // the whole balance — otherwise a second Late Payment could re-bill money the
   // first one already covers, and the guest would end up billed twice for
   // the same night. A real payment still caps at the full due, unchanged.
-  const cap = isBtc ? t.netDue : t.due;
+  const cap = isLate ? t.netDue : t.due;
   if(cap === 0){
-    showNotice(isBtc
-      ? 'Nothing left to bill on this booking — the balance is either already paid or already covered by a BTC.'
+    showNotice(isLate
+      ? 'Nothing left to record on this booking — the balance is either already paid or already covered by a late payment.'
       : 'This booking is already fully paid — no more payments can be added.');
     return;
   }
   if(total > cap){
-    showNotice('This ' + (isBtc ? 'BTC (Rs. ' : 'payment (Rs. ') + total.toLocaleString() + ') is MORE than the remaining ' + (isBtc ? 'unbilled balance' : 'Balance Due') + ' (Rs. ' + cap.toLocaleString() + '). It can never be more than that — please fix the figure.');
+    showNotice('This ' + (isLate ? 'late payment (Rs. ' : 'payment (Rs. ') + total.toLocaleString() + ') is MORE than the remaining ' + (isLate ? 'unrecorded balance' : 'Balance Due') + ' (Rs. ' + cap.toLocaleString() + '). It can never be more than that — please fix the figure.');
     focusError(mode === 'Cash' ? cashInput : acctInput);
     return;
   }
-  // A BTC moves who pays, not whether it is paid, so the guest's Due is
+  // A late payment moves who pays, not whether it is paid, so the guest's Due is
   // unchanged by it. Only a real payment brings the balance down.
-  const after = isBtc ? t.due : t.due - total;
+  const after = isLate ? t.due : t.due - total;
 
-  // cash/account forced to 0 for a BTC even though the figure was typed into
+  // cash/account forced to 0 for a late payment even though the figure was typed into
   // the shared Account box — same invariant as the entry form's save.
-  pendingDetailPayment = { date, type, mode, bank, cash: isBtc ? 0 : cash, account: isBtc ? 0 : account, remarks, total };
+  pendingDetailPayment = { date, type, mode, bank, cash: isLate ? 0 : cash, account: isLate ? 0 : account, remarks, total };
 
   document.getElementById('addPayModalBody').innerHTML = `
     <div class="grid" style="margin-bottom:14px;">
@@ -14470,11 +14470,11 @@ function addDetailPayment(){
       <div><div class="confirm-lbl">Remarks</div><div class="confirm-val">${remarks || '-'}</div></div>
     </div>
     <div class="summary" style="margin-top:0; padding-top:0; border-top:none;">
-      <div class="box"><div class="lbl">${isBtc ? 'Billed To Company' : 'This Payment'}</div><div class="val${isBtc ? ' btc-amt' : ''}">${total.toLocaleString()}</div><div class="date-readout">= ${amountInWords(total)}</div></div>
+      <div class="box"><div class="lbl">${isLate ? 'Late Payment' : 'This Payment'}</div><div class="val${isLate ? ' late-amt' : ''}">${total.toLocaleString()}</div><div class="date-readout">= ${amountInWords(total)}</div></div>
       <div class="box"><div class="lbl">Balance Due Now</div><div class="val">${t.due.toLocaleString()}</div></div>
-      <div class="box"><div class="lbl">${isBtc ? 'Due After (unchanged)' : 'Due After'}</div><div class="val" style="color:${after > 0 ? 'var(--danger)' : 'var(--cash)'};">${after.toLocaleString()}</div></div>
+      <div class="box"><div class="lbl">${isLate ? 'Due After (unchanged)' : 'Due After'}</div><div class="val" style="color:${after > 0 ? 'var(--danger)' : 'var(--cash)'};">${after.toLocaleString()}</div></div>
     </div>
-    ${isBtc ? '<div class="sub" style="margin:10px 0 0;">This records an invoice, not money received. The guest can be checked out, their Due stays owed, and it will be listed on the BTC page until you switch this row to Cash / Bank Transfer / Card once the company pays.</div>' : ''}
+    ${isLate ? '<div class="sub" style="margin:10px 0 0;">This records a payment still to come, not money received. The guest can be checked out, their Due stays owed, and it will be listed on the Late Payments page until you switch this row to Cash / Bank Transfer / Card once they pay.</div>' : ''}
   `;
 
   const input = document.getElementById('addPayTypeInput');
@@ -14537,11 +14537,11 @@ function updateAddPayPreview(){
   const t = computeTotals(entry);
   const cash = parseFloat(document.getElementById('dNewCash').value) || 0;
   const acct = parseFloat(document.getElementById('dNewAccount').value) || 0;
-  const isBtc = document.getElementById('dNewMode').value === BTC_MODE;
+  const isLate = document.getElementById('dNewMode').value === LATE_MODE;
   const amount = cash + acct;
-  // A BTC leaves the balance exactly where it was — it changes who will
+  // A late payment leaves the balance exactly where it was — it changes who will
   // settle it, not whether it has been settled.
-  const after = isBtc ? t.due : t.due - amount;
+  const after = isLate ? t.due : t.due - amount;
 
   document.getElementById('prevAmount').textContent = amount.toLocaleString();
   document.getElementById('prevAmountWords').textContent = amount > 0 ? '= ' + amountInWords(amount) : '';
@@ -14550,11 +14550,11 @@ function updateAddPayPreview(){
   const afterEl = document.getElementById('prevDueAfter');
   const statusEl = document.getElementById('prevStatus');
   statusEl.className = 'status';
-  if(isBtc && amount > 0){
+  if(isLate && amount > 0){
     afterEl.textContent = t.due.toLocaleString();
-    afterEl.style.color = 'var(--btc)';
+    afterEl.style.color = 'var(--late)';
     statusEl.classList.add('partial');
-    statusEl.textContent = 'Billed to company';
+    statusEl.textContent = 'Late payment';
   } else if(amount === 0){
     afterEl.textContent = t.due.toLocaleString();
     afterEl.style.color = 'inherit';
@@ -14627,7 +14627,7 @@ function classifyPaymentsByNightRange(fromDate, toDate){
     });
     nights.sort((a,b)=> a.date.localeCompare(b.date));
 
-    // paidPayments(): a BTC invoice has settled no room-night, so it must not
+    // paidPayments(): a late payment invoice has settled no room-night, so it must not
     // consume one in this FIFO walk — otherwise the night would read as
     // collected and the real money arriving later would have nothing to pay off.
     const payQueue = paidPayments(entry.payments)
@@ -14695,7 +14695,7 @@ function getFilteredReportRows(){
   let rows = [];
   all.forEach(entry=>{
     const roomNos = formatRoomChain(entry.rooms);
-    // BTC rows are excluded outright: this report, and the Graphs built from
+    // Late Payment rows are excluded outright: this report, and the Graphs built from
     // its rows, are both statements of money actually taken in.
     paidPayments(entry.payments).forEach(p=>{
       if(!p.date) return;
@@ -14866,8 +14866,8 @@ function getFilteredPaymentRecordRows(){
   all.forEach(entry=>{
     const roomNos = formatRoomChain(entry.rooms);
     paidPayments(entry.payments).forEach(p=>{
-      // Non-Cash only, and never a BTC — this page exists to reconcile money
-      // that actually landed in a bank account, which a BTC by definition has not.
+      // Non-Cash only, and never a late payment — this page exists to reconcile money
+      // that actually landed in a bank account, which a late payment by definition has not.
       if(!p.date || p.mode === 'Cash') return;
       rows.push({
         id: entry.id,
@@ -16274,7 +16274,7 @@ function buildLedgersRecords(includeUnconfirmed /*, includeNoShows */){
     });
     nights.sort((a,b)=> a.date.localeCompare(b.date));
 
-    // paidPayments(): an unpaid BTC settles no night, so it never marks one
+    // paidPayments(): an unpaid Late Payment settles no night, so it never marks one
     // as received here (see the same guard in buildRevenueReport).
     const payments = paidPayments(entry.payments)
       .slice()
@@ -16550,7 +16550,7 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
     nights.sort((a,b)=> a.date.localeCompare(b.date));
 
     // paidPayments(): Collected means collected. A room-night covered only by
-    // an outstanding BTC stays uncollected here until the company pays and the
+    // an outstanding Late Payment stays uncollected here until they pay and the
     // row is switched to a real mode — at which point it lands in this
     // report under the date the money actually arrived.
     const payQueue = paidPayments(entry.payments)
@@ -17550,25 +17550,25 @@ function renderPending(){
 }
 
 // =========================================================
-// BTC — the outstanding Bill To Company ledger. One row per BTC payment
+// Late Payment — the outstanding Late Payment ledger. One row per Late Payment payment
 // row anywhere in the system, newest first. This is the only page in the app
-// that shows BTC money, and by design it is the ONLY thing it shows: every
-// other report treats a BTC as if it did not exist until it becomes a real
+// that shows Late Payment money, and by design it is the ONLY thing it shows: every
+// other report treats a late payment as if it did not exist until it becomes a real
 // payment (see paidPayments()).
 //
 // There is no "mark settled" button on purpose. Settling is a mode change:
-// open the guest, edit the payment row, switch Mode from BTC to whatever the
+// open the guest, edit the payment row, switch Mode from Late Payment to whatever the
 // company actually paid with, and the row drops off this page while becoming
 // real money in the Payment Report / Revenue Report under its own date.
 // =========================================================
-function buildBtcRows(){
+function buildLatePayRows(){
   const rows = [];
   loadAllEntries().forEach(entry=>{
-    const btcPayments = (entry.payments || []).filter(isBtcPayment);
-    if(btcPayments.length === 0) return;
+    const latePayRows = (entry.payments || []).filter(isLatePayment);
+    if(latePayRows.length === 0) return;
     const t = computeTotals(entry);
     const actualCheckout = getDetailValue(entry, 'Actual Checkout');
-    btcPayments.forEach(pay=>{
+    latePayRows.forEach(pay=>{
       rows.push({
         guestId: entry.id,
         paymentId: pay.id || '',
@@ -17594,10 +17594,10 @@ function buildBtcRows(){
   return rows;
 }
 
-function getFilteredBtcRows(){
-  let rows = buildBtcRows();
-  const searchEl = document.getElementById('btcSearchInput');
-  const checkedOutEl = document.getElementById('btcCheckedOutOnly');
+function getFilteredLatePayRows(){
+  let rows = buildLatePayRows();
+  const searchEl = document.getElementById('latePaySearchInput');
+  const checkedOutEl = document.getElementById('latePayCheckedOutOnly');
   const searchVal = searchEl ? searchEl.value.trim().toLowerCase() : '';
   if(checkedOutEl && checkedOutEl.checked) rows = rows.filter(r=> r.checkedOut);
   if(searchVal){
@@ -17610,38 +17610,54 @@ function getFilteredBtcRows(){
   return rows;
 }
 
-// The nav button carries the outstanding count so an unpaid company invoice
-// is visible from anywhere, not only once someone thinks to open this page.
-function updateBtcNavCount(){
-  const el = document.getElementById('topNavBtcCount');
+// The nav button carries the outstanding count so an unpaid stay is visible
+// from anywhere, not only once someone thinks to open this page.
+function updateLatePayNavCount(){
+  const el = document.getElementById('topNavLatePayCount');
   if(!el) return;
-  const n = initialLoadDone ? buildBtcRows().length : 0;
+  const n = initialLoadDone ? buildLatePayRows().length : 0;
   el.textContent = n > 0 ? ' (' + n + ')' : '';
 }
 
-function renderBtc(){
-  const body = document.getElementById('btcBody');
+// Checkout/Pending's own nav count: guests due out today who are still not
+// checked out — the exact number that page shows as "Remaining", so the two
+// can never disagree.
+//
+// Deliberately gated on isAdmin(): the button is admin-only, and
+// buildAutoCheckoutRows() is the heaviest computation in this file (it walks
+// every room status for the date). No point paying for it on an account that
+// cannot see the result.
+function updateAutoCheckoutNavCount(){
+  const el = document.getElementById('topNavAutoCheckoutCount');
+  if(!el) return;
+  if(!initialLoadDone || !isAdmin()){ el.textContent = ''; return; }
+  const n = buildAutoCheckoutRows(todayStr()).filter(r=> r.status !== 'checked_out').length;
+  el.textContent = n > 0 ? ' (' + n + ')' : '';
+}
+
+function renderLatePay(){
+  const body = document.getElementById('latePayBody');
   if(!body) return;
   if(!initialLoadDone){
     body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
     return;
   }
-  const subEl = document.getElementById('btcPrintHeaderSub');
+  const subEl = document.getElementById('latePayPrintHeaderSub');
   if(subEl) subEl.textContent = 'Generated ' + formatDate(todayStr());
 
-  const rows = getFilteredBtcRows();
+  const rows = getFilteredLatePayRows();
   const total = rows.reduce((sum, r)=> sum + r.amount, 0);
-  const totalBox = document.getElementById('btcTotalBox');
+  const totalBox = document.getElementById('latePayTotalBox');
   if(totalBox){
     totalBox.innerHTML = rows.length
-      ? 'Outstanding BTC: <span class="btc-amt">Rs. ' + total.toLocaleString() + '</span>'
+      ? 'Outstanding: <span class="late-amt">Rs. ' + total.toLocaleString() + '</span>'
       : '';
   }
 
   if(rows.length === 0){
-    body.innerHTML = '<div class="empty-note">' + (buildBtcRows().length === 0
-      ? 'No BTC payments recorded. Bill a stay to a company by setting a payment row\'s Mode to BTC.'
-      : 'No BTC payments match these filters.') + '</div>';
+    body.innerHTML = '<div class="empty-note">' + (buildLatePayRows().length === 0
+      ? 'No late payments recorded. Record one by setting a payment row\'s Mode to Late Payment.'
+      : 'No late payments match these filters.') + '</div>';
     return;
   }
 
@@ -17656,11 +17672,11 @@ function renderBtc(){
           <th>Company</th>
           <th>Remarks</th>
           <th style="width:110px;">Guest Status</th>
-          <th style="width:120px;">BTC Amount</th>
+          <th style="width:120px;">Amount</th>
         </tr>
       </thead>
       <tbody>${rows.map((r, idx)=> `
-        <tr class="mode-btc" style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest to settle the BTC (change its Mode to Cash / Bank Transfer / Card)">
+        <tr class="mode-late" style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest to settle it (change its Mode to Cash / Bank Transfer / Card)">
           <td>${idx + 1}</td>
           <td>${r.date ? formatDate(r.date) : '-'}</td>
           <td>${r.rooms}</td>
@@ -17668,13 +17684,13 @@ function renderBtc(){
           <td>${r.company || '-'}</td>
           <td>${r.remarks || '-'}</td>
           <td><span class="status ${r.checkedOut ? 'paid' : 'partial'}">${r.checkedOut ? 'Checked Out' : 'In-house'}</span></td>
-          <td class="rowtotal btc-amt">${r.amount.toLocaleString()}</td>
+          <td class="rowtotal late-amt">${r.amount.toLocaleString()}</td>
         </tr>`).join('')}
       </tbody>
       <tfoot>
         <tr class="day-foot-total">
           <td colspan="7">Total Outstanding</td>
-          <td class="btc-amt">${total.toLocaleString()}</td>
+          <td class="late-amt">${total.toLocaleString()}</td>
         </tr>
       </tfoot>
     </table>`;
@@ -18250,8 +18266,8 @@ function buildFutureCheckoutRows(asOfDate){
 // Checkout/Pending shows two different numbers for the same guest on
 // purpose: `due` is what they still owe (drives the red Due column), while
 // `netDue` is what gates the Checkout button. They only diverge for a guest
-// carrying an outstanding BTC invoice — who reads as owing money AND is free
-// to leave, which is exactly the BTC arrangement. Guests with no BTC rows
+// carrying an outstanding Late Payment invoice — who reads as owing money AND is free
+// to leave, which is exactly the Late Payment arrangement. Guests with no Late Payment rows
 // get identical values for both, i.e. the behaviour this page always had.
 function acDueFigures(entry, isExtendedStatus){
   if(isExtendedStatus) return { due: 0, netDue: 0, status: 'extended' };
@@ -18259,7 +18275,7 @@ function acDueFigures(entry, isExtendedStatus){
   return {
     due: t.due,
     netDue: t.netDue,
-    status: t.netDue !== 0 ? 'pending' : (t.btcPending > 0 ? 'btc' : 'ready')
+    status: t.netDue !== 0 ? 'pending' : (t.latePending > 0 ? 'late' : 'ready')
   };
 }
 
@@ -18416,11 +18432,11 @@ function renderAutoCheckout(){
   // Remaining = due-list guests not yet checked out (Ready/Pending/Extended).
   const remainingEl = document.getElementById('acRemainingCount');
   if(remainingEl) remainingEl.textContent = rows.filter(r=> r.status !== 'checked_out').length;
-  // 'btc' is 'ready' with a reason: nothing is owed at the desk any more
-  // because a company is being invoiced for the rest, so the guest may leave
+  // 'late' is 'ready' with a reason: nothing is owed at the desk any more
+  // because payment is expected later for the rest, so the guest may leave
   // while the Due column still shows red. Its own pill keeps that visible
   // rather than showing a plain 'Ready' beside an unpaid balance.
-  const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'], btc: ['partial', 'BTC — Ready'] };
+  const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'], late: ['partial', 'Late Payment'] };
   if(rows.length === 0){
     // A day ahead reads differently on purpose: "nobody was due" sounds like
     // a verdict on something that already happened, when for a future date
@@ -18925,12 +18941,12 @@ async function undoArrivalNoShow(guestId){
 // holding several rooms into one due-list row, so checking them out means
 // checking out of every one of those rooms together, not just the first.
 // netDue, not due: a guest whose remaining balance is covered by an
-// outstanding BTC (Bill To Company) invoice is free to leave — the company
+// outstanding Late Payment (Late Payment) invoice is free to leave — the company
 // settles later. Nothing else about this gate changes, and for a guest with
-// no BTC rows netDue IS due, so ordinary checkouts behave exactly as before.
+// no Late Payment rows netDue IS due, so ordinary checkouts behave exactly as before.
 function startManualCheckout(guestId, roomNos, netDue){
   if(netDue !== 0){
-    showNotice('This guest\'s balance isn\'t settled at exactly 0 (owed money, or paid ahead of what\'s booked) — Checkout/Pending never checks out a guest like this, even manually. Settle the balance first, or record it as a BTC payment if a company is being billed for it.');
+    showNotice('This guest\'s balance isn\'t settled at exactly 0 (owed money, or paid ahead of what\'s booked) — Checkout/Pending never checks out a guest like this, even manually. Settle the balance first, or record it as a late payment payment if a company is being billed for it.');
     return;
   }
   pendingCheckoutRoomNos = roomNos;
@@ -20035,8 +20051,9 @@ function requestBackgroundPull(){
 // input — only the display lists rebuild.
 function rerenderActiveView(){
   // Runs on every data change (initial load, realtime event, local save), so
-  // the nav's outstanding-BTC count stays right whatever page you are on.
-  updateBtcNavCount();
+  // both nav counts stay right whatever page you happen to be on.
+  updateLatePayNavCount();
+  updateAutoCheckoutNavCount();
   if(currentView === 'entry'){ renderTodayEntries(); }
   else if(currentView === 'reservations'){ renderReservations(); }
   else if(currentView === 'search'){ renderSearch(); }
@@ -20064,7 +20081,7 @@ function rerenderActiveView(){
   else if(currentView === 'arrival'){ renderArrival(); }
   else if(currentView === 'paymentrecord'){ renderPaymentRecord(); }
   else if(currentView === 'frontoffice'){ renderFrontOffice(); }
-  else if(currentView === 'btc'){ renderBtc(); }
+  else if(currentView === 'latepay'){ renderLatePay(); }
   else if(currentView === 'pending'){ renderPending(); }
 }
 
