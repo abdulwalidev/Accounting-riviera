@@ -24958,7 +24958,32 @@ function posNewReceiptHotkey(e){
 // existing is actually being updated.
 function posEnterEditMode(){
   if (!posViewingRecord || posIsLocked(posViewingRecord)) return;
-  posEditingRecord = posViewingRecord.collected ? null : posViewingRecord;
+  // A collected invoice used to set the edit target to null here and then
+  // ungray the form anyway, on the next line. That combination is what made
+  // paying a Front Office invoice produce a SECOND invoice:
+  //
+  //   posEditingRecord = null   -> posPostInvoice takes its `else` branch and
+  //                                mints a fresh SI-###### from
+  //                                posNextInvoiceNo()
+  //   pos-view-only removed     -> posRequestPost's duplicate guard, which
+  //                                tests for that very class, stops firing
+  //   record.posted === true    -> and its "promote to the edit target"
+  //                                block is skipped too, since that only
+  //                                covers UNPOSTED receipts
+  //
+  // so Edit then Post wrote a brand-new invoice for a sale that already had
+  // one, with the money counted twice. Refusing outright is the honest
+  // version of what this line was always trying to say: a collected invoice
+  // is not editable here. Recording the payment is Select Payment's job, and
+  // genuinely changing the sale means undoing the collection first, on Front
+  // Office, which is already reversible.
+  if (posViewingRecord.collected) {
+    posShowToast(posNeedsPaymentSelection(posViewingRecord)
+      ? 'Front Office collected this — use Select Payment to record how it was paid, rather than editing it.'
+      : 'This invoice was collected at Front Office and can\'t be edited. Undo the collection on Front Office first if it really needs changing.', 'error');
+    return;
+  }
+  posEditingRecord = posViewingRecord;
 
   var invoicePage = document.getElementById('page-pos-invoice');
   if (invoicePage) invoicePage.classList.remove('pos-view-only');
@@ -25703,6 +25728,22 @@ async function posPostInvoice(mode){
   // (an edit shouldn't change when the sale happened) — posSaveInvoiceRecord
   // upserts by id, so this becomes an update instead of a new invoice.
   var editing = posEditingRecord;
+  // Hard invariant, and the last line of defence for it: an invoice that is
+  // ALREADY POSTED and sitting on screen must never leave this function as a
+  // second invoice. Every duplicate this module has produced came from
+  // reaching the `else` branch below with a posted record still loaded — the
+  // collected/Front Office case (see posEnterEditMode) was the latest, and it
+  // got past both of posRequestPost's guards. Rather than add a third guard
+  // there for one more route in, the rule is enforced where the new number is
+  // actually minted, so any future route in is covered too.
+  // 'printonly' is deliberately exempt: it never touches the record on screen,
+  // it saves whatever is loaded as a fresh unposted draft, which is the
+  // sanctioned way to carry a locked or collected invoice's data into a new
+  // one (see posOpenRecordInForm and the .pos-locked-view CSS).
+  if (!editing && mode !== 'printonly' && posViewingRecord && posViewingRecord.posted) {
+    abort('This invoice is already posted (' + posViewingRecord.no + '). Posting it again would create a duplicate — use Print-Only if you meant to start a new receipt from it.');
+    return;
+  }
   var invLabel, invId, recDate, recIsoDate;
   if (editing) {
     invLabel = editing.no;
