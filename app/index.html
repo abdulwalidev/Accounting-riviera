@@ -21166,6 +21166,15 @@ var posLockedDays = [];
 // taking posBootApp() (and with it Recent Invoices, which is filled after
 // it) down with it.
 var posLockAwarePickers = [];
+// The Invoice Date the payment rows are currently in step with, and a guard
+// for the moments the field is set programmatically rather than by a user —
+// see posSyncPaymentDatesToInvoiceDate. Both live up here for the same
+// boot-order reason as everything else in this block: posBootApp() builds
+// the invoice date field, registers that hook, and then calls posLoadDraft(),
+// which sets the field again — all synchronously, long before a `var`
+// declared down beside those functions would have been assigned.
+var posInvoiceDateInStep = '';
+var posSyncingInvoiceDate = false;
 // Whether pos_invoices has the customer_name column yet — see the note in
 // posInvoicePayload. Up here because posBootApp's synchronous cache
 // hydration reaches posRowFromDb, same trap as everything else in this block.
@@ -23812,6 +23821,74 @@ function posDateToISO(d){
 // Viewing or editing a saved invoice lifts the limits entirely: its own
 // date must display as-is, and flatpickr drops a preloaded value that falls
 // outside them.
+// Set the Invoice Date without the payment rows chasing it. Every
+// programmatic set goes through here — resetting the form, restoring a
+// draft, opening a saved record — because none of those is the user
+// changing the date of the receipt in front of them, and dragging real
+// payment dates along with them would be wrong (and would fire a toast
+// about it). flatpickr's setDate fires its hooks synchronously, so the
+// flag is safely cleared in the finally.
+function posSetInvoiceDateSilently(iso){
+  var el = document.getElementById('posInvoiceDate');
+  if (!el) return;
+  posSyncingInvoiceDate = true;
+  try{
+    if (el._flatpickr) el._flatpickr.setDate(iso, true); else el.value = iso;
+  } finally {
+    posSyncingInvoiceDate = false;
+    posInvoiceDateInStep = el.value || '';
+  }
+}
+
+// Moving the Invoice Date moves the payment rows that were still in step
+// with it.
+//
+// This is not cosmetic. The Invoice Date field had NO change handler at all,
+// and posEnsurePaymentRowDates only ever fills a row that is EMPTY — while
+// the first payment row is pre-filled with today at boot. So dating a new
+// receipt back to the 16th left its payment dated the 18th, silently, and
+// that payment date is what Charges Summary, Pending Payments and the
+// day-lock checks all read: the money landed on a different day from the
+// sale it belonged to.
+//
+// Only rows still sitting on the OLD invoice date move. A row deliberately
+// set to something else is a real fact — a charge settled the next day —
+// and must never be overwritten. Same rule the hotel side's own midnight
+// rollover uses: roll forward only what is still on the stale value, leave
+// a deliberately-picked date alone.
+function posSyncPaymentDatesToInvoiceDate(){
+  var el = document.getElementById('posInvoiceDate');
+  var newIso = (el && el.value) || '';
+  var prevIso = posInvoiceDateInStep;
+  posInvoiceDateInStep = newIso;
+  if (posSyncingInvoiceDate) return;          // set by us, not by the user
+  if (!newIso || !prevIso || newIso === prevIso) return;
+  // Viewing or editing a saved invoice: posPostInvoice deliberately reuses
+  // the ORIGINAL invoice date on an edit ("an edit shouldn't change when the
+  // sale happened"), so the date on screen is not what will persist.
+  // Dragging payment dates to match it would change the thing that DOES
+  // persist to agree with the thing that doesn't.
+  if (posViewingRecord || posEditingRecord) return;
+  // A payment cannot be dated into a closed day. The new-receipt picker
+  // already disables those (posDateIsClosed), so this is the belt to that
+  // braces — and silence is the right response, since the invoice date
+  // itself was still allowed to move.
+  if (posIsDateLocked(newIso)) return;
+  var moved = 0;
+  document.querySelectorAll('#page-pos-invoice .pay-rows .pay-row').forEach(function(row){
+    var input = row.querySelector('.pay-date-input');
+    if (!input || input.value !== prevIso) return;
+    // `false` = don't fire change; posRecalcAll runs once at the end instead
+    // of once per row.
+    if (input._flatpickr) input._flatpickr.setDate(newIso, false); else input.value = newIso;
+    moved++;
+  });
+  if (!moved) return;
+  posRecalcAll();
+  posShowToast('Payment date' + (moved === 1 ? '' : 's') + ' moved to ' +
+    posShortDate(receiptsDateToDMY(newIso)) + ' with the invoice date.');
+}
+
 function posApplyInvoiceDateLimits(){
   var el = document.getElementById('posInvoiceDate');
   if (!el || !el._flatpickr) return;
@@ -24733,9 +24810,7 @@ function posOpenRecordInForm(record){
   var invoiceDateInput = document.getElementById('posInvoiceDate');
   var openIso = record.isoDate || posTodayISO();
   posApplyInvoiceDateLimits(); // lift the new-receipt limits first — a saved invoice's own date may sit outside them
-  if (invoiceDateInput) {
-    if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(openIso, true); else invoiceDateInput.value = openIso;
-  }
+  if (invoiceDateInput) posSetInvoiceDateSilently(openIso);
 
   // Restore the payment rows too — they used to just get left blank (or,
   // worse, kept whatever the PREVIOUS invoice you had open left behind)
@@ -26023,7 +26098,7 @@ function posResetForm(){
   var roomNoInput = document.getElementById('posRoomNoField');
   if (roomNoInput) { roomNoInput.value = ''; posRoomNoChanged(roomNoInput); }
   var invoiceDateInput = document.getElementById('posInvoiceDate');
-  if (invoiceDateInput) { if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(posTodayISO(), true); else invoiceDateInput.value = posTodayISO(); }
+  if (invoiceDateInput) posSetInvoiceDateSilently(posTodayISO());
   posApplyInvoiceDateLimits(); // back to a new receipt — future dates and locked days grayed out again
   var orderNoInput = document.getElementById('posOrderNo');
   var orderNoNABox = document.getElementById('posOrderNoNA');
@@ -26139,9 +26214,7 @@ function posLoadDraft(){
   var roomNoInput = document.getElementById('posRoomNoField');
   if (roomNoInput && draft.roomNo) { roomNoInput.value = draft.roomNo; posRoomNoChanged(roomNoInput); }
   var invoiceDateInput = document.getElementById('posInvoiceDate');
-  if (invoiceDateInput && draft.invoiceDate) {
-    if (invoiceDateInput._flatpickr) invoiceDateInput._flatpickr.setDate(draft.invoiceDate, true); else invoiceDateInput.value = draft.invoiceDate;
-  }
+  if (invoiceDateInput && draft.invoiceDate) posSetInvoiceDateSilently(draft.invoiceDate);
   var hasPayments = draft.payments && draft.payments.some(function(p){ return parseFloat(p.amount) > 0; });
   if (hasPayments) posFillPaymentRows(draft.payments, posTodayISO());
 
@@ -26417,7 +26490,19 @@ function posBootApp(){
   var posInitDateInput = document.querySelector('#page-pos-invoice .pay-date-input');
   if (posInitDateInput) { posInitDateInput.value = posTodayISO(); posInitDatePicker(posInitDateInput, true); }
   var posInvoiceDateEl = document.getElementById('posInvoiceDate');
-  if (posInvoiceDateEl) { posInvoiceDateEl.value = posTodayISO(); posInitDatePicker(posInvoiceDateEl, true); posAttachDateStepper('posInvoiceDate'); posApplyInvoiceDateLimits(); }
+  if (posInvoiceDateEl) {
+    posInvoiceDateEl.value = posTodayISO();
+    posInitDatePicker(posInvoiceDateEl, true);
+    posAttachDateStepper('posInvoiceDate');
+    posApplyInvoiceDateLimits();
+    // Seed what the payment rows are in step with (both start on today), then
+    // hook the picker so a later user change carries them along. Appended to
+    // flatpickr's own onChange list rather than wired inside
+    // posInitDatePicker, which is shared by every POS date field and has no
+    // business knowing about the invoice date specifically.
+    posInvoiceDateInStep = posInvoiceDateEl.value || '';
+    if (posInvoiceDateEl._flatpickr) posInvoiceDateEl._flatpickr.config.onChange.push(posSyncPaymentDatesToInvoiceDate);
+  }
   posLoadDraft();
   posApplyQtPrefixToField(); // no draft to restore -> the empty field still opens on the prefix
   posRecalcAll();
