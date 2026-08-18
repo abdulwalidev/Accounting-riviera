@@ -90,7 +90,7 @@ create table if not exists public.guest_payments (
   guest_id text not null references public.guests(id) on delete cascade,
   payment_date date not null,
   pay_type text not null default 'Other',
-  mode text not null default 'Cash' check (mode in ('Cash', 'Bank Transfer', 'Card')),
+  mode text not null default 'Cash' check (mode in ('Cash', 'Bank Transfer', 'Card', 'BTC')),
   bank text not null default '',
   remarks text not null default '',
   cash numeric(12,2) not null default 0,

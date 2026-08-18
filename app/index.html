@@ -43,6 +43,7 @@
     --muted:#5B6B84;      /* slate — labels, secondary text */
     --cash:#166534;       /* green — cash amounts */
     --account:#1D4ED8;    /* blue — bank/account amounts */
+    --btc:#B45309;        /* burnt orange — BTC amounts (billed to a company, NOT collected) */
     --line:rgba(0,0,0,0.55); /* solid-reading black border — panels/cards need to visibly separate from the white page */
     --amber:#E7C55A;      /* gold accent — table headers, highlights */
     --gold-deep:#A16207;  /* darker gold for text/borders on light bg */
@@ -126,6 +127,10 @@
   /* ---- Payment mode colour-coding ---- */
   .cash-amt{ color:var(--cash) !important; font-weight:700; }
   .account-amt{ color:var(--account) !important; font-weight:700; }
+  /* BTC money is money that has NOT arrived — deliberately not green (cash)
+     and not blue (account), so an outstanding invoice can never be misread
+     as collected revenue at a glance. */
+  .btc-amt{ color:var(--btc) !important; font-weight:700; }
   /* ---- Revenue Report: Payments By Date boxes, left to right, wrapping ---- */
   .date-box-row{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
   .date-box{
@@ -153,17 +158,21 @@
   .section-divider{ border-top:2px solid #000; margin:24px 0; }
   tr.mode-cash td{ background:#E9F6EF; }
   tr.mode-bank td{ background:#EAF1FC; }
+  tr.mode-btc td{ background:#FDF1E3; }
   tbody tr.mode-cash:nth-child(even) td{ background:#DDF0E5; }
   tbody tr.mode-bank:nth-child(even) td{ background:#DEE9FA; }
+  tbody tr.mode-btc:nth-child(even) td{ background:#FAE7D2; }
   /* Day Lock already blocks saving an edit/delete on these rows (see
      isDateLocked() checks) — grayed out here so it reads that way before
      the user even tries. Wins over the cash/bank tint above on purpose. */
   tr.pay-row-locked td,
   tr.pay-row-locked.mode-cash td,
-  tr.pay-row-locked.mode-bank td{ background:#E5E5E5 !important; color:var(--muted); opacity:0.7; }
+  tr.pay-row-locked.mode-bank td,
+  tr.pay-row-locked.mode-btc td{ background:#E5E5E5 !important; color:var(--muted); opacity:0.7; }
   html[data-theme="dark"] tr.pay-row-locked td,
   html[data-theme="dark"] tr.pay-row-locked.mode-cash td,
-  html[data-theme="dark"] tr.pay-row-locked.mode-bank td{ background:rgba(255,255,255,0.06) !important; color:var(--muted); opacity:0.7; }
+  html[data-theme="dark"] tr.pay-row-locked.mode-bank td,
+  html[data-theme="dark"] tr.pay-row-locked.mode-btc td{ background:rgba(255,255,255,0.06) !important; color:var(--muted); opacity:0.7; }
   .pay-lock-tag{
     display:none;
     text-align:center;
@@ -209,9 +218,11 @@
   }
   .mode-badge.cash{ background:#CBEEDA; color:var(--cash); }
   .mode-badge.bank{ background:#D7E3FB; color:var(--account); }
+  .mode-badge.btc{ background:#FBE3C8; color:var(--btc); }
   input:disabled, select:disabled{ opacity:0.55; }
   .payCash:not(:disabled), #dNewCash:not(:disabled){ border-color:var(--cash); box-shadow:inset 0 0 0 1px var(--cash); }
   .payAccount:not(:disabled), #dNewAccount:not(:disabled){ border-color:var(--account); box-shadow:inset 0 0 0 1px var(--account); }
+  tr.mode-btc .payAccount:not(:disabled), #dNewAccount.btc-mode:not(:disabled){ border-color:var(--btc); box-shadow:inset 0 0 0 1px var(--btc); }
   label{
     display:block;
     font-family:'Inter',sans-serif;
@@ -1181,6 +1192,12 @@
   .status.checkoutdue{
     background:var(--danger-bg);
     color:var(--danger);
+  }
+  /* Billed to a company and still outstanding — its own colour so it can
+     never be skimmed as either Paid (green) or plain Pending (red). */
+  .status.btc{
+    background:#FBE3C8;
+    color:var(--btc);
   }
   .status.arrivaldue{
     background:#F7EBC5;
@@ -2814,8 +2831,9 @@
        below) and the Cash/Account column headers already say which is
        which, so nothing is actually lost by dropping the tint. */
     tbody tr:nth-child(even) td,
-    tr.mode-cash td, tr.mode-bank td,
-    tbody tr.mode-cash:nth-child(even) td, tbody tr.mode-bank:nth-child(even) td{
+    tr.mode-cash td, tr.mode-bank td, tr.mode-btc td,
+    tbody tr.mode-cash:nth-child(even) td, tbody tr.mode-bank:nth-child(even) td,
+    tbody tr.mode-btc:nth-child(even) td{
       background:#fff !important;
     }
     tr.day-foot-total td{
@@ -2866,6 +2884,7 @@
     --muted:#9C9C9C;
     --cash:#4ADE80;
     --account:#60A5FA;
+    --btc:#FB923C;
     --line:rgba(255,255,255,0.14);
     --amber:#F0D078;
     --gold-deep:#FBBF24;
@@ -2953,14 +2972,18 @@
   html[data-theme="dark"] th{ background:var(--ink-fill); color:#000; }
   html[data-theme="dark"] .status.paid{ background:rgba(74,222,128,0.18); }
   html[data-theme="dark"] .status.partial{ background:rgba(240,208,120,0.18); }
+  html[data-theme="dark"] .status.btc{ background:rgba(251,146,60,0.18); }
   html[data-theme="dark"] .status.ooo{ background:rgba(255,255,255,0.12); color:#D1D5DB; }
   html[data-theme="dark"] .guest-badge{ background:#B8860B; color:#fff; }
   html[data-theme="dark"] tr.mode-cash td{ background:rgba(74,222,128,0.08); }
   html[data-theme="dark"] tr.mode-bank td{ background:rgba(96,165,250,0.08); }
   html[data-theme="dark"] tbody tr.mode-cash:nth-child(even) td{ background:rgba(74,222,128,0.14); }
   html[data-theme="dark"] tbody tr.mode-bank:nth-child(even) td{ background:rgba(96,165,250,0.14); }
+  html[data-theme="dark"] tr.mode-btc td{ background:rgba(251,146,60,0.08); }
+  html[data-theme="dark"] tbody tr.mode-btc:nth-child(even) td{ background:rgba(251,146,60,0.14); }
   html[data-theme="dark"] .mode-badge.cash{ background:rgba(74,222,128,0.22); }
   html[data-theme="dark"] .mode-badge.bank{ background:rgba(96,165,250,0.22); }
+  html[data-theme="dark"] .mode-badge.btc{ background:rgba(251,146,60,0.22); }
   html[data-theme="dark"] .rpt-day-group,
   html[data-theme="dark"] .total-due-box,
   html[data-theme="dark"] .rpt-grandtotal-box{ box-shadow:0 4px 14px rgba(0,0,0,0.5); }
@@ -3063,6 +3086,7 @@
       --muted:#5B6B84;
       --cash:#166534;
       --account:#1D4ED8;
+      --btc:#B45309;
       --line:rgba(0,0,0,0.55);
       --amber:#E7C55A;
       --gold-deep:#A16207;
@@ -3498,7 +3522,7 @@
     #payBody td:nth-child(5)::before{ content:'Bank'; }
     #payBody td:nth-child(6)::before{ content:'Remarks'; }
     #payBody td:nth-child(7)::before{ content:'Cash Amount'; }
-    #payBody td:nth-child(8)::before{ content:'Account Amount'; }
+    #payBody td:nth-child(8)::before{ content:'Account / BTC'; }
     #payBody td:nth-child(9)::before{ content:'Row Total'; }
     #payBody td:nth-child(10)::before{ content:''; }
     #view-entry tbody td:nth-child(n+9){
@@ -4989,6 +5013,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
       <button class="navbtn" id="topNavAddPay" onclick="showView('addpay')">Add Payment</button>
       <button class="navbtn" id="topNavSearch" onclick="showView('search')">Search<span style="color:#dc2626;">(due)</span></button>
       <button class="navbtn" id="topNavPending" onclick="showView('pending')" style="display:none;">Pending</button>
+      <button class="navbtn" id="topNavBtc" onclick="showView('btc')">BTC<span id="topNavBtcCount" style="color:var(--btc);"></span></button>
       <button class="navbtn gold-nav" id="topNavReport" onclick="showView('report')">Payment Report</button>
       <div class="navbtn-separator"></div>
       <button class="navbtn gold-nav" id="topNavRevenue" onclick="showView('revenue')">Revenue Report</button>
@@ -5245,7 +5270,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
             <th style="width:110px;">Bank</th>
             <th>Remarks</th>
             <th style="width:110px;">Cash Amount</th>
-            <th style="width:110px;">Account Amount</th>
+            <th style="width:110px;">Account / BTC</th>
             <th style="width:110px;">Row Total</th>
             <th style="width:40px;"></th>
           </tr>
@@ -5268,6 +5293,10 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
         <div class="box">
           <div class="lbl">Balance Due</div>
           <div class="val" id="sumDue">0</div>
+        </div>
+        <div class="box" id="sumBtcBox" style="display:none;">
+          <div class="lbl">BTC (Pending)</div>
+          <div class="val btc-amt" id="sumBtcPending">0</div>
         </div>
         <div class="box">
           <div class="lbl">Status</div>
@@ -5387,6 +5416,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
               <option value="Cash">Cash</option>
               <option value="Bank Transfer">Bank Transfer</option>
               <option value="Card">Card</option>
+              <option value="BTC">BTC (Bill To Company)</option>
             </select>
           </div>
           <div>
@@ -5403,7 +5433,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
             <input type="number" id="dNewCash" min="0" placeholder="0">
           </div>
           <div>
-            <label>Account Amount</label>
+            <label id="dNewAccountLabel">Account Amount</label>
             <input type="number" id="dNewAccount" min="0" placeholder="0" disabled>
           </div>
           <div>
@@ -5589,7 +5619,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
             <th>Remarks</th>
             <th style="width:130px;">Taken By</th>
             <th style="width:100px;">Cash</th>
-            <th style="width:100px;">Account</th>
+            <th style="width:100px;">Account / BTC</th>
             <th style="width:100px;">Total</th>
           </tr>
         </thead>
@@ -5608,6 +5638,10 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
         <div class="box">
           <div class="lbl">Balance Due</div>
           <div class="val" id="dSumDue">0</div>
+        </div>
+        <div class="box" id="dSumBtcBox" style="display:none;">
+          <div class="lbl">BTC (Pending)</div>
+          <div class="val btc-amt" id="dSumBtcPending">0</div>
         </div>
         <div class="box">
           <div class="lbl">Status</div>
@@ -6102,6 +6136,43 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
 
     <div class="panel accent-report">
       <div id="pendingBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-btc">
+
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1 class="no-print">BTC — Bill To Company</h1>
+        <div class="sub no-print" style="margin-top:-6px;">Every stay billed to a company instead of collected at the desk. These guests check out normally; the money is still owed. A row leaves this page the moment you open the guest, edit the payment, and switch its Mode from BTC to whatever the company actually paid with.</div>
+      </div>
+      <div id="btcTotalBox" class="total-due-box"></div>
+    </div>
+
+    <div class="print-header">
+      <h1>BTC — Outstanding</h1>
+      <div class="print-header-sub" id="btcPrintHeaderSub"></div>
+    </div>
+
+    <div class="panel accent-report">
+      <div class="search-row no-print">
+        <div class="grow">
+          <label>Search (guest, company, room, remarks)</label>
+          <div class="search-clear-wrap">
+            <input type="text" id="btcSearchInput" placeholder="Type to search..." autocomplete="off">
+            <button type="button" class="search-clear-btn" onclick="clearSearchField(this)" title="Clear search">&#10005;</button>
+          </div>
+        </div>
+        <div class="checkline">
+          <input type="checkbox" id="btcCheckedOutOnly">
+          <label for="btcCheckedOutOnly" style="margin:0;">Only guests who've checked out</label>
+        </div>
+        <div style="align-self:flex-end;">
+          <button class="btn secondary" onclick="window.print()">&#128438; Print</button>
+        </div>
+      </div>
+      <div id="btcBody" style="overflow-x:auto;"><div class="empty-note">No data yet.</div></div>
     </div>
 
   </div>
@@ -8245,7 +8316,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant','users','pending'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant','users','pending','btc'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -8341,6 +8412,8 @@ function showView(view, fromPopState){
   document.getElementById('topNavSearch').classList.toggle('active', view === 'search' || view === 'detail');
   const topNavPending = document.getElementById('topNavPending');
   if(topNavPending) topNavPending.classList.toggle('active', view === 'pending');
+  const topNavBtc = document.getElementById('topNavBtc');
+  if(topNavBtc) topNavBtc.classList.toggle('active', view === 'btc');
   document.getElementById('topNavReport').classList.toggle('active', view === 'report' || view === 'graphs');
   document.getElementById('topNavLedgers').classList.toggle('active', view === 'ledgers');
   document.getElementById('topNavRevenue').classList.toggle('active', view === 'revenue');
@@ -8381,6 +8454,7 @@ function showView(view, fromPopState){
   if(view === 'entry') renderTodayEntries();
   if(view === 'addpay') renderApList();
   if(view === 'pending') renderPending();
+  if(view === 'btc') renderBtc();
   if(view === 'ledgers') renderLedgers();
   if(view === 'before19') renderBefore19();
   if(view === 'handover') renderMoneyHandover();
@@ -9032,6 +9106,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   ['dNewCash','dNewAccount'].forEach(id=>{
     document.getElementById(id).addEventListener('input', updateAddPayPreview);
   });
+  document.getElementById('btcSearchInput').addEventListener('input', renderBtc);
+  document.getElementById('btcCheckedOutOnly').addEventListener('change', renderBtc);
   document.getElementById('apSearchInput').addEventListener('input', renderApList);
   document.getElementById('apDueOnly').addEventListener('change', renderApList);
   document.getElementById('rdSearchInput').addEventListener('input', renderRoomDetail);
@@ -9810,7 +9886,8 @@ function openCheckoutConfirmModal(){
     <div><div class="confirm-lbl">Booking Total</div><div class="confirm-val">${t.bookingTotal.toLocaleString()}</div></div>
     <div><div class="confirm-lbl">Paid</div><div class="confirm-val">${t.paid.toLocaleString()}</div></div>
     <div><div class="confirm-lbl">Due</div><div class="confirm-val" style="${t.due > 0 ? 'color:var(--danger); font-weight:700;' : ''}">${t.due.toLocaleString()}</div></div>
-  `;
+    ${t.btcPending > 0 ? '<div><div class="confirm-lbl">Billed To Company (BTC)</div><div class="confirm-val btc-amt">' + t.btcPending.toLocaleString() + '</div></div>' : ''}
+  ` + (t.btcPending > 0 ? '<div class="sub" style="margin:10px 0 0;">This guest still owes Rs. ' + t.due.toLocaleString() + ', covered by an outstanding BTC invoice. Checking them out is expected here — the balance stays owed and stays listed on the BTC page until the company pays.</div>' : '');
   const input = document.getElementById('ccConfirmInput');
   input.value = '';
   input.classList.remove('duplicate');
@@ -9865,7 +9942,9 @@ async function confirmRoomCheckout(){
   if(!target) return;
   // Last line of defense — never write a checkout for a guest whose
   // balance isn't settled at exactly 0, no matter what UI path got here.
-  if(computeTotals(target).due !== 0){
+  // Balance owed against an outstanding BTC invoice counts as settled for
+  // this one purpose only (netDue) — the Due itself stays owed everywhere else.
+  if(computeTotals(target).netDue !== 0){
     showNotice('This guest\'s balance isn\'t settled at exactly 0 — checkout blocked.');
     return;
   }
@@ -10367,6 +10446,7 @@ function addPayRow(){
         <option value="Cash">Cash</option>
         <option value="Bank Transfer">Bank Transfer</option>
         <option value="Card">Card</option>
+        <option value="BTC">BTC (Bill To Company)</option>
       </select>
     </td>
     <td>
@@ -10400,8 +10480,18 @@ function applyPayModeEnablement(tr){
   const cash = tr.querySelector('.payCash');
   const acct = tr.querySelector('.payAccount');
   const bank = tr.querySelector('.payBank');
-  if(mode === 'Cash'){ cash.disabled = false; acct.disabled = true; bank.disabled = true; }
-  else { cash.disabled = true; acct.disabled = false; bank.disabled = false; }
+  // One live amount field per mode. BTC shares the Account box (the column
+  // header reads "Account / BTC") — what separates them is the mode itself,
+  // which is also what decides where the figure gets stored: an Account
+  // payment saves into `account`, a BTC saves into `total` alone with
+  // `account` left at 0, so it never reaches a collected-money report.
+  // BTC has no bank either: nothing was deposited anywhere, it is an
+  // invoice waiting on a company, so Bank stays shut exactly like Cash's.
+  const isCash = mode === 'Cash';
+  const isBtc = mode === BTC_MODE;
+  cash.disabled = !isCash;
+  acct.disabled = isCash;
+  bank.disabled = isCash || isBtc;
 }
 
 function updatePayRowLockStyle(tr){
@@ -10441,18 +10531,33 @@ function toggleMode(sel){
   const bank = tr.querySelector('.payBank');
   const total = tr.querySelector('.payTotal');
   const mode = sel.value;
-  if(mode === 'Cash'){
-    cash.disabled = false; acct.disabled = true; acct.value = '';
-    bank.disabled = true; bank.value = '';
-    tr.classList.remove('mode-bank'); tr.classList.add('mode-cash');
-    total.classList.remove('account-amt'); total.classList.add('cash-amt');
-  } else {
-    // Bank Transfer or Card
-    acct.disabled = false; cash.disabled = true; cash.value = '';
-    bank.disabled = false;
-    tr.classList.remove('mode-cash'); tr.classList.add('mode-bank');
-    total.classList.remove('cash-amt'); total.classList.add('account-amt');
+  // The row's own tint class records what it was before this change — no
+  // extra state needed, and unlike field-enablement it still distinguishes
+  // BTC from Card/Transfer now that those share the Account box.
+  const wasBtc = tr.classList.contains('mode-btc');
+  const isBtc = mode === BTC_MODE;
+  const amount = (parseFloat(cash.value) || 0) + (parseFloat(acct.value) || 0);
+
+  cash.value = ''; acct.value = '';
+  if(mode === 'Cash' || isBtc) bank.value = '';
+  applyPayModeEnablement(tr);
+
+  // Settling a BTC is a mode change and nothing more: when the company
+  // finally pays, switch this row from BTC to whatever actually came in and
+  // the amount is already sitting in the right box — no retyping real money,
+  // no second payment row, and the row leaves the BTC page by itself.
+  // Carried ONLY when BTC is on one side of the switch; a plain
+  // Cash<->Card/Transfer change still clears the amount exactly as it always
+  // has, so nothing about the three existing modes behaves differently.
+  if((wasBtc || isBtc) && amount > 0){
+    (mode === 'Cash' ? cash : acct).value = amount;
   }
+
+  tr.classList.remove('mode-cash', 'mode-bank', 'mode-btc');
+  total.classList.remove('cash-amt', 'account-amt', 'btc-amt');
+  if(mode === 'Cash'){ tr.classList.add('mode-cash'); total.classList.add('cash-amt'); }
+  else if(isBtc){ tr.classList.add('mode-btc'); total.classList.add('btc-amt'); }
+  else { tr.classList.add('mode-bank'); total.classList.add('account-amt'); }
   calcPayRow(cash);
 }
 
@@ -10482,19 +10587,36 @@ function renumberPay(){
 
 function calcSummary(){
   const bookingTotal = parseFloat(document.getElementById('grandTotal').textContent.replace(/,/g,'')) || 0;
-  let paid = 0;
-  document.querySelectorAll('#payBody .payTotal').forEach(td=>{
-    paid += parseFloat(td.textContent.replace(/,/g,'')) || 0;
+  // BTC rows are summed apart from Paid: the money has not arrived, so
+  // Balance Due must keep reading the full amount still owed.
+  let paid = 0, btcPending = 0;
+  document.querySelectorAll('#payBody tr').forEach(tr=>{
+    const totalEl = tr.querySelector('.payTotal');
+    const modeEl = tr.querySelector('.payMode');
+    if(!totalEl || !modeEl) return;
+    const amt = parseFloat(totalEl.textContent.replace(/,/g,'')) || 0;
+    if(modeEl.value === BTC_MODE) btcPending += amt;
+    else paid += amt;
   });
   const due = bookingTotal - paid;
+  // Fifth summary box, shown only once a BTC row actually exists — an entry
+  // with no BTC looks exactly like it always did.
+  const btcBox = document.getElementById('sumBtcBox');
+  if(btcBox){
+    btcBox.style.display = btcPending > 0 ? '' : 'none';
+    document.getElementById('sumBtcPending').textContent = btcPending.toLocaleString();
+  }
 
   document.getElementById('sumBookingTotal').textContent = bookingTotal.toLocaleString();
   document.getElementById('sumPaid').textContent = paid.toLocaleString();
   document.getElementById('sumDue').textContent = Math.max(due,0).toLocaleString();
 
   const statusEl = document.getElementById('sumStatus');
-  statusEl.classList.remove('paid','pending','partial');
-  if(bookingTotal > 0 && due <= 0){
+  statusEl.classList.remove('paid','pending','partial','btc');
+  if(btcPending > 0){
+    statusEl.textContent = 'BTC';
+    statusEl.classList.add('btc');
+  } else if(bookingTotal > 0 && due <= 0){
     statusEl.textContent = 'Paid';
     statusEl.classList.add('paid');
   } else if(paid > 0){
@@ -11055,7 +11177,10 @@ async function reviewEntry(){
     const dateInput = tr.querySelector('.payDate');
     const cashInput = tr.querySelector('.payCash');
     const acctInput = tr.querySelector('.payAccount');
+    const isBtc = mode === BTC_MODE;
     const cash = parseFloat(cashInput.value) || 0;
+    // For a BTC row this holds the invoiced amount, typed into the shared
+    // Account / BTC box; it is deliberately NOT saved to the account field.
     const account = parseFloat(acctInput.value) || 0;
     if(cash === 0 && account === 0) continue; // untouched filler payment row — ignore silently
     if(cash < 0 || account < 0){
@@ -11094,10 +11219,22 @@ async function reviewEntry(){
       focusError(dateInput);
       return;
     }
+    // A BTC row's amount lives in `total` alone, with cash and account both
+    // pinned at 0 — even though it was typed into the Account / BTC box.
+    // That is the whole storage trick, and it is what keeps BTC out of the
+    // money reports for free: every collected-money figure in this app is
+    // built from cash/account, or from a payment list that paidPayments()
+    // has already filtered, so an unpaid invoice can never add itself to a
+    // revenue total. `total` still carries the figure, so nothing is lost
+    // and switching the mode later turns it into a real payment as it
+    // stands. Forced to 0 here rather than trusted from the inputs, so the
+    // invariant holds no matter what state the form was left in.
     const payObj = {
       date: dateInput.value,
       type: tr.querySelector('.payType').value,
-      mode, bank, cash, account,
+      mode, bank,
+      cash: isBtc ? 0 : cash,
+      account: isBtc ? 0 : account,
       remarks: tr.querySelector('.payRemarks').value.trim(),
       total: parseFloat(tr.querySelector('.payTotal').textContent.replace(/,/g,'')) || 0
     };
@@ -11106,6 +11243,11 @@ async function reviewEntry(){
   }
 
   const bookingTotalNum = parseFloat(document.getElementById('grandTotal').textContent.replace(/,/g,'')) || 0;
+  // BTC rows DO count here, unlike everywhere else. This cap is not asking
+  // "how much has been paid" but "how much of this booking has been accounted
+  // for" — and an amount billed to a company is accounted for. Excluding it
+  // would let the same night be both invoiced to a company and paid in cash,
+  // i.e. charged twice.
   const paidTotalNum = cleanPayments.reduce((sum, p) => sum + p.total, 0);
   if(paidTotalNum > bookingTotalNum){
     showNotice(
@@ -11161,13 +11303,17 @@ function openConfirmModal(data){
   `).join('');
 
   const payRowsHtml = data.payments.length ? data.payments.map(p=>{
+    // A BTC row reaches here with cash and account already zeroed, so its
+    // figure has to be read off total or the review would show a blank row
+    // for the one payment most worth double-checking before saving.
+    const btc = isBtcPayment(p);
     const isCash = p.mode === 'Cash';
     return `
-    <tr class="${isCash ? 'mode-cash' : 'mode-bank'}">
-      <td>${formatDate(p.date)}</td><td>${p.type}</td><td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${p.mode}</span></td><td>${p.bank || '-'}</td>
+    <tr class="${btc ? 'mode-btc' : (isCash ? 'mode-cash' : 'mode-bank')}">
+      <td>${formatDate(p.date)}</td><td>${p.type}</td><td><span class="mode-badge ${btc ? 'btc' : (isCash ? 'cash' : 'bank')}">${p.mode}</span></td><td>${p.bank || '-'}</td>
       <td>${p.remarks || '-'}</td>
-      <td class="cash-amt">${p.cash ? p.cash.toLocaleString() : '-'}</td><td class="account-amt">${p.account ? p.account.toLocaleString() : '-'}</td>
-      <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${p.total.toLocaleString()}</td>
+      <td class="cash-amt">${p.cash ? p.cash.toLocaleString() : '-'}</td><td class="account-amt">${btc ? p.total.toLocaleString() : (p.account ? p.account.toLocaleString() : '-')}</td>
+      <td class="rowtotal ${btc ? 'btc-amt' : (isCash ? 'cash-amt' : 'account-amt')}">${p.total.toLocaleString()}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="8" class="empty-note">No payments entered yet.</td></tr>';
 
@@ -11463,19 +11609,67 @@ function loadAllEntries(){
   return entries;
 }
 
+// =========================================================
+// BTC — Bill To Company. A payment MODE (the 4th, alongside Cash / Bank
+// Transfer / Card) for money the guest never handed over at the desk: a
+// company settles it later, often a month later. Two rules define it, and
+// everything else in this file follows from them:
+//
+//   1. BTC is NOT money. It never counts as Paid, never lands in any
+//      collected-money report (Payment Report, Revenue, Ledgers, Night
+//      Summary, Graphs, Account Payment Record), and the guest's Due stays
+//      owed in full until the company actually pays.
+//   2. BTC unpins the guest. The one thing an unpaid balance normally does
+//      is block checkout (computeTotals().due !== 0, enforced twice in the
+//      checkout flow) — BTC lifts exactly that block via netDue, so the
+//      guest can leave on time while the invoice is still outstanding.
+//
+// Settling one is deliberately not a separate action: when the company
+// pays, you edit that payment row and switch its Mode from BTC to whatever
+// actually came in (Cash / Bank Transfer / Card). At that instant it stops
+// being a BTC row and becomes a real payment everywhere at once — it drops
+// off the BTC page, counts as Paid, and appears in the money reports under
+// the date it was collected. The amount carries across the mode switch on
+// its own (see toggleMode), so nothing has to be re-typed.
+const BTC_MODE = 'BTC';
+function isBtcPayment(p){ return !!p && p.mode === BTC_MODE; }
+// Every collected-money report flattens payments through one of these two,
+// so BTC can never silently leak into a revenue figure.
+function paidPayments(list){ return (list || []).filter(p=> !isBtcPayment(p)); }
+function sumPaymentTotals(list){
+  return (list || []).reduce((s,p)=> s + (parseFloat(p.total) || 0), 0);
+}
+
 function computeTotals(entry){
   const bookingTotal = (entry.rooms || []).reduce((s,r)=>{
     const t = parseFloat(String(r.total).replace(/,/g,'')) || 0;
     return s + t;
   }, 0);
-  const paid = (entry.payments || []).reduce((s,p)=> s + (parseFloat(p.total) || 0), 0);
+  // BTC rows are excluded from paid on purpose — the money has not arrived,
+  // so Due must keep reading the full amount owed (the guest stays on
+  // Search(due) and Add Payment until the company settles).
+  const payments = entry.payments || [];
+  const paid = sumPaymentTotals(paidPayments(payments));
+  const btcPending = sumPaymentTotals(payments.filter(isBtcPayment));
   const due = bookingTotal - paid;
   let status = 'Pending';
   if(bookingTotal > 0 && due <= 0) status = 'Paid';
   else if(paid > 0) status = 'Partial';
+  // An outstanding BTC outranks Pending/Partial as the guest's headline
+  // state: "Pending" reads as nobody has chased this yet, when in fact a
+  // company has been invoiced and the desk has nothing further to collect.
+  // Nothing anywhere branches on this string — every use renders it as a
+  // pill via .toLowerCase() — so this is display only.
+  if(btcPending > 0) status = 'BTC';
   const isNonpayingGuest = bookingTotal === 0;
   if(isNonpayingGuest) status = 'Guest';
-  return { bookingTotal, paid, due: Math.max(due,0), status, isNonpayingGuest };
+  // netDue is the checkout gate's number, and the ONLY place BTC counts for
+  // anything: what would still be owed if every outstanding BTC invoice were
+  // paid. Clamped exactly like due, so an overpaid guest reads 0 here the
+  // same way they always did. With no BTC rows this is identical to due, so
+  // every existing guest's checkout behaves precisely as before.
+  const netDue = Math.max(bookingTotal - paid - btcPending, 0);
+  return { bookingTotal, paid, due: Math.max(due,0), netDue, btcPending, status, isNonpayingGuest };
 }
 
 // The most recent thing that happened to this entry — created, edited, or
@@ -11633,7 +11827,10 @@ function startEditEntry(entry){
       // block the latter
       tr.dataset.origDate = p.date || '';
       tr.dataset.origCash = String(p.cash || 0);
-      tr.dataset.origAccount = String(p.account || 0);
+      // A BTC row's box is filled from `total` (account is 0 on disk), so the
+      // snapshot has to record what the box will actually show — otherwise
+      // every untouched BTC row would look edited to the Day Lock check.
+      tr.dataset.origAccount = String(isBtcPayment(p) ? (parseFloat(p.total) || 0) : (p.account || 0));
       tr.dataset.origMode = p.mode || 'Cash';
       tr.dataset.origBank = p.bank || '';
     }
@@ -11656,6 +11853,11 @@ function startEditEntry(entry){
     toggleMode(modeSel);
     if(modeSel.value === 'Cash'){
       tr.querySelector('.payCash').value = p.cash || '';
+    } else if(isBtcPayment(p)){
+      // A BTC row carries its amount in `total` (cash and account are both 0
+      // by construction — see the save flow), so that is what goes back
+      // into the shared Account / BTC box when the entry is reopened.
+      tr.querySelector('.payAccount').value = parseFloat(p.total) || '';
     } else {
       tr.querySelector('.payBank').value = p.bank || '';
       tr.querySelector('.payAccount').value = p.account || '';
@@ -13116,18 +13318,21 @@ function renderDetail(){
   const payBody = document.getElementById('detailPayBody');
   const payments = (entry.payments || []).slice().sort((a,b)=> (a.date||'').localeCompare(b.date||''));
   payBody.innerHTML = payments.map(p=>{
+    const btc = isBtcPayment(p);
     const isCash = p.mode === 'Cash';
+    const modeClass = btc ? 'mode-btc' : (isCash ? 'mode-cash' : 'mode-bank');
+    const amtClass = btc ? 'btc-amt' : (isCash ? 'cash-amt' : 'account-amt');
     return `
-    <tr class="${isCash ? 'mode-cash' : 'mode-bank'}">
+    <tr class="${modeClass}">
       <td>${p.id && newPaymentIds.has(p.id) ? '<span class="new-flag">NEW!</span>' : ''}${formatDate(p.date)}</td>
       <td>${p.type}</td>
-      <td><span class="mode-badge ${isCash ? 'cash' : 'bank'}">${p.mode}</span></td>
+      <td><span class="mode-badge ${btc ? 'btc' : (isCash ? 'cash' : 'bank')}">${p.mode}</span></td>
       <td>${p.bank || '-'}</td>
       <td>${p.remarks || '-'}</td>
       <td>${p.createdBy || '-'}</td>
       <td class="cash-amt">${p.cash ? Number(p.cash).toLocaleString() : '-'}</td>
-      <td class="account-amt">${p.account ? Number(p.account).toLocaleString() : '-'}</td>
-      <td class="rowtotal ${isCash ? 'cash-amt' : 'account-amt'}">${Number(p.total).toLocaleString()}</td>
+      <td class="account-amt">${btc ? Number(p.total).toLocaleString() : (p.account ? Number(p.account).toLocaleString() : '-')}</td>
+      <td class="rowtotal ${amtClass}">${Number(p.total).toLocaleString()}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="9" class="empty-note">No payments yet.</td></tr>';
 
@@ -13137,6 +13342,12 @@ function renderDetail(){
   document.getElementById('dSumBooking').textContent = t.bookingTotal.toLocaleString();
   document.getElementById('dSumPaid').textContent = t.paid.toLocaleString();
   document.getElementById('dSumDue').textContent = t.due.toLocaleString();
+  // Shown only when there is one, so a guest with no BTC looks unchanged.
+  const dBtcBox = document.getElementById('dSumBtcBox');
+  if(dBtcBox){
+    dBtcBox.style.display = t.btcPending > 0 ? '' : 'none';
+    document.getElementById('dSumBtcPending').textContent = t.btcPending.toLocaleString();
+  }
   const statusEl = document.getElementById('dSumStatus');
   statusEl.className = 'status ' + t.status.toLowerCase();
   statusEl.textContent = t.status;
@@ -13707,15 +13918,20 @@ function buildGuestFolioHtml(entry){
   // payment list in the app orders them, so this reads the same way.
   let running = 0;
   const payRows = (entry.payments || []).map(p=>{
-    running += parseFloat(p.total) || 0;
+    // A BTC is still printed on the folio — the guest should see what was
+    // billed to their company — but it does not advance the running balance,
+    // because nothing has been received against it.
+    const amount = parseFloat(p.total) || 0;
+    const btc = isBtcPayment(p);
+    if(!btc) running += amount;
     const balance = t.bookingTotal - running;
     return `
     <tr>
       <td>${p.date ? formatDate(p.date) : '-'}</td>
       <td>${p.type || '-'}</td>
-      <td>${p.mode || '-'}</td>
+      <td>${btc ? 'BTC (billed to company)' : (p.mode || '-')}</td>
       <td>${p.bank || '-'}</td>
-      <td class="num">${(parseFloat(p.total) || 0).toLocaleString()}</td>
+      <td class="num">${amount.toLocaleString()}</td>
       <td class="num">${balance.toLocaleString()}</td>
     </tr>`;
   }).join('');
@@ -13870,15 +14086,19 @@ function buildCompleteGuestFolioHtml(entry){
 
   let running = 0;
   const payRows = allPayments.map(p=>{
-    running += parseFloat(p.total) || 0;
+    // Same rule as the single-stay folio: a BTC is listed but never advances
+    // the running balance, because no money has come in against it.
+    const amount = parseFloat(p.total) || 0;
+    const btc = isBtcPayment(p);
+    if(!btc) running += amount;
     const balance = bookingTotal - running;
     return `
     <tr>
       <td>${p.date ? formatDate(p.date) : '-'}</td>
       <td>${p.type || '-'}</td>
-      <td>${p.mode || '-'}</td>
+      <td>${btc ? 'BTC (billed to company)' : (p.mode || '-')}</td>
       <td>${p.bank || '-'}</td>
-      <td class="num">${(parseFloat(p.total) || 0).toLocaleString()}</td>
+      <td class="num">${amount.toLocaleString()}</td>
       <td class="num">${balance.toLocaleString()}</td>
     </tr>`;
   }).join('');
@@ -14163,14 +14383,27 @@ function toggleDetailMode(){
   const cash = document.getElementById('dNewCash');
   const acct = document.getElementById('dNewAccount');
   const bank = document.getElementById('dNewBank');
-  if(mode === 'Cash'){
-    cash.disabled = false; acct.disabled = true; acct.value = '';
-    bank.disabled = true; bank.value = '';
-  } else {
-    // Bank Transfer or Card
-    acct.disabled = false; cash.disabled = true; cash.value = '';
-    bank.disabled = false;
+  const isCash = mode === 'Cash';
+  const isBtc = mode === BTC_MODE;
+  const wasBtc = acct.classList.contains('btc-mode');
+  // Same rule as the entry form's toggleMode: one live amount field per
+  // mode, BTC shares the Account box, and BTC has no bank because nothing
+  // was deposited anywhere.
+  if(!isCash) cash.value = '';
+  if(isCash || isBtc) bank.value = '';
+  // Cash is the only switch that moves the figure to a different box — carry
+  // it rather than dropping it, so settling a BTC never means retyping money.
+  if(wasBtc && isCash){
+    const carried = parseFloat(acct.value) || 0;
+    if(carried > 0) cash.value = carried;
   }
+  if(isCash) acct.value = '';
+  cash.disabled = !isCash;
+  acct.disabled = isCash;
+  bank.disabled = isCash || isBtc;
+  acct.classList.toggle('btc-mode', isBtc);
+  const acctLabel = document.getElementById('dNewAccountLabel');
+  if(acctLabel) acctLabel.textContent = isBtc ? 'BTC Amount' : 'Account Amount';
   updateAddPayPreview();
 }
 
@@ -14188,6 +14421,7 @@ function addDetailPayment(){
   const remarks = document.getElementById('dNewRemarks').value.trim();
   const cashInput = document.getElementById('dNewCash');
   const acctInput = document.getElementById('dNewAccount');
+  const isBtc = mode === BTC_MODE;
   const cash = parseFloat(cashInput.value) || 0;
   const account = parseFloat(acctInput.value) || 0;
   const total = cash + account;
@@ -14196,25 +14430,36 @@ function addDetailPayment(){
     focusError(cash < 0 ? cashInput : acctInput);
     return;
   }
-  if(total <= 0){ showNotice('Enter a cash or account amount.'); return; }
+  if(total <= 0){ showNotice(isBtc ? 'Enter the amount being billed to the company.' : 'Enter a cash or account amount.'); return; }
   if((mode === 'Bank Transfer' || mode === 'Card') && !bank){ showNotice('Please select a bank.'); return; }
 
   const entry = getCurrentEntry();
   if(!entry) return;
 
   const t = computeTotals(entry);
-  if(t.due === 0){
-    showNotice('This booking is already fully paid — no more payments can be added.');
+  // A BTC is invoiced against what is still UNBILLED (netDue), not against
+  // the whole balance — otherwise a second BTC could re-bill money the
+  // first one already covers, and the guest would end up billed twice for
+  // the same night. A real payment still caps at the full due, unchanged.
+  const cap = isBtc ? t.netDue : t.due;
+  if(cap === 0){
+    showNotice(isBtc
+      ? 'Nothing left to bill on this booking — the balance is either already paid or already covered by a BTC.'
+      : 'This booking is already fully paid — no more payments can be added.');
     return;
   }
-  if(total > t.due){
-    showNotice('This payment (Rs. ' + total.toLocaleString() + ') is MORE than the remaining Balance Due (Rs. ' + t.due.toLocaleString() + '). A payment can never be more than the due amount — please fix the figure.');
+  if(total > cap){
+    showNotice('This ' + (isBtc ? 'BTC (Rs. ' : 'payment (Rs. ') + total.toLocaleString() + ') is MORE than the remaining ' + (isBtc ? 'unbilled balance' : 'Balance Due') + ' (Rs. ' + cap.toLocaleString() + '). It can never be more than that — please fix the figure.');
     focusError(mode === 'Cash' ? cashInput : acctInput);
     return;
   }
-  const after = t.due - total;
+  // A BTC moves who pays, not whether it is paid, so the guest's Due is
+  // unchanged by it. Only a real payment brings the balance down.
+  const after = isBtc ? t.due : t.due - total;
 
-  pendingDetailPayment = { date, type, mode, bank, cash, account, remarks, total };
+  // cash/account forced to 0 for a BTC even though the figure was typed into
+  // the shared Account box — same invariant as the entry form's save.
+  pendingDetailPayment = { date, type, mode, bank, cash: isBtc ? 0 : cash, account: isBtc ? 0 : account, remarks, total };
 
   document.getElementById('addPayModalBody').innerHTML = `
     <div class="grid" style="margin-bottom:14px;">
@@ -14225,10 +14470,11 @@ function addDetailPayment(){
       <div><div class="confirm-lbl">Remarks</div><div class="confirm-val">${remarks || '-'}</div></div>
     </div>
     <div class="summary" style="margin-top:0; padding-top:0; border-top:none;">
-      <div class="box"><div class="lbl">This Payment</div><div class="val">${total.toLocaleString()}</div><div class="date-readout">= ${amountInWords(total)}</div></div>
+      <div class="box"><div class="lbl">${isBtc ? 'Billed To Company' : 'This Payment'}</div><div class="val${isBtc ? ' btc-amt' : ''}">${total.toLocaleString()}</div><div class="date-readout">= ${amountInWords(total)}</div></div>
       <div class="box"><div class="lbl">Balance Due Now</div><div class="val">${t.due.toLocaleString()}</div></div>
-      <div class="box"><div class="lbl">Due After</div><div class="val" style="color:${after > 0 ? 'var(--danger)' : 'var(--cash)'};">${after.toLocaleString()}</div></div>
+      <div class="box"><div class="lbl">${isBtc ? 'Due After (unchanged)' : 'Due After'}</div><div class="val" style="color:${after > 0 ? 'var(--danger)' : 'var(--cash)'};">${after.toLocaleString()}</div></div>
     </div>
+    ${isBtc ? '<div class="sub" style="margin:10px 0 0;">This records an invoice, not money received. The guest can be checked out, their Due stays owed, and it will be listed on the BTC page until you switch this row to Cash / Bank Transfer / Card once the company pays.</div>' : ''}
   `;
 
   const input = document.getElementById('addPayTypeInput');
@@ -14291,8 +14537,11 @@ function updateAddPayPreview(){
   const t = computeTotals(entry);
   const cash = parseFloat(document.getElementById('dNewCash').value) || 0;
   const acct = parseFloat(document.getElementById('dNewAccount').value) || 0;
+  const isBtc = document.getElementById('dNewMode').value === BTC_MODE;
   const amount = cash + acct;
-  const after = t.due - amount;
+  // A BTC leaves the balance exactly where it was — it changes who will
+  // settle it, not whether it has been settled.
+  const after = isBtc ? t.due : t.due - amount;
 
   document.getElementById('prevAmount').textContent = amount.toLocaleString();
   document.getElementById('prevAmountWords').textContent = amount > 0 ? '= ' + amountInWords(amount) : '';
@@ -14301,7 +14550,12 @@ function updateAddPayPreview(){
   const afterEl = document.getElementById('prevDueAfter');
   const statusEl = document.getElementById('prevStatus');
   statusEl.className = 'status';
-  if(amount === 0){
+  if(isBtc && amount > 0){
+    afterEl.textContent = t.due.toLocaleString();
+    afterEl.style.color = 'var(--btc)';
+    statusEl.classList.add('partial');
+    statusEl.textContent = 'Billed to company';
+  } else if(amount === 0){
     afterEl.textContent = t.due.toLocaleString();
     afterEl.style.color = 'inherit';
     statusEl.classList.add('pending');
@@ -14373,7 +14627,10 @@ function classifyPaymentsByNightRange(fromDate, toDate){
     });
     nights.sort((a,b)=> a.date.localeCompare(b.date));
 
-    const payQueue = (entry.payments || [])
+    // paidPayments(): a BTC invoice has settled no room-night, so it must not
+    // consume one in this FIFO walk — otherwise the night would read as
+    // collected and the real money arriving later would have nothing to pay off.
+    const payQueue = paidPayments(entry.payments)
       .slice()
       .sort((a,b)=> (a.date || '').localeCompare(b.date || ''))
       .map(p=> ({ id: p.id, date: p.date || '', mode: p.mode, bank: p.bank || '', remarks: p.remarks || '', type: p.type,
@@ -14438,7 +14695,9 @@ function getFilteredReportRows(){
   let rows = [];
   all.forEach(entry=>{
     const roomNos = formatRoomChain(entry.rooms);
-    (entry.payments || []).forEach(p=>{
+    // BTC rows are excluded outright: this report, and the Graphs built from
+    // its rows, are both statements of money actually taken in.
+    paidPayments(entry.payments).forEach(p=>{
       if(!p.date) return;
       rows.push({
         id: entry.id,
@@ -14606,7 +14865,9 @@ function getFilteredPaymentRecordRows(){
   let rows = [];
   all.forEach(entry=>{
     const roomNos = formatRoomChain(entry.rooms);
-    (entry.payments || []).forEach(p=>{
+    paidPayments(entry.payments).forEach(p=>{
+      // Non-Cash only, and never a BTC — this page exists to reconcile money
+      // that actually landed in a bank account, which a BTC by definition has not.
       if(!p.date || p.mode === 'Cash') return;
       rows.push({
         id: entry.id,
@@ -16013,7 +16274,9 @@ function buildLedgersRecords(includeUnconfirmed /*, includeNoShows */){
     });
     nights.sort((a,b)=> a.date.localeCompare(b.date));
 
-    const payments = (entry.payments || [])
+    // paidPayments(): an unpaid BTC settles no night, so it never marks one
+    // as received here (see the same guard in buildRevenueReport).
+    const payments = paidPayments(entry.payments)
       .slice()
       .sort((a,b)=> (a.date || '').localeCompare(b.date || ''))
       .map(p=> ({ remaining: parseFloat(p.total) || 0, date: p.date || '' }));
@@ -16286,7 +16549,11 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
     });
     nights.sort((a,b)=> a.date.localeCompare(b.date));
 
-    const payQueue = (entry.payments || [])
+    // paidPayments(): Collected means collected. A room-night covered only by
+    // an outstanding BTC stays uncollected here until the company pays and the
+    // row is switched to a real mode — at which point it lands in this
+    // report under the date the money actually arrived.
+    const payQueue = paidPayments(entry.payments)
       .slice()
       .sort((a,b)=> (a.date || '').localeCompare(b.date || ''))
       .map(p=> ({ id: p.id, remaining: parseFloat(p.total) || 0, total: parseFloat(p.total) || 0, date: p.date || '', mode: p.mode, bank: p.bank, towardRange: 0 }));
@@ -17282,6 +17549,137 @@ function renderPending(){
     </table>`;
 }
 
+// =========================================================
+// BTC — the outstanding Bill To Company ledger. One row per BTC payment
+// row anywhere in the system, newest first. This is the only page in the app
+// that shows BTC money, and by design it is the ONLY thing it shows: every
+// other report treats a BTC as if it did not exist until it becomes a real
+// payment (see paidPayments()).
+//
+// There is no "mark settled" button on purpose. Settling is a mode change:
+// open the guest, edit the payment row, switch Mode from BTC to whatever the
+// company actually paid with, and the row drops off this page while becoming
+// real money in the Payment Report / Revenue Report under its own date.
+// =========================================================
+function buildBtcRows(){
+  const rows = [];
+  loadAllEntries().forEach(entry=>{
+    const btcPayments = (entry.payments || []).filter(isBtcPayment);
+    if(btcPayments.length === 0) return;
+    const t = computeTotals(entry);
+    const actualCheckout = getDetailValue(entry, 'Actual Checkout');
+    btcPayments.forEach(pay=>{
+      rows.push({
+        guestId: entry.id,
+        paymentId: pay.id || '',
+        date: pay.date || '',
+        guest: entry.guestName || '(no name)',
+        // Company Name is an existing optional guest detail (see
+        // EXTRA_DETAIL_KINDS) — exactly the field you want on this page, so
+        // it is surfaced here rather than inventing a second one.
+        company: getDetailValue(entry, 'Company Name') || '',
+        cnic: entry.cnic || '',
+        rooms: formatRoomChain(entry.rooms) || '-',
+        amount: parseFloat(pay.total) || 0,
+        remarks: pay.remarks || '',
+        checkIn: entry.checkIn || '',
+        checkedOut: !!actualCheckout,
+        checkoutDate: actualCheckout || '',
+        bookingTotal: t.bookingTotal,
+        due: t.due
+      });
+    });
+  });
+  rows.sort((a,b)=> (b.date || '').localeCompare(a.date || ''));
+  return rows;
+}
+
+function getFilteredBtcRows(){
+  let rows = buildBtcRows();
+  const searchEl = document.getElementById('btcSearchInput');
+  const checkedOutEl = document.getElementById('btcCheckedOutOnly');
+  const searchVal = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  if(checkedOutEl && checkedOutEl.checked) rows = rows.filter(r=> r.checkedOut);
+  if(searchVal){
+    const searchValNoDash = stripDashes(searchVal);
+    rows = rows.filter(r=>{
+      const haystack = [r.guest, r.company, r.cnic, r.rooms, r.remarks, r.date].join(' ').toLowerCase();
+      return haystack.includes(searchVal) || stripDashes(haystack).includes(searchValNoDash);
+    });
+  }
+  return rows;
+}
+
+// The nav button carries the outstanding count so an unpaid company invoice
+// is visible from anywhere, not only once someone thinks to open this page.
+function updateBtcNavCount(){
+  const el = document.getElementById('topNavBtcCount');
+  if(!el) return;
+  const n = initialLoadDone ? buildBtcRows().length : 0;
+  el.textContent = n > 0 ? ' (' + n + ')' : '';
+}
+
+function renderBtc(){
+  const body = document.getElementById('btcBody');
+  if(!body) return;
+  if(!initialLoadDone){
+    body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>';
+    return;
+  }
+  const subEl = document.getElementById('btcPrintHeaderSub');
+  if(subEl) subEl.textContent = 'Generated ' + formatDate(todayStr());
+
+  const rows = getFilteredBtcRows();
+  const total = rows.reduce((sum, r)=> sum + r.amount, 0);
+  const totalBox = document.getElementById('btcTotalBox');
+  if(totalBox){
+    totalBox.innerHTML = rows.length
+      ? 'Outstanding BTC: <span class="btc-amt">Rs. ' + total.toLocaleString() + '</span>'
+      : '';
+  }
+
+  if(rows.length === 0){
+    body.innerHTML = '<div class="empty-note">' + (buildBtcRows().length === 0
+      ? 'No BTC payments recorded. Bill a stay to a company by setting a payment row\'s Mode to BTC.'
+      : 'No BTC payments match these filters.') + '</div>';
+    return;
+  }
+
+  body.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px;">Sr</th>
+          <th style="width:100px;">Date</th>
+          <th style="width:110px;">Room</th>
+          <th>Guest</th>
+          <th>Company</th>
+          <th>Remarks</th>
+          <th style="width:110px;">Guest Status</th>
+          <th style="width:120px;">BTC Amount</th>
+        </tr>
+      </thead>
+      <tbody>${rows.map((r, idx)=> `
+        <tr class="mode-btc" style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest to settle the BTC (change its Mode to Cash / Bank Transfer / Card)">
+          <td>${idx + 1}</td>
+          <td>${r.date ? formatDate(r.date) : '-'}</td>
+          <td>${r.rooms}</td>
+          <td>${r.guest}</td>
+          <td>${r.company || '-'}</td>
+          <td>${r.remarks || '-'}</td>
+          <td><span class="status ${r.checkedOut ? 'paid' : 'partial'}">${r.checkedOut ? 'Checked Out' : 'In-house'}</span></td>
+          <td class="rowtotal btc-amt">${r.amount.toLocaleString()}</td>
+        </tr>`).join('')}
+      </tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td colspan="7">Total Outstanding</td>
+          <td class="btc-amt">${total.toLocaleString()}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
 function setInhouseToday(){
   setFilterDate('ihDate', todayStr());
   renderInhouse();
@@ -17832,20 +18230,37 @@ function buildFutureCheckoutRows(asOfDate){
     // their rooms is just ending — an informational Extended row that can
     // never be checked out, exactly how the live-day path treats it.
     const isExtendedStatus = stillHereGuests.has(n.guestId);
-    const d = isExtendedStatus ? 0 : computeTotals(entry).due;
+    const acFig = acDueFigures(entry, isExtendedStatus);
+    const d = acFig.due;
     byGuest.set(n.guestId, {
       roomNos: [n.roomNo], guestId: n.guestId, guest: entry.guestName || '(no name)',
-      checkIn: entry.checkIn || '', checkoutDate: asOfDate, due: d,
-      status: isExtendedStatus ? 'extended' : (d === 0 ? 'ready' : 'pending')
+      checkIn: entry.checkIn || '', checkoutDate: asOfDate, due: d, netDue: acFig.netDue,
+      status: acFig.status
     });
   });
   return Array.from(byGuest.values()).map(r=>{
     const sortedRoomNos = r.roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
     return {
       roomNo: sortedRoomNos.join(', '), roomNos: sortedRoomNos, guestId: r.guestId, guest: r.guest,
-      checkIn: r.checkIn, checkoutDate: r.checkoutDate, due: r.due, status: r.status
+      checkIn: r.checkIn, checkoutDate: r.checkoutDate, due: r.due, netDue: r.netDue, status: r.status
     };
   }).sort((a,b)=> a.guest.localeCompare(b.guest, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+// Checkout/Pending shows two different numbers for the same guest on
+// purpose: `due` is what they still owe (drives the red Due column), while
+// `netDue` is what gates the Checkout button. They only diverge for a guest
+// carrying an outstanding BTC invoice — who reads as owing money AND is free
+// to leave, which is exactly the BTC arrangement. Guests with no BTC rows
+// get identical values for both, i.e. the behaviour this page always had.
+function acDueFigures(entry, isExtendedStatus){
+  if(isExtendedStatus) return { due: 0, netDue: 0, status: 'extended' };
+  const t = computeTotals(entry);
+  return {
+    due: t.due,
+    netDue: t.netDue,
+    status: t.netDue !== 0 ? 'pending' : (t.btcPending > 0 ? 'btc' : 'ready')
+  };
 }
 
 function buildAutoCheckoutRows(asOfDate){
@@ -17883,7 +18298,8 @@ function buildAutoCheckoutRows(asOfDate){
     if(isAdvanceReservation(rs.entry) && !getDetailValue(rs.entry, 'Actual Checkin')) return;
     const guestId = rs.entry.id;
     const isExtendedStatus = activeGuestIds.has(guestId);
-    const d = isExtendedStatus ? 0 : computeTotals(rs.entry).due;
+    const acFig = acDueFigures(rs.entry, isExtendedStatus);
+    const d = acFig.due;
     const existing = dueByGuest.get(guestId);
     if(existing){
       existing.roomNos.push(rs.roomNo);
@@ -17891,8 +18307,8 @@ function buildAutoCheckoutRows(asOfDate){
     } else {
       dueByGuest.set(guestId, {
         roomNos: [rs.roomNo], guestId, guest: rs.entry.guestName || '(no name)',
-        checkIn: rs.entry.checkIn || '', checkoutDate: rs.actualCheckout || '', due: d,
-        status: isExtendedStatus ? 'extended' : (d === 0 ? 'ready' : 'pending')
+        checkIn: rs.entry.checkIn || '', checkoutDate: rs.actualCheckout || '', due: d, netDue: acFig.netDue,
+        status: acFig.status
       });
     }
   });
@@ -17926,20 +18342,21 @@ function buildAutoCheckoutRows(asOfDate){
     // as the extended path — an informational Extended row, never dropped
     // silently, never checkout-able while their other room is active.
     const isExtendedStatus = activeGuestIds.has(guestId);
-    const d = isExtendedStatus ? 0 : computeTotals(entry).due;
+    const acFig = acDueFigures(entry, isExtendedStatus);
+    const d = acFig.due;
     dueByGuest.set(guestId, {
       roomNos: [rs.roomNo], guestId, guest: entry.guestName || '(no name)',
       checkIn: entry.checkIn || '',
       checkoutDate,
-      due: d,
-      status: isExtendedStatus ? 'extended' : (d === 0 ? 'ready' : 'pending')
+      due: d, netDue: acFig.netDue,
+      status: acFig.status
     });
   });
   const due = Array.from(dueByGuest.values()).map(r=>{
     const sortedRoomNos = r.roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
     return {
       roomNo: sortedRoomNos.join(', '), roomNos: sortedRoomNos,
-      guestId: r.guestId, guest: r.guest, checkIn: r.checkIn, checkoutDate: r.checkoutDate, due: r.due, status: r.status
+      guestId: r.guestId, guest: r.guest, checkIn: r.checkIn, checkoutDate: r.checkoutDate, due: r.due, netDue: r.netDue, status: r.status
     };
   });
 
@@ -17999,7 +18416,11 @@ function renderAutoCheckout(){
   // Remaining = due-list guests not yet checked out (Ready/Pending/Extended).
   const remainingEl = document.getElementById('acRemainingCount');
   if(remainingEl) remainingEl.textContent = rows.filter(r=> r.status !== 'checked_out').length;
-  const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'] };
+  // 'btc' is 'ready' with a reason: nothing is owed at the desk any more
+  // because a company is being invoiced for the rest, so the guest may leave
+  // while the Due column still shows red. Its own pill keeps that visible
+  // rather than showing a plain 'Ready' beside an unpaid balance.
+  const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'], btc: ['partial', 'BTC — Ready'] };
   if(rows.length === 0){
     // A day ahead reads differently on purpose: "nobody was due" sounds like
     // a verdict on something that already happened, when for a future date
@@ -18016,7 +18437,7 @@ function renderAutoCheckout(){
           const action = !isToday ? ''
             : r.status === 'checked_out' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoAutoCheckout('${r.guestId}')">Undo</button>`
             : r.status === 'extended' ? ''
-            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout('${r.guestId}', [${r.roomNos.map(rn=> "'" + String(rn).replace(/'/g, "\\'") + "'").join(',')}], ${r.due})">Checkout</button>`;
+            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout('${r.guestId}', [${r.roomNos.map(rn=> "'" + String(rn).replace(/'/g, "\\'") + "'").join(',')}], ${r.netDue})">Checkout</button>`;
           return `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${r.roomNo}</td>
@@ -18503,9 +18924,13 @@ async function undoArrivalNoShow(guestId){
 // roomNos is always an array here — buildAutoCheckoutRows groups a guest
 // holding several rooms into one due-list row, so checking them out means
 // checking out of every one of those rooms together, not just the first.
-function startManualCheckout(guestId, roomNos, due){
-  if(due !== 0){
-    showNotice('This guest\'s balance isn\'t settled at exactly 0 (owed money, or paid ahead of what\'s booked) — Checkout/Pending never checks out a guest like this, even manually. Settle the balance first.');
+// netDue, not due: a guest whose remaining balance is covered by an
+// outstanding BTC (Bill To Company) invoice is free to leave — the company
+// settles later. Nothing else about this gate changes, and for a guest with
+// no BTC rows netDue IS due, so ordinary checkouts behave exactly as before.
+function startManualCheckout(guestId, roomNos, netDue){
+  if(netDue !== 0){
+    showNotice('This guest\'s balance isn\'t settled at exactly 0 (owed money, or paid ahead of what\'s booked) — Checkout/Pending never checks out a guest like this, even manually. Settle the balance first, or record it as a BTC payment if a company is being billed for it.');
     return;
   }
   pendingCheckoutRoomNos = roomNos;
@@ -19609,6 +20034,9 @@ function requestBackgroundPull(){
 // form itself is never data-bound, so a pull can never wipe mid-typing
 // input — only the display lists rebuild.
 function rerenderActiveView(){
+  // Runs on every data change (initial load, realtime event, local save), so
+  // the nav's outstanding-BTC count stays right whatever page you are on.
+  updateBtcNavCount();
   if(currentView === 'entry'){ renderTodayEntries(); }
   else if(currentView === 'reservations'){ renderReservations(); }
   else if(currentView === 'search'){ renderSearch(); }
@@ -19636,6 +20064,8 @@ function rerenderActiveView(){
   else if(currentView === 'arrival'){ renderArrival(); }
   else if(currentView === 'paymentrecord'){ renderPaymentRecord(); }
   else if(currentView === 'frontoffice'){ renderFrontOffice(); }
+  else if(currentView === 'btc'){ renderBtc(); }
+  else if(currentView === 'pending'){ renderPending(); }
 }
 
 window.addEventListener('online', ()=>{ syncProblem = null; updateCloudIndicator(); resumeAppFromIdle(); });
