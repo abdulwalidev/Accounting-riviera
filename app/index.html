@@ -4166,6 +4166,42 @@ td.pos-order-na {color:#dc2626; font-weight:700;}
 #page-pos-invoice .status-badge.pending {background:#fde2e2; color:#c53030;}
 #page-pos-invoice .status-badge.at-fo {background:#dbeafe; color:#1d4ed8;}
 #page-pos-invoice .status-badge.collected {background:#dcfce7; color:#15803d;}
+/* "Select Payment" — the one status on an invoice that is a TASK rather
+   than a state, so it is the only badge that reads as a button: solid
+   fill, not a pastel wash, because a row wearing it is a row somebody
+   still has to act on. Front Office holding the cash is not the same
+   thing as the restaurant having booked the payment, and the old green
+   "Collected" pill said it was. See posPaymentStatus. */
+#page-pos-invoice .status-badge.select-payment,
+#page-front-office .status-badge.select-payment,
+#page-pending-payments .status-badge.select-payment {background:#7c3aed; color:#fff; box-shadow:0 1px 3px rgba(124,58,237,.35);}
+/* The same three pages also need the plain badge rules — .status-badge is
+   styled per page (see the #page-receipts note below), and Front Office /
+   Pending Payments only started carrying a status column with this
+   feature, so without these their pills would render as bare text. */
+#page-front-office .status-badge, #page-pending-payments .status-badge {display:inline-block; border-radius:12px; padding:3px 10px; font-size:11px; font-weight:700; letter-spacing:.02em; white-space:nowrap;}
+#page-front-office .status-badge.paid, #page-pending-payments .status-badge.paid {background:#dcfce7; color:#15803d;}
+#page-front-office .status-badge.partial, #page-pending-payments .status-badge.partial {background:#fdf1dc; color:#b45309;}
+#page-front-office .status-badge.pending, #page-pending-payments .status-badge.pending {background:#fde2e2; color:#c53030;}
+#page-front-office .status-badge.at-fo, #page-pending-payments .status-badge.at-fo {background:#dbeafe; color:#1d4ed8;}
+/* Matches .editing-bar's shape exactly (see there) but violet rather than
+   gold: it is not an edit warning, it is an outstanding task, and the two
+   must never be mistaken for each other at a glance. */
+.pay-select-bar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  background:#F1E9FE; border:1px solid #7c3aed; border-left:5px solid #7c3aed;
+  border-radius:6px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:#3b1e78;
+}
+html[data-theme="dark"] .pay-select-bar{ background:rgba(124,58,237,0.16); color:#e6dcff; }
+/* The three method tiles in the Select Payment modal. Radio behaviour, but
+   sized for a thumb on the terminal at the counter rather than for a
+   mouse — picking how the money came in is the entire dialog. */
+.pay-method-tile{
+  flex:1; min-width:96px; border:1.5px solid #d7dae0; background:#fff; border-radius:8px;
+  padding:12px 8px; font-size:12.5px; font-weight:700; color:#4b5b73; cursor:pointer;
+  text-align:center; line-height:1.4;
+}
+.pay-method-tile.active{ border-color:#7c3aed; background:#F1E9FE; color:#3b1e78; box-shadow:inset 0 0 0 1px #7c3aed; }
 
 /* ===== POS Receipts ===== */
 #page-receipts {
@@ -6197,6 +6233,48 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   </div>
 </div>
 
+<!-- SELECT PAYMENT — the restaurant's side of a Front Office collection.
+     "Collected" is the hotel's word for "we have the guest's cash"; it says
+     nothing about how or when the restaurant's own books record it. This
+     dialog is that missing step, and it is deliberately NOT the full
+     invoice form: the sale is already agreed and already collected, so the
+     only open questions are METHOD and DATE. Nothing here can touch items,
+     taxes or the total — it writes payment fields only (see
+     posConfirmSelectPayment), which is also why it can't go through the
+     normal edit/repost path: posEnterEditMode refuses to arm a collected
+     record, so posting one would mint a second invoice. -->
+<div id="posSelectPaymentBackdrop" onclick="posCloseSelectPaymentModal()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
+<div id="posSelectPaymentModal" onkeydown="if(event.key==='Escape'){ event.preventDefault(); posCloseSelectPaymentModal(); }" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(480px,94vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
+  <div style="font-weight:700; font-size:14.5px; margin-bottom:4px; color:#1f2430;">Select Payment</div>
+  <div style="font-size:12px; color:#6b7280; margin-bottom:12px;">Front Office has collected this. Record how and when it was paid.</div>
+  <div id="posSelectPaymentDetails" style="font-size:12.5px; color:#4b5b73; line-height:1.7; margin-bottom:14px; background:#f7f8fa; border-radius:6px; padding:10px 12px;"></div>
+
+  <div style="font-size:12px; color:var(--muted); margin-bottom:6px; letter-spacing:.04em; font-weight:700;">HOW WAS IT PAID?</div>
+  <div style="display:flex; gap:8px; margin-bottom:14px;">
+    <button type="button" class="pay-method-tile active" id="posPayMethodCash" onclick="posSetSelectPaymentMethod('cash')">Cash</button>
+    <button type="button" class="pay-method-tile" id="posPayMethodAccountTransfer" onclick="posSetSelectPaymentMethod('account_transfer')">Account<br>Transfer</button>
+    <button type="button" class="pay-method-tile" id="posPayMethodCard" onclick="posSetSelectPaymentMethod('card')">Card</button>
+  </div>
+
+  <div style="display:flex; gap:10px; margin-bottom:8px;">
+    <div style="flex:1;">
+      <label style="display:block; font-size:12px; color:var(--muted); margin-bottom:4px;">When</label>
+      <input type="date" id="posSelectPaymentDate" style="width:100%; border:1px solid #d7dae0; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
+    </div>
+    <div style="flex:1;">
+      <label style="display:block; font-size:12px; color:var(--muted); margin-bottom:4px;">Amount</label>
+      <input type="text" inputmode="decimal" id="posSelectPaymentAmount" autocomplete="off" oninput="posSelectPaymentCheck()" style="width:100%; border:1px solid #d7dae0; border-radius:6px; padding:8px 10px; font-size:13px; box-sizing:border-box;">
+    </div>
+  </div>
+  <div id="posSelectPaymentError" style="display:none; font-size:12px; color:#c53030; margin-bottom:10px;"></div>
+  <div style="font-size:11.5px; color:#6b7280; margin-bottom:16px;">Defaults to the full outstanding amount — lower it to record a part payment.</div>
+
+  <div style="display:flex; gap:10px; justify-content:flex-end;">
+    <button type="button" onclick="posCloseSelectPaymentModal()" style="background:#fff; color:#1f2430; border:1px solid #d7dae0; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;">Cancel</button>
+    <button type="button" id="posSelectPaymentSaveBtn" onclick="posConfirmSelectPayment()" style="background:#7c3aed; color:#fff; border:none; border-radius:6px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;">Save Payment</button>
+  </div>
+</div>
+
 <div id="posPostBackdrop" onclick="posCancelPost()" style="display:none; position:fixed; inset:0; background:rgba(15,17,21,.55); z-index:4998;"></div>
 <div id="posPostModal" onkeydown="if(event.key==='Enter' && !document.getElementById('posPostConfirmBtn').disabled){ event.preventDefault(); posConfirmPost(); } if(event.key==='Escape'){ event.preventDefault(); posCancelPost(); }" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:4999; width:min(440px,92vw); background:#fff; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,.35); padding:20px;">
   <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
@@ -6262,6 +6340,16 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="editing-bar no-print" id="posEditingBadge" style="display:none;">
     <span>✎ EDITING: <b id="posEditingBadgeLabel"></b> — saving will update this existing invoice, not create a new one.</span>
     <button type="button" class="btn secondary" onclick="posResetForm()">Cancel Edit</button>
+  </div>
+
+  <!-- Shown while VIEWING a collected invoice that still has an outstanding
+       balance. The row lists carry the same prompt as a badge/button, but a
+       receipt opened from a search or the prev/next arrows arrives here with
+       no list around it, and there is otherwise nothing on this screen
+       saying the money is sitting at the front desk unrecorded. -->
+  <div class="pay-select-bar no-print" id="posSelectPaymentBar" style="display:none;">
+    <span>💵 <b id="posSelectPaymentBarLabel"></b> — Front Office collected <b id="posSelectPaymentBarAmount"></b>. Record how and when it was paid.</span>
+    <button type="button" class="pos-new-btn" style="background:#7c3aed;" onclick="posOpenSelectPaymentFromForm()">Select Payment</button>
   </div>
 
   <div class="page-head">
@@ -6834,12 +6922,12 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
 
   <div class="card results-card" style="margin-top:16px;">
     <div class="results-head">
-      <span class="rh-title">COLLECTED</span>
+      <span class="rh-title">COLLECTED — RECORD PAYMENT</span>
       <span class="rh-count" id="frontOfficeCollectedCount">0 collected</span>
     </div>
     <table class="rep">
       <thead>
-        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:200px;">COLLECTED</th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">AMOUNT</th><th class="num">PAID</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:130px;">PAYMENT</th><th style="width:170px;">COLLECTED BY</th><th style="width:190px;"></th></tr>
       </thead>
       <tbody id="frontOfficeCollectedBody"></tbody>
     </table>
@@ -6900,7 +6988,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
     </div>
     <table class="rep">
       <thead>
-        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:90px;"></th></tr>
+        <tr><th style="width:36px;">#</th><th>INVOICE #</th><th>ORDER #</th><th>DATE</th><th>ROOM</th><th>CUSTOMER</th><th class="num">TOTAL</th><th class="num">PAID</th><th class="num">BALANCE</th><th class="tax-flag" title="Service Charge 10% charged on this invoice">SC</th><th class="tax-flag" title="GST 10% on Food charged on this invoice">TAX</th><th style="width:130px;">PAYMENT</th><th style="width:190px;"></th></tr>
       </thead>
       <tbody id="pendingPaymentsBody"></tbody>
     </table>
@@ -23353,13 +23441,243 @@ async function posNextInvoiceNo(){
 // Where an already-posted invoice's money currently stands. Only meaningful
 // for posted records — everywhere a list mixes posted and unposted rows the
 // Posted/Not Posted badge (showStatus) is the useful one instead.
-function posPaymentStatus(record){
-  if (record.collected) return { cls: 'collected', label: 'Collected', title: 'Collected by Front Office' + (record.collectedBy ? ' — ' + record.collectedBy : '') };
-  if (record.sentToFrontOffice) return { cls: 'at-fo', label: 'At Front Office', title: 'Sent to Front Office — waiting to be collected' };
+// What this invoice is still owed, live. Deliberately amount - paid rather
+// than the stored `balance` column: that one is a snapshot written at post
+// time, and a payment recorded afterwards (which is the whole point of the
+// Select Payment flow) makes it stale until the next save lands.
+function posOutstanding(record){
   var bal = (record.amount || 0) - (record.paid || 0);
+  return Math.round(bal * 100) / 100;
+}
+
+// Front Office has the guest's cash, but nobody here has said how it came in
+// or on what day — so this invoice is a task, not a finished sale.
+function posNeedsPaymentSelection(record){
+  return !!record && !record.deleted && !!record.collected && posOutstanding(record) > 0.004;
+}
+
+var POS_PAY_TYPE_LABELS = { cash: 'Cash', account_transfer: 'Account Transfer', card: 'Card' };
+function posPayTypeLabel(type){ return POS_PAY_TYPE_LABELS[type] || 'Cash'; }
+
+function posPaymentStatus(record){
+  var bal = posOutstanding(record);
+  // "Collected" is the HOTEL's word, and it used to short-circuit every
+  // other status here — a collected invoice read as a finished, green,
+  // terminal thing on the restaurant's own screens no matter what its books
+  // actually said. It isn't one. Front Office holding the guest's cash is
+  // the TRIGGER for a payment on this side, not the payment itself: the
+  // restaurant still has to book it the way it books every other receipt,
+  // with a method and a date. So a collected invoice reports what the
+  // restaurant still owes itself — Select Payment while anything is
+  // outstanding, and only then the same plain Paid every other settled
+  // invoice gets. The word "Collected" is kept where it belongs: in the
+  // title text and in the row's own collected-by stamp.
+  if (record.collected) {
+    var who = record.collectedBy ? ' by ' + record.collectedBy : '';
+    if (bal <= 0.004) return { cls: 'paid', label: 'Paid', title: 'Collected at Front Office' + who + ', and the payment is recorded here.' };
+    return { cls: 'select-payment', label: 'Select Payment', title: 'Collected at Front Office' + who + ' — ' + bal.toFixed(2) + ' still to be recorded here. Click to choose how and when it was paid.' };
+  }
+  if (record.sentToFrontOffice) return { cls: 'at-fo', label: 'At Front Office', title: 'Sent to Front Office — waiting to be collected' };
   if (bal <= 0.004) return { cls: 'paid', label: 'Paid', title: 'Paid in full' };
   if ((record.paid || 0) > 0.004) return { cls: 'partial', label: 'Partial', title: 'Partly paid — ' + bal.toFixed(2) + ' still outstanding' };
   return { cls: 'pending', label: 'Pending', title: 'Nothing paid yet — ' + bal.toFixed(2) + ' outstanding' };
+}
+
+// ---------- SELECT PAYMENT (the restaurant's side of an FO collection) ----------
+// See the modal's own comment in the markup for why this is a focused
+// dialog rather than the normal edit-and-repost path.
+var posPendingSelectPayment = null;      // the record the modal is open for
+var posSelectPaymentMethod = 'cash';
+
+function posSelectPaymentStatusCell(record){
+  var st = posPaymentStatus(record);
+  var td = document.createElement('td');
+  var span = document.createElement('span');
+  span.className = 'status-badge ' + st.cls;
+  span.title = st.title;
+  span.textContent = st.label;
+  // The badge IS the button on the collected-but-unbooked rows — clicking
+  // the row itself only opens the invoice, which is one step short of what
+  // the badge is asking for.
+  if (posNeedsPaymentSelection(record) && !posIsLocked(record)) {
+    span.style.cursor = 'pointer';
+    span.onclick = function(e){ e.stopPropagation(); posOpenSelectPaymentModal(record); };
+  }
+  td.appendChild(span);
+  return td;
+}
+
+// Insert a cell just before the row's trailing actions cell, so added
+// columns land with the data and never on top of the buttons (which is
+// exactly what the Front Office collected-stamp used to do — it wrote over
+// posMakeActionsCell's output, leaving that table with no actions at all).
+function posInsertCellBeforeActions(tr, td){
+  var actions = tr.querySelector('td.del-col');
+  if (actions) tr.insertBefore(td, actions); else tr.appendChild(td);
+  return td;
+}
+
+function posSetSelectPaymentMethod(type){
+  posSelectPaymentMethod = POS_PAY_TYPE_LABELS[type] ? type : 'cash';
+  [['cash','posPayMethodCash'], ['account_transfer','posPayMethodAccountTransfer'], ['card','posPayMethodCard']].forEach(function(pair){
+    var el = document.getElementById(pair[1]);
+    if (el) el.classList.toggle('active', pair[0] === posSelectPaymentMethod);
+  });
+}
+
+function posSelectPaymentSetError(msg){
+  var el = document.getElementById('posSelectPaymentError');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.display = msg ? '' : 'none';
+}
+
+// Live validation while typing, so the Save button never promises something
+// that is going to be refused a click later.
+function posSelectPaymentCheck(){
+  var btn = document.getElementById('posSelectPaymentSaveBtn');
+  var input = document.getElementById('posSelectPaymentAmount');
+  if (!btn || !input || !posPendingSelectPayment) return;
+  var amt = parseFloat(String(input.value || '').replace(/,/g, '')) || 0;
+  var outstanding = posOutstanding(posPendingSelectPayment);
+  var msg = '';
+  if (amt <= 0.004) msg = 'Enter the amount that was paid.';
+  else if (amt - outstanding > 0.004) msg = 'That is more than the ' + outstanding.toFixed(2) + ' outstanding on this invoice.';
+  posSelectPaymentSetError(msg);
+  btn.disabled = !!msg;
+  btn.style.opacity = msg ? '.5' : '1';
+}
+
+function posOpenSelectPaymentModal(record){
+  if (!record) return;
+  if (posIsLocked(record)) { posShowToast('This invoice is from a locked day — unlock it first to record a payment.', 'error'); return; }
+  posPendingSelectPayment = record;
+  var outstanding = posOutstanding(record);
+  var details = document.getElementById('posSelectPaymentDetails');
+  if (details) {
+    details.innerHTML =
+      'Invoice #: <b>' + posEscapeHtml(record.no) + '</b><br>' +
+      'Room: ' + posEscapeHtml(record.room || 'NA') + ' &nbsp;·&nbsp; ' + posEscapeHtml(record.customer || '') + '<br>' +
+      'Invoice total: <b>' + (record.amount || 0).toFixed(2) + '</b>' +
+      ((record.paid || 0) > 0.004 ? ' &nbsp;·&nbsp; already recorded: ' + (record.paid || 0).toFixed(2) : '') + '<br>' +
+      'Still to record: <b style="color:#7c3aed;">' + outstanding.toFixed(2) + '</b>' +
+      (record.collectedBy ? '<br><span style="color:#6b7280;">Collected at Front Office by ' + posEscapeHtml(record.collectedBy) +
+        (record.collectedAt ? ' · ' + posEscapeHtml(posFormatDateTimeFromIso(record.collectedAt)) : '') + '</span>' : '');
+  }
+  posSetSelectPaymentMethod('cash');
+  var amtInput = document.getElementById('posSelectPaymentAmount');
+  if (amtInput) amtInput.value = outstanding.toFixed(2);
+  var dateInput = document.getElementById('posSelectPaymentDate');
+  if (dateInput) {
+    // The day the front desk actually took the money is the honest date for
+    // this payment, so the collection stamp wins over "today" when there is
+    // one — a receipt booked days later must not silently claim to have
+    // been paid on the day somebody got round to typing it in.
+    var collectedIso = record.collectedAt ? String(record.collectedAt).slice(0, 10) : '';
+    var startIso = (collectedIso && !posIsDateLocked(collectedIso)) ? collectedIso : posTodayISO();
+    if (dateInput._flatpickr) dateInput._flatpickr.setDate(startIso, true);
+    else { dateInput.value = startIso; posInitDatePicker(dateInput, true); }
+  }
+  posSelectPaymentSetError('');
+  posSelectPaymentCheck();
+  var modal = document.getElementById('posSelectPaymentModal');
+  var backdrop = document.getElementById('posSelectPaymentBackdrop');
+  if (modal) modal.style.display = '';
+  if (backdrop) backdrop.style.display = '';
+  if (amtInput) { amtInput.focus(); amtInput.select(); }
+}
+
+function posCloseSelectPaymentModal(){
+  posPendingSelectPayment = null;
+  var modal = document.getElementById('posSelectPaymentModal');
+  var backdrop = document.getElementById('posSelectPaymentBackdrop');
+  if (modal) modal.style.display = 'none';
+  if (backdrop) backdrop.style.display = 'none';
+}
+
+function posOpenSelectPaymentFromForm(){
+  if (posViewingRecord) posOpenSelectPaymentModal(posViewingRecord);
+}
+
+// The in-form banner — kept in step with whatever record is on screen.
+function posUpdateSelectPaymentBar(record){
+  var bar = document.getElementById('posSelectPaymentBar');
+  if (!bar) return;
+  var show = posNeedsPaymentSelection(record) && !posIsLocked(record);
+  bar.style.display = show ? '' : 'none';
+  if (!show) return;
+  var label = document.getElementById('posSelectPaymentBarLabel');
+  if (label) label.textContent = record.no;
+  var amt = document.getElementById('posSelectPaymentBarAmount');
+  if (amt) amt.textContent = posOutstanding(record).toFixed(2);
+}
+
+async function posConfirmSelectPayment(){
+  var record = posPendingSelectPayment;
+  if (!record) return;
+  // Re-checked at the moment of writing, not just when the modal opened —
+  // a day lock can land from another terminal while this dialog sits open.
+  if (posIsLocked(record)) { posShowToast('This invoice is from a locked day — the payment was not recorded.', 'error'); posCloseSelectPaymentModal(); return; }
+  var amtInput = document.getElementById('posSelectPaymentAmount');
+  var dateInput = document.getElementById('posSelectPaymentDate');
+  var amt = Math.round((parseFloat(String((amtInput && amtInput.value) || '').replace(/,/g, '')) || 0) * 100) / 100;
+  var dateIso = (dateInput && dateInput.value) || '';
+  var outstanding = posOutstanding(record);
+  if (amt <= 0.004) { posSelectPaymentSetError('Enter the amount that was paid.'); return; }
+  if (amt - outstanding > 0.004) { posSelectPaymentSetError('That is more than the ' + outstanding.toFixed(2) + ' outstanding on this invoice.'); return; }
+  if (!dateIso) { posSelectPaymentSetError('Pick the date the payment was made.'); return; }
+  if (posIsDateLocked(dateIso)) { posSelectPaymentSetError('That day is locked — pick a day that is still open.'); return; }
+
+  // Appended to the same per-row payments array the invoice form writes, so
+  // a payment recorded here is indistinguishable from one typed on the
+  // receipt itself — it reopens in the form's payment rows, prints on the
+  // receipt, and counts in every summary, with no second concept to learn.
+  var payments = (record.payments || []).slice();
+  payments.push({ date: dateIso, amount: amt, type: posSelectPaymentMethod });
+
+  // Re-derived from the WHOLE array rather than incremented off the current
+  // totals: the array is the record of truth, and re-deriving it cannot
+  // drift the way a running += can if a write is ever retried.
+  var round2 = function(n){ return Math.round(n * 100) / 100; };
+  var paid = 0, cash = 0, transfer = 0, card = 0;
+  payments.forEach(function(p){
+    var a = parseFloat(p.amount) || 0;
+    paid += a;
+    if (p.type === 'account_transfer') transfer += a;
+    else if (p.type === 'card') card += a;
+    else cash += a;
+  });
+  paid = round2(paid); cash = round2(cash); transfer = round2(transfer); card = round2(card);
+  var balance = round2((record.amount || 0) - paid);
+
+  record.payments = payments;
+  record.paid = paid;
+  record.paidCash = cash;
+  record.paidAccountTransfer = transfer;
+  record.paidCard = card;
+  record.balance = balance;
+
+  var label = posPayTypeLabel(posSelectPaymentMethod);
+  posCloseSelectPaymentModal();
+
+  // Field-only update, through the same queue every other POS write uses —
+  // so an offline terminal keeps the payment and resends it, and so this
+  // can never touch items, taxes or the total the way a repost would.
+  await posQueueInvoiceUpdate(record, {
+    payments: payments,
+    paid: paid,
+    paid_cash: cash,
+    paid_account_transfer: transfer,
+    paid_card: card,
+    balance: balance
+  });
+
+  posShowToast('Recorded ' + amt.toFixed(2) + ' ' + label + ' on ' + record.no +
+    (balance > 0.004 ? ' — ' + balance.toFixed(2) + ' still outstanding' : ''));
+  posRerenderAll();
+  // If this same invoice is the one open on the Point of Sale screen, reload
+  // it so its payment rows and banner show what was just recorded.
+  if (posViewingRecord && posViewingRecord.id === record.id) posOpenRecordInForm(record);
 }
 
 // showPayStatus: swaps the INVOICE # column for the payment-status pill
@@ -23904,9 +24222,29 @@ function posMakeActionsCell(record){
 
   var locked = posIsLocked(record);
   if (record.collected) {
+    var needsPay = posNeedsPaymentSelection(record);
+    // The primary action on a collected-but-unbooked invoice, first in the
+    // row so it is the thing the eye lands on. Before this, a collected
+    // invoice's only controls were Undo and Update — nothing anywhere said
+    // the restaurant still had a payment to enter, and the Front Office
+    // Collected table did not even render this cell (see frontOfficeRefresh).
+    if (needsPay && !locked) {
+      var selectPayBtn = document.createElement('button');
+      selectPayBtn.type = 'button';
+      selectPayBtn.style.cssText = 'border:none; background:#7c3aed; color:#fff; border-radius:5px; padding:4px 9px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;';
+      selectPayBtn.textContent = 'Select Payment';
+      selectPayBtn.title = 'Front Office collected ' + posOutstanding(record).toFixed(2) + ' — record how and when it was paid';
+      selectPayBtn.onclick = function(e){ e.stopPropagation(); posOpenSelectPaymentModal(record); };
+      wrap.appendChild(selectPayBtn);
+    }
     var collectedTag = document.createElement('span');
     collectedTag.style.cssText = 'font-size:11px; color:#0f7a3d; white-space:nowrap;';
-    collectedTag.textContent = 'Collected · ' + (record.collectedBy || '');
+    // Still names who collected it — that stays useful after the payment is
+    // booked — but it no longer stands in for a status the invoice hasn't
+    // earned yet.
+    collectedTag.textContent = (needsPay ? 'FO · ' : 'Collected · ') + (record.collectedBy || '');
+    collectedTag.title = 'Collected at Front Office' + (record.collectedBy ? ' by ' + record.collectedBy : '') +
+      (record.collectedAt ? ' · ' + posFormatDateTimeFromIso(record.collectedAt) : '');
     wrap.appendChild(collectedTag);
     if (!locked) {
       var undoBtn = document.createElement('button');
@@ -23918,7 +24256,10 @@ function posMakeActionsCell(record){
       wrap.appendChild(undoBtn);
       // Reopening a collected invoice in POS is restaurant staff's job —
       // a superadmin browsing the same list isn't meant to edit it here.
-      if (isRestaurantRole()) {
+      // Dropped while Select Payment is showing: that button is the action
+      // on this row, and clicking the row itself already opens the invoice,
+      // so a third control here would only bury the one that matters.
+      if (isRestaurantRole() && !needsPay) {
         var updateBtn = document.createElement('button');
         updateBtn.type = 'button';
         updateBtn.style.cssText = 'border:1px solid #d7dae0; background:#fff; border-radius:5px; padding:4px 8px; font-size:11px; font-weight:600; cursor:pointer; color:#2563eb; white-space:nowrap;';
@@ -24148,13 +24489,36 @@ function frontOfficeRefresh(){
   });
   if (collectedBody) posAppendDayGroupedRows(collectedBody, collectedRows, function(record, num){
     var crow = posBuildInvoiceRow(record, false, true, false, num);
-    var stampTd = crow.lastElementChild;
-    if (stampTd) stampTd.textContent = (record.collectedBy || '') + ' · ' + (record.collectedAt ? posFormatDateTimeFromIso(record.collectedAt) : '');
+    // The PAYMENT column — this is the table where a collected invoice
+    // either says "Select Payment" or reads as genuinely done.
+    posInsertCellBeforeActions(crow, posSelectPaymentStatusCell(record));
+    // The collected-by stamp gets its own cell. It used to be written into
+    // crow.lastElementChild, which is the ACTIONS cell posBuildInvoiceRow
+    // appends — so setting .textContent on it destroyed every button in it.
+    // That is why a collected invoice had no controls at all here, on the
+    // one page where restaurant staff are most likely to be looking for them.
+    var stampTd = document.createElement('td');
+    stampTd.style.cssText = 'font-size:11.5px; color:#6b7280; white-space:nowrap;';
+    stampTd.textContent = (record.collectedBy || '') + (record.collectedAt ? ' · ' + posFormatDateTimeFromIso(record.collectedAt) : '');
+    posInsertCellBeforeActions(crow, stampTd);
     return crow;
+  }, function(a, b){
+    // Awaiting-payment rows to the top of their own day: this table stopped
+    // being an archive of what Front Office took the moment the restaurant
+    // had a step of its own left to do on these rows. Passed as the
+    // withinDay comparator rather than pre-sorting the array — day grouping
+    // is applied inside posSortInvoicesForDisplay, so a sort out here would
+    // simply be thrown away.
+    return (posNeedsPaymentSelection(b) ? 1 : 0) - (posNeedsPaymentSelection(a) ? 1 : 0);
   });
   var shown = pendingRows.length, shownCollected = collectedRows.length;
+  var awaiting = collectedRows.filter(posNeedsPaymentSelection).length;
   if (countEl) countEl.textContent = shown + ' pending';
-  if (collectedCountEl) collectedCountEl.textContent = shownCollected + ' collected';
+  // The count is the call to action, not a tally — "5 collected" said
+  // nothing about the three of them still waiting on this side.
+  if (collectedCountEl) collectedCountEl.textContent = awaiting > 0
+    ? awaiting + ' awaiting payment · ' + (shownCollected - awaiting) + ' done'
+    : shownCollected + ' collected';
 }
 
 // Set once a posted record is opened for viewing — the Edit button shows
@@ -24406,6 +24770,7 @@ function posOpenRecordInForm(record){
   }
 
   posRecalcAll();
+  posUpdateSelectPaymentBar(record);
   posFormDirty = false;
   posShowToast('Opened ' + record.no + ' in Point of Sale');
 }
@@ -24416,7 +24781,7 @@ function posOpenRecordInForm(record){
 // dropdown is open (that Escape just closes the dropdown, same as clicking
 // away, not the whole edit).
 function posAnyModalOpen(){
-  var openModalIds = ['posDeleteModal', 'posPostModal', 'posDayLockModal', 'posMenuPanel', 'posMenuEditModal'];
+  var openModalIds = ['posDeleteModal', 'posPostModal', 'posDayLockModal', 'posMenuPanel', 'posMenuEditModal', 'posSelectPaymentModal'];
   return openModalIds.some(function(id){
     var el = document.getElementById(id);
     return el && el.style.display && el.style.display !== 'none';
@@ -24635,6 +25000,10 @@ function pendingPaymentsRefresh(){
     // Before the SC/TAX flags, not before the actions cell — the money
     // columns belong next to each other, and this page IS the balance.
     tr.insertBefore(balTd, tr.querySelector('td.tax-flag') || tr.lastElementChild);
+    // A collected invoice lands on this page too (posted, still owing), and
+    // it is the one kind of pending payment with a specific next step
+    // attached — the badge here is the way to it.
+    posInsertCellBeforeActions(tr, posSelectPaymentStatusCell(r));
     return tr;
   }, function(a, b){
     var balA = a.balance != null ? a.balance : (a.amount - a.paid);
@@ -25584,6 +25953,9 @@ function posResetForm(){
   posViewingRecord = null;
   var editBadge = document.getElementById('posEditingBadge');
   if (editBadge) editBadge.style.display = 'none';
+  // No record on screen means nothing to record a payment against — the
+  // banner must not survive into a blank new receipt.
+  posUpdateSelectPaymentBar(null);
   var invoicePage = document.getElementById('page-pos-invoice');
   if (invoicePage) invoicePage.classList.remove('pos-locked-view', 'pos-view-only');
   var editRecordBtn = document.getElementById('posEditRecordBtn');
