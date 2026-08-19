@@ -5048,6 +5048,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
         <div class="dash-subtiles">
           <div class="dash-subtile"><div class="dash-subtile-val" id="dashArrivalsCheckedIn">0</div><div class="dash-subtile-lbl">Checked In</div></div>
           <div class="dash-subtile"><div class="dash-subtile-val" id="dashArrivalsPending">0</div><div class="dash-subtile-lbl">Pending Arrival</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashArrivalsGuests">0</div><div class="dash-subtile-lbl">Customers</div></div>
         </div>
       </div>
       <div class="dash-card clickable" onclick="showView('inhouse')">
@@ -7785,6 +7786,10 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
           <label>Date</label>
           <input type="date" id="arDate">
           <div class="date-readout" id="arDateReadout"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div class="dash-subtile" style="margin-top:0; flex:0 0 auto; width:auto; min-width:150px; max-width:190px; padding:10px 18px;"><div class="dash-subtile-val" id="arCheckedInCount" style="font-size:26px; color:#d4a017;">0</div><div class="dash-subtile-lbl" style="font-size:13px; font-weight:700; color:#d4a017;">Checked In</div></div>
+          <div class="dash-subtile" style="margin-top:0; flex:0 0 auto; width:auto; min-width:150px; max-width:190px; padding:10px 18px;"><div class="dash-subtile-val" id="arPendingCount" style="font-size:26px; color:#d4a017;">0</div><div class="dash-subtile-lbl" style="font-size:13px; font-weight:700; color:#d4a017;">Pending Arrivals</div></div>
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
@@ -13225,12 +13230,27 @@ function renderDashboard(){
   // page/Room Detail's arrivalPending badge: an advance reservation with no
   // Actual Checkin yet is still pending; a walk-in confirms itself the
   // moment it's saved (see isAdvanceReservation).
-  const arrivalsPendingCount = move.checkins.filter(({entry})=>
-    isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')
+  //
+  // The headline number counts ROOMS arriving, not entries: one family
+  // booked into four rooms is four rooms to get ready, which is what the
+  // card is read for — the guest count is its own subtile beside it. Rooms
+  // are deduped per entry (a rate change mid-stay splits one room across
+  // several rows) and Snooker/BBQ/Bonfire rows never count, same rule as
+  // every other room total on this page.
+  const arrivalRoomCount = ({entry})=> dedupeRoomsByNo(
+    (entry.rooms || []).filter(r=> r.roomNo && !isMiscRoomNo(r.roomNo))
   ).length;
-  document.getElementById('dashArrivals').textContent = move.checkins.length;
-  document.getElementById('dashArrivalsCheckedIn').textContent = move.checkins.length - arrivalsPendingCount;
-  document.getElementById('dashArrivalsPending').textContent = arrivalsPendingCount;
+  const pendingArrivals = move.checkins.filter(({entry})=>
+    isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')
+  );
+  const arrivalRooms = move.checkins.reduce((s, it)=> s + arrivalRoomCount(it), 0);
+  const arrivalRoomsPending = pendingArrivals.reduce((s, it)=> s + arrivalRoomCount(it), 0);
+  document.getElementById('dashArrivals').textContent = arrivalRooms;
+  // Checked In / Pending are rooms too, so the two subtiles still add up to
+  // the headline; Customers is the separate people-shaped number.
+  document.getElementById('dashArrivalsCheckedIn').textContent = arrivalRooms - arrivalRoomsPending;
+  document.getElementById('dashArrivalsPending').textContent = arrivalRoomsPending;
+  document.getElementById('dashArrivalsGuests').textContent = move.checkins.length;
   document.getElementById('dashInhouse').textContent = occupiedCount;
   document.getElementById('dashInhouseRoom').textContent = inhouseRoomCount;
   document.getElementById('dashInhouseApt').textContent = inhouseAptCount;
@@ -18874,6 +18894,14 @@ function renderArrival(){
     .filter(entry=> !loggedInIds.has(entry.id) && getDetailValue(entry, 'Actual Checkin') === asOfDate)
     .map(entry=> ({ guest_id: entry.id, at: null, username: null }));
   const allCheckins = dayCheckins.concat(backfilledIns);
+  // The two tiles beside the date read straight off the two lists below
+  // them, so each one always matches the rows you can actually see: Checked
+  // In is the confirmed list, Pending Arrivals is whatever is still sitting
+  // in the Arrivals table waiting to be confirmed.
+  const arCheckedInEl = document.getElementById('arCheckedInCount');
+  const arPendingEl = document.getElementById('arPendingCount');
+  if(arCheckedInEl) arCheckedInEl.textContent = allCheckins.length;
+  if(arPendingEl) arPendingEl.textContent = rows.filter(r=> r.status !== 'checked_in').length;
   if(allCheckins.length === 0){
     logBody.innerHTML = '<div class="empty-note">Nobody was checked in ' + (isToday ? 'today' : formatDate(asOfDate)) + '.</div>';
   } else {
