@@ -18368,6 +18368,42 @@ function buildAutoCheckoutRows(asOfDate){
       status: acFig.status
     });
   });
+  // A room has exactly ONE "current" slot and ONE previous-guest-pending
+  // slot per date, so a stay whose room was booked again by someone else
+  // (any time after them, not just the same-day turnover handled above)
+  // has no status row of its own at all — it silently vanished from this
+  // page with nothing to click Checkout on. That's how a guest with two
+  // separate entries only ever showed up once here: the newer entry owns
+  // the room's slot, the older one disappears. Fold in any entry that's
+  // still un-checked-out, whose booked nights have already run out by
+  // asOfDate, and that no room status above accounted for. Keyed on
+  // entry.id like everything else, so two entries for the same person are
+  // two rows, never merged.
+  const seenGuestIds = new Set();
+  statuses.forEach(rs=>{
+    if(rs.entry) seenGuestIds.add(rs.entry.id);
+    if(rs.previousGuestPending && rs.previousGuestPending.entry) seenGuestIds.add(rs.previousGuestPending.entry.id);
+    if(rs.nextGuestPending && rs.nextGuestPending.entry) seenGuestIds.add(rs.nextGuestPending.entry.id);
+  });
+  loadAllEntries().forEach(entry=>{
+    if(dueByGuest.has(entry.id) || seenGuestIds.has(entry.id)) return;
+    if(!entry.checkIn) return;
+    if(getDetailValue(entry, 'Actual Checkout')) return;
+    // Same arrival gate as both passes above — a reservation nobody ever
+    // confirmed in is a no-show, not a checkout waiting to happen.
+    if(isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
+    const checkoutDate = computeExpectedCheckoutDate(entry);
+    if(!checkoutDate || checkoutDate > asOfDate) return;
+    const isExtendedStatus = activeGuestIds.has(entry.id);
+    const acFig = acDueFigures(entry, isExtendedStatus);
+    dueByGuest.set(entry.id, {
+      roomNos: formatRoomChain(entry.rooms) ? formatRoomChain(entry.rooms).split(', ') : [],
+      guestId: entry.id, guest: entry.guestName || '(no name)',
+      checkIn: entry.checkIn || '', checkoutDate,
+      due: acFig.due, netDue: acFig.netDue, status: acFig.status
+    });
+  });
+
   const due = Array.from(dueByGuest.values()).map(r=>{
     const sortedRoomNos = r.roomNos.sort((a,b)=> a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
     return {
