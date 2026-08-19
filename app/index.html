@@ -5044,7 +5044,6 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
           <span class="dash-card-icon dash-icon-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></span>
           <span class="dash-card-lbl">New rooms / checkins</span>
         </div>
-        <div class="dash-card-val" id="dashArrivals">0</div>
         <div class="dash-subtiles">
           <div class="dash-subtile"><div class="dash-subtile-val" id="dashArrivalsRooms">0</div><div class="dash-subtile-lbl">New Rooms</div></div>
           <div class="dash-subtile"><div class="dash-subtile-val" id="dashArrivalsGuests">0</div><div class="dash-subtile-lbl">Customers</div></div>
@@ -6111,11 +6110,11 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
         <!-- The unit/guest tiles sit on their own full-width row under the date
              picker, so the buttons and the date keep the top row to themselves
              instead of being squeezed into a third of it. -->
-        <div style="width:100%; display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; justify-content:center;">
-          <div id="ihUnitSplit" class="dash-subtiles" style="max-width:480px; margin-top:0; justify-content:center;"></div>
+        <div style="width:100%; display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; justify-content:space-between;">
+          <div id="ihUnitSplit" class="dash-subtiles" style="max-width:480px; margin-top:0; justify-content:flex-start;"></div>
           <div>
-            <label class="lbl-sm" style="margin-bottom:4px; text-align:center;">In-house Guests</label>
-            <div id="ihGuestSplit" class="dash-subtiles" style="max-width:300px; margin-top:0; justify-content:center;"></div>
+            <label class="lbl-sm" style="margin-bottom:4px; text-align:right;">In-house Guests</label>
+            <div id="ihGuestSplit" class="dash-subtiles" style="max-width:300px; margin-top:0; justify-content:flex-end;"></div>
           </div>
         </div>
       </div>
@@ -13203,7 +13202,7 @@ function renderMovementList(containerId, items, dateColumnLabel){
 
 function renderDashboard(){
   if(!initialLoadDone){
-    ['dashArrivals','dashArrivalsRooms','dashArrivalsGuests','dashInhouse','dashInhouseRoom','dashInhouseApt','dashDepartures','dashCheckedOut','dashOcc','dashReady','dashDirty','dashOOO','dashNightOcc','dashNightAvail'].forEach(id=>{
+    ['dashArrivalsRooms','dashArrivalsGuests','dashInhouse','dashInhouseRoom','dashInhouseApt','dashDepartures','dashCheckedOut','dashOcc','dashReady','dashDirty','dashOOO','dashNightOcc','dashNightAvail'].forEach(id=>{
       document.getElementById(id).textContent = '…';
     });
     return;
@@ -13241,7 +13240,6 @@ function renderDashboard(){
     (entry.rooms || []).filter(r=> r.roomNo && !isMiscRoomNo(r.roomNo))
   ).length;
   const arrivalRooms = move.checkins.reduce((s, it)=> s + arrivalRoomCount(it), 0);
-  document.getElementById('dashArrivals').textContent = arrivalRooms;
   // The two are deliberately different shapes and don't add up to each other:
   // one customer can arrive into three rooms, so 2 customers can be 6 rooms.
   document.getElementById('dashArrivalsRooms').textContent = arrivalRooms;
