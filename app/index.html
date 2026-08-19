@@ -1047,6 +1047,15 @@
     font-weight:700;
     color:var(--ink-strong);
   }
+  /* Room/Apartment split shown inline beside a subtile's headline number. */
+  .dash-subtile-note{
+    font-family:'Inter',sans-serif;
+    font-size:9.5px;
+    font-weight:600;
+    opacity:.75;
+    margin-left:3px;
+    white-space:nowrap;
+  }
   .dash-subtile-lbl{
     font-family:'Inter',sans-serif;
     font-size:9.5px;
@@ -5046,9 +5055,9 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
         </div>
         <div class="dash-card-val" id="dashArrivals">0</div>
         <div class="dash-subtiles">
-          <div class="dash-subtile"><div class="dash-subtile-val" id="dashArrivalsCheckedIn">0</div><div class="dash-subtile-lbl">Checked In</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashArrivalsCheckedIn">0</div><div class="dash-subtile-lbl">Arrivals</div></div>
           <div class="dash-subtile"><div class="dash-subtile-val" id="dashArrivalsPending">0</div><div class="dash-subtile-lbl">Pending Arrival</div></div>
-          <div class="dash-subtile"><div class="dash-subtile-val" id="dashArrivalsGuests">0</div><div class="dash-subtile-lbl">Customers</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashArrivalsGuests">0</div><div class="dash-subtile-lbl">New Customers</div></div>
         </div>
       </div>
       <div class="dash-card clickable" onclick="showView('inhouse')">
@@ -13235,20 +13244,25 @@ function renderDashboard(){
   // are deduped per entry (a rate change mid-stay splits one room across
   // several rows) and Snooker/BBQ/Bonfire rows never count, same rule as
   // every other room total on this page.
-  const arrivalRoomCount = ({entry})=> dedupeRoomsByNo(
+  const arrivalUnits = ({entry})=> dedupeRoomsByNo(
     (entry.rooms || []).filter(r=> r.roomNo && !isMiscRoomNo(r.roomNo))
-  ).length;
+  );
+  const arrivalRoomCount = (it)=> arrivalUnits(it).length;
   const pendingArrivals = move.checkins.filter(({entry})=>
     isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')
   );
   const arrivalRooms = move.checkins.reduce((s, it)=> s + arrivalRoomCount(it), 0);
   const arrivalRoomsPending = pendingArrivals.reduce((s, it)=> s + arrivalRoomCount(it), 0);
   document.getElementById('dashArrivals').textContent = arrivalRooms;
-  // Checked In / Pending are rooms too, so the two subtiles still add up to
-  // the headline; Customers is the separate people-shaped number.
+  // Arrivals / Pending are rooms too, so the two subtiles still add up to
+  // the headline; New Customers is the separate people-shaped number, with the
+  // same units split by type (R / A) so the headline is broken down both ways.
   document.getElementById('dashArrivalsCheckedIn').textContent = arrivalRooms - arrivalRoomsPending;
   document.getElementById('dashArrivalsPending').textContent = arrivalRoomsPending;
-  document.getElementById('dashArrivalsGuests').textContent = move.checkins.length;
+  const arrivalUnitNos = move.checkins.flatMap(it=> arrivalUnits(it).map(r=> r.roomNo));
+  const arrivalApts = arrivalUnitNos.filter(no=> detectUnitType(no) === 'Apartment').length;
+  document.getElementById('dashArrivalsGuests').innerHTML = move.checkins.length +
+    '<span class="dash-subtile-note">(R:' + (arrivalUnitNos.length - arrivalApts) + ' A:' + arrivalApts + ')</span>';
   document.getElementById('dashInhouse').textContent = occupiedCount;
   document.getElementById('dashInhouseRoom').textContent = inhouseRoomCount;
   document.getElementById('dashInhouseApt').textContent = inhouseAptCount;
