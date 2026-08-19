@@ -5063,16 +5063,12 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
       <div class="dash-card clickable" onclick="showView('cico')">
         <div class="dash-card-head">
           <span class="dash-card-icon dash-icon-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
-          <span class="dash-card-lbl">Departures</span>
-        </div>
-        <div class="dash-card-val" id="dashDepartures">0</div>
-      </div>
-      <div class="dash-card clickable" onclick="showView('cico')">
-        <div class="dash-card-head">
-          <span class="dash-card-icon dash-icon-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8 12 11 15 16 9"/></svg></span>
           <span class="dash-card-lbl">Checked Out</span>
         </div>
-        <div class="dash-card-val" id="dashCheckedOut">0</div>
+        <div class="dash-subtiles">
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashCheckedOutRooms">0</div><div class="dash-subtile-lbl">Rooms</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashCheckedOutGuests">0</div><div class="dash-subtile-lbl">Customers</div></div>
+        </div>
       </div>
 
       <div class="dash-card">
@@ -13202,7 +13198,7 @@ function renderMovementList(containerId, items, dateColumnLabel){
 
 function renderDashboard(){
   if(!initialLoadDone){
-    ['dashArrivalsRooms','dashArrivalsGuests','dashInhouse','dashInhouseRoom','dashInhouseApt','dashDepartures','dashCheckedOut','dashOcc','dashReady','dashDirty','dashOOO','dashNightOcc','dashNightAvail'].forEach(id=>{
+    ['dashArrivalsRooms','dashArrivalsGuests','dashInhouse','dashInhouseRoom','dashInhouseApt','dashCheckedOutRooms','dashCheckedOutGuests','dashOcc','dashReady','dashDirty','dashOOO','dashNightOcc','dashNightAvail'].forEach(id=>{
       document.getElementById(id).textContent = '…';
     });
     return;
@@ -13230,25 +13226,23 @@ function renderDashboard(){
   // Actual Checkin yet is still pending; a walk-in confirms itself the
   // moment it's saved (see isAdvanceReservation).
   //
-  // The headline number counts ROOMS arriving, not entries: one family
-  // booked into four rooms is four rooms to get ready, which is what the
-  // card is read for — the guest count is its own subtile beside it. Rooms
-  // are deduped per entry (a rate change mid-stay splits one room across
-  // several rows) and Snooker/BBQ/Bonfire rows never count, same rule as
-  // every other room total on this page.
-  const arrivalRoomCount = ({entry})=> dedupeRoomsByNo(
+  // Both the arrivals and the checked-out card read rooms AND customers. The
+  // two are deliberately different shapes and never add up to each other: one
+  // customer can hold three rooms, so 2 customers can be 6 rooms. Rooms are
+  // deduped per entry (a rate change mid-stay splits one room across several
+  // rows) and Snooker/BBQ/Bonfire rows never count, same rule as every other
+  // room total on this page.
+  const movementRoomCount = ({entry})=> dedupeRoomsByNo(
     (entry.rooms || []).filter(r=> r.roomNo && !isMiscRoomNo(r.roomNo))
   ).length;
-  const arrivalRooms = move.checkins.reduce((s, it)=> s + arrivalRoomCount(it), 0);
-  // The two are deliberately different shapes and don't add up to each other:
-  // one customer can arrive into three rooms, so 2 customers can be 6 rooms.
-  document.getElementById('dashArrivalsRooms').textContent = arrivalRooms;
+  const countRooms = list=> list.reduce((s, it)=> s + movementRoomCount(it), 0);
+  document.getElementById('dashArrivalsRooms').textContent = countRooms(move.checkins);
   document.getElementById('dashArrivalsGuests').textContent = move.checkins.length;
   document.getElementById('dashInhouse').textContent = occupiedCount;
   document.getElementById('dashInhouseRoom').textContent = inhouseRoomCount;
   document.getElementById('dashInhouseApt').textContent = inhouseAptCount;
-  document.getElementById('dashDepartures').textContent = move.expectedCheckouts.length;
-  document.getElementById('dashCheckedOut').textContent = move.actualCheckouts.length;
+  document.getElementById('dashCheckedOutRooms').textContent = countRooms(move.actualCheckouts);
+  document.getElementById('dashCheckedOutGuests').textContent = move.actualCheckouts.length;
   document.getElementById('dashOcc').textContent = occupiedCount;
   document.getElementById('dashReady').textContent = readyCount;
   document.getElementById('dashDirty').textContent = dirtyCount;
