@@ -9259,7 +9259,43 @@ function getRoomMoveOffsets(entry){
     const m = /^(.+?) from night (\d+)$/.exec(String(d.value || '').trim());
     if(m) map[m[1].trim().toUpperCase()] = Math.max(0, parseInt(m[2]) - 1);
   });
-  return map;
+  if(!Object.keys(map).length) return map;
+  // An offset is only real if the booking still contains the room the guest
+  // moved OUT of — i.e. some other room's nights end exactly where this one
+  // starts. Editing an entry can delete that first room row while the hidden
+  // 'Room Move' detail stays behind (extra_details is only ever rewritten by
+  // the move flow itself), and an orphaned offset silently shifts the WHOLE
+  // stay later: the guest's nights, their occupancy, and their expected
+  // checkout all slide a day, so they drop off today's Checkout/Pending and
+  // reappear on tomorrow's. Unsupported offsets are ignored so the stay
+  // simply reads from check-in, exactly as it did before any move was
+  // recorded. A genuine move — both rooms still on the booking — is
+  // untouched, chains of moves included.
+  const nightsByRoom = {};
+  ((entry && entry.rooms) || []).forEach(r=>{
+    if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
+    const key = r.roomNo.trim().toUpperCase();
+    if(key === 'N/A') return;
+    nightsByRoom[key] = (nightsByRoom[key] || 0) + (parseInt(r.count) || 1);
+  });
+  // Every room that starts at check-in ends the first chain; anything whose
+  // offset matches an end already reached is a genuine handoff, and its own
+  // end opens the next link. Repeat until nothing new resolves.
+  const ends = new Set();
+  Object.keys(nightsByRoom).forEach(key=>{ if(!map[key]) ends.add(nightsByRoom[key]); });
+  const valid = {};
+  let grew = true;
+  while(grew){
+    grew = false;
+    Object.keys(map).forEach(key=>{
+      if(valid[key] !== undefined || !nightsByRoom[key]) return;
+      if(!ends.has(map[key])) return;
+      valid[key] = map[key];
+      ends.add(map[key] + nightsByRoom[key]);
+      grew = true;
+    });
+  }
+  return valid;
 }
 
 // The other half of a room move: the room the guest moved OUT of. Their
