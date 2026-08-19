@@ -6103,17 +6103,20 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
           <input type="date" id="ihDate">
           <div class="date-readout" id="ihDateReadout" style="font-size:28px; font-weight:700; color:var(--accent); letter-spacing:0.02em;"></div>
         </div>
-        <div style="flex:1; display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
-          <div id="ihUnitSplit" class="dash-subtiles" style="max-width:480px; margin-top:0; justify-content:flex-start;"></div>
-          <div>
-            <label class="lbl-sm" style="margin-bottom:4px; text-align:right;">In-house Guests</label>
-            <div id="ihGuestSplit" class="dash-subtiles" style="max-width:300px; margin-top:0; justify-content:flex-end;"></div>
-          </div>
-        </div>
         <div class="checkline" style="width:100%; padding-bottom:0;">
           <input type="checkbox" id="ihHideZero">
           <label for="ihHideZero" style="margin:0;">Hide nonpaying</label>
           <span id="ihHiddenNote" style="text-transform:none; letter-spacing:0; color:var(--muted);"></span>
+        </div>
+        <!-- The unit/guest tiles sit on their own full-width row under the date
+             picker, so the buttons and the date keep the top row to themselves
+             instead of being squeezed into a third of it. -->
+        <div style="width:100%; display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; justify-content:center;">
+          <div id="ihUnitSplit" class="dash-subtiles" style="max-width:480px; margin-top:0; justify-content:center;"></div>
+          <div>
+            <label class="lbl-sm" style="margin-bottom:4px; text-align:center;">In-house Guests</label>
+            <div id="ihGuestSplit" class="dash-subtiles" style="max-width:300px; margin-top:0; justify-content:center;"></div>
+          </div>
         </div>
       </div>
     </div>
