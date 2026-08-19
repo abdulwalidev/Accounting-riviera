@@ -13630,7 +13630,14 @@ function buildGuestLetterFields(entry){
   const dedupedRooms = dedupeRoomsByNo(realRooms);
   const adults = dedupedRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
   const children = dedupedRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
-  const hasBreakfast = dedupedRooms.some(r=> (parseInt(r.breakfastAdults) || 0) + (parseInt(r.breakfastChildren) || 0) > 0);
+  // "Yes/No" told the guest nothing about how many covers are actually
+  // included, which is the one thing they ask about — spell out the exact
+  // adult/child counts the reservation was booked with instead.
+  const breakfastAdults = dedupedRooms.reduce((s,r)=> s + (parseInt(r.breakfastAdults) || 0), 0);
+  const breakfastChildren = dedupedRooms.reduce((s,r)=> s + (parseInt(r.breakfastChildren) || 0), 0);
+  const breakfastParts = [];
+  if(breakfastAdults) breakfastParts.push(breakfastAdults + ' Adult' + (breakfastAdults === 1 ? '' : 's'));
+  if(breakfastChildren) breakfastParts.push(breakfastChildren + ' Child' + (breakfastChildren === 1 ? '' : 'ren'));
   const rentPerNight = dedupedRooms.reduce((s,r)=> s + (parseFloat(String(r.rent).replace(/,/g,'')) || 0), 0);
   const roomTypeLine = dedupedRooms.length
     ? dedupedRooms.map(r=> r.unitType || detectUnitType(r.roomNo) || 'Room').join(', ')
@@ -13646,9 +13653,14 @@ function buildGuestLetterFields(entry){
     roomTypeLine,
     individuals: adults + children,
     roomCount: realRooms.length,
-    breakfast: hasBreakfast ? 'Yes' : 'No',
+    breakfast: breakfastParts.length ? breakfastParts.join(' + ') + ' (' + (breakfastAdults + breakfastChildren) + ' total)' : 'Not included',
     rentPerNight: rentPerNight.toLocaleString(),
     totalRent: t.bookingTotal.toLocaleString(),
+    // The letter used to print the status word alone, so a guest who had
+    // already wired an advance saw nothing confirming it landed. Late
+    // Payment rows stay out of this on purpose — that money hasn't arrived.
+    advancePaid: t.paid.toLocaleString(),
+    balanceDue: t.due.toLocaleString(),
     paymentStatus: t.status + (t.due > 0 ? ' — Due: PKR. ' + t.due.toLocaleString() + '/-' : '')
   };
 }
@@ -13683,6 +13695,8 @@ function buildGuestLetterHtml(entry){
 
         <p class="riviera-letter-section-title">Payment Details:</p>
         <p><strong>Payment Status:</strong> ${f.paymentStatus}</p>
+        <p><strong>Advance Received:</strong> PKR. ${f.advancePaid}/-</p>
+        <p><strong>Balance Payable:</strong> PKR. ${f.balanceDue}/-</p>
         <p><strong>Account Tittle:</strong> RIVIERA Resort PVT LTD<br>
         <strong>Bank Alfalah:</strong><br>
         <strong>IBAN:</strong> <span class="riviera-letter-num">PK36 ALFH 0336 0010 1029 8690</span><br>
