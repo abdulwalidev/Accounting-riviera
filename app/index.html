@@ -10118,6 +10118,46 @@ function splitRoomRowRate(tr, nightIdx, rate){
   updateExpectedCheckoutDisplay();
 }
 
+// The "[new]" tag splitRoomRowRate puts on the night it split out lives only
+// in the DOM, so saving and reopening the entry lost it — the one row anybody
+// wants to spot afterwards (the changed rate, or the room the guest moved
+// into) came back looking exactly like the untouched stay rows. Nothing extra
+// is stored to bring it back: a saved split is re-derivable from the rows
+// themselves, so the tag is recomputed on load and stays for good.
+//   · rate change — same room, consecutive rows (already regrouped above);
+//     the tagged one is whichever row's rent differs from the group's first.
+//   · room move  — a different room number, so it never joins the group; the
+//     entry's own 'Room Move' details name the room that was moved into.
+// Raw details on purpose, not getRoomMoveOffsets: an offset orphaned by a
+// later edit is ignored for date maths, but the row it points at is still the
+// row someone changed, and that's exactly what this tag is for.
+function retagSplitNewRows(entry){
+  const movedInto = new Set();
+  ((entry && entry.extraDetails) || []).forEach(d=>{
+    if(d.kind !== 'Room Move') return;
+    const m = /^(.+?) from night (\d+)$/.exec(String(d.value || '').trim());
+    if(m) movedInto.add(m[1].trim().toUpperCase());
+  });
+  const groupFirstRent = {};
+  Array.from(document.querySelectorAll('#roomBody tr')).forEach(tr=>{
+    const rmno = tr.querySelector('.rmno');
+    const roomNoEl = tr.querySelector('.roomNo');
+    if(!rmno || !roomNoEl) return;
+    tr.querySelectorAll('.split-new-tag').forEach(t=> t.remove());
+    const roomNo = roomNoEl.value.trim().toUpperCase();
+    const rent = (tr.querySelector('.rent').value || '').trim();
+    const group = tr.dataset.splitGroup;
+    let isNew = false;
+    if(roomNo && movedInto.has(roomNo)){
+      isNew = true;
+    } else if(group){
+      if(groupFirstRent[group] === undefined) groupFirstRent[group] = rent;
+      else if(rent !== groupFirstRent[group]) isNew = true;
+    }
+    if(isNew) rmno.insertAdjacentHTML('beforeend', '<span class="split-new-tag">[new]</span>');
+  });
+}
+
 function deleteRow(btn){
   btn.closest('tr').remove();
   calcGrandTotal();
@@ -11846,6 +11886,7 @@ function startEditEntry(entry){
     }
     calcRow(tr.querySelector('.rent'));
   });
+  retagSplitNewRows(entry);
   refreshDuplicateRoomHighlights();
   updateExpectedCheckoutDisplay();
 
