@@ -13404,11 +13404,16 @@ function renderDetail(){
   // the stay. Only the first row of a room number is "the" booking; every
   // repeat after it gets a "[new rate]" tag here so it's obvious at a
   // glance this isn't a second, separate room.
+  //
+  // "N/A" is not a room number — it's every not-yet-assigned unit on the
+  // booking, so two unassigned rooms of the same type share the key without
+  // being the same room. Same guard as getRoomMoveOffsets: never match on N/A.
   const seenRoomNos = new Set();
   roomBody.innerHTML = (entry.rooms || []).map(r=>{
     const key = (r.roomNo || '').trim().toUpperCase();
-    const isRepeat = key && !isMiscRoomNo(r.roomNo) && seenRoomNos.has(key);
-    if(key) seenRoomNos.add(key);
+    const realRoom = key && key !== 'N/A' && !isMiscRoomNo(r.roomNo);
+    const isRepeat = realRoom && seenRoomNos.has(key);
+    if(realRoom) seenRoomNos.add(key);
     const roomNoCell = (r.roomNo ? displayRoomNo(r.roomNo, r.unitType) : '-') + (isRepeat ? ' <span class="new-rate-tag">[new rate]</span>' : '');
     return `
     <tr>
