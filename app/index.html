@@ -5076,8 +5076,8 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
           <span class="dash-card-lbl">Bookings</span>
         </div>
         <div class="dash-subtiles">
-          <div class="dash-subtile"><div class="dash-subtile-val" id="dashBookingsCheckedIn">0</div><div class="dash-subtile-lbl">Checked In</div></div>
-          <div class="dash-subtile"><div class="dash-subtile-val" id="dashBookingsPending">0</div><div class="dash-subtile-lbl">Pending Arrivals</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashBookingsCheckedIn">0</div><div class="dash-subtile-lbl">Rooms Checked In</div></div>
+          <div class="dash-subtile"><div class="dash-subtile-val" id="dashBookingsPending">0</div><div class="dash-subtile-lbl">Pending Room Arrivals</div></div>
         </div>
       </div>
 
@@ -11103,6 +11103,18 @@ async function reviewEntry(){
        && checkInEl.value && checkInEl.value !== originalEntryForEdit.checkIn){
       origCheckin = checkInEl.value;
     }
+    // An advance reservation with no stamp yet whose booked Check-in has
+    // already arrived (today or earlier) gets confirmed right here, the
+    // moment anyone resaves it — same as a same-day walk-in below. Without
+    // this, an advance booking nobody happened to open on the Arrival page
+    // sat unconfirmed forever even though the desk was actively adding
+    // payments/details to it, silently dropping out of Ledgers/Revenue/
+    // Checkout days later (see isLapsedUnconfirmedArrival). Arrival's own
+    // Check-in button and Undo still work exactly as before — this only
+    // fills the gap when nobody used them.
+    if(!stampOverride && !origCheckin && checkInEl.value && checkInEl.value <= todayStr()){
+      origCheckin = checkInEl.value;
+    }
     if(origCheckin) extraDetails.unshift({ kind: 'Actual Checkin', value: origCheckin });
     const origCheckout = stampOverride ? stampOverride.checkout : getDetailValue(originalEntryForEdit, 'Actual Checkout');
     if(origCheckout) extraDetails.unshift({ kind: 'Actual Checkout', value: origCheckout });
@@ -12979,7 +12991,7 @@ function renderRoomDetail(){
           <td>${roomDetailTypeLabel(r.type) || '-'}</td>
           <td>${pg.entry.checkIn ? formatDateShort(pg.entry.checkIn) : '-'}</td>
           <td>${pgDue.toLocaleString()}</td>
-          <td><span class="status checkoutdue">Pending<br>Checkout</span></td>
+          <td><span class="status checkoutdue">Room<br>Booked</span></td>
           <td>${pg.entry.guestName || '(no name)'}</td>
         </tr>`;
       })() : '';
@@ -13040,7 +13052,7 @@ function renderRoomDetail(){
         return `<div class="smart-row clickable" onclick="openDetail('${pg.entry.id}')" title="Open this guest">
           <span class="sr-room">${r.roomNo}</span>
           <span class="sr-type">${roomDetailTypeLabel(r.type) || ''}</span>
-          <span class="sr-status checkoutdue">pending checkout</span>
+          <span class="sr-status checkoutdue">room booked</span>
           <span class="sr-arrival">${pg.entry.checkIn ? formatDateShort(pg.entry.checkIn) : ''}</span>
           <span class="sr-guest">${pg.entry.guestName || '(no name)'}</span>
         </div>`;
@@ -13246,15 +13258,20 @@ function renderDashboard(){
     (entry.rooms || []).filter(r=> r.roomNo && !isMiscRoomNo(r.roomNo))
   ).length;
   const countRooms = list=> list.reduce((s, it)=> s + movementRoomCount(it), 0);
-  document.getElementById('dashArrivalsRooms').textContent = countRooms(move.checkins);
-  document.getElementById('dashArrivalsGuests').textContent = move.checkins.length;
-  // Bookings splits the SAME arrivals into confirmed vs still-expected, in
-  // rooms, so the two subtiles always add back up to New Rooms on the first
-  // card. Pending = an advance reservation with no Actual Checkin on file; a
-  // walk-in confirms itself the moment it's saved (isAdvanceReservation).
+  // Pending = an advance reservation with no Actual Checkin on file; a walk-in
+  // confirms itself the moment it's saved (isAdvanceReservation).
   const pendingArrivals = move.checkins.filter(({entry})=>
     isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')
   );
+  const pendingIds = new Set(pendingArrivals.map(({entry})=> entry.id));
+  // New rooms / checkins is people who have ACTUALLY turned up — a booking
+  // that hasn't been confirmed at the desk isn't a new room to service yet,
+  // and it's already counted on the Bookings card beside this one.
+  const arrivedToday = move.checkins.filter(({entry})=> !pendingIds.has(entry.id));
+  document.getElementById('dashArrivalsRooms').textContent = countRooms(arrivedToday);
+  document.getElementById('dashArrivalsGuests').textContent = arrivedToday.length;
+  // Bookings covers everyone due today, split confirmed vs still-expected, in
+  // rooms — so Checked In here always equals New Rooms beside it.
   const pendingRooms = countRooms(pendingArrivals);
   document.getElementById('dashBookingsCheckedIn').textContent = countRooms(move.checkins) - pendingRooms;
   document.getElementById('dashBookingsPending').textContent = pendingRooms;
@@ -16753,14 +16770,34 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
   // this range never billed. Checkout/Pending is where that balance belongs.
   const isSingleDay = !!fromDate && !!toDate && fromDate === toDate;
   const extendedKeys = new Set();
+  const roomBookedKeys = new Set();
   if(isSingleDay){
-    computeRoomStatuses(fromDate).filter(rs=> rs.extended && rs.entry).forEach(rs=>{
+    const dayStatuses = computeRoomStatuses(fromDate);
+    dayStatuses.filter(rs=> rs.extended && rs.entry).forEach(rs=>{
       const key = rs.entry.id + '|' + rs.roomNo + '|' + fromDate;
       if(nightsByKey[key]) return; // already has a real booked night — nothing to add
       const roomRow = (rs.entry.rooms || []).find(r=> r.roomNo === rs.roomNo);
       nightsByKey[key] = { rent: 0, received: 0 };
       rowMeta[key] = { roomNo: rs.roomNo, unitType: roomRow ? roomRow.unitType : '', date: fromDate, guestId: rs.entry.id, guest: rs.entry.guestName || '(no name)' };
       extendedKeys.add(key);
+    });
+    // Same-day turnover: the room's one Extended slot was claimed by today's
+    // incoming (possibly unconfirmed) booking, so a previous guest whose
+    // checkout was never confirmed has no real room-night above (nothing
+    // was ever booked for this date) AND misses the Extended loop just
+    // above — without this they'd silently vanish from Revenue Report the
+    // same way they used to vanish from Checkout/Pending (see the identical
+    // fold-in in buildAutoCheckoutRows). Own key/flag rather than folded
+    // into extendedKeys: the room really is already promised to someone
+    // else, which reads as its own "Room Booked" state, not a plain overstay.
+    dayStatuses.filter(rs=> rs.previousGuestPending && rs.previousGuestPending.entry).forEach(rs=>{
+      const entry = rs.previousGuestPending.entry;
+      const key = entry.id + '|' + rs.roomNo + '|' + fromDate;
+      if(nightsByKey[key]) return;
+      const roomRow = (entry.rooms || []).find(r=> r.roomNo === rs.roomNo);
+      nightsByKey[key] = { rent: 0, received: 0 };
+      rowMeta[key] = { roomNo: rs.roomNo, unitType: roomRow ? roomRow.unitType : '', date: fromDate, guestId: entry.id, guest: entry.guestName || '(no name)' };
+      roomBookedKeys.add(key);
     });
   }
 
@@ -16798,7 +16835,8 @@ function buildRevenueReport(fromDate, toDate, keyChunksById){
       rent, collected, chunks,
       cashTotal, mcbTotal, alfalahTotal, hajiTotal,
       due: Math.max(rent - collected, 0),
-      extended: extendedKeys.has(key)
+      extended: extendedKeys.has(key),
+      roomBooked: roomBookedKeys.has(key)
     };
   }).sort((a,b)=> a.date.localeCompare(b.date) || a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
 
@@ -16992,18 +17030,18 @@ function buildRoomsTableHtml(roomRows, totals, showDateCol){
     <table style="table-layout:fixed; width:100%; min-width:${totalW}px;">
       <thead><tr><th style="width:${HASH_W}px; white-space:nowrap;">#</th>${dateTh}<th style="width:${ROOMNO_W}px;">Room No</th><th style="width:${GUEST_W}px;">Guest</th><th style="width:${RENT_W}px; white-space:nowrap;">Rent</th>${paymentHeaders}<th style="width:${CASH_W}px; white-space:nowrap;">Cash</th><th style="width:${MCB_W}px; white-space:nowrap;">MCB</th><th style="width:${HAJI_W}px; white-space:nowrap;">Haji (MCB)</th><th style="width:${ALFALAH_W}px; white-space:nowrap;">Alfalah</th><th style="width:${DUE_W}px; white-space:nowrap;">Due</th><th class="no-print" style="width:${SS_W}px; white-space:nowrap;">SS</th></tr></thead>
       <tbody>${roomRows.map((r,i)=> `
-        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="${r.extended ? 'Still in the room past their last booked night — not checked out yet' : 'Open this guest'}">
+        <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="${r.roomBooked ? 'Still in the room past checkout — this room has already been rebooked for a new guest' : (r.extended ? 'Still in the room past their last booked night — not checked out yet' : 'Open this guest')}">
           <td>${i + 1}</td>
           ${dateTd(r)}
           <td>${displayRoomNo(r.roomNo, r.unitType)}</td>
-          <td>${r.guest}${r.extended ? ' <span style="color:var(--amber); font-weight:600; font-size:11px;">(Extended)</span>' : ''}</td>
-          <td>${r.extended ? '<span style="color:var(--amber); font-weight:600;">NOT SET</span>' : (r.rent === 0 ? 'Guest' : r.rent.toLocaleString())}</td>
-          ${Array.from({length: maxChunks}, (_,i)=> `<td>${r.extended ? '-' : paymentCell(r.chunks[i])}</td>`).join('')}
+          <td>${r.guest}${r.roomBooked ? ' <span style="color:var(--danger); font-weight:600; font-size:11px;">(Room Booked)</span>' : (r.extended ? ' <span style="color:var(--amber); font-weight:600; font-size:11px;">(Extended)</span>' : '')}</td>
+          <td>${r.roomBooked ? '<span style="color:var(--danger); font-weight:600;">ROOM BOOKED</span>' : (r.extended ? '<span style="color:var(--amber); font-weight:600;">NOT SET</span>' : (r.rent === 0 ? 'Guest' : r.rent.toLocaleString()))}</td>
+          ${Array.from({length: maxChunks}, (_,i)=> `<td>${(r.extended || r.roomBooked) ? '-' : paymentCell(r.chunks[i])}</td>`).join('')}
           <td class="cash-amt">${r.cashTotal ? r.cashTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.mcbTotal ? r.mcbTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.hajiTotal ? r.hajiTotal.toLocaleString() : '-'}</td>
           <td class="account-amt">${r.alfalahTotal ? r.alfalahTotal.toLocaleString() : '-'}</td>
-          <td style="font-weight:700; color:${r.extended ? 'var(--amber)' : (r.due > 0 ? 'var(--danger)' : 'inherit')};"${r.extended ? ' title="No rent was billed for this extra night, so there is no rent due on it — see Checkout/Pending for what the guest still owes on the stay"' : ''}>${r.extended ? '-' : r.due.toLocaleString()}</td>
+          <td style="font-weight:700; color:${r.roomBooked ? 'var(--danger)' : (r.extended ? 'var(--amber)' : (r.due > 0 ? 'var(--danger)' : 'inherit'))};"${(r.extended || r.roomBooked) ? ' title="No rent was billed for this extra night, so there is no rent due on it — see Checkout/Pending for what the guest still owes on the stay"' : ''}>${(r.extended || r.roomBooked) ? '-' : r.due.toLocaleString()}</td>
           ${ssCell(r)}
         </tr>`).join('')}
       </tbody>
@@ -18482,12 +18520,23 @@ function buildAutoCheckoutRows(asOfDate){
     const isExtendedStatus = activeGuestIds.has(guestId);
     const acFig = acDueFigures(entry, isExtendedStatus);
     const d = acFig.due;
+    // A guest whose room got rebooked out from under them before their own
+    // checkout was ever confirmed is still physically holding the room with
+    // nobody having confirmed they left — reading that as plain "Ready"
+    // looks like nothing is wrong, when actually the room is already
+    // promised to someone else. Tagged its own "Room Booked" status
+    // (extended_overdue) rather than folded into `extended` itself: unlike
+    // the multi-room `extended` case above, there's no OTHER active room
+    // covering for them, so this one keeps its real due/netDue and its
+    // Checkout button — the room-already-reserved conflict is surfaced
+    // separately if staff actually tries to extend them, not a reason to
+    // block checking this guest out now.
     dueByGuest.set(guestId, {
       roomNos: [rs.roomNo], guestId, guest: entry.guestName || '(no name)',
       checkIn: entry.checkIn || '',
       checkoutDate,
       due: d, netDue: acFig.netDue,
-      status: acFig.status
+      status: isExtendedStatus ? acFig.status : 'extended_overdue'
     });
   });
   // A room has exactly ONE "current" slot and ONE previous-guest-pending
@@ -18517,14 +18566,27 @@ function buildAutoCheckoutRows(asOfDate){
     if(isAdvanceReservation(entry) && !getDetailValue(entry, 'Actual Checkin')) return;
     const checkoutDate = computeExpectedCheckoutDate(entry);
     if(!checkoutDate || checkoutDate > asOfDate) return;
-    // Never 'extended' here — anyone still in a room was filtered out above,
-    // so these all get a real Ready/Pending/Late status and a Checkout button.
+    // The previousGuestPending pass above only catches a room rebooked for
+    // EXACTLY the day after this guest's last night — a genuine vacancy gap
+    // (rebooked two, three, however many days later) skips that check
+    // entirely and lands here instead. Still just as much "the room is
+    // already promised to someone else" as the same-day case, so it gets
+    // the same Room Booked treatment rather than reading as a plain, nothing
+    // -wrong-here Ready/Pending. Checked per room the guest actually held —
+    // a truly vacant room (nobody rebooked it at all) would already have
+    // been picked up by the `extended` pass above and never reach here.
+    const roomTakenByOther = (entry.rooms || []).some(r=>{
+      if(!r.roomNo || isMiscRoomNo(r.roomNo)) return false;
+      const rs = statuses.find(s=> s.roomNo === r.roomNo);
+      return !!(rs && rs.entry && rs.entry.id !== entry.id);
+    });
     const acFig = acDueFigures(entry, false);
     dueByGuest.set(entry.id, {
       roomNos: formatRoomChain(entry.rooms) ? formatRoomChain(entry.rooms).split(', ') : [],
       guestId: entry.id, guest: entry.guestName || '(no name)',
       checkIn: entry.checkIn || '', checkoutDate,
-      due: acFig.due, netDue: acFig.netDue, status: acFig.status
+      due: acFig.due, netDue: acFig.netDue,
+      status: roomTakenByOther ? 'extended_overdue' : acFig.status
     });
   });
 
@@ -18596,7 +18658,11 @@ function renderAutoCheckout(){
   // because payment is expected later for the rest, so the guest may leave
   // while the Due column still shows red. Its own pill keeps that visible
   // rather than showing a plain 'Ready' beside an unpaid balance.
-  const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'], late: ['partial', 'Late Payment'] };
+  // extended_overdue gets its own red "Room Booked" pill rather than reusing
+  // Extended's — it needs to read as more urgent than a plain overstay: the
+  // room is already promised to someone else, so the desk needs to actually
+  // resolve this one (checkout, or a real extension) rather than let it sit.
+  const STATUS_BADGE = { ready: ['paid', 'Ready'], pending: ['checkoutdue', 'Pending'], checked_out: ['paid', 'Checked Out'], extended: ['partial', 'Extended'], extended_overdue: ['checkoutdue', 'Room Booked'], late: ['partial', 'Late Payment'] };
   if(rows.length === 0){
     // A day ahead reads differently on purpose: "nobody was due" sounds like
     // a verdict on something that already happened, when for a future date
