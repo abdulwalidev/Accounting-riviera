@@ -5076,7 +5076,6 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
           <span class="dash-card-lbl">Bookings</span>
         </div>
         <div class="dash-subtiles">
-          <div class="dash-subtile"><div class="dash-subtile-val" id="dashBookingsCheckedIn">0</div><div class="dash-subtile-lbl">Rooms Checked In</div></div>
           <div class="dash-subtile"><div class="dash-subtile-val" id="dashBookingsPending">0</div><div class="dash-subtile-lbl">Pending Room Arrivals</div></div>
         </div>
       </div>
@@ -13270,10 +13269,7 @@ function renderDashboard(){
   const arrivedToday = move.checkins.filter(({entry})=> !pendingIds.has(entry.id));
   document.getElementById('dashArrivalsRooms').textContent = countRooms(arrivedToday);
   document.getElementById('dashArrivalsGuests').textContent = arrivedToday.length;
-  // Bookings covers everyone due today, split confirmed vs still-expected, in
-  // rooms — so Checked In here always equals New Rooms beside it.
   const pendingRooms = countRooms(pendingArrivals);
-  document.getElementById('dashBookingsCheckedIn').textContent = countRooms(move.checkins) - pendingRooms;
   document.getElementById('dashBookingsPending').textContent = pendingRooms;
   document.getElementById('dashInhouse').textContent = occupiedCount;
   document.getElementById('dashInhouseRoom').textContent = inhouseRoomCount;
