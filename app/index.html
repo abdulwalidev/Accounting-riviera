@@ -3745,6 +3745,7 @@
     padding:8px; font-weight:700; border:none !important; border-top:2px solid #333 !important; background:transparent !important; color:#222 !important;
   }
   #view-nightsummary .ns-table tfoot td.num{ text-align:right; }
+  #view-nightsummary .ns-table .ns-pax-breakdown{ font-size:10px; color:var(--muted); white-space:nowrap; margin-top:1px; }
 
   /* Night Summary — dark mode (screen only, see comment above). Same
      structure as the light palette, just re-colored to match the rest of
@@ -3811,6 +3812,7 @@
     #view-nightsummary .ns-table thead th{ font-size:8.5px; padding:3px 4px; }
     #view-nightsummary .ns-table tbody td{ padding:3px 4px; }
     #view-nightsummary .ns-table tfoot td{ padding:4px; }
+    #view-nightsummary .ns-table .ns-pax-breakdown{ font-size:8px; }
   }
 
   /* Viewer role: Guest Entry and Add Payment become non-interactive and
@@ -17491,7 +17493,9 @@ function buildNightSummaryReport(asOfDate){
       rate: n.rent,
       extraBed: 0,
       total: n.rent,
-      pax: adultsDisplay + childrenDisplay
+      pax: adultsDisplay + childrenDisplay,
+      adults: adultsDisplay,
+      children: childrenDisplay
     };
   }).sort((a,b)=> a.roomNo.localeCompare(b.roomNo, undefined, { numeric: true, sensitivity: 'base' }));
 
@@ -17557,7 +17561,7 @@ function renderNightSummary(){
           <td class="num">${money(r.rate)}</td>
           <td class="num">${money(r.extraBed)}</td>
           <td class="num">${money(r.total)}</td>
-          <td class="num">${r.pax}</td>
+          <td class="num">${r.pax}<div class="ns-pax-breakdown">Adult: ${r.adults}&nbsp;&nbsp;Kids: ${r.children}</div></td>
         </tr>`).join('')}
       </tbody>
       <tfoot>
