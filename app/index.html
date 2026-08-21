@@ -11369,8 +11369,15 @@ async function reviewEntry(){
     const key = r.roomNo.toUpperCase() === 'N/A' ? ('na-' + i) : r.roomNo;
     roomNightTotalsForCheckout[key] = (roomNightTotalsForCheckout[key] || 0) + nights;
   });
+  // A moved-into room's nights don't start counting at check-in — same
+  // offset logic as updateExpectedCheckoutDisplay, so the SAVED value
+  // matches what the form's own Expected Checkout box already showed.
+  const moveOffsetsForCheckout = getDomRoomMoveOffsets();
   let maxNightsForCheckout = 0;
-  Object.values(roomNightTotalsForCheckout).forEach(n=>{ if(n > maxNightsForCheckout) maxNightsForCheckout = n; });
+  Object.entries(roomNightTotalsForCheckout).forEach(([key, n])=>{
+    const end = (moveOffsetsForCheckout[String(key).toUpperCase()] || 0) + n;
+    if(end > maxNightsForCheckout) maxNightsForCheckout = end;
+  });
   const computedCheckOut = (checkInEl.value && maxNightsForCheckout > 0) ? addDaysToDateStr(checkInEl.value, maxNightsForCheckout) : '';
 
   const data = {
@@ -13397,7 +13404,11 @@ function renderDetail(){
   document.getElementById('dCnic').value = entry.cnic || '';
   document.getElementById('dContactNo').value = getDetailValue(entry, 'Contact No') || '—';
   document.getElementById('dCheckIn').value = entry.checkIn ? formatDate(entry.checkIn) : '—';
-  document.getElementById('dCheckOut').value = entry.checkOut ? formatDate(entry.checkOut) : '—';
+  // computeExpectedCheckoutDate is Room-Move-aware (adds getRoomMoveOffsets);
+  // the raw stored entry.checkOut isn't, so it under-counts after a move —
+  // try the computed value first and only fall back to the stored one.
+  const expectedCheckout = computeExpectedCheckoutDate(entry) || entry.checkOut;
+  document.getElementById('dCheckOut').value = expectedCheckout ? formatDate(expectedCheckout) : '—';
   const actualCheckin = getDetailValue(entry, 'Actual Checkin');
   document.getElementById('dActualCheckin').value = actualCheckin ? formatDate(actualCheckin) : '—';
   const actualCheckout = getDetailValue(entry, 'Actual Checkout');
@@ -13416,13 +13427,26 @@ function renderDetail(){
   // "N/A" is not a room number — it's every not-yet-assigned unit on the
   // booking, so two unassigned rooms of the same type share the key without
   // being the same room. Same guard as getRoomMoveOffsets: never match on N/A.
+  // A room number named in a 'Room Move' extraDetail is a room the guest
+  // moved INTO mid-stay — it never repeats an earlier room number (it's a
+  // different room), so the seenRoomNos repeat-check below can never catch
+  // it. Same extraDetails parse as retagSplitNewRows (the edit-form version
+  // of this tag).
+  const movedInto = new Set();
+  ((entry && entry.extraDetails) || []).forEach(d=>{
+    if(d.kind !== 'Room Move') return;
+    const m = /^(.+?) from night (\d+)$/.exec(String(d.value || '').trim());
+    if(m) movedInto.add(m[1].trim().toUpperCase());
+  });
   const seenRoomNos = new Set();
   roomBody.innerHTML = (entry.rooms || []).map(r=>{
     const key = (r.roomNo || '').trim().toUpperCase();
     const realRoom = key && key !== 'N/A' && !isMiscRoomNo(r.roomNo);
-    const isRepeat = realRoom && seenRoomNos.has(key);
+    const isMoved = realRoom && movedInto.has(key);
+    const isRepeat = !isMoved && realRoom && seenRoomNos.has(key);
     if(realRoom) seenRoomNos.add(key);
-    const roomNoCell = (r.roomNo ? displayRoomNo(r.roomNo, r.unitType) : '-') + (isRepeat ? ' <span class="new-rate-tag">[new rate]</span>' : '');
+    const tag = isMoved ? '[moved]' : (isRepeat ? '[new rate]' : '');
+    const roomNoCell = (r.roomNo ? displayRoomNo(r.roomNo, r.unitType) : '-') + (tag ? ' <span class="new-rate-tag">' + tag + '</span>' : '');
     return `
     <tr>
       <td>${roomNoCell}</td>
@@ -18822,6 +18846,17 @@ function buildArrivalRows(asOfDate){
       if(rs.arrivalPending && rs.entry && !dueSeen.has(rs.entry.id)){
         dueSeen.add(rs.entry.id);
         due.push(toRow(rs.entry, 'due'));
+      }
+      // Same one-guest-per-room bottleneck as arrivalPending above, but for
+      // a real room number instead of the N/A bucket below: nextGuestPending
+      // is computeRoomStatuses' own safety net for a second, different guest
+      // whose booked night also lands on this room/date — an arrival
+      // assigned into a room someone else is already occupying. It carries
+      // the same "unconfirmed advance reservation" guard arrivalPending
+      // uses, so no extra check is needed here beyond dedup.
+      if(rs.nextGuestPending && rs.nextGuestPending.entry && !dueSeen.has(rs.nextGuestPending.entry.id)){
+        dueSeen.add(rs.nextGuestPending.entry.id);
+        due.push(toRow(rs.nextGuestPending.entry, 'due'));
       }
     });
     // computeRoomStatuses buckets room-nights by room NUMBER and surfaces one
