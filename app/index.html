@@ -11882,7 +11882,7 @@ function startEditEntry(entry){
     if(r.id) tr.dataset.roomId = r.id;
     tr.querySelector('.roomNo').value = r.roomNo || '';
     const rNo = (r.roomNo || '').trim().toUpperCase();
-    if(rNo && !isMiscRoomNo(rNo) && rNo === prevSplitRoomNo){
+    if(rNo && rNo !== 'N/A' && !isMiscRoomNo(rNo) && rNo === prevSplitRoomNo){
       if(!prevSplitGroup) prevSplitGroup = 'sg-load-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
       tr.dataset.splitGroup = prevSplitGroup;
       const prevTr = tr.previousElementSibling;
