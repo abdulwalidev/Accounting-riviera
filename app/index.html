@@ -15310,13 +15310,24 @@ function buildAutoScreenshotCaption(chunk, roomNo, unitType, guest, cashTotal){
 // nothing to attribute it to; buildFallbackScreenshotCaption below still
 // produces something from the payment/guest record directly rather than
 // leaving it blank until the guest eventually checks in.
-function buildAutoScreenshotCaptionForPayment(paymentId){
+// guestId (when the caller has it — every real caller does, since this is
+// only ever invoked from a specific guest's own row) scopes the search to
+// THAT guest's own room-nights first. Without this, a payment ID that's
+// somehow duplicated onto another guest's record (which should never
+// happen, but nothing in the data model actually prevents it — payment
+// IDs aren't guaranteed unique, see uid()) could make this caption quietly
+// borrow the wrong guest's name/room, exactly like the Raza Rehman /
+// M.Yazdan Ali mix-up this scoping was added to fix.
+function buildAutoScreenshotCaptionForPayment(paymentId, guestId){
   const data = buildRevenueReport('', '', true);
   const hits = [];
-  data.roomRows.forEach(r=> r.chunks.forEach(c=>{
-    if(c.paymentId === paymentId) hits.push({ chunk: c, roomNo: r.roomNo, unitType: r.unitType, guest: r.guest, cashTotal: r.cashTotal });
-  }));
-  if(hits.length === 0) return buildFallbackScreenshotCaption(paymentId);
+  data.roomRows.forEach(r=>{
+    if(guestId && r.guestId !== guestId) return;
+    r.chunks.forEach(c=>{
+      if(c.paymentId === paymentId) hits.push({ chunk: c, roomNo: r.roomNo, unitType: r.unitType, guest: r.guest, cashTotal: r.cashTotal });
+    });
+  });
+  if(hits.length === 0) return buildFallbackScreenshotCaption(paymentId, guestId);
   if(hits.length === 1){
     const h = hits[0];
     return buildAutoScreenshotCaption(h.chunk, h.roomNo, h.unitType, h.guest, h.cashTotal);
@@ -15346,22 +15357,38 @@ function buildAutoScreenshotCaptionForPayment(paymentId){
 // counts stays that have actually happened/been confirmed). Reads
 // straight off the payment/guest record itself instead — always
 // available, so this always returns real text, never ''.
-function buildFallbackScreenshotCaption(paymentId){
+// guestId, when given, is checked FIRST and exclusively that entry — same
+// anti-cross-contamination reasoning as buildAutoScreenshotCaptionForPayment
+// above. Only falls through to the old scan-every-entry behavior if that
+// known entry somehow doesn't actually contain the payment (shouldn't
+// happen), so this still always returns real text, never ''.
+function buildFallbackScreenshotCaption(paymentId, guestId){
   const all = loadAllEntries();
-  for(const entry of all){
+  function fromEntry(entry){
     const p = (entry.payments || []).find(pp=> pp.id === paymentId);
-    if(!p) continue;
+    if(!p) return null;
     const guest = entry.guestName || '(no name)';
     const roomChain = formatRoomChain(entry.rooms);
     const amount = parseFloat(p.total) || 0;
     const dateLabel = p.date ? formatDate(p.date) : '';
     return `Rs. ${amount.toLocaleString()}${roomChain ? ' for ' + roomChain : ''} — ${guest}${dateLabel ? ' (sent on: ' + dateLabel + ')' : ''}`;
   }
+  if(guestId){
+    const known = all.find(e=> e.id === guestId);
+    if(known){
+      const text = fromEntry(known);
+      if(text) return text;
+    }
+  }
+  for(const entry of all){
+    const text = fromEntry(entry);
+    if(text) return text;
+  }
   return '';
 }
 
 function openAccountPaymentModal(paymentId, paymentDate, guestId){
-  openPaymentRecordModal(paymentId, paymentDate, guestId, buildAutoScreenshotCaptionForPayment(paymentId));
+  openPaymentRecordModal(paymentId, paymentDate, guestId, buildAutoScreenshotCaptionForPayment(paymentId, guestId));
 }
 
 // Payment Report's own icon — read-only (no Replace/Upload, same as every
@@ -15369,7 +15396,7 @@ function openAccountPaymentModal(paymentId, paymentDate, guestId){
 // same room-attribution caption so a screenshot attached before this
 // feature existed gets it auto-saved the moment it's opened here too.
 function openReadOnlyPaymentModal(paymentId, paymentDate, guestId){
-  openPaymentRecordModal(paymentId, paymentDate, guestId, buildAutoScreenshotCaptionForPayment(paymentId), true);
+  openPaymentRecordModal(paymentId, paymentDate, guestId, buildAutoScreenshotCaptionForPayment(paymentId, guestId), true);
 }
 
 // suggestedCaption — always computed and passed by every caller
@@ -15411,6 +15438,19 @@ async function autoSavePaymentRecordCaption(paymentId, caption){
   if(ok && pendingPaymentRecordContext && pendingPaymentRecordContext.paymentId === paymentId){
     renderPaymentRecordModalBody();
   }
+}
+
+// Superadmin-only manual re-run of the (now guestId-scoped)
+// buildAutoScreenshotCaptionForPayment — a caption is otherwise computed
+// once and never touched again, so this is the way to self-correct an
+// already-wrong stored caption (e.g. one saved before the guestId scoping
+// fix existed) without needing to edit Supabase directly.
+async function regeneratePaymentRecordCaption(){
+  if(!pendingPaymentRecordContext) return;
+  const { paymentId, guestId } = pendingPaymentRecordContext;
+  const caption = buildAutoScreenshotCaptionForPayment(paymentId, guestId);
+  const ok = await updatePaymentScreenshotCaption(paymentId, caption);
+  if(ok) renderPaymentRecordModalBody();
 }
 
 function closePaymentRecordModal(){
@@ -15511,6 +15551,7 @@ function renderPaymentRecordModalBody(){
       ${captionHtml}
       <div class="sub" style="margin-bottom:14px;">Attached by ${att.uploaded_by || '-'} on ${formatDate(toKarachiDateStr(att.uploaded_at))}</div>
       <div class="modal-actions">
+        ${isSuperAdmin() ? '<button class="btn secondary" onclick="regeneratePaymentRecordCaption()" title="Recompute this caption from the current payment/room data">↻ Regenerate Caption</button>' : ''}
         ${readOnly ? '' : '<button class="btn secondary" onclick="showPaymentRecordUploadZone()">Replace</button>'}
         ${rightBtn}
       </div>`;
@@ -19745,7 +19786,18 @@ function loadCloudSnapshotFromCache(){
 // re-run instead of overwriting fresher in-memory state.
 let mutationStamp = 0;
 
+// crypto.randomUUID() (122 bits of real randomness) when available —
+// Date.now()+Math.random() alone only has ~26 bits of randomness after the
+// timestamp, low enough that two ids generated in the same millisecond
+// could plausibly collide. A collision here isn't just cosmetic: payment
+// IDs are used as-is as the payment_attachments primary key and storage
+// filename, so two different guests' payments sharing an id make their
+// screenshots/captions bleed into each other (see the Raza Rehman /
+// M.Yazdan Ali mix-up this was tightened for).
 function uid(prefix){
+  if(typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'){
+    return (prefix || '') + crypto.randomUUID();
+  }
   return (prefix || '') + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 }
 
