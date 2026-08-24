@@ -21168,7 +21168,7 @@ function renderSettings(){
 // walk over the sidebar rather than a list of things to hide, so an item
 // added to that nav later is hidden for this role by default instead of
 // quietly appearing. superadmin is untouched and still sees everything.
-const PLAIN_ADMIN_SETTINGS_ITEMS = ['settingsDayLockBtn', 'settingsDeleteEntityBtn', 'settingsCashCheckBtn'];
+const PLAIN_ADMIN_SETTINGS_ITEMS = ['settingsDayLockBtn', 'settingsDeleteEntityBtn', 'settingsCashCheckBtn', 'settingsDownloadSsBtn'];
 function applyPlainAdminSettingsTrim(){
   if(!isPlainAdmin()) return;
   document.querySelectorAll('#globalSettingsNav .settings-nav-item').forEach(el=>{
