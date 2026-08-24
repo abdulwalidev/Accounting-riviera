@@ -5751,6 +5751,48 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
 
   </div>
 
+  <div class="view" id="view-downloadss">
+
+    <h1>Download SS</h1>
+    <div class="sub" style="visibility:hidden;">Download attached payment screenshots as one PDF, filtered by date range and bank.</div>
+
+    <div class="panel accent-filters">
+      <h2>Filters</h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
+        <div>
+          <label>Date Range</label>
+          <input type="text" id="dsRange" placeholder="Select a date range">
+          <input type="date" id="dsFrom" style="display:none">
+          <input type="date" id="dsTo" style="display:none">
+        </div>
+        <div>
+          <label>Bank</label>
+          <select id="dsBank" onchange="renderDownloadSs()">
+            <option value="">All Banks</option>
+            <option value="Alfalah">Alfalah</option>
+            <option value="MCB">MCB</option>
+            <option value="Haji (MCB)">Haji (MCB)</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn secondary" onclick="clearDownloadSsFilters()">Clear Filters</button>
+          <button class="btn secondary" onclick="setDownloadSsFiltersToday()">Today</button>
+        </div>
+        <div id="dsRangeReadout" style="font-size:20px; font-weight:700; color:var(--ink-strong); letter-spacing:0.02em;"></div>
+      </div>
+    </div>
+
+    <div class="panel accent-report">
+      <div id="dsStatus" class="empty-note">No screenshots match these filters.</div>
+      <div class="actions" style="margin-top:12px;">
+        <button class="btn" id="dsDownloadBtn" onclick="downloadSsScreenshotsPdf(this)" disabled>⬇ Download PDF</button>
+      </div>
+    </div>
+
+  </div>
+
   <div class="view" id="view-graphs">
 
     <span class="backlink" onclick="showView('report')">&larr; Back to Report</span>
@@ -7859,6 +7901,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
       <a class="settings-nav-item" onclick="showView('audit')">Full Audit</a>
       <a class="settings-nav-item" id="settingsDayLockBtn" onclick="showView('daylock')" style="display:none;">Day Lock</a>
       <a class="settings-nav-item" id="settingsPaymentRecordBtn" onclick="showView('paymentrecord')" style="display:none;">Report Screenshot</a>
+      <a class="settings-nav-item" id="settingsDownloadSsBtn" onclick="showView('downloadss')" style="display:none;">Download SS</a>
       <a class="settings-nav-item" id="settingsFrontOfficeBtn" onclick="showView('frontoffice')" style="display:none;">Front Office</a>
       <a class="settings-nav-item" onclick="showView('before19')">Before 19</a>
       <a class="settings-nav-item" onclick="showView('handover')">Revenue Summary</a>
@@ -8325,7 +8368,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','frontoffice','restaurant','users','pending','latepay'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','downloadss','frontoffice','restaurant','users','pending','latepay'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -8385,6 +8428,11 @@ function showView(view, fromPopState){
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
     return;
   }
+  if(view === 'downloadss' && !isAdmin()){
+    showNotice('Download SS is only available to admin accounts.');
+    if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
+    return;
+  }
   if(view === 'frontoffice' && !isAdmin() && !isRestaurantRole()){
     showNotice('Front Office is only available to admin accounts.');
     if(fromPopState) history.replaceState(currentRouteState, '', location.pathname + location.search);
@@ -8430,7 +8478,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavRevSummary').classList.toggle('active', view === 'handover');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   document.getElementById('topNavArrival').classList.toggle('active', view === 'arrival');
-  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'npr' || view === 'cashcheck' || view === 'misc' || view === 'paymentrecord' || view === 'frontoffice' || view === 'users' || isAdminSettingsPage(view);
+  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'npr' || view === 'cashcheck' || view === 'misc' || view === 'paymentrecord' || view === 'downloadss' || view === 'frontoffice' || view === 'users' || isAdminSettingsPage(view);
   document.getElementById('topNavSettings').classList.toggle('active', isSettingsView);
   const globalSettingsNav = document.getElementById('globalSettingsNav');
   if(globalSettingsNav) globalSettingsNav.style.display = isSettingsView ? 'flex' : 'none';
@@ -8475,6 +8523,7 @@ function showView(view, fromPopState){
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
   if(view === 'paymentrecord') renderPaymentRecord();
+  if(view === 'downloadss') renderDownloadSs();
   if(view === 'deleteentity') renderDeleteEntityList();
   if(view === 'roomdetail') renderRoomDetail();
   if(view === 'inhouse') renderInhouse();
@@ -9098,6 +9147,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   setFiltersToday();
   initRangeDatePicker('parRange', 'parFrom', 'parTo', renderPaymentRecord);
   setParFiltersToday();
+  initRangeDatePicker('dsRange', 'dsFrom', 'dsTo', renderDownloadSs);
+  setDownloadSsFiltersToday();
   setStayDate('checkInDate', checkinTodayStr());
   updateDateReadout(document.getElementById('checkInDate'), document.getElementById('checkInDateReadout'));
   updateSaveEntryButtonLabel();
@@ -9202,7 +9253,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     'auditEntryDate','dNewDate','gsearchDate',
     'dlDate','acDate','arDate','auditPageDate','rdDate','b19From',
     'cicoFrom','cicoTo','filterFrom','filterTo','hoFrom','hoTo','lgFrom','lgTo',
-    'nprFrom','nprTo','parFrom','parTo','rvFrom','rvTo',
+    'nprFrom','nprTo','parFrom','parTo','dsFrom','dsTo','rvFrom','rvTo',
     // csFromDate/csToDate (Charges Summary) and qsFromDate/qsToDate
     // (Quantity Summary) deliberately left out: both pairs are hidden
     // inputs driven by their page's range picker (initRangeDatePicker),
@@ -15679,6 +15730,84 @@ async function downloadRangeScreenshotsPdf(fromDate, toDate, btn){
   doc.save(`payment-screenshots-${label}.pdf`);
 }
 
+// =========================================================
+// DOWNLOAD SS — Settings > Download SS. Superadmin-only bulk screenshot
+// export: pick a date range and (optionally) a bank, get every matching
+// attached screenshot as one PDF. paymentAttachments has no bank column
+// (bank lives on the payment record inside each guest entry), so the bank
+// filter cross-references payment_id against entry.payments the same way
+// getFilteredPaymentRecordRows() does.
+// =========================================================
+function getDownloadSsAttachments(){
+  const fromVal = document.getElementById('dsFrom').value;
+  const toVal = document.getElementById('dsTo').value;
+  const bankVal = document.getElementById('dsBank').value;
+
+  let bankByPaymentId = null;
+  if(bankVal){
+    bankByPaymentId = {};
+    loadAllEntries().forEach(entry=>{
+      paidPayments(entry.payments).forEach(p=>{
+        bankByPaymentId[p.id] = p.bank || '';
+      });
+    });
+  }
+
+  let attachments = paymentAttachments.slice();
+  if(fromVal) attachments = attachments.filter(a=> a.payment_date >= fromVal);
+  if(toVal) attachments = attachments.filter(a=> a.payment_date <= toVal);
+  if(bankVal) attachments = attachments.filter(a=> bankByPaymentId[a.payment_id] === bankVal);
+
+  attachments.sort((a,b)=> a.payment_date.localeCompare(b.payment_date));
+  return { attachments, fromVal, toVal, bankVal };
+}
+
+function renderDownloadSs(){
+  const { attachments, fromVal, toVal } = getDownloadSsAttachments();
+  document.getElementById('dsRangeReadout').textContent = formatIsoRangeDisplay(fromVal, toVal);
+  const status = document.getElementById('dsStatus');
+  const downloadBtn = document.getElementById('dsDownloadBtn');
+  if(attachments.length === 0){
+    status.textContent = 'No screenshots match these filters.';
+    downloadBtn.disabled = true;
+  }else{
+    status.textContent = `${attachments.length} screenshot${attachments.length === 1 ? '' : 's'} match${attachments.length === 1 ? 'es' : ''} these filters.`;
+    downloadBtn.disabled = false;
+  }
+}
+
+async function downloadSsScreenshotsPdf(btn){
+  if(typeof jspdf === 'undefined'){
+    showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
+    return;
+  }
+  const { attachments, fromVal, toVal, bankVal } = getDownloadSsAttachments();
+  if(attachments.length === 0){
+    showNotice('No screenshots match these filters.');
+    return;
+  }
+  const { doc, pagesAdded } = await buildScreenshotsPdfDoc(attachments, btn);
+  if(pagesAdded === 0){
+    showNotice('Couldn\'t load any of these screenshots — check the internet connection and try again.');
+    return;
+  }
+  const bankLabel = bankVal ? bankVal.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '-') : 'all-banks';
+  const dateLabel = fromVal && toVal ? `${fromVal}_to_${toVal}` : (fromVal || toVal || 'all-dates');
+  doc.save(`screenshots-${bankLabel}-${dateLabel}.pdf`);
+}
+
+function clearDownloadSsFilters(){
+  setRangeDate('dsRange', 'dsFrom', 'dsTo', '', '');
+  document.getElementById('dsBank').value = '';
+  renderDownloadSs();
+}
+
+function setDownloadSsFiltersToday(){
+  const t = todayStr();
+  setRangeDate('dsRange', 'dsFrom', 'dsTo', t, t);
+  renderDownloadSs();
+}
+
 // Normal (default) view hides the Before/After carry-over sections below
 // the main day-by-day breakdown — Extra shows them. Same toggle pattern as
 // Breakfast Report's Simple/Full View.
@@ -20474,6 +20603,7 @@ const DATE_RESET_POS_IDS = ['posDlDate','receiptsDateFilter','printedOnlyDateFil
 const DATE_RESET_RANGES = [
   { range:'filterRange', from:'filterFrom', to:'filterTo' },
   { range:'parRange',    from:'parFrom',    to:'parTo' },
+  { range:'dsRange',     from:'dsFrom',     to:'dsTo' },
   { range:'lgRange',     from:'lgFrom',     to:'lgTo' },
   { range:'rvRange',     from:'rvFrom',     to:'rvTo' },
   { range:'cicoRange',   from:'cicoFrom',   to:'cicoTo' },
@@ -20883,6 +21013,8 @@ function renderSettings(){
   if(dayLockBtn) dayLockBtn.style.display = isAdmin() ? '' : 'none';
   const paymentRecordBtn = document.getElementById('settingsPaymentRecordBtn');
   if(paymentRecordBtn) paymentRecordBtn.style.display = isAdmin() ? '' : 'none';
+  const downloadSsBtn = document.getElementById('settingsDownloadSsBtn');
+  if(downloadSsBtn) downloadSsBtn.style.display = isAdmin() ? '' : 'none';
   const frontOfficeBtn = document.getElementById('settingsFrontOfficeBtn');
   if(frontOfficeBtn) frontOfficeBtn.style.display = isAdmin() ? '' : 'none';
   applyAdminSettingsPageMoves();
@@ -20914,6 +21046,8 @@ function applyRolePermissions(){
   if(dayLockBtn) dayLockBtn.style.display = isAdmin() ? '' : 'none';
   const paymentRecordBtn = document.getElementById('settingsPaymentRecordBtn');
   if(paymentRecordBtn) paymentRecordBtn.style.display = isAdmin() ? '' : 'none';
+  const downloadSsBtn = document.getElementById('settingsDownloadSsBtn');
+  if(downloadSsBtn) downloadSsBtn.style.display = isAdmin() ? '' : 'none';
   const deleteEntityBtn = document.getElementById('settingsDeleteEntityBtn');
   if(deleteEntityBtn) deleteEntityBtn.style.display = isAdmin() ? '' : 'none';
   const autoCheckoutNav = document.getElementById('topNavAutoCheckout');
