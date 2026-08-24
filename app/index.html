@@ -15759,7 +15759,7 @@ async function buildScreenshotsPdfDoc(attachments, btn){
   }finally{
     if(btn){ btn.disabled = false; btn.textContent = originalLabel; }
   }
-  return { doc, pagesAdded };
+  return { doc, pagesAdded, totalAmount };
 }
 
 async function downloadDayScreenshotsPdf(date, btn){
@@ -15876,36 +15876,59 @@ function renderDownloadSs(){
   }
 }
 
+// "15 AUGUST" — the day-month token Download SS filenames are built from.
+// No year (matches the naming convention asked for), local-midnight parse
+// like formatDate() to avoid a UTC day-shift.
+function formatDayMonthLabel(iso){
+  const d = new Date(iso + 'T00:00:00');
+  return `${d.getDate()} ${d.toLocaleDateString('en-US', { month: 'long' }).toUpperCase()}`;
+}
+
+// Combined-download date token: a single day collapses to "15 AUGUST", a
+// real range becomes "15 AUGUST to 20 AUGUST", no filter at all is "All
+// Dates". Per-day downloads don't need this — they always have one exact
+// date and call formatDayMonthLabel directly.
+function formatSsFilenameDateLabel(fromVal, toVal){
+  if(!fromVal && !toVal) return 'All Dates';
+  if(!fromVal) return formatDayMonthLabel(toVal);
+  if(!toVal) return formatDayMonthLabel(fromVal);
+  if(fromVal === toVal) return formatDayMonthLabel(fromVal);
+  return `${formatDayMonthLabel(fromVal)} to ${formatDayMonthLabel(toVal)}`;
+}
+
 async function downloadSsScreenshotsPdf(btn){
   if(typeof jspdf === 'undefined'){
     showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
     return;
   }
-  const { attachments, fromVal, toVal, bankVal } = getDownloadSsAttachments();
+  const { attachments, fromVal, toVal } = getDownloadSsAttachments();
   if(attachments.length === 0){
     showNotice('No screenshots match these filters.');
     return;
   }
-  const { doc, pagesAdded } = await buildScreenshotsPdfDoc(attachments, btn);
+  const { doc, pagesAdded, totalAmount } = await buildScreenshotsPdfDoc(attachments, btn);
   if(pagesAdded === 0){
     showNotice('Couldn\'t load any of these screenshots — check the internet connection and try again.');
     return;
   }
-  const bankLabel = bankVal ? bankVal.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '-') : 'all-banks';
-  const dateLabel = fromVal && toVal ? `${fromVal}_to_${toVal}` : (fromVal || toVal || 'all-dates');
-  doc.save(`screenshots-${bankLabel}-${dateLabel}.pdf`);
+  // Filename total is the same summary-page total (every matched
+  // screenshot's payment amount), never the Payment Report page's own
+  // MCB/Alfalah/Haji total logic.
+  doc.save(`${formatSsFilenameDateLabel(fromVal, toVal)} (${totalAmount.toLocaleString()}).pdf`);
 }
 
 // Same filters as downloadSsScreenshotsPdf, but one PDF per day instead of
 // one combined PDF — built sequentially (one day at a time) so btn's
 // per-image progress text (set inside buildScreenshotsPdfDoc) stays
-// meaningful, and so one day's fetch failures don't touch the others.
+// meaningful, and so one day's fetch failures don't touch the others. Each
+// day's own filename total is that day's own summary total, not the
+// combined range's.
 async function downloadSsScreenshotsPerDayPdf(btn){
   if(typeof jspdf === 'undefined'){
     showNotice('PDF export isn\'t available right now — the PDF library failed to load.');
     return;
   }
-  const { attachments, bankVal } = getDownloadSsAttachments();
+  const { attachments } = getDownloadSsAttachments();
   if(attachments.length === 0){
     showNotice('No screenshots match these filters.');
     return;
@@ -15916,15 +15939,14 @@ async function downloadSsScreenshotsPerDayPdf(btn){
     byDay[a.payment_date].push(a);
   });
   const days = Object.keys(byDay).sort();
-  const bankLabel = bankVal ? bankVal.replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '-') : 'all-banks';
   const originalLabel = btn.textContent;
   let savedCount = 0;
   for(let i = 0; i < days.length; i++){
     const date = days[i];
     btn.textContent = `Day ${i + 1} of ${days.length} (${date})…`;
-    const { doc, pagesAdded } = await buildScreenshotsPdfDoc(byDay[date], btn);
+    const { doc, pagesAdded, totalAmount } = await buildScreenshotsPdfDoc(byDay[date], btn);
     if(pagesAdded === 0) continue; // this day's fetches all failed — skip it, keep going
-    doc.save(`screenshots-${bankLabel}-${date}.pdf`);
+    doc.save(`${formatDayMonthLabel(date)} (${totalAmount.toLocaleString()}).pdf`);
     savedCount++;
   }
   btn.textContent = originalLabel;
