@@ -13805,8 +13805,19 @@ const RIVIERA_LETTER_CSS = `
     background:#fff; padding:11mm 15mm 13mm 15mm;
     position:relative; overflow:hidden;
     font-family:'Helvetica Neue',Arial,sans-serif; color:#1a1a1a; font-size:13px;
+    /* Everything structural on this letter — the navy table header, the
+       cream row stripes, the gold Booking Total bar — is a background fill,
+       and browsers drop those unless the print dialog's "Background
+       graphics" box is ticked. The navy header row is white text, so with
+       that box unticked it printed white-on-white: gone. This tells the
+       browser to print the colours as authored regardless of the box, so
+       the letter never depends on whoever is at the desk finding a setting
+       buried under "More settings". */
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
   }
-  .riviera-letter-page *{ box-sizing:border-box; }
+  /* print-color-adjust inherits, but stated on the descendants too so a
+     print stylesheet resetting it further down cannot undo it. */
+  .riviera-letter-page *{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   /* The letter is also mounted inside the main app document (html2canvas
      needs it in a real layout to rasterize it), where every global table/
      paragraph rule in this file would otherwise land on it — so everything
@@ -14271,8 +14282,13 @@ const RIVIERA_FOLIO_CSS = `
   .riviera-folio-page{
     width:210mm; box-sizing:border-box;
     font-family:Georgia,'Times New Roman',serif; color:#1a1a1a; background:#fff;
+    /* Same reason as the letter: print the fills as authored instead of
+       only when the print dialog's "Background graphics" box is ticked.
+       The folio leans on real borders for its structure so it survived
+       without this, but its shaded table headers did not. */
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
   }
-  .riviera-folio-page *{ box-sizing:border-box; }
+  .riviera-folio-page *{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .riviera-folio-header{ display:flex; align-items:center; gap:14px; padding:14mm 15mm 6mm; border-bottom:2px solid #1a1a1a; }
   .riviera-folio-header img{ width:70px; display:block; }
   .riviera-folio-header h1{ font-size:22px; letter-spacing:2px; margin:0; }
