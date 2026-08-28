@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Riviera Resort - Confirmation Letter</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ccc;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #1a1a1a;
+  }
+  .page {
+    width: 210mm;
+    height: 297mm;
+    margin: 10mm auto;
+    background-image: url('riviera-bg.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    box-shadow: 0 0 8px rgba(0,0,0,0.3);
+    position: relative;
+    overflow: hidden;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14mm 20mm 0;
+  }
+  .logo {
+    width: 100px;
+    display: block;
+  }
+  .header h1 {
+    font-size: 26px;
+    letter-spacing: 2px;
+    margin: 0;
+  }
+  .content {
+    padding: 8mm 20mm 0;
+    font-size: 12.5px;
+    line-height: 1.75;
+  }
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 11px;
+  }
+  .content p { margin: 6px 0; }
+  .section-title {
+    margin-top: 18px;
+    font-weight: bold;
+  }
+  @media print {
+    body { background: none; }
+    .page {
+      margin: 0;
+      box-shadow: none;
+    }
+  }
+  @page {
+    size: A4;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <img class="logo" src="riviera-logo.png" alt="Riviera Resort Logo">
+      <h1>RIVIERA RESORT</h1>
+    </div>
+
+    <div class="content">
+      <div class="top-row">
+        <p><strong>Riviera Resort Naran Hotel.</strong></p>
+        <p><strong>Confirmation No:</strong> <em>[XX]</em></p>
+      </div>
+      <p><strong>Ghaar Road Naran, Pakistan</strong></p>
+      <p><strong>[XX]</strong><br>
+      <strong>COMPANY NAME:</strong> [XX] &nbsp;&nbsp;&nbsp;&nbsp; <strong>C/O:</strong> [XX]<br>
+      Respected Sir,</p>
+
+      <p>We are pleased to let you know about the confirmation of your reservation at Riviera Resort, Naran Hotel for your upcoming stay. We highly appreciate your preference and are delighted to welcome you for an eminence stay with our resort.</p>
+
+      <p class="section-title">Your Hotel Confirmation Details:</p>
+      <p><strong>Reservation Date:</strong> [XX]</p>
+      <p><strong>Check-in Date:</strong> [XX]</p>
+      <p><strong>Check-out Date:</strong> [XX]</p>
+      <p><strong>No of Nights:</strong> [XX]</p>
+      <p><strong>Room type:</strong> [XX]</p>
+      <p><strong>No of Individuals:</strong> [XX]</p>
+      <p><strong>No of Rooms:</strong> [XX]</p>
+      <p><strong>Complimentary Breakfast:</strong> [XX]</p>
+      <p><strong>Room rent Per night:</strong> PKR. [XX]/-</p>
+      <p><strong>Total Rent Amount:</strong> PKR. [XX]/-</p>
+
+      <p class="section-title">Payment Details:</p>
+      <p><strong>Payment Status:</strong> [XX]</p>
+      <p><strong>Account Tittle:</strong> RIVIERA Resort PVT LTD<br>
+      <strong>Bank Alfalah:</strong><br>
+      <strong>IBAN:</strong> PK36 ALFH 0336 0010 1029 8690<br>
+      <strong>ACC NO:</strong> 1010298690</p>
+
+      <p>We look forward to welcoming you to Riviera Resort soon. If you have any further inquiries or need to make changes to your reservation, please do not hesitate to contact us via 099-7430540-41, 0340-8022227. Thank you for choosing our hotel. We take pride in providing exceptional services to our guests, and we are committed to making your stay memorable.</p>
+
+      <p>Best regards,<br>
+      <strong>[XX]</strong><br>
+      Riviera Resort Naran</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -11291,7 +11291,16 @@ async function reviewEntry(){
     const thisEntryNights = [];
     const roomCursor = {};
     for(const r of cleanRooms){
-      if(isMiscRoomNo(r.roomNo)) continue;
+      // A room nobody has picked yet cannot be double-booked — there is no
+      // room to clash over. "N/A" is a sentinel, not a room number, so
+      // comparing it across bookings made every pair of undecided
+      // reservations on the same night read as the SAME room and fire
+      // "Room N/A on 29 Aug — already booked by ...". Same guard the
+      // same-room-twice check above already uses. Overbooking a TYPE is a
+      // different question, and the Availability page answers it (see
+      // buildAvailability's naByType).
+      const roomKey = r.roomNo.trim().toUpperCase();
+      if(roomKey === 'N/A' || roomKey === MISC_ROOM_NO.toUpperCase()) continue;
       const nightsCount = parseInt(r.count) || 1;
       const rowStart = roomCursor[r.roomNo] || addDaysToDateStr(checkInEl.value, saveMoveOffsets[r.roomNo.trim().toUpperCase()] || 0);
       for(let i = 0; i < nightsCount; i++){
@@ -13781,7 +13790,9 @@ function blobToDataUrl(blob){
 // =========================================================
 // GUEST LETTER — Download/Print buttons on the Guest Detail page render
 // this guest's stay as a branded confirmation letter (matching the resort's
-// own reference template/logo/background), instead of a plain data dump.
+// own reference template in "guest entry page format/new format.html" —
+// white stationery, gold logo, one table row per room), instead of a plain
+// data dump.
 // Download rasterizes the exact on-screen layout (html2canvas) onto a
 // full-bleed A4 page image inside a PDF (jsPDF) — WYSIWYG, no auto-
 // pagination guesswork. Print opens the same letter in a fresh tab and
@@ -13791,57 +13802,184 @@ function blobToDataUrl(blob){
 const RIVIERA_LETTER_CSS = `
   .riviera-letter-page{
     width:210mm; height:297mm; box-sizing:border-box;
-    background-image:url('/app/assets/riviera-bg.png');
-    background-size:cover; background-position:center; background-repeat:no-repeat;
+    background:#fff; padding:11mm 15mm 13mm 15mm;
     position:relative; overflow:hidden;
-    font-family:Georgia,'Times New Roman',serif; color:#1a1a1a;
+    font-family:'Helvetica Neue',Arial,sans-serif; color:#1a1a1a; font-size:13px;
   }
   .riviera-letter-page *{ box-sizing:border-box; }
-  .riviera-letter-header{ display:flex; align-items:center; gap:14px; padding:14mm 20mm 0; }
-  .riviera-letter-header img{ width:100px; display:block; }
-  .riviera-letter-header h1{ font-size:26px; letter-spacing:2px; margin:0; }
-  /* Matches the reference template's own spacing — this fits real A4 fine;
-     fitLetterContent() below is only a safety net for an unusually long
-     stay (many rooms, a long due note, ...), not the normal case. */
-  .riviera-letter-content{ padding:8mm 20mm 0; font-size:12.5px; line-height:1.75; }
-  .riviera-letter-content p{ margin:6px 0; }
-  .riviera-letter-section-title{ margin-top:18px; font-weight:bold; }
-  /* Georgia's old-style figures (uneven digit heights) read as "off" for an
-     account/IBAN number, where every digit is expected to line up evenly —
-     switch just these to a plain sans-serif with lining numerals. */
-  .riviera-letter-num{ font-family:Arial,Helvetica,sans-serif; font-variant-numeric:lining-nums; letter-spacing:0.02em; }
+  /* The letter is also mounted inside the main app document (html2canvas
+     needs it in a real layout to rasterize it), where every global table/
+     paragraph rule in this file would otherwise land on it — so everything
+     below is namespaced AND reset first, instead of inheriting the app's
+     own table styling into what is meant to be the resort's stationery. */
+  .riviera-letter-page p{ margin:0; }
+  .riviera-letter-page table{
+    border:none; border-collapse:collapse; width:100%; margin:0;
+    font-family:inherit; box-shadow:none;
+  }
+  .riviera-letter-page th,
+  .riviera-letter-page td{
+    border:none; margin:0; background:none; font-family:inherit;
+    vertical-align:middle; white-space:normal;
+  }
+  .riviera-letter-header{ position:relative; text-align:center; margin-bottom:18px; }
+  .riviera-letter-header img{ position:absolute; left:0; top:-4px; width:66px; height:66px; }
+  .riviera-letter-header h1{
+    margin:4px 0 0 0; font-size:27px; font-weight:400;
+    letter-spacing:1px; color:#1a1a1a;
+  }
+  .riviera-letter-header .rl-addr{ margin-top:4px; font-size:11px; font-weight:600; color:#1a1a1a; }
+  .riviera-letter-header .rl-contact{ margin-top:3px; font-size:10px; color:#c0392b; }
+  .riviera-letter-content hr.rl-top-rule{ border:none; border-top:2px solid #c0983c; margin:0 0 20px 0; }
+  .riviera-letter-content .rl-guest-line{ font-size:12.5px; margin-bottom:8px; }
+  .riviera-letter-content .rl-guest-line b{ font-weight:700; color:#1a1a1a; }
+  .riviera-letter-content p.rl-body{ font-size:11.5px; line-height:1.55; margin:0 0 16px 0; color:#1a3a6b; }
+  .riviera-letter-content p.rl-body.rl-greeting{ margin:0 0 6px 0; color:#1a1a1a; }
+  .riviera-letter-content h2.rl-title{ font-size:14px; font-weight:700; margin:20px 0 10px 0; color:#1a1a1a; }
+  .riviera-letter-content h3.rl-title{ font-size:14px; font-weight:700; margin:22px 0 10px 0; color:#1a1a1a; }
+  .riviera-letter-content table.rl-kv{ margin-bottom:4px; }
+  .riviera-letter-content table.rl-kv tr:nth-child(odd) td{ background:#f2ede1; }
+  .riviera-letter-content table.rl-kv td{ font-size:11.5px; padding:7px 10px; }
+  .riviera-letter-content table.rl-kv td.rl-label{ font-weight:700; color:#1a1a1a; width:220px; }
+  .riviera-letter-content table.rl-kv td.rl-value{ color:#1a4fa0; font-weight:500; }
+  .riviera-letter-content table.rl-rooms{ font-size:11px; margin-bottom:0; }
+  .riviera-letter-content table.rl-rooms th{
+    text-align:left; font-weight:700; padding:8px 10px; color:#fff; background:#1a2035;
+  }
+  .riviera-letter-content table.rl-rooms td{ padding:7px 10px; color:#1a4fa0; }
+  .riviera-letter-content table.rl-rooms tbody tr:nth-child(odd) td{ background:#f2ede1; }
+  .riviera-letter-content table.rl-rooms td:first-child{ color:#1a1a1a; font-weight:500; }
+  .riviera-letter-content table.rl-rooms th:not(:first-child),
+  .riviera-letter-content table.rl-rooms td:not(:first-child){ text-align:center; }
+  .riviera-letter-content table.rl-rooms th:last-child,
+  .riviera-letter-content table.rl-rooms td:last-child{ text-align:right; }
+  /* Its own table rather than a second .rl-rooms one: the zebra-stripe and
+     per-column colour rules above are more specific than a lone class, so
+     reusing .rl-rooms here repainted the total bar cream-on-navy-text
+     instead of the gold-on-navy it is meant to be. */
+  .riviera-letter-content table.rl-total td.rl-booking-total{
+    text-align:right; font-size:13px; font-weight:900; padding:9px 10px;
+    background:#1a2035; color:#c0983c;
+  }
+  .riviera-letter-content hr.rl-bottom-rule{ border:none; border-top:1px solid #c0983c; margin:26px 0 14px 0; }
+  .riviera-letter-content .rl-footer{
+    font-size:10.5px; line-height:1.5; margin:0; color:#1a3a6b; text-align:center;
+  }
+  .riviera-letter-content .rl-footer-sign{
+    font-size:10.5px; margin-top:10px; font-weight:700; text-align:center; color:#1a1a1a;
+  }
+  /* Helvetica's figures already line up, but an IBAN/account number reads
+     better with a touch of tracking than the body text does. */
+  .riviera-letter-num{ font-variant-numeric:lining-nums; letter-spacing:0.02em; }
 `;
+
+// Rooms are identified for counting the same way the rest of the app already
+// does it (see computeExpectedCheckoutDate and formatRoomChain): a room
+// number groups its own rows together — so a Split Rate room split across
+// two rows is still ONE room — while every "N/A" row is a separate
+// undecided room and never merges with another one. Keying N/A on the
+// literal string is what used to collapse a four-room reservation down to a
+// single room and print 8 nights for a 2-night stay.
+function letterRoomKey(room, index){
+  const key = (room.roomNo || '').trim().toUpperCase();
+  return key === 'N/A' ? ('na-' + index) : key;
+}
+
+// Beyond this many printed lines the room table is grouped instead of
+// listed room by room, so a big group booking still fits the one page the
+// letter is supposed to be rather than being scaled down to unreadable.
+const LETTER_ROOM_ROW_LIMIT = 8;
+
+// One object per line of the letter's Room Detail table. Miscellaneous rows
+// (BBQ/Bonfire/Snooker/Mattress) are kept rather than filtered out: they are
+// part of what computeTotals() bills as the Booking Total, so dropping them
+// left a letter whose room lines visibly did not add up to its own total.
+function buildLetterRoomRows(entry){
+  const rows = [];
+  (entry.rooms || []).forEach(r=>{
+    if(!r || !r.roomNo) return;
+    const rent = parseFloat(String(r.rent).replace(/,/g,'')) || 0;
+    const total = parseFloat(String(r.total).replace(/,/g,'')) || 0;
+    if(isMiscRoomNo(r.roomNo)){
+      rows.push({ label: r.unitType || MISC_ROOM_NO, rent, qty:1, adults:0, children:0, breakfast:0, nights:0, total, misc:true });
+      return;
+    }
+    rows.push({
+      // displayRoomNo(): the real room number once one is assigned, the
+      // picked type ("River View") while it is still undecided — never the
+      // literal "N/A", same as everywhere else in the app.
+      label: displayRoomNo(r.roomNo, r.unitType),
+      rent,
+      qty: 1,
+      adults: parseInt(r.adults) || 0,
+      children: parseInt(r.children) || 0,
+      breakfast: (parseInt(r.breakfastAdults) || 0) + (parseInt(r.breakfastChildren) || 0),
+      nights: parseInt(r.count) || 1,
+      total,
+      misc: false
+    });
+  });
+  if(rows.length <= LETTER_ROOM_ROW_LIMIT) return rows;
+  // Only rooms identical in every printed respect merge — a different rate,
+  // occupancy, breakfast count or night count stays on its own line, so
+  // grouping never hides a difference the guest is paying for.
+  const groups = new Map();
+  const grouped = [];
+  rows.forEach(row=>{
+    const key = [row.misc ? 'm' : 'r', row.label, row.rent, row.adults, row.children, row.breakfast, row.nights].join('|');
+    const hit = groups.get(key);
+    if(hit){
+      hit.qty += row.qty;
+      hit.total += row.total;
+      return;
+    }
+    const copy = Object.assign({}, row);
+    groups.set(key, copy);
+    grouped.push(copy);
+  });
+  return grouped;
+}
 
 // Same field set the resort's own confirmation-letter template expects,
 // pulled from this entry's real data instead of the template's [XX] blanks.
 function buildGuestLetterFields(entry){
   const t = computeTotals(entry);
-  const realRooms = (entry.rooms || []).filter(r=> r.roomNo && !isMiscRoomNo(r.roomNo));
-  // A room split across more than one row (see splitRoomRowRate — a
-  // mid-stay rate change) still adds up to ONE room's worth of nights, not
-  // one per split row, and its occupants/rate must only be counted once —
-  // grouped by room number first, then combined across distinct rooms.
-  const nightsByRoom = {};
-  realRooms.forEach(r=>{
-    const key = r.roomNo.trim().toUpperCase();
-    nightsByRoom[key] = (nightsByRoom[key] || 0) + (parseInt(r.count) || 1);
+  // Every non-misc room row paired with the key that says which physical
+  // room it belongs to — see letterRoomKey() for why N/A cannot key on
+  // its own value.
+  const keyed = [];
+  (entry.rooms || []).forEach((r, i)=>{
+    if(!r || !r.roomNo || isMiscRoomNo(r.roomNo)) return;
+    keyed.push({ room: r, key: letterRoomKey(r, i) });
   });
-  const nights = Math.max(1, ...Object.values(nightsByRoom), 0);
-  const dedupedRooms = dedupeRoomsByNo(realRooms);
-  const adults = dedupedRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
-  const children = dedupedRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
+  // Nights per ROOM, then the longest of them — a stay is as long as its
+  // longest room, not the sum of every row's nights.
+  const nightsByRoom = {};
+  keyed.forEach(({ room, key })=>{
+    nightsByRoom[key] = (nightsByRoom[key] || 0) + (parseInt(room.count) || 1);
+  });
+  const nightValues = Object.values(nightsByRoom);
+  const nights = nightValues.length ? Math.max.apply(null, nightValues) : 0;
+  // Occupants are the same people on every rate-split row of one room, so
+  // they are counted once per room — but four undecided rooms are four
+  // separate sets of people, which is exactly what letterRoomKey() keeps apart.
+  const seenRooms = new Set();
+  const uniqueRooms = [];
+  keyed.forEach(({ room, key })=>{
+    if(seenRooms.has(key)) return;
+    seenRooms.add(key);
+    uniqueRooms.push(room);
+  });
+  const adults = uniqueRooms.reduce((s,r)=> s + (parseInt(r.adults) || 0), 0);
+  const children = uniqueRooms.reduce((s,r)=> s + (parseInt(r.children) || 0), 0);
   // "Yes/No" told the guest nothing about how many covers are actually
   // included, which is the one thing they ask about — spell out the exact
   // adult/child counts the reservation was booked with instead.
-  const breakfastAdults = dedupedRooms.reduce((s,r)=> s + (parseInt(r.breakfastAdults) || 0), 0);
-  const breakfastChildren = dedupedRooms.reduce((s,r)=> s + (parseInt(r.breakfastChildren) || 0), 0);
+  const breakfastAdults = uniqueRooms.reduce((s,r)=> s + (parseInt(r.breakfastAdults) || 0), 0);
+  const breakfastChildren = uniqueRooms.reduce((s,r)=> s + (parseInt(r.breakfastChildren) || 0), 0);
   const breakfastParts = [];
   if(breakfastAdults) breakfastParts.push(breakfastAdults + ' Adult' + (breakfastAdults === 1 ? '' : 's'));
   if(breakfastChildren) breakfastParts.push(breakfastChildren + ' Child' + (breakfastChildren === 1 ? '' : 'ren'));
-  const rentPerNight = dedupedRooms.reduce((s,r)=> s + (parseFloat(String(r.rent).replace(/,/g,'')) || 0), 0);
-  const roomTypeLine = dedupedRooms.length
-    ? dedupedRooms.map(r=> r.unitType || detectUnitType(r.roomNo) || 'Room').join(', ')
-    : '-';
   const checkOutDate = entry.checkOut || computeExpectedCheckoutDate(entry);
   return {
     guestName: entry.guestName || '(no name)',
@@ -13849,63 +13987,94 @@ function buildGuestLetterFields(entry){
     reservationDate: entry.savedAt ? formatDate(toKarachiDateStr(entry.savedAt)) : '-',
     checkInDate: entry.checkIn ? formatDate(entry.checkIn) : '-',
     checkOutDate: checkOutDate ? formatDate(checkOutDate) : '-',
-    nights,
-    roomTypeLine,
+    nights: nights || '-',
     individuals: adults + children,
-    roomCount: realRooms.length,
+    roomCount: uniqueRooms.length,
     breakfast: breakfastParts.length ? breakfastParts.join(' + ') + ' (' + (breakfastAdults + breakfastChildren) + ' total)' : 'Not included',
-    rentPerNight: rentPerNight.toLocaleString(),
-    totalRent: t.bookingTotal.toLocaleString(),
+    roomRows: buildLetterRoomRows(entry),
+    bookingTotal: t.bookingTotal.toLocaleString(),
     // The letter used to print the status word alone, so a guest who had
     // already wired an advance saw nothing confirming it landed. Late
     // Payment rows stay out of this on purpose — that money hasn't arrived.
     advancePaid: t.paid.toLocaleString(),
     balanceDue: t.due.toLocaleString(),
-    paymentStatus: t.status + (t.due > 0 ? ' — Due: PKR. ' + t.due.toLocaleString() + '/-' : '')
+    // Just the word — the Balance Payable row below it already prints the
+    // amount, so the old " — Due: PKR .../-" suffix said it twice.
+    paymentStatus: t.status
   };
 }
 
 function buildGuestLetterHtml(entry){
   const f = buildGuestLetterFields(entry);
+  const roomRows = f.roomRows.map(r=>{
+    const occupants = r.misc ? '&mdash;' : (r.children ? r.adults + ' + ' + r.children + ' ch' : String(r.adults));
+    return `<tr>
+        <td>${r.label}</td>
+        <td>PKR ${r.rent.toLocaleString()}</td>
+        <td>${r.qty}</td>
+        <td>${occupants}</td>
+        <td>${r.misc ? '&mdash;' : r.breakfast}</td>
+        <td>${r.misc ? '&mdash;' : r.nights}</td>
+        <td>PKR ${r.total.toLocaleString()}</td>
+      </tr>`;
+  }).join('') || '<tr><td colspan="7">No rooms on this reservation.</td></tr>';
   return `<style>${RIVIERA_LETTER_CSS}</style>
     <div class="riviera-letter-page">
       <div class="riviera-letter-header">
-        <img src="/app/assets/riviera-logo.png" alt="Riviera Resort Logo">
+        <img src="/app/assets/riviera-logo-gold.png" alt="Riviera Resort Logo">
         <h1>RIVIERA RESORT</h1>
+        <div class="rl-addr">Ghaar Road Naran, Pakistan</div>
+        <div class="rl-contact">Tel: 099-7430540-41 &nbsp;|&nbsp; 0340-8022227 &nbsp;|&nbsp; info@rivieresortnaran.com</div>
       </div>
       <div class="riviera-letter-content">
-        <p><strong>Riviera Resort Naran Hotel.</strong></p>
-        <p><strong>Ghaar Road Naran, Pakistan</strong></p>
-        <p><strong>Guest Name:</strong> ${f.guestName}${f.fatherName ? ' s/o ' + f.fatherName : ''}<br>
-        Respected Guest,</p>
+        <hr class="rl-top-rule">
 
-        <p>We are pleased to let you know about the confirmation of your reservation at Riviera Resort, Naran Hotel for your upcoming stay. We highly appreciate your preference and are delighted to welcome you for an eminence stay with our resort.</p>
+        <div class="rl-guest-line"><b>Guest Name:</b> ${f.guestName}${f.fatherName ? ' s/o ' + f.fatherName : ''}</div>
+        <p class="rl-body rl-greeting">Respected Guest,</p>
+        <p class="rl-body">We are pleased to confirm your reservation at Riviera Resort, Naran Hotel. We highly appreciate your preference and are delighted to welcome you for an eminence stay with our resort.</p>
 
-        <p class="riviera-letter-section-title">Your Hotel Confirmation Details:</p>
-        <p><strong>Reservation Date:</strong> ${f.reservationDate}</p>
-        <p><strong>Check-in Date:</strong> ${f.checkInDate}</p>
-        <p><strong>Check-out Date:</strong> ${f.checkOutDate}</p>
-        <p><strong>No of Nights:</strong> ${f.nights}</p>
-        <p><strong>Room type:</strong> ${f.roomTypeLine}</p>
-        <p><strong>No of Individuals:</strong> ${f.individuals}</p>
-        <p><strong>No of Rooms:</strong> ${f.roomCount}</p>
-        <p><strong>Complimentary Breakfast:</strong> ${f.breakfast}</p>
-        <p><strong>Room rent Per night:</strong> PKR. ${f.rentPerNight}/-</p>
-        <p><strong>Total Rent Amount:</strong> PKR. ${f.totalRent}/-</p>
+        <h2 class="rl-title">Your Hotel Confirmation Details:</h2>
+        <table class="rl-kv">
+          <tr><td class="rl-label">Reservation Date:</td><td class="rl-value">${f.reservationDate}</td></tr>
+          <tr><td class="rl-label">Check-in Date:</td><td class="rl-value">${f.checkInDate}</td></tr>
+          <tr><td class="rl-label">Check-out Date:</td><td class="rl-value">${f.checkOutDate}</td></tr>
+          <tr><td class="rl-label">No of Nights:</td><td class="rl-value">${f.nights}</td></tr>
+          <tr><td class="rl-label">No of Individuals:</td><td class="rl-value">${f.individuals}</td></tr>
+          <tr><td class="rl-label">No of Rooms:</td><td class="rl-value">${f.roomCount}</td></tr>
+          <tr><td class="rl-label">Complimentary Breakfast:</td><td class="rl-value">${f.breakfast}</td></tr>
+        </table>
 
-        <p style="margin-top:18px;"><strong>Payment Status:</strong> ${f.paymentStatus}</p>
-        <p><strong>Advance Received:</strong> PKR. ${f.advancePaid}/-</p>
-        <p><strong>Balance Payable:</strong> PKR. ${f.balanceDue}/-</p>
-        <p><strong>Account Tittle:</strong> RIVIERA Resort PVT LTD<br>
-        <strong>Bank Alfalah:</strong><br>
-        <strong>IBAN:</strong> <span class="riviera-letter-num">PK36 ALFH 0336 0010 1029 8690</span><br>
-        <strong>ACC NO:</strong> <span class="riviera-letter-num">1010298690</span></p>
+        <h3 class="rl-title">Room Detail:</h3>
+        <table class="rl-rooms">
+          <thead>
+            <tr>
+              <th>Room / Type</th>
+              <th>Rent/Night</th>
+              <th>Rooms</th>
+              <th>Adults</th>
+              <th>Breakfast</th>
+              <th>Nights</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>${roomRows}</tbody>
+        </table>
+        <table class="rl-total"><tr><td colspan="7" class="rl-booking-total">Booking Total &nbsp; PKR ${f.bookingTotal}</td></tr></table>
 
-        <p>We look forward to welcoming you to Riviera Resort soon. If you have any further inquiries or need to make changes to your reservation, please do not hesitate to contact us via 099-7430540-41, 0340-8022227. Thank you for choosing our hotel. We take pride in providing exceptional services to our guests, and we are committed to making your stay memorable.</p>
+        <h3 class="rl-title">Payment Details:</h3>
+        <table class="rl-kv">
+          <tr><td class="rl-label">Payment Status:</td><td class="rl-value">${f.paymentStatus}</td></tr>
+          <tr><td class="rl-label">Advance Received:</td><td class="rl-value">PKR. ${f.advancePaid}/-</td></tr>
+          <tr><td class="rl-label">Balance Payable:</td><td class="rl-value">PKR. ${f.balanceDue}/-</td></tr>
+          <tr><td class="rl-label">Account Title:</td><td class="rl-value">RIVIERA Resort PVT LTD</td></tr>
+          <tr><td class="rl-label">Bank:</td><td class="rl-value">Bank Alfalah</td></tr>
+          <tr><td class="rl-label">IBAN:</td><td class="rl-value"><span class="riviera-letter-num">PK36 ALFH 0336 0010 1029 8690</span></td></tr>
+          <tr><td class="rl-label">ACC NO:</td><td class="rl-value"><span class="riviera-letter-num">1010298690</span></td></tr>
+        </table>
 
-        <p>Best regards,<br>
-        <strong>Riviera Resort Team</strong><br>
-        Riviera Resort Naran</p>
+        <hr class="rl-bottom-rule">
+        <p class="rl-footer">We look forward to welcoming you to Riviera Resort. For inquiries or changes, contact us at 099-7430540-41 or 0340-8022227.</p>
+        <div class="rl-footer-sign">Riviera Resort Team | Riviera Resort Naran</div>
       </div>
     </div>`;
 }
@@ -13923,13 +14092,19 @@ function waitForLetterImages(container){
 // example and spill a footer onto page 2 for a longer one.
 function fitLetterContent(pageEl){
   if(!pageEl) return;
-  const header = pageEl.querySelector('.riviera-letter-header');
   const content = pageEl.querySelector('.riviera-letter-content');
-  if(!header || !content) return;
-  const pageHeight = pageEl.getBoundingClientRect().height;
-  const headerHeight = header.getBoundingClientRect().height;
-  const bottomSafety = pageHeight * 0.03; // small breathing room above the physical edge
-  const available = pageHeight - headerHeight - bottomSafety;
+  if(!content) return;
+  const pageBox = pageEl.getBoundingClientRect();
+  // Measured from where the content actually starts — below the page's own
+  // top padding, the header, and the header's bottom margin — down to the
+  // inside of the page's bottom padding. Deriving this from the header's
+  // height alone (as it did while the page had no padding of its own) now
+  // overstates the room available by both paddings, which would let a long
+  // letter overflow the page before the scale ever kicked in.
+  const padBottom = parseFloat(getComputedStyle(pageEl).paddingBottom) || 0;
+  const contentTop = content.getBoundingClientRect().top - pageBox.top;
+  const bottomSafety = pageBox.height * 0.01; // small breathing room above the physical edge
+  const available = pageBox.height - contentTop - padBottom - bottomSafety;
   const natural = content.scrollHeight;
   if(available > 0 && natural > available){
     const scale = Math.max(0.55, available / natural); // 0.55 floor keeps text legible even in a pathological case
@@ -19501,7 +19676,11 @@ async function undoArrivalNoShow(guestId){
   // second cancelled booking on the same room never reads as a clash.
   const withNoShows = buildLedgersRecords(true, true);
   const noShowIds = new Set(loadAllEntries().filter(e=> e.id !== guestId && isNoShowEntry(e)).map(e=> e.id));
-  const mine = withNoShows.filter(n=> n.guestId === guestId && !isMiscRoomNo(n.roomNo));
+  // Undecided rooms are excluded for the same reason the Guest Entry
+  // double-booking check excludes them: "N/A" is a sentinel, not a room, so
+  // matching it against another booking's "N/A" invents a clash over a room
+  // neither guest has been given yet.
+  const mine = withNoShows.filter(n=> n.guestId === guestId && !isMiscRoomNo(n.roomNo) && n.roomNo.trim().toUpperCase() !== 'N/A');
   const others = withNoShows.filter(n=> n.guestId !== guestId && !noShowIds.has(n.guestId));
   const clashes = [];
   mine.forEach(n=>{
