@@ -9,6 +9,10 @@
      in-page header that isn't actually part of the page at all. -->
 <meta name="theme-color" content="#1a73e8">
 <title>Riviera Resort</title>
+<!-- Without this the browser asks for /favicon.ico, gets a 404, and falls
+     back to its generic globe on the tab. Same gold mark as the header and
+     the printed letter/folio. -->
+<link rel="icon" type="image/png" href="/app/assets/riviera-logo-gold.png">
 <!-- Loaded async (media=print swapped to all on load) instead of a plain
      blocking <link> — a pending stylesheet delays execution of every
      <script> after it per spec, so if this specific request to Google's
@@ -1247,8 +1251,20 @@
   }
   .hdr-brand{
     display:flex;
-    flex-direction:column;
+    flex-direction:row;
+    align-items:center;
+    gap:9px;
     white-space:nowrap;
+    flex:0 0 auto;
+  }
+  /* Same gold mark the confirmation letter and folio print with, so the
+     screen and the paper the guest is handed carry one logo. Gold on the
+     header's blue, and it keeps its own colours in both app themes since
+     this bar is always blue. */
+  .hdr-logo{
+    width:26px;
+    height:26px;
+    display:block;
     flex:0 0 auto;
   }
   .hdr-brand-name{
@@ -4953,6 +4969,7 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   <div class="hdr-row1">
     <div class="hdr-left">
       <div class="hdr-brand">
+        <img class="hdr-logo" src="/app/assets/riviera-logo-gold.png" alt="">
         <span class="hdr-brand-name">RIVIERA<span class="hdr-brand-suffix"> RESORT</span></span>
       </div>
       <div class="hdr-search-wrap">
