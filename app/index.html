@@ -14008,16 +14008,18 @@ function buildGuestLetterHtml(entry){
   const f = buildGuestLetterFields(entry);
   const roomRows = f.roomRows.map(r=>{
     const occupants = r.misc ? '&mdash;' : (r.children ? r.adults + ' + ' + r.children + ' ch' : String(r.adults));
+    // Grouped lines (only past LETTER_ROOM_ROW_LIMIT) carry their count in
+    // the name — "River View &times; 8" — rather than in a column of its
+    // own, which on a normal booking was just a stripe of 1s.
     return `<tr>
-        <td>${r.label}</td>
+        <td>${r.label}${r.qty > 1 ? ' &times; ' + r.qty : ''}</td>
         <td>PKR ${r.rent.toLocaleString()}</td>
-        <td>${r.qty}</td>
         <td>${occupants}</td>
         <td>${r.misc ? '&mdash;' : r.breakfast}</td>
         <td>${r.misc ? '&mdash;' : r.nights}</td>
         <td>PKR ${r.total.toLocaleString()}</td>
       </tr>`;
-  }).join('') || '<tr><td colspan="7">No rooms on this reservation.</td></tr>';
+  }).join('') || '<tr><td colspan="6">No rooms on this reservation.</td></tr>';
   return `<style>${RIVIERA_LETTER_CSS}</style>
     <div class="riviera-letter-page">
       <div class="riviera-letter-header">
@@ -14050,7 +14052,6 @@ function buildGuestLetterHtml(entry){
             <tr>
               <th>Room / Type</th>
               <th>Rent/Night</th>
-              <th>Rooms</th>
               <th>Adults</th>
               <th>Breakfast</th>
               <th>Nights</th>
@@ -14059,7 +14060,7 @@ function buildGuestLetterHtml(entry){
           </thead>
           <tbody>${roomRows}</tbody>
         </table>
-        <table class="rl-total"><tr><td colspan="7" class="rl-booking-total">Booking Total &nbsp; PKR ${f.bookingTotal}</td></tr></table>
+        <table class="rl-total"><tr><td colspan="6" class="rl-booking-total">Booking Total &nbsp; PKR ${f.bookingTotal}</td></tr></table>
 
         <h3 class="rl-title">Payment Details:</h3>
         <table class="rl-kv">
