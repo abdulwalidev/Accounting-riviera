@@ -2235,7 +2235,12 @@
      Type really is mandatory (a Miscellaneous row IS its facility, and a
      real room has to say whether it's a Room or an Apartment). Ink colour
      is left alone so it stays readable in both themes. */
-  .unitType.pick-optional{
+  /* Also on the Room No column itself, so a row booked as "not decided yet"
+     reads as one deliberate gold pair rather than a gold Type sitting next
+     to an ordinary-looking room box. No !important here, so the red
+     duplicate-room rule below still wins if both ever land on one field. */
+  .unitType.pick-optional,
+  .roomNo.pick-optional{
     border-color:var(--amber);
     box-shadow:inset 0 0 0 1px var(--amber);
     background:rgba(231,197,90,0.16);
@@ -3030,7 +3035,8 @@
   html[data-theme="dark"] .collapse-head:hover{ background:rgba(255,255,255,0.04); }
   html[data-theme="dark"] .editing-bar{ background:rgba(240,208,120,0.12); }
   html[data-theme="dark"] .unitType.auto-detected{ background:rgba(74,222,128,0.12); }
-html[data-theme="dark"] .unitType.pick-optional{ background:rgba(231,197,90,0.13); }
+html[data-theme="dark"] .unitType.pick-optional,
+html[data-theme="dark"] .roomNo.pick-optional{ background:rgba(231,197,90,0.13); }
   html[data-theme="dark"] .modal-backdrop{ background:rgba(0,0,0,0.65); }
   /* gold/amber stays a light accent in dark mode, so text sitting on a solid
      gold fill needs to flip dark rather than inherit the (now light) --ink */
@@ -9656,6 +9662,10 @@ function updateUnitType(tr){
   // Cleared on every path so the gold "Type optional" marker can't linger
   // from a previous room number; the N/A branch below re-adds it.
   typeSel.classList.remove('pick-optional');
+  // The room box itself goes gold whenever the room is the undecided one —
+  // unlike the Type marker this doesn't depend on whether anything else was
+  // filled in, so it's set here once for every path through this function.
+  tr.querySelector('.roomNo').classList.toggle('pick-optional', v === 'N/A');
 
   // Miscellaneous rows are a one-off charge, not a stay of N nights — lock
   // "No of Days" at 1 and show a plain "-" instead of the +/- stepper.
