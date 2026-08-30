@@ -2237,13 +2237,25 @@
      is left alone so it stays readable in both themes. */
   /* Also on the Room No column itself, so a row booked as "not decided yet"
      reads as one deliberate gold pair rather than a gold Type sitting next
-     to an ordinary-looking room box. No !important here, so the red
-     duplicate-room rule below still wins if both ever land on one field. */
-  .unitType.pick-optional,
-  .roomNo.pick-optional{
+     to an ordinary-looking room box.
+
+     Deliberately outranks .field-error above (element+2 classes beats
+     element+1, and its :focus twin too) and zeroes that rule's red OUTLINE
+     — an outline draws outside the border, so without this the field came
+     out gold-filled inside a red ring, reading as both states at once.
+     Picking the undecided room IS the answer to "you must pick a room", so
+     gold wins outright. The red duplicate-room rule keeps its !important
+     and still wins over this, which is correct — that one is a real
+     mistake, though N/A rows are exempt from it anyway. */
+  input.roomNo.pick-optional,
+  input.roomNo.pick-optional:focus,
+  select.unitType.pick-optional,
+  select.unitType.pick-optional:focus{
+    outline:none;
     border-color:var(--amber);
     box-shadow:inset 0 0 0 1px var(--amber);
     background:rgba(231,197,90,0.16);
+    color:var(--ink);
     font-weight:600;
   }
   .new-flag{
@@ -9539,7 +9551,13 @@ const APARTMENT_NUMBERS = [
   "D-101","D-102","D-201","D-202","D-301","D-302","D-401","D-402"
 ];
 const ALL_UNITS = [
-  { value:'Miscellaneous', label:'Other (Miscellaneous)', group:'' },
+  // HIDDEN — never used in practice, so it is kept out of the picker rather
+  // than deleted. Everything behind it still works: isMiscRoomNo() and the
+  // Ledgers/Revenue/Room Detail exclusions are untouched, so entries that
+  // already have a Miscellaneous row keep loading, editing, printing and
+  // reporting exactly as before, and the row can still be produced by
+  // typing the name by hand. Drop `hidden` to put it back in the list.
+  { value:'Miscellaneous', label:'Other (Miscellaneous)', group:'', hidden:true },
   // Value stays 'N/A' — it's the stored key every room-number check keys
   // off — but the picker shows plain words, since staff never need to read
   // the internal token.
@@ -9665,7 +9683,13 @@ function updateUnitType(tr){
   // The room box itself goes gold whenever the room is the undecided one —
   // unlike the Type marker this doesn't depend on whether anything else was
   // filled in, so it's set here once for every path through this function.
-  tr.querySelector('.roomNo').classList.toggle('pick-optional', v === 'N/A');
+  const roomSel = tr.querySelector('.roomNo');
+  roomSel.classList.toggle('pick-optional', v === 'N/A');
+  // Any room number at all answers focusError()'s "please pick a room", so
+  // the red clears here rather than waiting for the input/change event it
+  // listens for — which never fires when the value is set in code, as it is
+  // when picking off the suggestion list or loading a row to edit.
+  if(v) roomSel.classList.remove('field-error');
 
   // Miscellaneous rows are a one-off charge, not a stay of N nights — lock
   // "No of Days" at 1 and show a plain "-" instead of the +/- stepper.
@@ -9750,7 +9774,9 @@ function getUsedRoomNumbers(excludeTr){
 function renderRoomNoList(listEl, filter, currentTr){
   const f = (filter || '').trim().toLowerCase();
   const usedElsewhere = getUsedRoomNumbers(currentTr);
-  const rawMatches = ALL_UNITS.filter(u=> !f || u.value.toLowerCase().includes(f) || (u.label && u.label.toLowerCase().includes(f)));
+  // u.hidden keeps a unit out of the picker without removing it from
+  // ALL_UNITS — see the Miscellaneous entry there.
+  const rawMatches = ALL_UNITS.filter(u=> !u.hidden && (!f || u.value.toLowerCase().includes(f) || (u.label && u.label.toLowerCase().includes(f))));
   const matches = rawMatches.filter(u=> !usedElsewhere.has(u.value.toUpperCase()));
   if(matches.length === 0){
     listEl.innerHTML = rawMatches.length > 0
