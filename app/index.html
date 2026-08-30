@@ -2228,6 +2228,19 @@
     color:var(--danger);
     font-weight:700;
   }
+  /* A room with no number yet may legitimately have no Type yet either —
+     the desk often doesn't know which category the guest will take. That
+     isn't an error, so it gets a gold "you could fill this in" marker
+     instead of the red needs-pick above, which stays for the rows where a
+     Type really is mandatory (a Miscellaneous row IS its facility, and a
+     real room has to say whether it's a Room or an Apartment). Ink colour
+     is left alone so it stays readable in both themes. */
+  .unitType.pick-optional{
+    border-color:var(--amber);
+    box-shadow:inset 0 0 0 1px var(--amber);
+    background:rgba(231,197,90,0.16);
+    font-weight:600;
+  }
   .new-flag{
     display:inline-block;
     background:var(--amber);
@@ -3017,6 +3030,7 @@
   html[data-theme="dark"] .collapse-head:hover{ background:rgba(255,255,255,0.04); }
   html[data-theme="dark"] .editing-bar{ background:rgba(240,208,120,0.12); }
   html[data-theme="dark"] .unitType.auto-detected{ background:rgba(74,222,128,0.12); }
+html[data-theme="dark"] .unitType.pick-optional{ background:rgba(231,197,90,0.13); }
   html[data-theme="dark"] .modal-backdrop{ background:rgba(0,0,0,0.65); }
   /* gold/amber stays a light accent in dark mode, so text sitting on a solid
      gold fill needs to flip dark rather than inherit the (now light) --ink */
@@ -9617,9 +9631,10 @@ function detectUnitType(roomNo){
   return '';
 }
 
-// Auto-fills the Type column from the picked unit; when the unit is N/A
-// (or hand-typed and unknown) the dropdown unlocks so the user must say
-// whether it's a Room or an Apartment.
+// Auto-fills the Type column from the picked unit; when the unit is
+// hand-typed and unknown the dropdown unlocks and a Room/Apartment answer
+// is required. An N/A (undecided) room also unlocks it, but there the
+// answer is optional — see updateUnitType's isNA branch.
 const ROOM_TYPE_OPTIONS_HTML = '<option value="">—</option><option value="Room">Room</option><option value="Apartment">Apartment</option>';
 const MISC_TYPE_OPTIONS_HTML = '<option value="">—</option>' + MISC_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('');
 // A room number picked as "N/A" isn't a known Room/Apartment unit at all
@@ -9638,6 +9653,9 @@ function updateUnitType(tr){
   const v = tr.querySelector('.roomNo').value.trim().toUpperCase();
   const typeSel = tr.querySelector('.unitType');
   typeSel.classList.remove('auto-detected');
+  // Cleared on every path so the gold "Type optional" marker can't linger
+  // from a previous room number; the N/A branch below re-adds it.
+  typeSel.classList.remove('pick-optional');
 
   // Miscellaneous rows are a one-off charge, not a stay of N nights — lock
   // "No of Days" at 1 and show a plain "-" instead of the +/- stepper.
@@ -9681,8 +9699,13 @@ function updateUnitType(tr){
   }
   if(isNA){
     typeSel.disabled = false;
-    placeholder.textContent = 'SELECT THIS';
-    typeSel.classList.toggle('needs-pick', !typeSel.value);
+    // The blank option is a real answer here, not a prompt: "the room isn't
+    // decided AND neither is the type". It keeps value "" so it saves
+    // exactly as leaving the field alone always did — every reader already
+    // copes (displayRoomNo falls back to "Unassigned", and buildAvailability
+    // deliberately holds a type-less booking against no type's stock).
+    placeholder.textContent = 'N/A — not decided';
+    typeSel.classList.toggle('pick-optional', !typeSel.value);
     return;
   }
   const roomOpt = typeSel.querySelector('option[value="Room"]');
@@ -9781,7 +9804,11 @@ roomBodyEl.addEventListener('input', e=>{
 
 roomBodyEl.addEventListener('change', e=>{
   if(!e.target.classList.contains('unitType')) return;
-  e.target.classList.toggle('needs-pick', !e.target.value);
+  // Which marker an empty Type earns depends on the row: gold and allowed
+  // on an undecided room, red and blocking anywhere else.
+  const isNA = (e.target.closest('tr').querySelector('.roomNo').value.trim().toUpperCase() === 'N/A');
+  e.target.classList.toggle('pick-optional', isNA && !e.target.value);
+  e.target.classList.toggle('needs-pick', !isNA && !e.target.value);
 });
 
 // keep the "18 Jul 2026" readouts in sync with their date selectors
@@ -11238,12 +11265,17 @@ async function reviewEntry(){
     }
     const typeSel = tr.querySelector('.unitType');
     const unitType = typeSel.value;
-    if(!unitType){
+    // An undecided room may be saved with no Type at all — the desk often
+    // books "a room, we'll sort out which and what kind later", and forcing
+    // a category there just made someone guess and record something false.
+    // It stays mandatory wherever the Type IS the row's identity: a
+    // Miscellaneous row is nothing without its facility, and a real room
+    // number has to declare Room or Apartment.
+    const isUndecidedRoom = roomNo.trim().toUpperCase() === 'N/A';
+    if(!unitType && !isUndecidedRoom){
       showNotice(isMiscRoomNo(roomNo)
         ? 'Please select which facility this Miscellaneous row is for — BBQ, Bonfire, or Snooker.'
-        : roomNo.trim().toUpperCase() === 'N/A'
-          ? 'Please select a Type for the room that has no number yet, in the Type column.'
-          : 'Please select whether "' + roomNo + '" is a Room or an Apartment in the Type column.');
+        : 'Please select whether "' + roomNo + '" is a Room or an Apartment in the Type column.');
       focusError(typeSel);
       return;
     }
@@ -11991,6 +12023,7 @@ function startEditEntry(entry){
     if(!typeSel.disabled && r.unitType){
       typeSel.value = r.unitType;
       typeSel.classList.remove('needs-pick');
+      typeSel.classList.remove('pick-optional');
     }
     calcRow(tr.querySelector('.rent'));
   });
