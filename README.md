@@ -77,7 +77,7 @@ server of our own. The in-memory arrays (`entries`, `lockedDays`,
 | `pos_locked_days` | The restaurant's own day lock |
 | `users` | Logins. Ungranted and RLS-blocked — see [Accounts](#accounts) |
 
-### Two conventions that surprise people
+### Three conventions that surprise people
 
 **Nothing is ever really deleted.** "Delete" sets `deleted_at` (or `deleted` on
 POS invoices). The app reads the `*_active` views, so deleted rows vanish from
@@ -93,8 +93,40 @@ never reads or writes them — the `*_active` views are frozen `select *` and
 adding a column to them is not a thing that can be done casually. Check-in,
 checkout, no-show, room moves and the rest are hidden entries in the
 `extra_details` jsonb array instead (`HIDDEN_DETAIL_KINDS` — `Actual Checkin`,
-`Actual Checkout`, `Room Move`, `Adults`, `Children`, `Contact No`). If you go
-looking for the checkout date in a column, you will not find it.
+`Actual Checkout`, `Room Move`, `Room Checkout`, `Adults`, `Children`,
+`Contact No`). If you go looking for the checkout date in a column, you will not
+find it.
+
+**Occupancy and money read the same room-nights and deliberately disagree.** A
+stay is expanded into one record per room per night (`buildLedgersRecords`), and
+that one list answers two different questions: *what is free to sell tonight*
+and *what did we earn*. Per-room checkout is the point where the two split
+apart.
+
+A guest with four rooms can hand two back and stay on in the others. Each
+released room gets its own hidden detail — `{ kind: 'Room Checkout', value: '207
+on 2026-08-30' }` — written by `checkOutSomeRooms()` from the **Checkout Room/s**
+button on Checkout/Pending. Then:
+
+- **Occupancy skips the released nights.** `withoutReleasedRoomNights()` filters
+  them out for the three readers that answer "who is here" —
+  `computeRoomStatuses`, `buildAvailability`, and the save-time double-booking
+  scan. The room frees up, becomes sellable, and stops reading Extended
+  (`resolvedByRoomCheckout`, alongside the existing `resolvedByMove`).
+- **Money does not.** No night-generation loop was changed, and the room keeps
+  its stored `count` and `total`. Revenue, NPR, Night Summary and
+  `computeTotals` all still bill the full booked run, so Booking Total and Due
+  never move on their own. **If the guest is owed a refund for nights they did
+  not use, a human edits the rent.** That is a decision, not a side effect.
+
+Checking out the *last* remaining rooms is not a partial checkout at all — it
+ends the stay, so it hands off to `checkOutEntryRoom()` for the guest-level
+`Actual Checkout`, and the usual "balance must be settled at exactly 0" gate
+applies there. `undoRoomCheckout()` puts a single room back.
+
+A room the guest *moved out of* is resolved separately
+(`getRoomMoveVacatedRooms`), not by any of this — a move has a handoff to
+detect and a handback does not.
 
 ---
 
@@ -198,6 +230,16 @@ must be complete, page explicitly with `.range()` over a key-ordered `.order()`
 **CSS specificity.** Id-scoped rules like `#page-x table.rep td` outrank a plain
 class selector. New table styling either names every page it applies to or
 carries `!important` — and there is a reason the day separator does.
+
+**The room-night loop exists in more than one copy.** `buildLedgersRecords` is
+described everywhere as the single source of room-nights. It is not —
+`buildRevenueReport` walks `entry.rooms` itself with its own `roomCursor`, its
+own move offsets and its own copies of both entry gates, and the save-time
+double-booking check and `computeExpectedCheckoutDate` each carry a partial
+fourth and fifth. Change how a stay becomes nights and you must change all of
+them or they diverge silently, in money. This is why per-room checkout is a
+*filter over the output* (`withoutReleasedRoomNights`) rather than another
+branch inside the loop.
 
 **Storage egress costs real money.** Screenshot image bytes are fetched only on
 an explicit click, never on render, hover or preload. `downloadPaymentScreenshotBlob()`
