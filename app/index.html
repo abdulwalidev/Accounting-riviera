@@ -499,6 +499,12 @@
     font-weight:700;
     margin-right:2px;
   }
+  /* Divider between the two action columns on Checkout/Pending — handing
+     back one room and ending the whole stay are separate decisions, so the
+     line keeps them from reading as one button group. */
+  .ac-action-split{
+    border-left:1px solid var(--line);
+  }
   .new-rate-tag{
     color:var(--gold-deep);
     font-weight:700;
@@ -19636,7 +19642,7 @@ function renderAutoCheckout(){
   } else {
     dueBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Check-in</th><th style="width:110px;">Checkout</th><th style="width:110px;">Due</th><th style="width:110px;">Status</th><th class="no-print" style="width:130px;"></th><th class="no-print" style="width:150px;"></th></tr></thead>
+        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Check-in</th><th style="width:110px;">Checkout</th><th style="width:110px;">Due</th><th style="width:110px;">Status</th><th class="no-print" style="width:150px;">Room Checkout</th><th class="no-print ac-action-split" style="width:130px;">Full Checkout</th></tr></thead>
         <tbody>${rows.map(r=>{
           const [cls, label] = STATUS_BADGE[r.status];
           // A guest handing back only part of their booking. Offered on
@@ -19669,8 +19675,8 @@ function renderAutoCheckout(){
             <td>${r.checkoutDate ? formatDate(r.checkoutDate) : '-'}</td>
             <td style="${r.due !== 0 ? 'color:var(--danger); font-weight:700;' : ''}">${r.due.toLocaleString()}</td>
             <td><span class="status ${cls}">${label}</span></td>
-            <td class="no-print">${action}</td>
             <td class="no-print">${partialBtn}</td>
+            <td class="no-print ac-action-split">${action}</td>
           </tr>`;
         }).join('')}</tbody>
       </table>`;
