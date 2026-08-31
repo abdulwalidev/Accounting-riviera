@@ -19636,7 +19636,7 @@ function renderAutoCheckout(){
   } else {
     dueBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Check-in</th><th style="width:110px;">Checkout</th><th style="width:110px;">Due</th><th style="width:110px;">Status</th><th class="no-print" style="width:210px;"></th></tr></thead>
+        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Check-in</th><th style="width:110px;">Checkout</th><th style="width:110px;">Due</th><th style="width:110px;">Status</th><th class="no-print" style="width:130px;"></th><th class="no-print" style="width:150px;"></th></tr></thead>
         <tbody>${rows.map(r=>{
           const [cls, label] = STATUS_BADGE[r.status];
           // A guest handing back only part of their booking. Offered on
@@ -19651,12 +19651,16 @@ function renderAutoCheckout(){
           // stays reachable even once only one room is left open.
           const rcReleased = rcEntry ? Object.keys(getRoomCheckouts(rcEntry)).length : 0;
           const partialBtn = (isToday && r.status !== 'checked_out' && (rcOpen.length > 1 || rcReleased > 0))
-            ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); openRoomCheckoutModal('${r.guestId}')">Checkout Room/s</button>`
+            ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); openRoomCheckoutModal('${r.guestId}')">Room Checkout</button>`
             : '';
+          // Two separate cells rather than both buttons crammed into one:
+          // ending the whole stay and handing back one room are different
+          // decisions, and side by side in a single cell they read as
+          // variations on the same one.
           const action = !isToday ? ''
             : r.status === 'checked_out' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoAutoCheckout('${r.guestId}')">Undo</button>`
-            : r.status === 'extended' ? partialBtn
-            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout('${r.guestId}', [${r.roomNos.map(rn=> "'" + String(rn).replace(/'/g, "\\'") + "'").join(',')}], ${r.netDue})">Checkout</button>` + (partialBtn ? ' ' + partialBtn : '');
+            : r.status === 'extended' ? ''
+            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout('${r.guestId}', [${r.roomNos.map(rn=> "'" + String(rn).replace(/'/g, "\\'") + "'").join(',')}], ${r.netDue})">Full Checkout</button>`;
           return `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${r.roomNo}</td>
@@ -19666,6 +19670,7 @@ function renderAutoCheckout(){
             <td style="${r.due !== 0 ? 'color:var(--danger); font-weight:700;' : ''}">${r.due.toLocaleString()}</td>
             <td><span class="status ${cls}">${label}</span></td>
             <td class="no-print">${action}</td>
+            <td class="no-print">${partialBtn}</td>
           </tr>`;
         }).join('')}</tbody>
       </table>`;
