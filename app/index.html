@@ -505,6 +505,15 @@
     font-size:11px;
     white-space:nowrap;
   }
+  /* Same shape as the gold tag above but red, because it means the opposite:
+     [moved from x] / [new rate] describe a room the guest still has, while
+     this one is a room they have handed back. */
+  .checked-out-tag{
+    color:var(--danger);
+    font-weight:700;
+    font-size:11px;
+    white-space:nowrap;
+  }
   input:focus, select:focus{
     outline:2px solid var(--account);
     outline-offset:0;
@@ -8329,6 +8338,30 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
   </div>
 </div>
 
+<!-- Partial checkout: hand back some of a guest's rooms while they stay on
+     in the rest. Same typed-confirmation shape as Confirm Checkout above,
+     with a room picker instead of a fixed room list. -->
+<div class="modal-backdrop" id="roomCheckoutModalBackdrop">
+  <div class="modal" style="width:480px;">
+    <h3>Check Out Room/s</h3>
+    <div class="sub" style="margin-bottom:14px;">Pick the rooms the guest is handing back. They stay checked in on the rest. This frees those rooms to be re-sold and marks them Dirty — it does not change the bill.</div>
+    <div class="grid" id="rcModalBody" style="margin-bottom:12px;"></div>
+    <label>Rooms to check out</label>
+    <div id="rcRoomList" style="margin:6px 0 16px 0; display:flex; flex-direction:column; gap:8px;"></div>
+    <div style="margin-bottom:16px;">
+      <label>Checkout Date</label>
+      <input type="date" id="rcCheckoutDate">
+    </div>
+    <div id="rcLastRoomsNote" class="sub" style="display:none; margin-bottom:12px; color:var(--danger); font-weight:700;"></div>
+    <label>Type CHECKOUT to confirm</label>
+    <input type="text" id="rcConfirmInput" placeholder="CHECKOUT" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeRoomCheckoutModal()">Cancel</button>
+      <button class="btn" onclick="confirmRoomCheckoutModal()">✓ Check Out Selected</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="arrivalConfirmModalBackdrop">
   <div class="modal" style="width:460px;">
     <h3>Confirm Arrival</h3>
@@ -9455,6 +9488,82 @@ function getRoomMoveVacatedRooms(entry){
   return vacated;
 }
 
+// ---- Per-room checkout ------------------------------------------------
+// A guest holding four rooms who hands two back today. Actual Checkout is
+// ONE guest-level field, so it can't express that — writing it would mark
+// the whole booking gone while the guest is still in two rooms. So each
+// released room gets its own hidden detail instead, exactly the way a room
+// move does: { kind:'Room Checkout', value:'207 on 2026-08-30' }.
+//
+// Deliberately occupancy-only. The room-night loops that Revenue, NPR and
+// Night Summary bill from are NOT touched — a released room keeps every
+// booked night and its stored total, so Booking Total and Due never move on
+// their own. Releasing a room frees it to be re-sold; refunding it is a
+// human decision made on the room row.
+//
+// Forward-only: no 'Room Checkout' detail, behaviour identical to before.
+// Returns { ROOMKEY: 'YYYY-MM-DD' } — the date the room stopped being this
+// guest's, i.e. the first date it is free again.
+function getRoomCheckouts(entry){
+  const map = {};
+  ((entry && entry.extraDetails) || []).forEach(d=>{
+    if(d.kind !== 'Room Checkout') return;
+    const m = /^(.+?) on (\d{4}-\d{2}-\d{2})$/.exec(String(d.value || '').trim());
+    if(!m) return;
+    const key = m[1].trim().toUpperCase();
+    // Earliest wins if a room somehow carries two — it was free from then.
+    if(!map[key] || m[2] < map[key]) map[key] = m[2];
+  });
+  return map;
+}
+
+// Drops the room-nights a per-room checkout has already released, off the
+// output of buildLedgersRecords(). Occupancy and availability run their
+// nights through this; anything that turns nights into money must NOT —
+// that is the whole point (see getRoomCheckouts above).
+//
+// Applied as a filter rather than another branch inside the night loop
+// because that loop is already hand-copied in four places; one filter over
+// the result keeps the fifth copy from existing.
+function withoutReleasedRoomNights(nights){
+  const byGuest = {};
+  return (nights || []).filter(n=>{
+    if(!n || !n.roomNo || !n.guestId) return true;
+    if(byGuest[n.guestId] === undefined){
+      const e = loadAllEntries().find(x=> x.id === n.guestId);
+      byGuest[n.guestId] = e ? getRoomCheckouts(e) : {};
+    }
+    const releasedOn = byGuest[n.guestId][String(n.roomNo).trim().toUpperCase()];
+    return !releasedOn || n.date < releasedOn;
+  });
+}
+
+// Which room a guest moved OUT of to reach a given room — the inverse of
+// getRoomMoveVacatedRooms above, so the detail page can say "[moved from
+// 205]" rather than a bare "[moved]" that leaves the desk guessing which of
+// several rooms it came from. Same handoff rule: room A hands off to room B
+// when B's nights start exactly where A's ended.
+// Returns { DESTINATION: SOURCE }. An orphaned move resolves to nothing, so
+// the caller falls back to the plain tag.
+function getRoomMoveSources(entry){
+  const offsets = getRoomMoveOffsets(entry);
+  if(!Object.keys(offsets).length) return {};
+  const nightsByRoom = {};
+  ((entry && entry.rooms) || []).forEach(r=>{
+    if(!r.roomNo || isMiscRoomNo(r.roomNo)) return;
+    const key = r.roomNo.trim().toUpperCase();
+    if(key === 'N/A') return;
+    nightsByRoom[key] = (nightsByRoom[key] || 0) + (parseInt(r.count) || 1);
+  });
+  const sources = {};
+  Object.keys(nightsByRoom).forEach(key=>{
+    const endOffset = (offsets[key] || 0) + nightsByRoom[key];
+    const movedInto = Object.keys(offsets).find(m=> m !== key && offsets[m] === endOffset);
+    if(movedInto) sources[movedInto] = key;
+  });
+  return sources;
+}
+
 // Same offsets read off the LIVE form rows: split-group siblings whose room
 // number differs from the group's first row are a room move, starting after
 // however many nights precede them in that group. Merged with the saved
@@ -10078,6 +10187,83 @@ function closeCheckoutConfirmModal(){
   document.getElementById('checkoutConfirmModalBackdrop').classList.remove('active');
 }
 
+// ---- Check Out Room/s modal -------------------------------------------
+let pendingRoomCheckoutGuestId = null;
+
+function openRoomCheckoutModal(guestId){
+  const entry = loadAllEntries().find(e=> e.id === guestId);
+  if(!entry) return;
+  const open = unreleasedRoomNos(entry);
+  if(!open.length){ showNotice('Every room on this booking has already been checked out.'); return; }
+  pendingRoomCheckoutGuestId = guestId;
+  const t = computeTotals(entry);
+  const released = getRoomCheckouts(entry);
+  const doneList = Object.keys(released).sort();
+  document.getElementById('rcModalBody').innerHTML =
+    '<div><label>Guest Name</label><input type="text" value="' + (entry.guestName || '') + '" disabled></div>' +
+    '<div><label>Check-in</label><input type="text" value="' + (entry.checkIn ? formatDate(entry.checkIn) : '-') + '" disabled></div>' +
+    '<div><label>Balance Due</label><input type="text" value="' + t.due.toLocaleString() + '" disabled></div>' +
+    '<div><label>Already Checked Out</label><input type="text" value="' + (doneList.length ? doneList.join(', ') : 'None') + '" disabled></div>';
+  // Each room's own row, labelled the way the rest of the app labels rooms.
+  document.getElementById('rcRoomList').innerHTML = open.map(rn=>{
+    const row = (entry.rooms || []).find(r=> r.roomNo && r.roomNo.trim().toUpperCase() === rn);
+    const label = row ? displayRoomNo(row.roomNo, row.unitType) : rn;
+    return '<label class="na-check" style="gap:8px;"><input type="checkbox" class="rc-room" value="' + rn + '" onchange="refreshRoomCheckoutNote()"> ' + label + '</label>';
+  }).join('');
+  setFilterDate('rcCheckoutDate', todayStr());
+  const input = document.getElementById('rcConfirmInput');
+  input.value = '';
+  input.classList.remove('duplicate');
+  refreshRoomCheckoutNote();
+  document.getElementById('roomCheckoutModalBackdrop').classList.add('active');
+}
+
+// Ticking every remaining room isn't a partial checkout at all — it ends the
+// stay, so say so plainly here rather than surprising the user with the
+// balance gate after they have typed CHECKOUT.
+function refreshRoomCheckoutNote(){
+  const entry = loadAllEntries().find(e=> e.id === pendingRoomCheckoutGuestId);
+  const note = document.getElementById('rcLastRoomsNote');
+  if(!entry || !note) return;
+  const picked = Array.from(document.querySelectorAll('#rcRoomList .rc-room:checked')).map(c=> c.value);
+  const remaining = unreleasedRoomNos(entry).filter(rn=> !picked.includes(rn));
+  if(picked.length && !remaining.length){
+    const t = computeTotals(entry);
+    note.textContent = t.netDue !== 0
+      ? 'These are the last rooms — this ends the stay, and the balance is not settled at 0, so it will be blocked.'
+      : 'These are the last rooms — this ends the stay and checks the guest out completely.';
+    note.style.display = '';
+  } else {
+    note.style.display = 'none';
+  }
+}
+
+function closeRoomCheckoutModal(){
+  document.getElementById('roomCheckoutModalBackdrop').classList.remove('active');
+}
+
+async function confirmRoomCheckoutModal(){
+  const input = document.getElementById('rcConfirmInput');
+  if(input.value.trim().toUpperCase() !== 'CHECKOUT'){
+    input.classList.add('duplicate');
+    showNotice('Please type CHECKOUT to confirm.');
+    input.focus();
+    return;
+  }
+  const picked = Array.from(document.querySelectorAll('#rcRoomList .rc-room:checked')).map(c=> c.value);
+  if(!picked.length){ showNotice('Pick at least one room to check out.'); return; }
+  const guestId = pendingRoomCheckoutGuestId;
+  const date = document.getElementById('rcCheckoutDate').value || todayStr();
+  const entry = await checkOutSomeRooms(guestId, picked, date);
+  if(!entry) return; // checkOutSomeRooms already explained why (balance gate)
+  closeRoomCheckoutModal();
+  pendingRoomCheckoutGuestId = null;
+  rerenderActiveView();
+  const stillIn = unreleasedRoomNos(entry);
+  showNotice((entry.guestName || 'Guest') + ' checked out of room ' + picked.join(', ') + ' (' + formatDate(date) + ')' +
+    (stillIn.length ? ' — still in ' + stillIn.join(', ') + '.' : ' — stay complete.'), 'success');
+}
+
 async function confirmCheckoutConfirmModal(){
   const input = document.getElementById('ccConfirmInput');
   if(input.value.trim().toUpperCase() !== 'CHECKOUT'){
@@ -10111,6 +10297,86 @@ async function checkOutEntryRoom(entryId, roomNos, logAction, checkoutDate){
   queueEntryPush(entry.id);
   const rooms = Array.isArray(roomNos) ? roomNos : [roomNos];
   await Promise.all(rooms.map(rn=> upsertRoomStatus(rn, 'Dirty')));
+  return entry;
+}
+
+// ---- Partial checkout: hand back SOME of a guest's rooms ---------------
+// The rooms of a booking that are real, physical units and can therefore be
+// released one at a time. Miscellaneous rows aren't rooms, and every N/A row
+// shares the one key "N/A", so there is no individual unit to hand back
+// until one is actually assigned. Split-rate rows of the same room collapse
+// to one entry — releasing "207" releases the room, not a rate segment.
+function releasableRoomNos(entry){
+  const seen = [];
+  ((entry && entry.rooms) || []).forEach(r=>{
+    if(!r || !r.roomNo || isMiscRoomNo(r.roomNo)) return;
+    const key = r.roomNo.trim().toUpperCase();
+    if(key === 'N/A' || seen.includes(key)) return;
+    seen.push(key);
+  });
+  return seen;
+}
+
+// The ones still with the guest — what the picker offers, and what decides
+// whether releasing this batch finishes the whole stay.
+function unreleasedRoomNos(entry){
+  const released = getRoomCheckouts(entry);
+  return releasableRoomNos(entry).filter(rn=> !released[rn]);
+}
+
+// Writes one 'Room Checkout' detail per room and marks each Dirty, exactly
+// as a full checkout does. When this empties the last room the stay really
+// is over, so it hands off to checkOutEntryRoom() for the guest-level
+// Actual Checkout — which is also where the netDue gate lives, deliberately
+// re-checked here rather than trusted to whichever button called this.
+async function checkOutSomeRooms(entryId, roomNos, checkoutDate){
+  const entry = loadAllEntries().find(e=> e.id === entryId);
+  if(!entry) return false;
+  const rooms = (Array.isArray(roomNos) ? roomNos : [roomNos])
+    .map(rn=> String(rn).trim().toUpperCase()).filter(Boolean);
+  if(!rooms.length) return false;
+  const date = checkoutDate || todayStr();
+  const remaining = unreleasedRoomNos(entry).filter(rn=> !rooms.includes(rn));
+
+  // Last rooms out = a normal full checkout, gate and all.
+  if(!remaining.length){
+    if(computeTotals(entry).netDue !== 0){
+      showNotice('These are the guest\'s last rooms, so this finishes the stay — and their balance isn\'t settled at exactly 0. Settle it first, or record it as a Late Payment if a company is being billed.');
+      return false;
+    }
+    return await checkOutEntryRoom(entryId, rooms, undefined, date);
+  }
+
+  const extraDetails = (entry.extraDetails || []).filter(d=>{
+    if(d.kind !== 'Room Checkout') return true;
+    const m = /^(.+?) on (\d{4}-\d{2}-\d{2})$/.exec(String(d.value || '').trim());
+    return !m || !rooms.includes(m[1].trim().toUpperCase());
+  });
+  rooms.forEach(rn=> extraDetails.unshift({ kind: 'Room Checkout', value: rn + ' on ' + date }));
+  entry.extraDetails = extraDetails;
+  entry.editedAt = new Date().toISOString();
+  entry.editedBy = currentUser ? currentUser.username : '';
+  logGuestAction(entry.id, 'room_checked_out');
+  queueEntryPush(entry.id);
+  await Promise.all(rooms.map(rn=> upsertRoomStatus(rn, 'Dirty')));
+  return entry;
+}
+
+// Puts a released room back with the guest. Mirrors undoAutoCheckout, which
+// only ever knew how to strip the guest-level field.
+async function undoRoomCheckout(entryId, roomNo){
+  const entry = loadAllEntries().find(e=> e.id === entryId);
+  if(!entry) return false;
+  const key = String(roomNo).trim().toUpperCase();
+  entry.extraDetails = (entry.extraDetails || []).filter(d=>{
+    if(d.kind !== 'Room Checkout') return true;
+    const m = /^(.+?) on (\d{4}-\d{2}-\d{2})$/.exec(String(d.value || '').trim());
+    return !m || m[1].trim().toUpperCase() !== key;
+  });
+  entry.editedAt = new Date().toISOString();
+  entry.editedBy = currentUser ? currentUser.username : '';
+  logGuestAction(entry.id, 'edited');
+  queueEntryPush(entry.id);
   return entry;
 }
 
@@ -10951,7 +11217,7 @@ function formatExtraDetail(d){
 // no schema change. These helpers move them between the fixed fields and
 // that array, and keep them out of the generic "+ Detail" list/dropdown.
 // [FUTURE: No Show] add 'No Show' back to this list when re-enabling.
-const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Actual Checkin', 'Adults', 'Children', 'Room Move'];
+const HIDDEN_DETAIL_KINDS = ['Contact No', 'Actual Checkout', 'Actual Checkin', 'Adults', 'Children', 'Room Move', 'Room Checkout'];
 function getDetailValue(entry, kind){
   const d = (entry.extraDetails || []).find(d=> d.kind === kind);
   return d ? d.value : '';
@@ -11394,7 +11660,9 @@ async function reviewEntry(){
       roomCursor[r.roomNo] = addDaysToDateStr(rowStart, nightsCount);
     }
     if(thisEntryNights.length > 0){
-      const otherNights = buildLedgersRecords(true).filter(n=> n.guestId !== editingEntryId);
+      // A room another guest has already handed back is genuinely free for
+      // the nights after they left, so it must not read as a clash.
+      const otherNights = withoutReleasedRoomNights(buildLedgersRecords(true)).filter(n=> n.guestId !== editingEntryId);
       const conflicts = [];
       thisEntryNights.forEach(n=>{
         const hit = otherNights.find(x=> x.roomNo.trim().toUpperCase() === n.roomNo.trim().toUpperCase() && x.date === n.date);
@@ -12649,7 +12917,10 @@ function buildAvailability(fromDate, days){
   // each call, which at a month's horizon is 30 full rebuilds.
   const byRoom = {};      // roomNo -> date -> {guest, guestId}
   const naByType = {};    // picked type -> date -> [{guest, guestId}]
-  buildLedgersRecords(true).forEach(n=>{
+  // A room handed back mid-stay is sellable from that date — this is the
+  // whole point of the per-room checkout, so its released nights must not
+  // keep holding stock.
+  withoutReleasedRoomNights(buildLedgersRecords(true)).forEach(n=>{
     if(!inRange.has(n.date)) return;
     if(isMiscRoomNo(n.roomNo)) return; // BBQ/Bonfire/Snooker aren't rooms
     const key = (n.roomNo || '').trim().toUpperCase();
@@ -12835,7 +13106,11 @@ function computeRoomStatuses(asOfDate){
   // except for today, where a booked night alone only means a reservation
   // is expected; the guest doesn't read as occupying the room until Arrival
   // confirms they actually showed up (their own Actual Checkin field).
-  const nights = buildLedgersRecords(true);
+  // Released rooms drop out here rather than in the night loop, so a
+  // per-room checkout frees the room everywhere occupancy is read
+  // (Dashboard, Room Detail, Inhouse, Breakfast, Checkout/Pending)
+  // without touching a single figure the reports bill from.
+  const nights = withoutReleasedRoomNights(buildLedgersRecords(true));
   const nightsByRoom = {};
   nights.forEach(n=>{
     if(isMiscRoomNo(n.roomNo)) return; // Snooker/BBQ/Bonfire aren't a room — never occupancy
@@ -12956,13 +13231,20 @@ function computeRoomStatuses(asOfDate){
     // they're still staying, and there is no per-room checkout to reach for.
     const vacatedByMove = current ? (getRoomMoveVacatedRooms(current)[roomNo] || '') : '';
     const resolvedByMove = !!vacatedByMove && vacatedByMove <= refDate;
+    // ...and the case the move rule deliberately excludes: a guest holding
+    // several rooms who simply handed one back. There is no handoff to
+    // detect, so it used to read Extended forever; now the desk can say so
+    // explicitly and this room stops asking to be checked out while its
+    // siblings carry on.
+    const releasedOn = current ? (getRoomCheckouts(current)[roomNo] || '') : '';
+    const resolvedByRoomCheckout = !!releasedOn && releasedOn <= refDate;
     // Extended is strictly a live/past-date state, never a forecast: for a
     // FUTURE refDate (Check Availability picking a day ahead), a guest who
     // is inhouse right now with no confirmed checkout must be assumed to
     // leave when their booked nights end — otherwise every unconfirmed
     // departure blocks its room on every future date forever and
     // availability reads permanently full.
-    const extended = !todayNight && !!lastNightDate && lastNightDate < refDate && !resolvedByCheckout && !resolvedByMove && refDate <= todayStr();
+    const extended = !todayNight && !!lastNightDate && lastNightDate < refDate && !resolvedByCheckout && !resolvedByMove && !resolvedByRoomCheckout && refDate <= todayStr();
     // Arrival gate — today only, and only for an advance reservation (booked
     // ahead of its own check-in date). A walk-in entered the same day as its
     // check-in date is its own confirmation — the front desk was looking at
@@ -12993,6 +13275,7 @@ function computeRoomStatuses(asOfDate){
       // everything else. Purely informational for the UI ("moved to 302")
       // — the occupancy decision already happened, in `extended` above.
       vacatedByMove,
+      releasedOn,
       previousGuestPending,
       nextGuestPending,
       housekeepingStatus,
@@ -13587,6 +13870,12 @@ function renderDetail(){
     const m = /^(.+?) from night (\d+)$/.exec(String(d.value || '').trim());
     if(m) movedInto.add(m[1].trim().toUpperCase());
   });
+  // Which room they came FROM, so the tag can say "[moved from 205]" instead
+  // of a bare "[moved]" that leaves the desk guessing on a multi-room stay.
+  // Resolved from the validated move chain, so an orphaned move falls back
+  // to the plain tag rather than naming the wrong room.
+  const moveSources = getRoomMoveSources(entry);
+  const releasedRooms = getRoomCheckouts(entry);
   const seenRoomNos = new Set();
   roomBody.innerHTML = (entry.rooms || []).map(r=>{
     const key = (r.roomNo || '').trim().toUpperCase();
@@ -13594,8 +13883,13 @@ function renderDetail(){
     const isMoved = realRoom && movedInto.has(key);
     const isRepeat = !isMoved && realRoom && seenRoomNos.has(key);
     if(realRoom) seenRoomNos.add(key);
-    const tag = isMoved ? '[moved]' : (isRepeat ? '[new rate]' : '');
-    const roomNoCell = (r.roomNo ? displayRoomNo(r.roomNo, r.unitType) : '-') + (tag ? ' <span class="new-rate-tag">' + tag + '</span>' : '');
+    const movedFrom = isMoved ? moveSources[key] : '';
+    const tag = isMoved ? (movedFrom ? '[moved from ' + movedFrom + ']' : '[moved]') : (isRepeat ? '[new rate]' : '');
+    // A room handed back mid-stay while the guest stayed on in the others.
+    const releasedOn = realRoom ? (releasedRooms[key] || '') : '';
+    const tags = (tag ? ' <span class="new-rate-tag">' + tag + '</span>' : '') +
+      (releasedOn ? ' <span class="checked-out-tag">[checked out ' + formatDate(releasedOn) + ']</span>' : '');
+    const roomNoCell = (r.roomNo ? displayRoomNo(r.roomNo, r.unitType) : '-') + tags;
     return `
     <tr>
       <td>${roomNoCell}</td>
@@ -13655,7 +13949,7 @@ function renderDetail(){
 // Every recorded action on this entry, newest first: who did what, when.
 // The log is append-only on the server — nothing in the app can rewrite it.
 // [FUTURE: No Show] add back: res_no_show: 'Marked No Show', res_reactivated: 'No Show undone'
-const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added', checked_out: 'Checked Out', checked_in: 'Checked In' };
+const LOG_ACTION_LABELS = { created: 'Entry created', edited: 'Entry edited', payment_added: 'Payment added', checked_out: 'Checked Out', checked_in: 'Checked In', room_checked_out: 'Room/s Checked Out' };
 
 function renderChangeLog(entry){
   const box = document.getElementById('detailChangeLog');
@@ -19302,13 +19596,24 @@ function renderAutoCheckout(){
   } else {
     dueBody.innerHTML = `
       <table>
-        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Check-in</th><th style="width:110px;">Checkout</th><th style="width:110px;">Due</th><th style="width:110px;">Status</th><th class="no-print" style="width:110px;"></th></tr></thead>
+        <thead><tr><th style="width:110px;">Room No</th><th>Guest</th><th style="width:110px;">Check-in</th><th style="width:110px;">Checkout</th><th style="width:110px;">Due</th><th style="width:110px;">Status</th><th class="no-print" style="width:210px;"></th></tr></thead>
         <tbody>${rows.map(r=>{
           const [cls, label] = STATUS_BADGE[r.status];
+          // A guest handing back only part of their booking. Offered on
+          // Extended rows too — a room whose nights ran out while its
+          // siblings carry on is exactly the case this exists for, and
+          // that row shows no button at all otherwise. No balance gate:
+          // the guest is still staying, so the bill is settled at the
+          // real checkout, which keeps its own gate.
+          const rcEntry = loadAllEntries().find(e=> e.id === r.guestId);
+          const rcOpen = rcEntry ? unreleasedRoomNos(rcEntry) : [];
+          const partialBtn = (isToday && r.status !== 'checked_out' && rcOpen.length > 1)
+            ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); openRoomCheckoutModal('${r.guestId}')">Checkout Room/s</button>`
+            : '';
           const action = !isToday ? ''
             : r.status === 'checked_out' ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); undoAutoCheckout('${r.guestId}')">Undo</button>`
-            : r.status === 'extended' ? ''
-            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout('${r.guestId}', [${r.roomNos.map(rn=> "'" + String(rn).replace(/'/g, "\\'") + "'").join(',')}], ${r.netDue})">Checkout</button>`;
+            : r.status === 'extended' ? partialBtn
+            : `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); startManualCheckout('${r.guestId}', [${r.roomNos.map(rn=> "'" + String(rn).replace(/'/g, "\\'") + "'").join(',')}], ${r.netDue})">Checkout</button>` + (partialBtn ? ' ' + partialBtn : '');
           return `
           <tr style="cursor:pointer;" onclick="openDetail('${r.guestId}')" title="Open this guest">
             <td>${r.roomNo}</td>
