@@ -8346,8 +8346,14 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
     <h3>Check Out Room/s</h3>
     <div class="sub" style="margin-bottom:14px;">Pick the rooms the guest is handing back. They stay checked in on the rest. This frees those rooms to be re-sold and marks them Dirty — it does not change the bill.</div>
     <div class="grid" id="rcModalBody" style="margin-bottom:12px;"></div>
-    <label>Rooms to check out</label>
-    <div id="rcRoomList" style="margin:6px 0 16px 0; display:flex; flex-direction:column; gap:8px;"></div>
+    <div id="rcReleasedWrap" style="display:none; margin-bottom:16px;">
+      <label>Already checked out — press Undo to put a room back</label>
+      <div id="rcReleasedList" style="margin-top:6px; display:flex; flex-direction:column; gap:6px;"></div>
+    </div>
+    <div id="rcOpenWrap">
+      <label>Rooms to check out</label>
+      <div id="rcRoomList" style="margin:6px 0 16px 0; display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
     <div style="margin-bottom:16px;">
       <label>Checkout Date</label>
       <input type="date" id="rcCheckoutDate">
@@ -10193,29 +10199,59 @@ let pendingRoomCheckoutGuestId = null;
 function openRoomCheckoutModal(guestId){
   const entry = loadAllEntries().find(e=> e.id === guestId);
   if(!entry) return;
-  const open = unreleasedRoomNos(entry);
-  if(!open.length){ showNotice('Every room on this booking has already been checked out.'); return; }
   pendingRoomCheckoutGuestId = guestId;
-  const t = computeTotals(entry);
-  const released = getRoomCheckouts(entry);
-  const doneList = Object.keys(released).sort();
-  document.getElementById('rcModalBody').innerHTML =
-    '<div><label>Guest Name</label><input type="text" value="' + (entry.guestName || '') + '" disabled></div>' +
-    '<div><label>Check-in</label><input type="text" value="' + (entry.checkIn ? formatDate(entry.checkIn) : '-') + '" disabled></div>' +
-    '<div><label>Balance Due</label><input type="text" value="' + t.due.toLocaleString() + '" disabled></div>' +
-    '<div><label>Already Checked Out</label><input type="text" value="' + (doneList.length ? doneList.join(', ') : 'None') + '" disabled></div>';
-  // Each room's own row, labelled the way the rest of the app labels rooms.
-  document.getElementById('rcRoomList').innerHTML = open.map(rn=>{
-    const row = (entry.rooms || []).find(r=> r.roomNo && r.roomNo.trim().toUpperCase() === rn);
-    const label = row ? displayRoomNo(row.roomNo, row.unitType) : rn;
-    return '<label class="na-check" style="gap:8px;"><input type="checkbox" class="rc-room" value="' + rn + '" onchange="refreshRoomCheckoutNote()"> ' + label + '</label>';
-  }).join('');
+  renderRoomCheckoutModal();
   setFilterDate('rcCheckoutDate', todayStr());
   const input = document.getElementById('rcConfirmInput');
   input.value = '';
   input.classList.remove('duplicate');
   refreshRoomCheckoutNote();
   document.getElementById('roomCheckoutModalBackdrop').classList.add('active');
+}
+
+// Redrawn on open and after every Undo, so a room put back reappears in the
+// checkout list without having to close and reopen the modal.
+function renderRoomCheckoutModal(){
+  const entry = loadAllEntries().find(e=> e.id === pendingRoomCheckoutGuestId);
+  if(!entry) return;
+  const open = unreleasedRoomNos(entry);
+  const released = getRoomCheckouts(entry);
+  const doneList = Object.keys(released).sort();
+  const t = computeTotals(entry);
+  const labelFor = rn=>{
+    const row = (entry.rooms || []).find(r=> r.roomNo && r.roomNo.trim().toUpperCase() === rn);
+    return row ? displayRoomNo(row.roomNo, row.unitType) : rn;
+  };
+  document.getElementById('rcModalBody').innerHTML =
+    '<div><label>Guest Name</label><input type="text" value="' + (entry.guestName || '') + '" disabled></div>' +
+    '<div><label>Check-in</label><input type="text" value="' + (entry.checkIn ? formatDate(entry.checkIn) : '-') + '" disabled></div>' +
+    '<div><label>Balance Due</label><input type="text" value="' + t.due.toLocaleString() + '" disabled></div>' +
+    '<div><label>Still Checked In</label><input type="text" value="' + (open.length ? open.join(', ') : 'None') + '" disabled></div>';
+  // Already-released rooms, each with its own Undo. This is the only way back,
+  // and it has to stay reachable even when a single room is left open — which
+  // is why the Checkout Room/s button also opens this modal purely to undo.
+  document.getElementById('rcReleasedList').innerHTML = doneList.map(rn=>
+    '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
+      '<span><strong>' + labelFor(rn) + '</strong> <span class="sub">left ' + formatDate(released[rn]) + '</span></span>' +
+      '<button type="button" class="btn secondary" style="min-height:26px; padding:2px 10px;" onclick="undoRoomCheckoutFromModal(&quot;' + rn + '&quot;)">Undo</button>' +
+    '</div>').join('');
+  document.getElementById('rcReleasedWrap').style.display = doneList.length ? '' : 'none';
+  document.getElementById('rcOpenWrap').style.display = open.length ? '' : 'none';
+  document.getElementById('rcRoomList').innerHTML = open.map(rn=>
+    '<label class="na-check" style="gap:8px;"><input type="checkbox" class="rc-room" value="' + rn + '" onchange="refreshRoomCheckoutNote()"> ' + labelFor(rn) + '</label>'
+  ).join('');
+  refreshRoomCheckoutNote();
+}
+
+// Puts one room back and redraws in place. Housekeeping status is deliberately
+// left Dirty, exactly as Undo Checkout leaves it — the room still needs its
+// pass regardless of who it belongs to now.
+async function undoRoomCheckoutFromModal(roomNo){
+  const entry = await undoRoomCheckout(pendingRoomCheckoutGuestId, roomNo);
+  if(!entry) return;
+  renderRoomCheckoutModal();
+  rerenderActiveView();
+  showNotice('Room ' + roomNo + ' is back with ' + (entry.guestName || 'this guest') + '.', 'success');
 }
 
 // Ticking every remaining room isn't a partial checkout at all — it ends the
@@ -10251,7 +10287,7 @@ async function confirmRoomCheckoutModal(){
     return;
   }
   const picked = Array.from(document.querySelectorAll('#rcRoomList .rc-room:checked')).map(c=> c.value);
-  if(!picked.length){ showNotice('Pick at least one room to check out.'); return; }
+  if(!picked.length){ showNotice('Pick at least one room to check out, or press Undo on a room to put it back.'); return; }
   const guestId = pendingRoomCheckoutGuestId;
   const date = document.getElementById('rcCheckoutDate').value || todayStr();
   const entry = await checkOutSomeRooms(guestId, picked, date);
@@ -13875,7 +13911,11 @@ function renderDetail(){
   // Resolved from the validated move chain, so an orphaned move falls back
   // to the plain tag rather than naming the wrong room.
   const moveSources = getRoomMoveSources(entry);
-  const releasedRooms = getRoomCheckouts(entry);
+  // Once the whole stay is checked out, every room is out by definition —
+  // tagging each row individually then says nothing and just clutters the
+  // table. The per-room tag is only interesting while SOME rooms are still
+  // occupied. The details stay on the entry either way.
+  const releasedRooms = getDetailValue(entry, 'Actual Checkout') ? {} : getRoomCheckouts(entry);
   const seenRoomNos = new Set();
   roomBody.innerHTML = (entry.rooms || []).map(r=>{
     const key = (r.roomNo || '').trim().toUpperCase();
@@ -19607,7 +19647,10 @@ function renderAutoCheckout(){
           // real checkout, which keeps its own gate.
           const rcEntry = loadAllEntries().find(e=> e.id === r.guestId);
           const rcOpen = rcEntry ? unreleasedRoomNos(rcEntry) : [];
-          const partialBtn = (isToday && r.status !== 'checked_out' && rcOpen.length > 1)
+          // Offered for undoing as well as checking out, so a released room
+          // stays reachable even once only one room is left open.
+          const rcReleased = rcEntry ? Object.keys(getRoomCheckouts(rcEntry)).length : 0;
+          const partialBtn = (isToday && r.status !== 'checked_out' && (rcOpen.length > 1 || rcReleased > 0))
             ? `<button class="btn secondary" style="min-height:28px; padding:3px 10px;" onclick="event.stopPropagation(); openRoomCheckoutModal('${r.guestId}')">Checkout Room/s</button>`
             : '';
           const action = !isToday ? ''
