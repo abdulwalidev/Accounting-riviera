@@ -105,7 +105,7 @@ apart.
 
 A guest with four rooms can hand two back and stay on in the others. Each
 released room gets its own hidden detail — `{ kind: 'Room Checkout', value: '207
-on 2026-08-30' }` — written by `checkOutSomeRooms()` from the **Checkout Room/s**
+on 2026-08-30' }` — written by `checkOutSomeRooms()` from the **Room Checkout**
 button on Checkout/Pending. Then:
 
 - **Occupancy skips the released nights.** `withoutReleasedRoomNights()` filters
@@ -122,7 +122,33 @@ button on Checkout/Pending. Then:
 Checking out the *last* remaining rooms is not a partial checkout at all — it
 ends the stay, so it hands off to `checkOutEntryRoom()` for the guest-level
 `Actual Checkout`, and the usual "balance must be settled at exactly 0" gate
-applies there. `undoRoomCheckout()` puts a single room back.
+applies there.
+
+**Where the button is, and why it is often not there.** Checkout/Pending shows
+two action columns — **Room Checkout** and **Full Checkout**. Room Checkout
+appears only when *all* of these hold, which is worth knowing before concluding
+a deploy did not land:
+
+1. The page is **Checkout/Pending** — admin only, hidden from the nav otherwise.
+2. The date filter is **today**. Every action button on this page is suppressed
+   on a past or future date, so nothing can be checked out under the wrong one.
+3. The row is not already Checked Out (that row shows Undo instead).
+4. The guest has **more than one room still not handed back**, *or* already has
+   one released. A single-room guest never gets it — there is nothing partial
+   about handing back your only room.
+
+The column headers render whenever the table does, so they are the quick tell:
+headers visible but no button means a row condition above, not a stale file.
+
+**Undo lives inside that modal**, not on the row: released rooms are listed
+there with an Undo each (`undoRoomCheckoutFromModal` → `undoRoomCheckout`), and
+condition 4 admits a guest with one open room precisely so the undo stays
+reachable. Housekeeping status is deliberately left Dirty on undo, exactly as
+Undo Checkout leaves it.
+
+Once the stay is fully checked out the per-room `[checked out]` tags stop
+rendering on the detail page — every room is out by then, so tagging each row
+says nothing. The details stay on the entry; only the display stops.
 
 A room the guest *moved out of* is resolved separately
 (`getRoomMoveVacatedRooms`), not by any of this — a move has a handoff to
