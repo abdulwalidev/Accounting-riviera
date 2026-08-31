@@ -184,6 +184,13 @@ dump — the core tables, views, functions, policies and grants in one place.
 `migration/roles/user_management.sql` and `migration/pos/pos_customer_name.sql`
 need running before their features do anything. Both are additive and safe.
 
+`migration/guests/guest_edits_room_checked_out_action.sql` widens the
+`guest_edits.action` CHECK constraint for per-room checkout. Until it runs, the
+checkout still saves — the guests row goes up first — but its audit line is
+rejected and the push queue retries it until the page is reloaded. **Any new
+`logGuestAction()` value needs this constraint widened in the same commit**;
+this is the third time it has caught someone.
+
 ---
 
 ## Backup
