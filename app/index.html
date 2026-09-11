@@ -4991,7 +4991,6 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
       <button type="button" class="login-forgot" onclick="showNotice('Contact your admin to reset your password.')">Forgot password?</button>
     </div>
 
-    <div class="login-footer">Riviera Resort &middot; Guest Register</div>
   </div>
 </div>
 
@@ -5994,6 +5993,10 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
           <input type="date" id="hoFrom" style="display:none">
           <input type="date" id="hoTo" style="display:none">
         </div>
+      </div>
+      <div class="actions">
+        <div></div>
+        <button class="btn secondary" onclick="printMoneyHandover()">🖶 Print</button>
       </div>
     </div>
 
@@ -16926,6 +16929,10 @@ function renderMoneyHandover(){
     </div>`;
 
   container.innerHTML = html;
+}
+
+function printMoneyHandover(){
+  window.print();
 }
 
 // ---- NPR (Night Posting Reconciliation): read-only view of what this
