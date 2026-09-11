@@ -1701,6 +1701,9 @@
   }
   .settings-nav-item.danger{ color:var(--danger); }
   .settings-nav-item.danger:hover{ background:rgba(185,28,28,0.06); }
+  .settings-nav-item.gold-nav{ color:var(--gold-nav); font-weight:700; }
+  .settings-nav-item.gold-nav:hover{ color:var(--gold-nav); }
+  .settings-nav-item.gold-nav.active{ color:var(--gold-nav); border-left-color:var(--gold-nav); }
   html[data-theme="dark"] .settings-nav-item:hover{ background:rgba(125,211,252,0.08); }
   html[data-theme="dark"] .settings-nav-item.active{ background:rgba(125,211,252,0.12); }
   .settings-nav-info{
@@ -6382,6 +6385,30 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
 
   </div>
 
+  <div class="view" id="view-accountcheck">
+
+    <h1>Account Check</h1>
+    <div class="sub" style="visibility:hidden;">Revenue Account: Guest Charges Summary's own Account column (Bank Transfer + Card), grouped by the room-night's date. Report Account: every non-Cash, non-Late-Payment payment in the system, grouped by the date it was actually received. These use two different meanings of "date" on purpose — a night paid off later will land on different rows in each column.</div>
+
+    <div class="panel accent-report">
+      <h2>Account Received, Per Day</h2>
+      <div id="accountCheckBody" style="overflow-x:auto; margin-top:10px;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
+  <div class="view" id="view-revenuereportcheck">
+
+    <h1>Revenue vs Report Check</h1>
+    <div class="sub" style="visibility:hidden;">Revenue Total: Guest Charges Summary's own collected total (cash + account), grouped by the room-night's date. Report Total: every non-Late-Payment payment in the system, grouped by the date it was actually received. These use two different meanings of "date" on purpose — a night paid off later will land on different rows in each column.</div>
+
+    <div class="panel accent-report">
+      <h2>Money Received, Per Day</h2>
+      <div id="revenueReportCheckBody" style="overflow-x:auto; margin-top:10px;"><div class="empty-note">No data yet.</div></div>
+    </div>
+
+  </div>
+
   <div class="view" id="view-misc">
 
     <h1>Miscellaneous</h1>
@@ -7973,7 +8000,9 @@ html[data-theme="dark"] #page-manage-parts .tag{ color:#fff !important; }
       <a class="settings-nav-item" onclick="showView('before19')">Before 19</a>
       <a class="settings-nav-item" onclick="showView('handover')">Revenue Summary</a>
       <a class="settings-nav-item" onclick="showView('npr')">NPR</a>
-      <a class="settings-nav-item" id="settingsCashCheckBtn" onclick="showView('cashcheck')">Cash Check</a>
+      <a class="settings-nav-item gold-nav" id="settingsCashCheckBtn" onclick="showView('cashcheck')">Cash Check</a>
+      <a class="settings-nav-item gold-nav" id="settingsAccountCheckBtn" onclick="showView('accountcheck')">Account Check</a>
+      <a class="settings-nav-item gold-nav" id="settingsRevenueReportCheckBtn" onclick="showView('revenuereportcheck')">Revenue vs Report Check</a>
       <a class="settings-nav-item" onclick="showView('misc')">Miscellaneous</a>
       <a class="settings-nav-item" id="settingsUsersBtn" onclick="showView('users')" style="display:none;">Users</a>
       <a class="settings-nav-item danger" id="settingsDeleteEntityBtn" onclick="showView('deleteentity')" style="display:none;">⚠ Delete Entity</a>
@@ -8465,7 +8494,7 @@ function focusError(el){
 }
 
 let currentView = 'entry';
-const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','downloadss','frontoffice','restaurant','users','pending','latepay'];
+const ROUTABLE_VIEWS = ['dashboard','cico','entry','reservations','addpay','search','report','graphs','detail','ledgers','before19','handover','npr','revenue','nightsummary','cashcheck','accountcheck','revenuereportcheck','misc','audit','daylock','deleteentity','roomdetail','inhouse','breakfast','availability','autocheckout','arrival','settings','paymentrecord','downloadss','frontoffice','restaurant','users','pending','latepay'];
 
 // In-app back/forward: this is one static HTML file with no server routes
 // to deep-link to, so the address bar never changes — history.state just
@@ -8575,7 +8604,7 @@ function showView(view, fromPopState){
   document.getElementById('topNavRevSummary').classList.toggle('active', view === 'handover');
   document.getElementById('topNavAutoCheckout').classList.toggle('active', view === 'autocheckout');
   document.getElementById('topNavArrival').classList.toggle('active', view === 'arrival');
-  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'npr' || view === 'cashcheck' || view === 'misc' || view === 'paymentrecord' || view === 'downloadss' || view === 'frontoffice' || view === 'users' || isAdminSettingsPage(view);
+  const isSettingsView = view === 'settings' || view === 'audit' || view === 'deleteentity' || view === 'daylock' || view === 'before19' || view === 'npr' || view === 'cashcheck' || view === 'accountcheck' || view === 'revenuereportcheck' || view === 'misc' || view === 'paymentrecord' || view === 'downloadss' || view === 'frontoffice' || view === 'users' || isAdminSettingsPage(view);
   document.getElementById('topNavSettings').classList.toggle('active', isSettingsView);
   const globalSettingsNav = document.getElementById('globalSettingsNav');
   if(globalSettingsNav) globalSettingsNav.style.display = isSettingsView ? 'flex' : 'none';
@@ -8616,6 +8645,8 @@ function showView(view, fromPopState){
   if(view === 'revenue') renderRevenue();
   if(view === 'nightsummary') renderNightSummary();
   if(view === 'cashcheck') renderCashCheck();
+  if(view === 'accountcheck') renderAccountCheck();
+  if(view === 'revenuereportcheck') renderRevenueReportCheck();
   if(view === 'misc') renderMiscReport();
   if(view === 'audit') renderAuditPage();
   if(view === 'daylock') renderDayLock();
@@ -18346,6 +18377,165 @@ function renderCashCheck(){
 }
 
 // =========================================================
+// ACCOUNT CHECK — the same standing cross-check as Cash Check, for account
+// money (Bank Transfer + Card) instead of Cash: Revenue Report's per-room-
+// night account allocation (mcbTotal + alfalahTotal + hajiTotal) vs. a
+// brute-force sum of every non-Cash, non-Late-Payment payment across every
+// entry, grouped by its own date. Late Payment ("BTC") is never money (see
+// isLatePayment) so it's excluded from both sides, same as every other
+// collected-money report.
+// =========================================================
+function buildAccountCheckReport(){
+  const all = loadAllEntries();
+  const reportAccountByDate = {};
+  all.forEach(entry=>{
+    (entry.payments || []).forEach(p=>{
+      if(p.mode === 'Cash' || isLatePayment(p) || !p.date) return;
+      reportAccountByDate[p.date] = (reportAccountByDate[p.date] || 0) + (parseFloat(p.total) || 0);
+    });
+  });
+
+  // Revenue Account sums Guest Charges Summary's own per-bank columns
+  // (Table 1), grouped by each row's own Date — the room-NIGHT date, not
+  // the date the payment was received. Same received-date-vs-night-date
+  // distinction as Cash Check, on purpose.
+  const revenue = buildRevenueReport('', '');
+  const revenueAccountByDate = {};
+  revenue.roomRows.forEach(r=>{
+    const acct = r.mcbTotal + r.alfalahTotal + r.hajiTotal;
+    revenueAccountByDate[r.date] = (revenueAccountByDate[r.date] || 0) + acct;
+  });
+
+  const dates = new Set([...Object.keys(reportAccountByDate), ...Object.keys(revenueAccountByDate)]);
+  const rows = Array.from(dates).sort((a,b)=> a.localeCompare(b)).map(date=>({
+    date,
+    revenueAccount: Math.round((revenueAccountByDate[date] || 0) * 100) / 100,
+    reportAccount: Math.round((reportAccountByDate[date] || 0) * 100) / 100
+  }));
+  const totalRevenueAccount = rows.reduce((s,r)=> s + r.revenueAccount, 0);
+  const totalReportAccount = rows.reduce((s,r)=> s + r.reportAccount, 0);
+  return { rows, totalRevenueAccount, totalReportAccount };
+}
+
+function renderAccountCheck(){
+  const body = document.getElementById('accountCheckBody');
+  if(!initialLoadDone){ body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>'; return; }
+  const data = buildAccountCheckReport();
+  if(data.rows.length === 0){
+    body.innerHTML = '<div class="empty-note">No account payments recorded.</div>';
+    return;
+  }
+  // Revenue Account only counts money tied to a room-night (Table 1); Report
+  // Account also counts non-Cash payments that never landed on one — Misc
+  // charges (Snooker/BBQ/Bonfire) paid by bank/card chief among them. That
+  // gap is called out on the Total row instead of just showing a smaller
+  // number with no explanation.
+  const miscGap = Math.round((data.totalReportAccount - data.totalRevenueAccount) * 100) / 100;
+  const revenueAccountTotalText = miscGap > 0
+    ? `${data.totalRevenueAccount.toLocaleString()} + ${miscGap.toLocaleString()} (Miscellaneous)`
+    : data.totalRevenueAccount.toLocaleString();
+  body.innerHTML = `
+    <table class="cashcheck-table">
+      <thead><tr><th>Date</th><th style="text-align:right;">Revenue Account</th><th style="text-align:right;">Report Account</th></tr></thead>
+      <tbody>${data.rows.map(r=> `
+        <tr>
+          <td>${formatDate(r.date)}</td>
+          <td class="cash-amt" style="text-align:right;">${r.revenueAccount.toLocaleString()}</td>
+          <td class="cash-amt" style="text-align:right;">${r.reportAccount.toLocaleString()}</td>
+        </tr>`).join('')}</tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td>Total</td>
+          <td style="text-align:right;">${revenueAccountTotalText}</td>
+          <td style="text-align:right;">${data.totalReportAccount.toLocaleString()}</td>
+        </tr>
+        <tr class="day-foot-total">
+          <td>Grand Total</td>
+          <td style="text-align:right;">${data.totalReportAccount.toLocaleString()}</td>
+          <td style="text-align:right;">${data.totalReportAccount.toLocaleString()}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
+// =========================================================
+// REVENUE VS REPORT CHECK — the same standing cross-check as Cash Check and
+// Account Check, but for everything: Revenue Report's per-room-night total
+// collected (cash + account combined) vs. a brute-force sum of every
+// non-Late-Payment payment across every entry, grouped by its own date.
+// Late Payment ("BTC") is never money (see isLatePayment) so it's excluded
+// from both sides, same as every other collected-money report.
+// =========================================================
+function buildRevenueReportCheckReport(){
+  const all = loadAllEntries();
+  const reportTotalByDate = {};
+  all.forEach(entry=>{
+    (entry.payments || []).forEach(p=>{
+      if(isLatePayment(p) || !p.date) return;
+      reportTotalByDate[p.date] = (reportTotalByDate[p.date] || 0) + (parseFloat(p.total) || 0);
+    });
+  });
+
+  // Revenue Total sums Guest Charges Summary's own collected total (cash +
+  // account combined) per row, grouped by each row's own Date — the
+  // room-NIGHT date, not the date the payment was received. Same
+  // received-date-vs-night-date distinction as Cash Check/Account Check.
+  const revenue = buildRevenueReport('', '');
+  const revenueTotalByDate = {};
+  revenue.roomRows.forEach(r=>{ revenueTotalByDate[r.date] = (revenueTotalByDate[r.date] || 0) + r.collected; });
+
+  const dates = new Set([...Object.keys(reportTotalByDate), ...Object.keys(revenueTotalByDate)]);
+  const rows = Array.from(dates).sort((a,b)=> a.localeCompare(b)).map(date=>({
+    date,
+    revenueTotal: Math.round((revenueTotalByDate[date] || 0) * 100) / 100,
+    reportTotal: Math.round((reportTotalByDate[date] || 0) * 100) / 100
+  }));
+  const totalRevenueTotal = rows.reduce((s,r)=> s + r.revenueTotal, 0);
+  const totalReportTotal = rows.reduce((s,r)=> s + r.reportTotal, 0);
+  return { rows, totalRevenueTotal, totalReportTotal };
+}
+
+function renderRevenueReportCheck(){
+  const body = document.getElementById('revenueReportCheckBody');
+  if(!initialLoadDone){ body.innerHTML = '<div class="empty-note">' + cloudLoadingNote() + '</div>'; return; }
+  const data = buildRevenueReportCheckReport();
+  if(data.rows.length === 0){
+    body.innerHTML = '<div class="empty-note">No payments recorded.</div>';
+    return;
+  }
+  // Revenue Total only counts money tied to a room-night (Table 1); Report
+  // Total also counts payments that never landed on one — Misc charges
+  // (Snooker/BBQ/Bonfire) chief among them. That gap is called out on the
+  // Total row instead of just showing a smaller number with no explanation.
+  const miscGap = Math.round((data.totalReportTotal - data.totalRevenueTotal) * 100) / 100;
+  const revenueTotalText = miscGap > 0
+    ? `${data.totalRevenueTotal.toLocaleString()} + ${miscGap.toLocaleString()} (Miscellaneous)`
+    : data.totalRevenueTotal.toLocaleString();
+  body.innerHTML = `
+    <table class="cashcheck-table">
+      <thead><tr><th>Date</th><th style="text-align:right;">Revenue Total</th><th style="text-align:right;">Report Total</th></tr></thead>
+      <tbody>${data.rows.map(r=> `
+        <tr>
+          <td>${formatDate(r.date)}</td>
+          <td class="cash-amt" style="text-align:right;">${r.revenueTotal.toLocaleString()}</td>
+          <td class="cash-amt" style="text-align:right;">${r.reportTotal.toLocaleString()}</td>
+        </tr>`).join('')}</tbody>
+      <tfoot>
+        <tr class="day-foot-total">
+          <td>Total</td>
+          <td style="text-align:right;">${revenueTotalText}</td>
+          <td style="text-align:right;">${data.totalReportTotal.toLocaleString()}</td>
+        </tr>
+        <tr class="day-foot-total">
+          <td>Grand Total</td>
+          <td style="text-align:right;">${data.totalReportTotal.toLocaleString()}</td>
+          <td style="text-align:right;">${data.totalReportTotal.toLocaleString()}</td>
+        </tr>
+      </tfoot>
+    </table>`;
+}
+
+// =========================================================
 // MISCELLANEOUS — Settings page listing only the Miscellaneous rows
 // (Snooker/BBQ/Bonfire/Mattress) from guest entries, newest first.
 // Read-only view of what's already saved; touches nothing.
@@ -21877,13 +22067,14 @@ function renderSettings(){
   applyPlainAdminSettingsTrim();
 }
 
-// Role 'admin' gets a deliberately tiny Settings: Day Lock, Cash Check, and
-// Delete Entity, nothing else. Runs LAST, after every other rule above has
+// Role 'admin' gets a deliberately tiny Settings: Day Lock, Cash Check,
+// Account Check, Revenue vs Report Check, and Delete Entity, nothing else.
+// Runs LAST, after every other rule above has
 // had its say, so it can only ever take items away — and it's a whitelist
 // walk over the sidebar rather than a list of things to hide, so an item
 // added to that nav later is hidden for this role by default instead of
 // quietly appearing. superadmin is untouched and still sees everything.
-const PLAIN_ADMIN_SETTINGS_ITEMS = ['settingsDayLockBtn', 'settingsDeleteEntityBtn', 'settingsCashCheckBtn', 'settingsDownloadSsBtn'];
+const PLAIN_ADMIN_SETTINGS_ITEMS = ['settingsDayLockBtn', 'settingsDeleteEntityBtn', 'settingsCashCheckBtn', 'settingsAccountCheckBtn', 'settingsRevenueReportCheckBtn', 'settingsDownloadSsBtn'];
 function applyPlainAdminSettingsTrim(){
   if(!isPlainAdmin()) return;
   document.querySelectorAll('#globalSettingsNav .settings-nav-item').forEach(el=>{
