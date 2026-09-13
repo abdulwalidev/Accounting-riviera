@@ -20220,7 +20220,13 @@ function openArrivalConfirmModal(){
     <div><div class="confirm-lbl">Room No</div><div class="confirm-val">${formatRoomChain(entry.rooms) || '-'}</div></div>
     <div><div class="confirm-lbl">Check-in</div><div class="confirm-val">${entry.checkIn ? formatDate(entry.checkIn) : '-'}</div></div>
   `;
-  setFilterDate('acnCheckinDate', todayStr());
+  // Defaults to the booking's own check-in date, not today — right for a
+  // same-day confirmation (entry.checkIn already IS today) and, unlike
+  // today's date, also right for a LATE confirmation of a lapsed
+  // reservation (see isLapsedUnconfirmedArrival): defaulting to today there
+  // silently saved the wrong Actual Checkin unless the desk remembered to
+  // overwrite it, which fed a wrong date into computeExpectedCheckoutDate.
+  setFilterDate('acnCheckinDate', entry.checkIn || todayStr());
   const staffInput = document.getElementById('acnStaffInput');
   staffInput.value = '';
   staffInput.classList.remove('duplicate');
